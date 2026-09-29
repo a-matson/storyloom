@@ -50,11 +50,17 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
   const used = ctx?.budget.used ?? tokenizer.count(adv.actions.map((a) => a.versions[a.active] ?? '').join('\n\n'));
   const total = adv.settings.model.contextLength;
   const last = state.log.last;
+  const lastStats = last?.stats;
+  const hit = lastStats?.promptTokens ? Math.round(((lastStats.cachedTokens ?? 0) / lastStats.promptTokens) * 100) : null;
   const status = state.busy
     ? 'generating…'
-    : last?.stats?.promptMs !== undefined
-      ? `${((last.stats.promptMs + (last.stats.generationMs ?? 0)) / 1000).toFixed(1)} s · ${last.stats.cachedTokens ?? 0} cached`
-      : backendLabel;
+    : [
+        lastStats?.promptMs !== undefined ? `${((lastStats.promptMs + (lastStats.generationMs ?? 0)) / 1000).toFixed(1)} s` : backendLabel,
+        hit !== null ? `${hit}% cached` : '',
+        state.warm === 'warm' ? 'next turn warm' : state.warm === 'warming' ? 'warming…' : '',
+      ]
+        .filter(Boolean)
+        .join(' · ');
 
   const overflow =
     ctx && (adv.settings.context.contextWarning ?? true)
@@ -141,11 +147,11 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
             onViewContext={openContext}
             contextSummary={ctx ? `${ctx.triggeredCards.length} story cards · ${ctx.usedMemories.length} memories used` : undefined}
           />
-          <CommandRow busy={state.busy} canRetry={last?.type === 'continue'} canErase={state.log.length > 1} status={status} api={api} onSee={() => api.clearNotice()} />
+          <CommandRow busy={state.busy} canRetry={last?.type === 'continue'} canErase={state.log.length > 1} status={status} api={api} onSee={() => api.clearNotice()} retryReady={state.prefetchReady} />
         </main>
         <Sidebar adventure={adv} api={api} provider={providerFor(app, adv.settings.providerId)} hidden={!showSidebar} onClose={() => setShowSidebar(false)} />
       </div>
-      {showContext && state.context && <ContextViewer result={state.context.result} prompt={state.context.prompt} onClose={() => setShowContext(false)} />}
+      {showContext && state.context && <ContextViewer result={state.context.result} prompt={state.context.prompt} stats={lastStats} onClose={() => setShowContext(false)} />}
       {state.error && (
         <div className="toast error" role="alert">
           {state.error}{' '}

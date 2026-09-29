@@ -4,7 +4,7 @@ import { ActionLog } from './actionLog';
 import { buildContext, type ContextBuildResult, renderBody } from './contextBuilder';
 import { formatPlayerInput, joinStory, trimUnfinishedSentence } from './formatting';
 import { rankMemories, touchUsed, type RankedMemory } from './memoryBank';
-import { renderTemplate } from './templates';
+import { renderPrefix, renderTemplate } from './templates';
 import type { Tokenizer } from './tokenizer';
 import type { CompletionStats, Provider } from '@providers/types';
 import type { Embedder } from '@embeddings/index';
@@ -31,7 +31,7 @@ export interface TurnDeps {
 
 export type TurnEvent =
   | { type: 'player'; action: Action }
-  | { type: 'context'; result: ContextBuildResult; prompt: string }
+  | { type: 'context'; result: ContextBuildResult; prompt: string; stop: string[] }
   | { type: 'token'; text: string }
   | { type: 'done'; action: Action; text: string; stats?: CompletionStats }
   | { type: 'stopped'; reason: string }
@@ -133,9 +133,10 @@ export async function prepareContext(adventure: Adventure, actions: Action[], de
 
 async function* generate(
   adventure: Adventure,
-  prepared: PreparedContext,
+  prepared: Pick<PreparedContext, 'prompt' | 'stop'>,
   deps: TurnDeps,
   signal?: AbortSignal,
+  opts: { slotId?: number; seed?: number } = {},
 ): AsyncGenerator<TurnEvent, { text: string; stats?: CompletionStats }> {
   const s = adventure.settings.model;
   let text = '';
@@ -151,10 +152,10 @@ async function* generate(
       presencePenalty: s.presencePenalty,
       frequencyPenalty: s.frequencyPenalty,
       repetitionPenalty: s.repetitionPenalty,
-      seed: s.seed,
+      seed: opts.seed ?? s.seed,
       stop: [...prepared.stop, '\n> '],
       cachePrompt: true,
-      slotId: 0,
+      slotId: opts.slotId ?? 0,
     },
     signal,
   );
@@ -227,7 +228,7 @@ export async function* runTurn(
       yield { type: 'stopped', reason: prepared.stopped };
       return;
     }
-    yield { type: 'context', result: prepared.result, prompt: prepared.prompt };
+    yield { type: 'context', result: prepared.result, prompt: prepared.prompt, stop: prepared.stop };
 
     const gen = generate(adventure, prepared, deps, signal);
     let next = await gen.next();
@@ -265,9 +266,8 @@ export async function* retryLast(adventure: Adventure, log: ActionLog, deps: Tur
       yield { type: 'stopped', reason: prepared.stopped };
       return;
     }
-    yield { type: 'context', result: prepared.result, prompt: prepared.prompt };
-    const seeded: Adventure = { ...adventure, settings: { ...adventure.settings, model: { ...adventure.settings.model, seed: Math.floor(Math.random() * 2 ** 31) } } };
-    const gen = generate(seeded, prepared, deps, signal);
+    yield { type: 'context', result: prepared.result, prompt: prepared.prompt, stop: prepared.stop };
+    const gen = generate(adventure, prepared, deps, signal, { seed: randomSeed() });
     let next = await gen.next();
     while (!next.done) {
       yield next.value;
@@ -283,6 +283,61 @@ export async function* retryLast(adventure: Adventure, log: ActionLog, deps: Tur
     }
     yield { type: 'error', message: e instanceof Error ? e.message : String(e) };
   }
+}
+
+export function randomSeed(): number {
+  return Math.floor(Math.random() * 2 ** 31);
+}
+
+/**
+ * Generate one more alternative for the prompt of the last turn without
+ * touching the log (retry prefetch). Runs on `slotId` (default 1) so the
+ * story slot's KV cache is left alone. The caller adds the result as a
+ * version when the player actually presses Retry.
+ */
+export async function generateAlternative(
+  adventure: Adventure,
+  prepared: Pick<PreparedContext, 'prompt' | 'stop'>,
+  deps: TurnDeps,
+  signal?: AbortSignal,
+  slotId = 1,
+): Promise<{ text: string; stats?: CompletionStats }> {
+  const gen = generate(adventure, prepared, deps, signal, { slotId, seed: randomSeed() });
+  let next = await gen.next();
+  while (!next.done) next = await gen.next();
+  return next.value;
+}
+
+/**
+ * The byte-stable prefix of the NEXT turn's prompt, for KV-cache warming.
+ * Builds the context as if the player had just taken a short action, then
+ * keeps only the `cacheable` sections (system, plot essentials, history) and
+ * renders them as an unterminated prompt. Returns null when the layout is not
+ * cache-stable (nothing worth warming beyond the system prompt).
+ */
+export async function buildWarmupPrompt(adventure: Adventure, actions: Action[], deps: TurnDeps): Promise<string | null> {
+  if (!adventure.settings.context.cacheStableLayout) return null;
+  const placeholder: Action = { id: 'warmup', type: 'do', versions: ['> You wait.'], active: 0, createdAt: Date.now() };
+  const rankedMemories: RankedMemory[] = []; // memories are not part of the cached prefix
+  const scriptMemory = (adventure.scriptState.memory ?? {}) as { context?: string; authorsNote?: string; frontMemory?: string };
+  const result = buildContext({
+    actions: [...actions, placeholder],
+    plot: adventure.plot,
+    storyCards: adventure.storyCards,
+    rankedMemories,
+    frontMemory: scriptMemory.frontMemory,
+    overrides: { plotEssentials: scriptMemory.context, authorsNote: scriptMemory.authorsNote },
+    settings: {
+      contextLength: adventure.settings.model.contextLength,
+      memoryBankEnabled: adventure.settings.memory.memoryBank,
+      cacheStableLayout: true,
+      evictionChunk: adventure.settings.context.evictionChunk,
+    },
+    tokenizer: deps.tokenizer,
+  });
+  const prefix = result.sections.filter((sec) => sec.cacheable && sec.kind !== 'instructions').map((sec) => sec.text).join('\n\n');
+  if (!prefix) return null;
+  return renderPrefix(adventure.settings.template, result.system, prefix);
 }
 
 /** Full story text of the active path (for export and summarisation). */

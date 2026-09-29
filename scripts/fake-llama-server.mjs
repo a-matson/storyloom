@@ -31,7 +31,7 @@ http
       const j = body ? JSON.parse(body) : {};
       if (req.url === '/tokenize') return json({ tokens: Array.from({ length: Math.ceil((j.content ?? '').length / 4) }, (_, i) => i) });
       if (req.url === '/completion') {
-        process.stdout.write(`\n===== prompt (${(j.prompt ?? '').length} chars) =====\n${j.prompt}\n=====\n`);
+        process.stdout.write(`\n===== prompt (${(j.prompt ?? '').length} chars) slot=${j.id_slot ?? '-'} n_predict=${j.n_predict} =====\n${j.prompt}\n=====\n`);
         if (j.n_predict === 0) return json({ content: '', stop: true, tokens_evaluated: Math.ceil(j.prompt.length / 4), tokens_cached: 0 });
         // Structured requests (story card generator, summaries) come without streaming semantics we care about:
         // answer JSON when a schema is attached, a one-line memory otherwise.

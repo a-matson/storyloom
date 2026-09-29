@@ -56,6 +56,19 @@ export function renderTemplate(id: TemplateId, system: string, user: string, ass
 }
 
 /**
+ * Render only the OPENING of a prompt: template header, system turn, user-turn
+ * opening and `userPrefix`, with no closing tokens. Used to warm the backend's
+ * KV cache with the byte-stable prefix of the next turn (see engine.ts
+ * `buildWarmupPrompt`). Must be a byte-for-byte prefix of what `renderTemplate`
+ * produces for the same system text and a user text starting with `userPrefix`.
+ */
+export function renderPrefix(id: TemplateId, system: string, userPrefix: string): string {
+  const full = renderTemplate(id, system, userPrefix + '\u0000').prompt;
+  const cut = full.indexOf('\u0000');
+  return cut >= 0 ? full.slice(0, cut) : full;
+}
+
+/**
  * Guess a template from a model id / GGUF name. Latitude's fine-tunes are
  * generally trained with ChatML regardless of base model; the Llama 3.3
  * based ones (Nova, Wayfarer Large) use the Llama 3 format and Equinox uses
