@@ -31,6 +31,21 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
     return () => window.clearTimeout(t);
   }, [state.notice, api]);
 
+  // Escape closes the context drawer, then the sidebar sheet; Ctrl/⌘+. toggles the sidebar.
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showContext) setShowContext(false);
+        else if (showSidebar && window.innerWidth <= 1100) setShowSidebar(false);
+      } else if ((e.ctrlKey || e.metaKey) && e.key === '.') {
+        e.preventDefault();
+        setShowSidebar((s) => !s);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showContext, showSidebar]);
+
   const ctx = state.context?.result;
   const used = ctx?.budget.used ?? tokenizer.count(adv.actions.map((a) => a.versions[a.active] ?? '').join('\n\n'));
   const total = adv.settings.model.contextLength;
@@ -40,6 +55,11 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
     : last?.stats?.promptMs !== undefined
       ? `${((last.stats.promptMs + (last.stats.generationMs ?? 0)) / 1000).toFixed(1)} s · ${last.stats.cachedTokens ?? 0} cached`
       : backendLabel;
+
+  const openContext = () => {
+    if (!state.context) void api.previewContext();
+    setShowContext(true);
+  };
 
   return (
     <div className="app">
@@ -94,7 +114,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
             streaming={state.streaming}
             busy={state.busy}
             api={api}
-            onViewContext={() => setShowContext(true)}
+            onViewContext={openContext}
             contextSummary={ctx ? `${ctx.triggeredCards.length} story cards · ${ctx.usedMemories.length} memories used` : undefined}
           />
           <CommandRow busy={state.busy} canRetry={last?.type === 'continue'} canErase={state.log.length > 1} status={status} api={api} onSee={() => api.clearNotice()} />
