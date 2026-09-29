@@ -12,3 +12,4 @@ export * from './engine';
 export * from './memoryJobs';
 export * from './scenario';
 export * from './prompts';
+export * from './cardGenerator';

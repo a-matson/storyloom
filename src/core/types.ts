@@ -124,6 +124,8 @@ export interface ContextSettings {
   evictionChunk: number;
   /** Include the raw model output (no sentence trimming). */
   rawOutput: boolean;
+  /** Show a warning on the context meter when cards or plot components did not fit. */
+  contextWarning?: boolean;
 }
 
 export interface AdventureSettings {
@@ -155,6 +157,14 @@ export interface Adventure {
   /** Answers given to ${placeholders} when the adventure was created. */
   placeholders: { question: string; answer: string }[];
   settings: AdventureSettings;
+  /** Story-card generator settings (AI instructions, story information…). Per adventure, like AI Dungeon. */
+  cardGenerator?: {
+    speedCreate: boolean;
+    includeSummary: boolean;
+    logToNotes: boolean;
+    aiInstructions: string;
+    storyInformation: string;
+  };
   createdAt: number;
   updatedAt: number;
 }
@@ -223,7 +233,7 @@ export const DEFAULT_ADVENTURE_SETTINGS: AdventureSettings = {
   template: 'chatml',
   model: DEFAULT_MODEL_SETTINGS,
   memory: { autoSummary: true, memoryBank: true, bankSize: 200 },
-  context: { cacheStableLayout: true, evictionChunk: 8, rawOutput: false },
+  context: { cacheStableLayout: true, evictionChunk: 8, rawOutput: false, contextWarning: true },
   textStyle: 'print',
 };
 

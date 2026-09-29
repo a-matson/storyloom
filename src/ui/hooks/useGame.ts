@@ -188,6 +188,9 @@ export function useGame(initial: Adventure, app: AppSettings) {
     setStoryCards: (cards: Adventure['storyCards']) => mutate((_, adv) => {
       adv.storyCards = cards;
     }),
+    setCardGenerator: (s: NonNullable<Adventure['cardGenerator']>) => mutate((_, adv) => {
+      adv.cardGenerator = s;
+    }),
     clearError: () => setError(null),
     clearNotice: () => setNotice(null),
     /**

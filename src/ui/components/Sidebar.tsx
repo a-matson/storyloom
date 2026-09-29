@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import type { Adventure, StoryCard } from '@core/types';
-import { newId } from '@core/types';
-import { parseTriggers } from '@core/storyCards';
+import { MAX_STORY_CARDS } from '@core/storyCards';
+import type { Provider } from '@providers/types';
+import { CardDialog } from './CardDialog';
 import { MODEL_PRESETS } from '@core/modelPresets';
 import { exportStoryCardsJson, importStoryCardsJson } from '@storage/transfer';
 import { tokenizer } from '../services';
@@ -12,6 +13,7 @@ import { IconChevron } from './Icons';
 interface Props {
   adventure: Adventure;
   api: GameApi;
+  provider: Provider;
   hidden: boolean;
   onClose: () => void;
 }
@@ -20,7 +22,7 @@ type Tab = 'adventure' | 'gameplay';
 type SubTab = 'plot' | 'cards' | 'details';
 
 /** Adventure / Gameplay settings panel. Mirrors the in-game settings of AI Dungeon. */
-export function Sidebar({ adventure, api, hidden, onClose }: Props) {
+export function Sidebar({ adventure, api, provider, hidden, onClose }: Props) {
   const [tab, setTab] = useState<Tab>('adventure');
   const [sub, setSub] = useState<SubTab>('plot');
   return (
@@ -52,7 +54,7 @@ export function Sidebar({ adventure, api, hidden, onClose }: Props) {
           </div>
           <div className="body">
             {sub === 'plot' && <PlotTab adventure={adventure} api={api} />}
-            {sub === 'cards' && <CardsTab adventure={adventure} api={api} />}
+            {sub === 'cards' && <CardsTab adventure={adventure} api={api} provider={provider} />}
             {sub === 'details' && <DetailsTab adventure={adventure} api={api} />}
           </div>
         </>
@@ -147,38 +149,60 @@ function MemoryStatus({ adventure }: { adventure: Adventure }) {
   );
 }
 
-function CardsTab({ adventure, api }: { adventure: Adventure; api: GameApi }) {
+function CardsTab({ adventure, api, provider }: { adventure: Adventure; api: GameApi; provider: Provider }) {
   const cards = adventure.storyCards;
-  const update = (id: string, patch: Partial<StoryCard>) => api.setStoryCards(cards.map((c) => (c.id === id ? { ...c, ...patch } : c)));
-  const add = () => api.setStoryCards([...cards, { id: newId('card_'), type: 'Character', name: 'New card', entry: '', triggers: [] }]);
-  const remove = (id: string) => api.setStoryCards(cards.filter((c) => c.id !== id));
+  const [editing, setEditing] = useState<StoryCard | 'new' | null>(null);
+  // Bumped on every open so the dialog remounts with fresh state (speed-create "Next").
+  const [dialogKey, setDialogKey] = useState(0);
+  const [filter, setFilter] = useState('');
+  const shown = filter.trim()
+    ? cards.filter((c) => `${c.name} ${c.type} ${c.triggers.join(' ')} ${c.entry}`.toLowerCase().includes(filter.trim().toLowerCase()))
+    : cards;
+  const save = (card: StoryCard, next?: 'close' | 'new') => {
+    if (!card.entry) {
+      api.setStoryCards(cards.filter((c) => c.id !== card.id)); // Delete from the dialog
+      setEditing(null);
+      return;
+    }
+    const exists = cards.some((c) => c.id === card.id);
+    api.setStoryCards(exists ? cards.map((c) => (c.id === card.id ? card : c)) : [...cards, card]);
+    setEditing(next === 'new' ? 'new' : null);
+    if (next === 'new') setDialogKey((k) => k + 1);
+  };
   return (
     <>
       <div className="row">
-        <span className="small muted">Triggered when a keyword appears in recent actions.</span>
-        <span className="grow" />
-        <button className="btn" onClick={add}>
-          + Add
+        <input className="field" style={{ height: 32, fontSize: 12 }} placeholder="Filter cards" value={filter} onChange={(e) => setFilter(e.target.value)} />
+        <button className="btn primary" style={{ height: 32 }} onClick={() => setEditing('new')} disabled={cards.length >= MAX_STORY_CARDS}>
+          + New
         </button>
       </div>
-      {cards.length === 0 && <p className="muted small">No story cards yet.</p>}
-      {cards.map((c) => (
-        <Section key={c.id} title={c.name || '(unnamed)'} badge={<span className="pill">{c.type}</span>} tokens={tokenizer.count(c.entry)}>
-          <div className="row">
-            <input className="field" value={c.name} onChange={(e) => update(c.id, { name: e.target.value })} placeholder="Name (player only)" />
-            <input className="field" style={{ width: 120 }} value={c.type} onChange={(e) => update(c.id, { type: e.target.value })} placeholder="Type" />
-          </div>
-          <input className="field mono" value={c.triggers.join(',')} onChange={(e) => update(c.id, { triggers: parseTriggers(e.target.value) })} placeholder="triggers,comma,separated" />
-          <textarea className="field" value={c.entry} onChange={(e) => update(c.id, { entry: e.target.value })} placeholder="What the AI sees when triggered. Mention the name." />
-          <textarea className="field" style={{ minHeight: 48 }} value={c.notes ?? ''} onChange={(e) => update(c.id, { notes: e.target.value })} placeholder="Notes (never sent to the AI)" />
-          <div className="row">
-            <span className="grow" />
-            <button className="btn ghost danger" onClick={() => remove(c.id)}>
-              Delete
-            </button>
-          </div>
-        </Section>
+      {cards.length === 0 && <p className="muted small">No story cards yet. Cards are sent to the AI only when one of their triggers appears in recent actions.</p>}
+      {shown.map((c) => (
+        <button key={c.id} className="section" style={{ textAlign: 'left', padding: 0, cursor: 'pointer', color: 'inherit' }} onClick={() => setEditing(c)}>
+          <header style={{ cursor: 'pointer' }}>
+            <span className={`pill ${c.type.toLowerCase() === 'character' ? 'do' : c.type.toLowerCase() === 'location' ? 'say' : ''}`}>{c.type}</span>
+            <span className="grow" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {c.name || '(unnamed)'}
+            </span>
+            <span className="mono muted" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 140 }}>
+              {c.triggers.join(',')}
+            </span>
+            <span className="mono muted">{tokenizer.count(c.entry)}</span>
+          </header>
+        </button>
       ))}
+      {editing && (
+        <CardDialog
+          key={dialogKey}
+          adventure={adventure}
+          provider={provider}
+          card={editing === 'new' ? undefined : editing}
+          onSave={save}
+          onSettings={api.setCardGenerator}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </>
   );
 }
@@ -332,6 +356,10 @@ function GameplayTab({ adventure, api }: { adventure: Adventure; api: GameApi })
         <div className="setting">
           <label>Raw model output</label>
           <button className="toggle" role="switch" aria-checked={s.context.rawOutput} onClick={() => setContext({ rawOutput: !s.context.rawOutput })} />
+        </div>
+        <div className="setting">
+          <label title="Red ⚠ on the context meter when story cards or plot components did not fit">Context warning</label>
+          <button className="toggle" role="switch" aria-checked={s.context.contextWarning ?? true} onClick={() => setContext({ contextWarning: !(s.context.contextWarning ?? true) })} />
         </div>
       </Section>
       <Section title="Appearance">

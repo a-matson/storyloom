@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Adventure, AppSettings } from '@core/types';
 import { useGame } from '../hooks/useGame';
-import { applyTheme, tokenizer } from '../services';
+import { applyTheme, providerFor, tokenizer } from '../services';
 import { StoryView } from './StoryView';
 import { CommandRow } from './CommandRow';
 import { Sidebar } from './Sidebar';
@@ -56,6 +56,17 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
       ? `${((last.stats.promptMs + (last.stats.generationMs ?? 0)) / 1000).toFixed(1)} s · ${last.stats.cachedTokens ?? 0} cached`
       : backendLabel;
 
+  const overflow =
+    ctx && (adv.settings.context.contextWarning ?? true)
+      ? [
+          ctx.droppedCards.length ? `${ctx.droppedCards.length} triggered story card(s) did not fit` : '',
+          ctx.droppedSections.length ? `dropped: ${ctx.droppedSections.join(', ')}` : '',
+          ctx.sections.some((s) => s.trimmed && s.kind !== 'history' && s.kind !== 'storyCards') ? 'a plot component was trimmed' : '',
+        ]
+          .filter(Boolean)
+          .join(' · ')
+      : '';
+
   const openContext = () => {
     if (!state.context) void api.previewContext();
     setShowContext(true);
@@ -90,7 +101,20 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
         </div>
         <div className="col" style={{ gap: 4, width: 150 }}>
           <div className="row small muted" style={{ justifyContent: 'space-between' }}>
-            <span>Context</span>
+            <span>
+              Context
+              {overflow && (
+                <button
+                  className="btn ghost"
+                  onClick={openContext}
+                  title={overflow}
+                  aria-label={`Context warning: ${overflow}`}
+                  style={{ height: 18, padding: '0 4px', marginLeft: 4, border: 'none', color: 'var(--danger)', fontSize: 12 }}
+                >
+                  ⚠
+                </button>
+              )}
+            </span>
             <span className="mono">
               {(used / 1000).toFixed(1)}k / {(total / 1000).toFixed(0)}k
             </span>
@@ -119,7 +143,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
           />
           <CommandRow busy={state.busy} canRetry={last?.type === 'continue'} canErase={state.log.length > 1} status={status} api={api} onSee={() => api.clearNotice()} />
         </main>
-        <Sidebar adventure={adv} api={api} hidden={!showSidebar} onClose={() => setShowSidebar(false)} />
+        <Sidebar adventure={adv} api={api} provider={providerFor(app, adv.settings.providerId)} hidden={!showSidebar} onClose={() => setShowSidebar(false)} />
       </div>
       {showContext && state.context && <ContextViewer result={state.context.result} prompt={state.context.prompt} onClose={() => setShowContext(false)} />}
       {state.error && (

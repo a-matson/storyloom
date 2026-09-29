@@ -33,6 +33,21 @@ http
       if (req.url === '/completion') {
         process.stdout.write(`\n===== prompt (${(j.prompt ?? '').length} chars) =====\n${j.prompt}\n=====\n`);
         if (j.n_predict === 0) return json({ content: '', stop: true, tokens_evaluated: Math.ceil(j.prompt.length / 4), tokens_cached: 0 });
+        // Structured requests (story card generator, summaries) come without streaming semantics we care about:
+        // answer JSON when a schema is attached, a one-line memory otherwise.
+        if (j.json_schema) {
+          const m = /name is "([^"]+)"/.exec(j.prompt);
+          const name = m ? m[1] : ['Merav', 'The Needle Map', 'Well-wardens', 'Ashen Flats'][n++ % 4];
+          const card = { name, entry: `${name} matters to this story: a detail the caravan will not forget.`, triggers: [name.toLowerCase(), name.toLowerCase().split(' ')[0], 'caravan'] };
+          res.writeHead(200, { ...cors, 'content-type': 'text/event-stream' });
+          res.write(`data: ${JSON.stringify({ content: JSON.stringify(card), stop: true, stopped_eos: true, tokens_evaluated: 120, tokens_predicted: 40 })}\n\n`);
+          return res.end();
+        }
+        if (/Memory:\s*$|Write the updated summary:\s*$/.test(j.prompt)) {
+          res.writeHead(200, { ...cors, 'content-type': 'text/event-stream' });
+          res.write(`data: ${JSON.stringify({ content: 'The caravan crossed the flats; Merav hid her blindness; a needle-pricked map surfaced.', stop: true, stopped_eos: true, tokens_evaluated: 200, tokens_predicted: 20 })}\n\n`);
+          return res.end();
+        }
         res.writeHead(200, { ...cors, 'content-type': 'text/event-stream' });
         const words = lines[n++ % lines.length].split(' ');
         let i = 0;
