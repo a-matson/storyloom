@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Adventure, AdventureSettings, AppSettings, PlotComponents } from '@core/types';
 import { ActionLog } from '@core/actionLog';
 import type { ContextBuildResult } from '@core/contextBuilder';
-import { retryLast, runTurn, type PlayerTurnType } from '@core/engine';
+import { prepareContext, retryLast, runTurn, type PlayerTurnType } from '@core/engine';
 import { runMemoryMaintenance } from '@core/memoryJobs';
 import { markStale } from '@core/memoryBank';
 import { embedderFor, providerFor, scripts, storage, tokenizer } from '../services';
@@ -190,6 +190,20 @@ export function useGame(initial: Adventure, app: AppSettings) {
     }),
     clearError: () => setError(null),
     clearNotice: () => setNotice(null),
+    /**
+     * Build (without sending) the context for the current log, so the viewer
+     * works before any turn has been generated in this session.
+     */
+    previewContext: async () => {
+      const adv = advRef.current;
+      const prepared = await prepareContext(adv, logRef.current.actions, deps);
+      if ('stopped' in prepared) {
+        setNotice(prepared.stopped);
+        return;
+      }
+      promptRef.current = prepared.prompt;
+      setContext({ result: prepared.result, prompt: prepared.prompt });
+    },
   };
 
   const state: GameState = { adventure: advRef.current, log: logRef.current, version, busy, streaming, context, error, notice };
