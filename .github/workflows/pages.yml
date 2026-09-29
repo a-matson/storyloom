@@ -1,0 +1,40 @@
+name: Pages
+
+# Opt-in: publishes the built PWA to GitHub Pages. Enable Pages (Settings →
+# Pages → Source: GitHub Actions) and run this workflow manually. The app is a
+# static bundle that talks to http://localhost:<port> from the browser, so a
+# hosted copy still works with the player's own local inference server.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run build -- --base=/storyloom/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
