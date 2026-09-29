@@ -19,6 +19,8 @@ interface Props {
   status: string;
   api: GameApi;
   onSee?: (prompt: string) => void;
+  /** A prefetched alternative exists: Retry is instant. */
+  retryReady?: boolean;
 }
 
 /**
@@ -27,7 +29,7 @@ interface Props {
  * Ctrl/⌘+Z undoes (when the input is empty). Typing `/` opens commands:
  * /do /say /story /see switch mode; /reset is reserved (retry cache).
  */
-export function CommandRow({ busy, canRetry, canErase, status, api, onSee }: Props) {
+export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retryReady }: Props) {
   const [mode, setMode] = useState<Mode>('do');
   const [text, setText] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -113,8 +115,8 @@ export function CommandRow({ busy, canRetry, canErase, status, api, onSee }: Pro
           <button className="btn lg" onClick={() => api.submit('continue', '')} disabled={busy}>
             Continue
           </button>
-          <button className="btn lg" onClick={api.retry} disabled={busy || !canRetry}>
-            Retry
+          <button className="btn lg" onClick={api.retry} disabled={busy || !canRetry} title={retryReady ? 'An alternative is ready — retry is instant' : undefined} style={retryReady ? { borderColor: 'var(--verdigris)' } : undefined}>
+            Retry{retryReady ? ' ·' : ''}
           </button>
           <button className="btn lg danger" onClick={api.erase} disabled={busy || !canErase}>
             Erase

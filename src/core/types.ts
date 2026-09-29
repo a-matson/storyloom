@@ -126,6 +126,10 @@ export interface ContextSettings {
   rawOutput: boolean;
   /** Show a warning on the context meter when cards or plot components did not fit. */
   contextWarning?: boolean;
+  /** After each turn, prefill the next turn's stable prefix so the backend's KV cache is warm. */
+  cacheWarming?: boolean;
+  /** After each turn, generate one retry alternative in the background on a second slot. */
+  retryPrefetch?: boolean;
 }
 
 export interface AdventureSettings {
@@ -233,7 +237,7 @@ export const DEFAULT_ADVENTURE_SETTINGS: AdventureSettings = {
   template: 'chatml',
   model: DEFAULT_MODEL_SETTINGS,
   memory: { autoSummary: true, memoryBank: true, bankSize: 200 },
-  context: { cacheStableLayout: true, evictionChunk: 8, rawOutput: false, contextWarning: true },
+  context: { cacheStableLayout: true, evictionChunk: 8, rawOutput: false, contextWarning: true, cacheWarming: true, retryPrefetch: false },
   textStyle: 'print',
 };
 

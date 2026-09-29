@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Adventure, AdventureSettings, AppSettings, PlotComponents } from '@core/types';
 import { ActionLog } from '@core/actionLog';
 import type { ContextBuildResult } from '@core/contextBuilder';
-import { prepareContext, retryLast, runTurn, type PlayerTurnType } from '@core/engine';
+import { buildWarmupPrompt, generateAlternative, prepareContext, retryLast, runTurn, type PlayerTurnType } from '@core/engine';
+import type { CompletionStats } from '@providers/types';
 import { runMemoryMaintenance } from '@core/memoryJobs';
 import { markStale } from '@core/memoryBank';
 import { embedderFor, providerFor, scripts, storage, tokenizer } from '../services';
@@ -16,6 +17,10 @@ export interface GameState {
   context: { result: ContextBuildResult; prompt: string } | null;
   error: string | null;
   notice: string | null;
+  /** A retry alternative is ready; Retry will be instant. */
+  prefetchReady: boolean;
+  /** KV-cache warm-up state for the next turn. */
+  warm: 'idle' | 'warming' | 'warm';
 }
 
 /**
@@ -33,6 +38,13 @@ export function useGame(initial: Adventure, app: AppSettings) {
   const [notice, setNotice] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const promptRef = useRef<string>('');
+  const lastPreparedRef = useRef<{ prompt: string; stop: string[] } | null>(null);
+  /** Background work between turns (cache warming, retry prefetch); cancelled when the player acts. */
+  const idleAbortRef = useRef<AbortController | null>(null);
+  /** A prefetched retry alternative for the action id it belongs to. */
+  const prefetchRef = useRef<{ actionId: string; text: string; stats?: CompletionStats } | null>(null);
+  const [prefetchReady, setPrefetchReady] = useState(false);
+  const [warm, setWarm] = useState<'idle' | 'warming' | 'warm'>('idle');
   const saveTimer = useRef<number | null>(null);
 
   const bump = useCallback(() => setVersion((v) => v + 1), []);
@@ -48,6 +60,7 @@ export function useGame(initial: Adventure, app: AppSettings) {
   }, []);
 
   useEffect(() => () => {
+    idleAbortRef.current?.abort();
     if (saveTimer.current) window.clearTimeout(saveTimer.current);
     const adv = advRef.current;
     adv.actions = logRef.current.actions;
@@ -81,6 +94,60 @@ export function useGame(initial: Adventure, app: AppSettings) {
     else window.setTimeout(() => void run(), 800);
   }, [app, bump, save]);
 
+  const cancelIdleWork = useCallback(() => {
+    idleAbortRef.current?.abort();
+    idleAbortRef.current = null;
+    setWarm('idle');
+  }, []);
+
+  /**
+   * Between turns: warm the backend's KV cache with the next turn's stable
+   * prefix, and optionally prefetch one retry alternative on a second slot.
+   * Both are best-effort and cancelled the moment the player acts.
+   */
+  const scheduleIdleWork = useCallback(async () => {
+    const adv = advRef.current;
+    const ctx = adv.settings.context;
+    const caps = await deps.provider.capabilities().catch(() => null);
+    if (!caps) return;
+    const ac = new AbortController();
+    idleAbortRef.current = ac;
+    const last = logRef.current.last;
+    const jobs: Promise<unknown>[] = [];
+
+    if ((ctx.retryPrefetch ?? false) && caps.parallelSlots > 1 && last?.type === 'continue' && lastPreparedRef.current) {
+      const prepared = lastPreparedRef.current;
+      const actionId = last.id;
+      jobs.push(
+        generateAlternative(adv, prepared, deps, ac.signal, 1)
+          .then((alt) => {
+            if (ac.signal.aborted || !alt.text.trim()) return;
+            prefetchRef.current = { actionId, text: alt.text, stats: alt.stats };
+            setPrefetchReady(true);
+          })
+          .catch(() => undefined),
+      );
+    }
+
+    if ((ctx.cacheWarming ?? true) && caps.prefixCache) {
+      setWarm('warming');
+      jobs.push(
+        buildWarmupPrompt(adv, logRef.current.actions, deps)
+          .then(async (prompt) => {
+            if (!prompt || ac.signal.aborted) return;
+            for await (const _ of deps.provider.complete({ prompt, maxTokens: 0, temperature: 0, cachePrompt: true, slotId: 0, prefillOnly: true }, ac.signal)) {
+              // drain
+            }
+            if (!ac.signal.aborted) setWarm('warm');
+          })
+          .catch(() => {
+            if (!ac.signal.aborted) setWarm('idle');
+          }),
+      );
+    }
+    await Promise.all(jobs);
+  }, [deps]);
+
   const drive = useCallback(
     async (gen: AsyncGenerator<import('@core/engine').TurnEvent>) => {
       setBusy(true);
@@ -96,6 +163,7 @@ export function useGame(initial: Adventure, app: AppSettings) {
               break;
             case 'context':
               promptRef.current = evt.prompt;
+              lastPreparedRef.current = { prompt: evt.prompt, stop: evt.stop };
               setContext({ result: evt.result, prompt: evt.prompt });
               break;
             case 'token':
@@ -125,38 +193,74 @@ export function useGame(initial: Adventure, app: AppSettings) {
         adv.actions = logRef.current.actions;
         bump();
         save();
-        if (ok) scheduleMaintenance();
+        if (ok) {
+          scheduleMaintenance();
+          void scheduleIdleWork();
+        }
       }
     },
-    [bump, save, scheduleMaintenance],
+    [bump, save, scheduleMaintenance, scheduleIdleWork],
   );
+
+  /** Any player action invalidates background work and any prefetched alternative for a different action. */
+  const beginAction = useCallback(() => {
+    cancelIdleWork();
+    setError(null);
+  }, [cancelIdleWork]);
 
   const submit = useCallback(
     (type: PlayerTurnType | 'continue', text: string) => {
       if (busy) return;
+      beginAction();
+      prefetchRef.current = null;
+      setPrefetchReady(false);
       abortRef.current = new AbortController();
       void drive(runTurn(advRef.current, logRef.current, { type, text }, deps, abortRef.current.signal));
     },
-    [busy, deps, drive],
+    [busy, deps, drive, beginAction],
   );
 
   const retry = useCallback(() => {
     if (busy) return;
+    beginAction();
+    const last = logRef.current.last;
+    const pre = prefetchRef.current;
+    if (pre && last && pre.actionId === last.id) {
+      // Instant retry: the alternative was generated in the background.
+      prefetchRef.current = null;
+      setPrefetchReady(false);
+      logRef.current.addVersion(last.id, pre.text);
+      if (pre.stats) logRef.current.patch(last.id, { stats: pre.stats });
+      advRef.current.actions = logRef.current.actions;
+      bump();
+      save();
+      void scheduleIdleWork();
+      return;
+    }
+    prefetchRef.current = null;
+    setPrefetchReady(false);
     abortRef.current = new AbortController();
     void drive(retryLast(advRef.current, logRef.current, deps, abortRef.current.signal));
-  }, [busy, deps, drive]);
+  }, [busy, deps, drive, beginAction, bump, save, scheduleIdleWork]);
 
   const cancel = useCallback(() => abortRef.current?.abort(), []);
 
   const mutate = useCallback(
     (fn: (log: ActionLog, adv: Adventure) => void) => {
       if (busy) return;
+      cancelIdleWork();
       fn(logRef.current, advRef.current);
+      // Editing the log makes any prefetched alternative stale unless it still targets the last action.
+      const last = logRef.current.last;
+      if (prefetchRef.current && (!last || prefetchRef.current.actionId !== last.id)) {
+        prefetchRef.current = null;
+        setPrefetchReady(false);
+      }
       advRef.current.actions = logRef.current.actions;
       bump();
       save();
     },
-    [busy, bump, save],
+    [busy, bump, save, cancelIdleWork],
   );
 
   const api = {
@@ -209,7 +313,7 @@ export function useGame(initial: Adventure, app: AppSettings) {
     },
   };
 
-  const state: GameState = { adventure: advRef.current, log: logRef.current, version, busy, streaming, context, error, notice };
+  const state: GameState = { adventure: advRef.current, log: logRef.current, version, busy, streaming, context, error, notice, prefetchReady, warm };
   return [state, api] as const;
 }
 

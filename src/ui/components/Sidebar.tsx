@@ -340,6 +340,14 @@ function GameplayTab({ adventure, api }: { adventure: Adventure; api: GameApi })
           <label title="History before cards/memories so the backend reuses its KV cache">Cache-stable layout</label>
           <button className="toggle" role="switch" aria-checked={s.context.cacheStableLayout} onClick={() => setContext({ cacheStableLayout: !s.context.cacheStableLayout })} />
         </div>
+        <div className="setting">
+          <label title="After each turn, prefill the next turn's stable prefix so the first token arrives faster">Warm cache between turns</label>
+          <button className="toggle" role="switch" aria-checked={s.context.cacheWarming ?? true} onClick={() => setContext({ cacheWarming: !(s.context.cacheWarming ?? true) })} />
+        </div>
+        <div className="setting">
+          <label title="Generate one retry alternative in the background on a second slot (needs -np 2 and spare VRAM)">Prefetch a retry</label>
+          <button className="toggle" role="switch" aria-checked={s.context.retryPrefetch ?? false} onClick={() => setContext({ retryPrefetch: !(s.context.retryPrefetch ?? false) })} />
+        </div>
       </Section>
       <Section title="Model settings">
         {num('Response length', 'responseLength', 10, 16, 2048)}

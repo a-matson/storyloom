@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ContextBuildResult, SectionKind } from '@core/contextBuilder';
+import type { CompletionStats } from '@providers/types';
 import { IconClose } from './Icons';
 
 const COLORS: Record<SectionKind, string> = {
@@ -28,11 +29,13 @@ const LABELS: Record<SectionKind, string> = {
 interface Props {
   result: ContextBuildResult;
   prompt: string;
+  /** Backend statistics for the last generation, when available. */
+  stats?: CompletionStats;
   onClose: () => void;
 }
 
 /** What was sent to the model: budget bar, per-section tokens, cards, memories, raw prompt. */
-export function ContextViewer({ result, prompt, onClose }: Props) {
+export function ContextViewer({ result, prompt, stats, onClose }: Props) {
   const [tab, setTab] = useState<'budget' | 'raw'>('budget');
   const total = result.budget.total || 1;
   return (
@@ -149,6 +152,22 @@ export function ContextViewer({ result, prompt, onClose }: Props) {
             </pre>
           )}
         </div>
+        {stats && (
+          <footer className="row mono muted" style={{ gap: 14, padding: '10px 24px', borderTop: '1px solid var(--border)', fontSize: 12 }}>
+            {stats.promptTokens !== undefined && (
+              <span>
+                prompt eval {stats.promptTokens.toLocaleString()} tok{stats.promptMs !== undefined ? ` · ${(stats.promptMs / 1000).toFixed(2)} s` : ''}
+              </span>
+            )}
+            {stats.generatedTokens !== undefined && (
+              <span>
+                generation {stats.generatedTokens} tok{stats.generationMs !== undefined ? ` · ${(stats.generationMs / 1000).toFixed(1)} s` : ''}
+              </span>
+            )}
+            {stats.promptTokens ? <span>cache hit {Math.round(((stats.cachedTokens ?? 0) / stats.promptTokens) * 100)}%</span> : null}
+            {stats.generatedTokens && stats.generationMs ? <span>{(stats.generatedTokens / (stats.generationMs / 1000)).toFixed(1)} tok/s</span> : null}
+          </footer>
+        )}
       </div>
     </>
   );
