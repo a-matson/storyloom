@@ -3,21 +3,25 @@ import type { AppSettings } from '@core/types';
 import { createBlankAdventure, QUICK_STARTS } from '@core/scenario';
 import type { AdventureSummary } from '@storage/types';
 import { storage } from '../services';
+import { importAdventureFromFile, pickFile } from '../transferUi';
 import { IconBook, IconSettings } from './Icons';
 
 interface Props {
   app: AppSettings;
   backendLabel: string;
   backendOk: boolean | null;
+  notice?: string | null;
+  onDismissNotice?: () => void;
   onOpen: (id: string) => void;
   onSettings: () => void;
 }
 
-/** Home: continue the last adventure, quick starts, the adventure grid. Scenarios arrive in milestone 5. */
-export function LibraryScreen({ app, backendLabel, backendOk, onOpen, onSettings }: Props) {
+/** Home: continue the last adventure, quick starts, the adventure grid, import. Scenarios arrive in milestone 5. */
+export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissNotice, onOpen, onSettings }: Props) {
   const [adventures, setAdventures] = useState<AdventureSummary[]>([]);
   const [custom, setCustom] = useState('');
   const [showCustom, setShowCustom] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = () => void storage.listAdventures().then(setAdventures);
   useEffect(refresh, []);
@@ -32,6 +36,18 @@ export function LibraryScreen({ app, backendLabel, backendOk, onOpen, onSettings
     if (!confirm('Delete this adventure? This cannot be undone.')) return;
     await storage.deleteAdventure(id);
     refresh();
+  };
+
+  const importFile = async () => {
+    const file = await pickFile('.json,.zip,application/json,application/zip');
+    if (!file) return;
+    try {
+      const adv = await importAdventureFromFile(file, app.defaults);
+      await storage.putAdventure(adv);
+      refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   };
 
   const latest = adventures[0];
@@ -106,6 +122,10 @@ export function LibraryScreen({ app, backendLabel, backendOk, onOpen, onSettings
           <div className="row" style={{ alignItems: 'baseline', gap: 12 }}>
             <h2 className="h">My adventures</h2>
             <span className="small muted">{adventures.length}</span>
+            <span className="grow" />
+            <button className="btn ghost" onClick={importFile} title="Storyloom JSON, or an AI Dungeon adventure export (JSON or zip)">
+              Import…
+            </button>
           </div>
           {adventures.length === 0 && <p className="muted small">Nothing here yet.</p>}
           <div className="grid-4">
@@ -139,6 +159,21 @@ export function LibraryScreen({ app, backendLabel, backendOk, onOpen, onSettings
           </p>
         </section>
       </div>
+      {(error || notice) && (
+        <div className={`toast ${error ? 'error' : ''}`} role="alert">
+          {error ?? notice}
+          <button
+            className="btn ghost"
+            style={{ height: 24, marginLeft: 8 }}
+            onClick={() => {
+              setError(null);
+              onDismissNotice?.();
+            }}
+          >
+            dismiss
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,7 +3,9 @@ import type { Adventure, StoryCard } from '@core/types';
 import { newId } from '@core/types';
 import { parseTriggers } from '@core/storyCards';
 import { MODEL_PRESETS } from '@core/modelPresets';
+import { exportStoryCardsJson, importStoryCardsJson } from '@storage/transfer';
 import { tokenizer } from '../services';
+import { downloadAdventureJson, downloadAdventureText, downloadText, pickFile } from '../transferUi';
 import type { GameApi } from '../hooks/useGame';
 import { IconChevron } from './Icons';
 
@@ -182,6 +184,16 @@ function CardsTab({ adventure, api }: { adventure: Adventure; api: GameApi }) {
 }
 
 function DetailsTab({ adventure, api }: { adventure: Adventure; api: GameApi }) {
+  const importCards = async () => {
+    const file = await pickFile('.json,application/json');
+    if (!file) return;
+    try {
+      const cards = importStoryCardsJson(await file.text());
+      api.setStoryCards([...adventure.storyCards, ...cards]);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    }
+  };
   return (
     <>
       <label className="col">
@@ -196,7 +208,42 @@ function DetailsTab({ adventure, api }: { adventure: Adventure; api: GameApi }) 
         <span className="label">Tags</span>
         <input className="field" value={adventure.tags.join(', ')} onChange={(e) => api.updateMeta({ tags: e.target.value.split(',').map((t) => t.trim()).filter(Boolean) })} />
       </label>
-      <p className="small muted">Export / import of adventures and story cards lives in the Library (milestone 2).</p>
+      <section className="section">
+        <header style={{ cursor: 'default' }}>
+          <span className="grow">Story cards</span>
+        </header>
+        <div className="content">
+          <div className="row">
+            <button className="btn" onClick={() => downloadText(`${adventure.title || 'cards'}.cards.json`, exportStoryCardsJson(adventure.storyCards))}>
+              Export cards
+            </button>
+            <button className="btn" onClick={importCards}>
+              Import cards
+            </button>
+          </div>
+          <p className="small muted" style={{ margin: 0 }}>
+            JSON array of {'{'}keys, entry, type, title{'}'} — the same shape AI Dungeon exports.
+          </p>
+        </div>
+      </section>
+      <section className="section">
+        <header style={{ cursor: 'default' }}>
+          <span className="grow">Download adventure</span>
+        </header>
+        <div className="content">
+          <div className="row">
+            <button className="btn" onClick={() => downloadAdventureJson(adventure)}>
+              JSON (full backup)
+            </button>
+            <button className="btn" onClick={() => downloadAdventureText(adventure)}>
+              Plain text
+            </button>
+          </div>
+          <p className="small muted" style={{ margin: 0 }}>
+            The JSON backup restores everything, including retries and settings; import it from the Library.
+          </p>
+        </div>
+      </section>
     </>
   );
 }
