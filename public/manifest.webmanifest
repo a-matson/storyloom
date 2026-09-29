@@ -1,0 +1,10 @@
+{
+  "name": "Storyloom",
+  "short_name": "Storyloom",
+  "description": "Local-first AI text adventure",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0C1017",
+  "theme_color": "#0C1017",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
