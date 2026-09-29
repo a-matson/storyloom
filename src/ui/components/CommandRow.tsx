@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import type { PlayerTurnType } from '@core/engine';
 import type { GameApi } from '../hooks/useGame';
 import { IconSend, IconStop } from './Icons';
@@ -95,7 +95,7 @@ export function CommandRow({ busy, canRetry, canErase, status, api, onSee }: Pro
           <label htmlFor="turn-input" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
             Take a turn
           </label>
-          <div className="turn-input" style={{ ['--mode-color' as string]: m.color }}>
+          <div className="turn-input" style={{ '--mode-color': m.color } as CSSProperties}>
             <span className="prefix" aria-hidden>
               {m.prefix}
             </span>
