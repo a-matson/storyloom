@@ -55,7 +55,7 @@ export function useGame(initial: Adventure, app: AppSettings) {
       const adv = advRef.current;
       adv.actions = logRef.current.actions;
       adv.updatedAt = Date.now();
-      void storage.putAdventure(adv);
+      storage.putAdventure(adv).catch((e: unknown) => setError(`Could not save: ${e instanceof Error ? e.message : String(e)}`));
     }, 300);
   }, []);
 
@@ -65,7 +65,8 @@ export function useGame(initial: Adventure, app: AppSettings) {
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
       const adv = advRef.current;
       adv.actions = logRef.current.actions;
-      void storage.putAdventure(adv);
+      // Unmounted: no UI left to show it in.
+      storage.putAdventure(adv).catch((e: unknown) => console.error('Could not save adventure on close:', e));
     },
     [],
   );

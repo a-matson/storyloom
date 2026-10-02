@@ -1,4 +1,3 @@
-export { MemoryStorage } from './memoryStorage';
-export { IndexedDbStorage, createStorage } from './indexedDbStorage';
+export { DexieStorage } from './dexie';
 export * from './transfer';
 export { ZipReader, type ZipEntry } from './zip';

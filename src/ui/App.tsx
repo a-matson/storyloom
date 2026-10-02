@@ -21,8 +21,13 @@ export function App() {
 
   useEffect(() => {
     void (async () => {
-      await storage.init();
-      const saved = await storage.getSettings();
+      let saved: AppSettings | undefined;
+      try {
+        await storage.init();
+        saved = await storage.getSettings();
+      } catch (e) {
+        setLoadError(`Storage problem — using default settings. ${e instanceof Error ? e.message : String(e)}`);
+      }
       const settings = saved ?? DEFAULT_APP_SETTINGS;
       setApp(settings);
       applyTheme(settings);
@@ -55,18 +60,25 @@ export function App() {
       return;
     }
     let cancelled = false;
-    void storage.getAdventure(route.id).then((adv) => {
-      if (cancelled) return;
-      if (!adv) {
-        setLoadError('That adventure no longer exists.');
+    void storage
+      .getAdventure(route.id)
+      .then((adv) => {
+        if (cancelled) return;
+        if (!adv) {
+          setLoadError('That adventure no longer exists.');
+          navigate({ name: 'library' }, true);
+          return;
+        }
+        if (!adv.settings.providerId || !app.providers.some((p) => p.id === adv.settings.providerId)) {
+          adv.settings = { ...app.defaults, ...adv.settings, providerId: app.defaultProviderId };
+        }
+        setAdventure(adv);
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        setLoadError(e instanceof Error ? e.message : String(e));
         navigate({ name: 'library' }, true);
-        return;
-      }
-      if (!adv.settings.providerId || !app.providers.some((p) => p.id === adv.settings.providerId)) {
-        adv.settings = { ...app.defaults, ...adv.settings, providerId: app.defaultProviderId };
-      }
-      setAdventure(adv);
-    });
+      });
     return () => {
       cancelled = true;
     };
