@@ -27,6 +27,7 @@ function setup(opts: { failSave?: boolean; prefetch?: boolean; warm?: boolean } 
     scripts: new NoopScriptRunner(),
     storage,
     idle: () => undefined,
+    frame: (fn) => setTimeout(fn, 0),
     saveDelayMs: 0,
   });
   const snapshots: GameSnapshot[] = [];
@@ -53,6 +54,16 @@ describe('GameSession', () => {
     expect(snap.actions.map((a) => a.type)).toEqual(['start', 'do', 'continue']);
     expect(snap.context?.prompt).toContain('open the gate');
     expect(saved.at(-1)?.actions).toHaveLength(3);
+  });
+
+  it('publishes streamed tokens at most once per frame', async () => {
+    const { session, snapshots } = setup();
+    session.submit('do', 'open the gate');
+    await settled(session);
+    const streamed = snapshots.map((s) => s.streaming).filter((t, i, all) => t !== '' && t !== all[i - 1]);
+    const words = session.getSnapshot().actions.at(-1)?.versions[0]?.split(' ').length ?? 0;
+    expect(streamed.length).toBeGreaterThan(0);
+    expect(streamed.length).toBeLessThan(words);
   });
 
   it('publishes new identities only for what changed', async () => {

@@ -26,6 +26,8 @@ export class GameSession {
   private prefetched: Prefetched | null = null;
   private lastPrompt = '';
   private lastPrepared: { prompt: string; stop: string[] } | null = null;
+  /** Tokens not yet published; flushed once per frame. */
+  private pending = '';
 
   constructor(adventure: Adventure, app: AppSettings, services: SessionServices) {
     this.adv = adventure;
@@ -90,6 +92,7 @@ export class GameSession {
     try {
       for await (const evt of gen) ok = this.onEvent(evt) || ok;
     } finally {
+      this.pending = '';
       this.emit({ busy: false, streaming: '' });
       this.save();
       if (ok) this.afterTurn();
@@ -108,7 +111,9 @@ export class GameSession {
         this.emit({ context: { result: evt.result, prompt: evt.prompt } });
         break;
       case 'token':
-        this.emit({ streaming: this.snapshot.streaming + evt.text });
+        // Fast backends stream faster than the screen refreshes; one render per frame is enough.
+        this.pending += evt.text;
+        if (this.pending === evt.text) this.svc.frame(() => this.flushTokens());
         break;
       case 'done':
         // Calibrate the heuristic tokenizer against the backend's real count (needs a non-trivial prompt).
@@ -125,6 +130,13 @@ export class GameSession {
         break;
     }
     return evt.type === 'done';
+  }
+
+  private flushTokens(): void {
+    if (!this.pending) return;
+    const streaming = this.snapshot.streaming + this.pending;
+    this.pending = '';
+    this.emit({ streaming });
   }
 
   private afterTurn(): void {

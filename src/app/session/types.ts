@@ -28,6 +28,8 @@ export interface SessionServices {
   storage: Storage;
   /** Run background work when the browser is idle. */
   idle: (fn: () => void) => void;
+  /** Run before the next paint. */
+  frame: (fn: () => void) => void;
   saveDelayMs: number;
 }
 
