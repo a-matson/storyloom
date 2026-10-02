@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createAdventureFromScenario, creatorChoices, newScenario, type Scenario, type StoryCard } from '@core/model';
 import { openingRequest, writeOpening } from '@core/cards/opening';
 import type { CompletionRequest, Provider } from '@core/ports/provider';
+import { surprisePrompt } from '@core/text/prompts';
+import { DEFAULT_APP_SETTINGS, providerFor, storage } from '@app/services';
+import { surpriseAdventure } from '@app/scenarios';
 
 const card = (id: string, type: string, entry: string, selectable?: boolean): StoryCard => ({
   id,
@@ -97,5 +100,37 @@ describe('character creator', () => {
     const req = { brief: 'A ferry.', picks: [] };
     await expect(writeOpening(req, { provider: p, template: 'chatml' })).rejects.toThrow('empty opening');
     expect(p.last?.prompt).toContain('<|im_start|>system\nYou are the narrator of an interactive story.');
+  });
+});
+
+describe('surprise me', () => {
+  const app = { ...DEFAULT_APP_SETTINGS, providers: [{ id: 'demo', kind: 'demo' as const, name: 'Demo', baseUrl: 'demo' }], defaultProviderId: 'demo' };
+  afterEach(() => vi.restoreAllMocks());
+
+  const reply = (text: string) => {
+    const p = recorder(text);
+    vi.spyOn(providerFor(app, 'demo'), 'complete').mockImplementation((req) => p.complete(req));
+    return p;
+  };
+
+  it('asks for a short second-person opening in the genre', () => {
+    expect(surprisePrompt('mystery')).toMatch(/new mystery interactive story.*second person, present tense/s);
+  });
+
+  it('stores a blank adventure titled by a random Quick Start genre, opening with the model text', async () => {
+    const p = reply(' The bell rings twice. ');
+    const put = vi.spyOn(storage, 'putAdventure').mockResolvedValue();
+    const adv = await surpriseAdventure(app, () => 0.3);
+    expect(adv.title).toBe('Mystery');
+    expect(adv.actions.map((a) => a.versions[0])).toEqual(['The bell rings twice.']);
+    expect(put).toHaveBeenCalledWith(adv);
+    expect(p.last?.prompt).toContain('new mystery interactive story');
+  });
+
+  it('stores nothing when the model returns nothing', async () => {
+    reply('  ');
+    const put = vi.spyOn(storage, 'putAdventure').mockResolvedValue();
+    await expect(surpriseAdventure(app, () => 0)).rejects.toThrow('empty opening');
+    expect(put).not.toHaveBeenCalled();
   });
 });

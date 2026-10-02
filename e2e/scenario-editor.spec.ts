@@ -45,7 +45,7 @@ test('create, edit, save and reopen a scenario', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Edit story card Ferryman' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Back to library' }).click();
-  await page.getByRole('button', { name: 'Night Ferry' }).click();
+  await page.getByRole('button', { name: 'Night Ferry', exact: true }).click();
   await expect(page).toHaveURL(/#\/scenario\//);
 });
 

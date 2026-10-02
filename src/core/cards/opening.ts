@@ -11,6 +11,8 @@ export interface OpeningRequest {
   plotEssentials?: string | undefined;
   /** Scenario AI Instructions; the system prompt when set. */
   aiInstructions?: string | undefined;
+  /** Replaces the prompt built from brief and picks ("Surprise me"). */
+  prompt?: string | undefined;
 }
 
 /** The opening request for a Character Creator adventure just made by `createAdventureFromScenario`. */
@@ -26,7 +28,7 @@ export function openingRequest(s: Scenario, adv: Adventure): OpeningRequest {
 
 /** AI-written first action (Character Creator, later "Surprise me"). Runs on slot 1, uncached. */
 export async function writeOpening(req: OpeningRequest, deps: { provider: Provider; template: TemplateId; signal?: AbortSignal }): Promise<string> {
-  const rendered = renderTemplate(deps.template, req.aiInstructions?.trim() || OPENING_SYSTEM, openingPrompt(req));
+  const rendered = renderTemplate(deps.template, req.aiInstructions?.trim() || OPENING_SYSTEM, req.prompt ?? openingPrompt(req));
   const { text } = await collect(
     deps.provider.complete(
       {

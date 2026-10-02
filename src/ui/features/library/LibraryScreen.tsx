@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { AppSettings } from '@core/model';
 import { createBlankAdventure } from '@core/model';
@@ -10,7 +10,9 @@ import { LibraryHeader } from './LibraryHeader';
 import { ContinueHero } from './ContinueHero';
 import { QuickStart } from './QuickStart';
 import { AdventureGrid } from './AdventureGrid';
-import { ScenarioList } from './ScenarioList';
+
+// Below the fold and over the start-up budget when eager.
+const ScenarioGrid = lazy(async () => ({ default: (await import('./ScenarioGrid')).ScenarioGrid }));
 
 interface Props {
   app: AppSettings;
@@ -18,7 +20,8 @@ interface Props {
   backendOk: boolean | null;
   notice?: string | null;
   onDismissNotice?: () => void;
-  onOpen: (id: string) => void;
+  /** `warning`: the adventure started with a fallback (see `startScenario`). */
+  onOpen: (id: string, warning?: string) => void;
   onEditScenario: (id: string) => void;
   onSettings: () => void;
 }
@@ -44,6 +47,15 @@ export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissN
     );
   };
 
+  const surprise = async () => {
+    try {
+      const { surpriseAdventure } = await import('@app/scenarios');
+      onOpen((await surpriseAdventure(app)).id);
+    } catch (e) {
+      setError(message(e));
+    }
+  };
+
   const importFile = async () => {
     const file = await pickFile('.json,.zip,application/json,application/zip');
     if (!file) return;
@@ -63,7 +75,7 @@ export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissN
       <div className="flex grow flex-col gap-7 overflow-y-auto px-8 py-7 max-sm:p-4">
         <div className="flex items-stretch gap-5">
           <ContinueHero latest={adventures[0]} backendOk={backendOk} onOpen={onOpen} />
-          <QuickStart onStart={start} />
+          <QuickStart onStart={start} onSurprise={backendOk === false ? undefined : surprise} />
         </div>
         <section className="flex flex-col gap-3.5">
           <div className="flex items-baseline gap-3">
@@ -76,7 +88,9 @@ export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissN
           </div>
           <AdventureGrid adventures={adventures} onOpen={onOpen} onDelete={(id) => void remove(id).catch((e: unknown) => setError(message(e)))} />
         </section>
-        <ScenarioList onEdit={onEditScenario} onError={setError} />
+        <Suspense fallback={null}>
+          <ScenarioGrid app={app} onEdit={onEditScenario} onPlay={onOpen} onError={setError} />
+        </Suspense>
       </div>
       {shown !== null && (
         <Toast

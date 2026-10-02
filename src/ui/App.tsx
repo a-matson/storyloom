@@ -58,7 +58,10 @@ export function App() {
             backendOk={backend.ok}
             notice={loadError}
             onDismissNotice={() => setLoadError(null)}
-            onOpen={(id) => navigate({ name: 'adventure', id })}
+            onOpen={(id, w) => {
+              setWarning(w ?? null);
+              navigate({ name: 'adventure', id });
+            }}
             onEditScenario={(id) => navigate({ name: 'scenario', id, path: [] })}
             onSettings={() => navigate({ name: 'settings' })}
           />
