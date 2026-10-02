@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ContextBuildResult } from '@core/context';
 import type { CompletionStats } from '@core/ports';
 import { Drawer, DrawerBody, DrawerHeader, Segmented } from '@ui/components/ui/drawer';
+import { TopBarTitle } from '@ui/components/ui/top-bar';
 import { BudgetView } from './BudgetView';
 import { StatsFooter } from './StatsFooter';
 
@@ -23,7 +24,7 @@ export function ContextViewer({ result, prompt, stats, onClose }: Props) {
   const [view, setView] = useState<'budget' | 'raw'>('budget');
   const title = (
     <div className="flex flex-col gap-0.5">
-      <div>Context sent to the model</div>
+      <TopBarTitle>Context sent to the model</TopBarTitle>
       <div className="text-caption text-muted-foreground">
         <span className="font-mono text-caption">
           {result.budget.used.toLocaleString()} / {result.budget.total.toLocaleString()} tokens

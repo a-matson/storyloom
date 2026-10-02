@@ -4,6 +4,7 @@ import type { CardGeneratorSettings } from '@core/cards';
 import type { Provider } from '@core/ports';
 import { Button } from '@ui/components/ui/button';
 import { Drawer, DrawerBody, DrawerHeader, Segmented } from '@ui/components/ui/drawer';
+import { TopBarTitle } from '@ui/components/ui/top-bar';
 import { CardDetails } from './CardDetails';
 import { GeneratorSettings } from './GeneratorSettings';
 import { useCardDraft } from './useCardDraft';
@@ -32,7 +33,7 @@ export function CardDialog({ adventure, provider, card, onSave, onSettings, onCl
   const next = draft.settings.speedCreate && !card ? 'new' : 'close';
   return (
     <Drawer label={title} onClose={onClose} className="w-[min(640px,100vw)]">
-      <DrawerHeader title={<div>{title}</div>} onClose={onClose}>
+      <DrawerHeader title={<TopBarTitle>{title}</TopBarTitle>} onClose={onClose}>
         <Segmented value={view} options={[...VIEWS]} onChange={setView} />
       </DrawerHeader>
       <DrawerBody>{view === 'details' ? <CardDetails draft={draft} /> : <GeneratorSettings settings={draft.settings} onChange={onSettings} />}</DrawerBody>
