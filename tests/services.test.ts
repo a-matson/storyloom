@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_APP_SETTINGS, embedderFor, openSession, providerFor } from '@app/services';
 import { createBlankAdventure, type AppSettings } from '@core/model';
 import type { Provider } from '@core/ports';
@@ -25,6 +25,19 @@ describe('services', () => {
     const e = await embedderFor(providerFor(demoApp, 'demo'));
     expect(e.id).toBe('hash-bow');
     expect(await embedderFor(providerFor(demoApp, 'demo'))).toBe(e);
+  });
+
+  it('uses the in-browser model when it loads and the backend has none', async () => {
+    class ReadyWorker extends EventTarget {
+      postMessage(): void {
+        queueMicrotask(() => this.dispatchEvent(new MessageEvent('message', { data: { type: 'ready' } })));
+      }
+      terminate(): void {}
+    }
+    vi.stubGlobal('Worker', ReadyWorker);
+    const p = { id: 'no-emb', capabilities: () => Promise.resolve({ embeddings: false }) } as unknown as Provider;
+    expect((await embedderFor(p)).id).toBe('tjs-bge-small-en-v1.5');
+    vi.unstubAllGlobals();
   });
 
   it('uses server embeddings when offered', async () => {

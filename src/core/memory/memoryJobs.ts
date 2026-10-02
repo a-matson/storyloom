@@ -29,6 +29,23 @@ export interface MaintenanceReport {
   summaryUpdated: boolean;
 }
 
+/** Memories re-embedded per idle run after an embedder change. [provisional] */
+const REEMBED_BATCH = 32;
+
+/** Bring vectors from a previous embedder (other length, or none) in line with the current one. */
+async function reembed(adventure: Adventure, deps: MaintenanceDeps): Promise<void> {
+  const dims = deps.embedder.dimensions;
+  if (!dims || deps.signal?.aborted) return; // unknown until the embedder's first result
+  const batch = adventure.memories.filter((m) => !m.stale && m.embedding?.length !== dims).slice(0, REEMBED_BATCH);
+  if (!batch.length) return;
+  const vectors = await deps.embedder.embed(batch.map((m) => m.text));
+  const byId = new Map(batch.map((m, i) => [m.id, vectors[i]]));
+  adventure.memories = adventure.memories.map((m) => {
+    const embedding = byId.get(m.id);
+    return embedding ? { ...m, embedding } : m;
+  });
+}
+
 export async function runMemoryMaintenance(adventure: Adventure, deps: MaintenanceDeps): Promise<MaintenanceReport> {
   const report: MaintenanceReport = { memoriesWritten: 0, memoriesForgotten: 0, summaryUpdated: false };
   const settings = adventure.settings.memory;
@@ -55,6 +72,7 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
       adventure.memories = [...adventure.memories, createMemory(memoryText, actions, range, embedding)];
       report.memoriesWritten += 1;
     }
+    await reembed(adventure, deps);
     const { kept, forgotten } = evictToSize(adventure.memories, settings.bankSize);
     adventure.memories = kept;
     report.memoriesForgotten = forgotten.length;

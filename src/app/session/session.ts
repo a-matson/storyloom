@@ -1,6 +1,7 @@
 import { ActionLog } from '@core/log';
 import { markStale, runMemoryMaintenance } from '@core/memory';
 import type { Adventure, AdventureSettings, AppSettings, PlotComponents, TurnTrace } from '@core/model';
+import type { Embedder } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
 import { runIdleWork } from './idleWork';
 import type { GameSnapshot, Prefetched, SessionServices } from './types';
@@ -28,6 +29,8 @@ export class GameSession {
   private lastPrepared: PreparedContext | null = null;
   /** Tokens not yet published; flushed once per frame. */
   private pending = '';
+  /** The story provider's embedder; queries and memories must share it so vectors compare. */
+  private embedder: Embedder | undefined;
 
   constructor(adventure: Adventure, app: AppSettings, services: SessionServices) {
     this.adv = adventure;
@@ -35,6 +38,8 @@ export class GameSession {
     this.app = app;
     this.svc = services;
     this.snapshot = this.build({ busy: false, streaming: '', context: null, error: null, notice: null, prefetchReady: false, warm: 'idle' });
+    // Until it resolves, turns rank memories by recency only.
+    this.resolveEmbedder().catch((e: unknown) => console.warn('no embedder; memories rank by recency', e));
   }
 
   // ---- store ---------------------------------------------------------------
@@ -58,7 +63,13 @@ export class GameSession {
   }
 
   private deps(): TurnDeps {
-    return { provider: this.svc.providerFor(this.app, this.adv.settings.providerId), tokenizer: this.svc.tokenizer, scripts: this.svc.scripts };
+    const provider = this.svc.providerFor(this.app, this.adv.settings.providerId);
+    return { provider, tokenizer: this.svc.tokenizer, scripts: this.svc.scripts, ...(this.embedder && { embedder: this.embedder }) };
+  }
+
+  private async resolveEmbedder(): Promise<Embedder> {
+    this.embedder = await this.svc.embedderFor(this.svc.providerFor(this.app, this.adv.settings.providerId));
+    return this.embedder;
   }
 
   // ---- persistence ------------------------------------------------------------
@@ -168,7 +179,7 @@ export class GameSession {
     const utility = this.app.providers.find((p) => p.role === 'utility');
     const provider = this.svc.providerFor(this.app, utility?.id ?? this.adv.settings.providerId);
     try {
-      const report = await runMemoryMaintenance(this.adv, { provider, embedder: await this.svc.embedderFor(provider), template: this.adv.settings.template });
+      const report = await runMemoryMaintenance(this.adv, { provider, embedder: await this.resolveEmbedder(), template: this.adv.settings.template });
       if (report.memoriesWritten || report.summaryUpdated) {
         this.emit();
         this.save();

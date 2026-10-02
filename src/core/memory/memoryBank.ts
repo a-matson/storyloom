@@ -84,7 +84,8 @@ export function rankMemories(memories: Memory[], query: number[] | undefined, li
   const ranked: RankedMemory[] = [];
   for (const m of memories) {
     if (m.stale) continue;
-    const score = query && m.embedding ? cosine(m.embedding, query) : 0;
+    // Vectors from another embedder (other length) are not comparable; they rank by recency until re-embedded.
+    const score = query && m.embedding?.length === query.length ? cosine(m.embedding, query) : 0;
     ranked.push({ memory: m, score });
   }
   ranked.sort((a, b) => b.score - a.score || b.memory.createdAt - a.memory.createdAt);

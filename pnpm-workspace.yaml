@@ -1,2 +1,4 @@
 allowBuilds:
   lefthook: true
+  onnxruntime-node: false
+  protobufjs: false
