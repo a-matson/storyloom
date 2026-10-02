@@ -21,7 +21,8 @@ export const LlamaCompletionEvent = z.object({
   tokens_predicted: num,
   tokens_evaluated: num,
   tokens_cached: num,
-  timings: z.optional(z.object({ prompt_ms: num, predicted_ms: num, prompt_n: num, predicted_n: num })),
+  // `tokens_cached` is the whole slot cache after the request, not the reused prefix; `cache_n` is.
+  timings: z.optional(z.object({ prompt_ms: num, predicted_ms: num, prompt_n: num, predicted_n: num, cache_n: num })),
 });
 export type LlamaCompletionEvent = z.output<typeof LlamaCompletionEvent>;
 

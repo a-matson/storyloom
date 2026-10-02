@@ -173,9 +173,12 @@ export class LlamaServerProvider implements Provider {
 }
 
 function statsOf(e: z.output<typeof LlamaCompletionEvent>) {
+  const t = e.timings;
+  // `prompt_n` counts only newly evaluated tokens; the full prompt is reused + evaluated.
+  const total = t?.cache_n !== undefined && t.prompt_n !== undefined ? t.cache_n + t.prompt_n : e.tokens_evaluated;
   return {
-    promptTokens: e.timings?.prompt_n ?? e.tokens_evaluated,
-    cachedTokens: e.tokens_cached,
+    promptTokens: total,
+    cachedTokens: t?.cache_n,
     generatedTokens: e.timings?.predicted_n ?? e.tokens_predicted,
     promptMs: e.timings?.prompt_ms,
     generationMs: e.timings?.predicted_ms,
