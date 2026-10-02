@@ -3,7 +3,8 @@ import { applyPlaceholders, findPlaceholders } from '@core/text/placeholders';
 import { formatPlayerInput, trimUnfinishedSentence } from '@core/text/formatting';
 import { guessTemplate, renderTemplate } from '@core/text/templates';
 import { createApproxTokenizer, trimToTokens } from '@core/text/tokenizer';
-import { createAdventureFromScenario, placeholderQuestions } from '@core/model/scenario';
+import { createAdventureFromScenario, newScenario, placeholderQuestions } from '@core/model/scenario';
+import * as S from '@core/schema';
 import type { Scenario } from '@core/model/types';
 
 describe('placeholders', () => {
@@ -35,6 +36,16 @@ describe('placeholders', () => {
     expect(a.actions[0]!.versions[0]).toBe('You are Peach the bard.');
     expect(a.plot.plotEssentials).toBe('Peach is brave.');
     expect(a.storyCards[0]!.triggers).toEqual(['Peach']);
+  });
+});
+
+describe('newScenario', () => {
+  it('is a valid blank story scenario without placeholders', () => {
+    const s = newScenario();
+    expect(S.Scenario.safeParse(s).success).toBe(true);
+    expect(s.type).toBe('story');
+    expect(placeholderQuestions(s)).toEqual([]);
+    expect(s.plot.aiInstructions).toMatch(/narrator/);
   });
 });
 

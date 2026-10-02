@@ -60,25 +60,31 @@ export function createAdventureFromScenario(
   };
 }
 
-/** A blank adventure from a free-text opening (Quick Start / "Surprise me"). */
-export function createBlankAdventure(title: string, opening: string, settings: AdventureSettings = DEFAULT_ADVENTURE_SETTINGS): Adventure {
-  const scenario: Scenario = {
+/** Default system prompt for blank stories and new scenarios. [provisional] */
+export const DEFAULT_AI_INSTRUCTIONS =
+  'You are the narrator of an interactive story. Write in second person, present tense. Describe what the player sees, hears and feels. ' +
+  'Keep scenes moving. Never decide what the player does or says.';
+
+/** An empty story scenario, ready for the editor. */
+export function newScenario(title = '', prompt = ''): Scenario {
+  const now = Date.now();
+  return {
     id: newId('scn_'),
     title,
     description: '',
     tags: [],
     type: 'story',
-    prompt: opening,
-    plot: {
-      aiInstructions:
-        'You are the narrator of an interactive story. Write in second person, present tense. Describe what the player sees, hears and feels. ' +
-        'Keep scenes moving. Never decide what the player does or says.',
-    },
+    prompt,
+    plot: { aiInstructions: DEFAULT_AI_INSTRUCTIONS },
     storyCards: [],
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
+    createdAt: now,
+    updatedAt: now,
   };
-  const adv = createAdventureFromScenario(scenario, {}, settings);
+}
+
+/** A blank adventure from a free-text opening (Quick Start / "Surprise me"). */
+export function createBlankAdventure(title: string, opening: string, settings: AdventureSettings = DEFAULT_ADVENTURE_SETTINGS): Adventure {
+  const adv = createAdventureFromScenario(newScenario(title, opening), {}, settings);
   delete adv.scenarioId;
   return adv;
 }

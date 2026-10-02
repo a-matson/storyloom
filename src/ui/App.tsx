@@ -8,6 +8,7 @@ import { LibraryScreen } from './features/library/LibraryScreen';
 
 // Only the library is on the start-up path; the other screens load on first visit.
 const GameScreen = lazy(async () => ({ default: (await import('./features/game/GameScreen')).GameScreen }));
+const ScenarioEditor = lazy(async () => ({ default: (await import('./features/scenario/ScenarioEditor')).ScenarioEditor }));
 const SetupScreen = lazy(async () => ({ default: (await import('./features/setup/SetupScreen')).SetupScreen }));
 
 /** Shell: loads settings, then renders the screen for the hash route (see router.ts). */
@@ -30,6 +31,8 @@ export function App() {
       case 'adventure':
         if (!adventure) return <div className="h-full" />;
         return <GameScreen key={adventure.id} adventure={adventure} app={app} backendLabel={backend.label} onExit={() => navigate({ name: 'library' })} />;
+      case 'scenario':
+        return <ScenarioEditor key={route.id} id={route.id} onExit={() => navigate({ name: 'library' })} />;
       case 'library':
       default:
         return (
@@ -40,6 +43,7 @@ export function App() {
             notice={loadError}
             onDismissNotice={() => setLoadError(null)}
             onOpen={(id) => navigate({ name: 'adventure', id })}
+            onEditScenario={(id) => navigate({ name: 'scenario', id, path: [] })}
             onSettings={() => navigate({ name: 'settings' })}
           />
         );
