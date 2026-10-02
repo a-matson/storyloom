@@ -128,6 +128,8 @@ export class GameSession {
       case 'error':
         this.emit({ error: evt.message });
         break;
+      case 'trace':
+        break; // not stored yet
     }
     return evt.type === 'done';
   }

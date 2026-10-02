@@ -1,5 +1,5 @@
 import type { ContextBuildResult } from '../context';
-import type { Action } from '../model/types';
+import type { Action, TurnTrace } from '../model/types';
 import type { Embedder } from '../ports/embedder';
 import type { CompletionStats, Provider } from '../ports/provider';
 import type { ScriptRunner } from '../ports/scripting';
@@ -14,14 +14,17 @@ export interface TurnDeps {
   embedder?: Embedder;
 }
 
+/** Events that belong to one turn carry its `turnId`; tokens and messages are tied to it by order. */
 export type TurnEvent =
-  | { type: 'player'; action: Action }
-  | { type: 'context'; result: ContextBuildResult; prompt: string; stop: string[] }
+  | { type: 'player'; turnId: string; action: Action }
+  | { type: 'context'; turnId: string; result: ContextBuildResult; prompt: string; stop: string[] }
   | { type: 'token'; text: string }
-  | { type: 'done'; action: Action; text: string; stats?: CompletionStats | undefined }
-  | { type: 'stopped'; reason: string }
+  | { type: 'done'; turnId: string; action: Action; text: string; stats?: CompletionStats | undefined }
+  | { type: 'stopped'; turnId: string; reason: string }
   | { type: 'message'; text: string }
-  | { type: 'error'; message: string };
+  | { type: 'error'; turnId: string; message: string }
+  /** Last event of a turn that got as far as a prompt. */
+  | { type: 'trace'; trace: TurnTrace };
 
 export interface PreparedContext {
   result: ContextBuildResult;
@@ -32,4 +35,6 @@ export interface PreparedContext {
 export interface Generated {
   text: string;
   stats?: CompletionStats | undefined;
+  /** Milliseconds to the first streamed token. */
+  ttftMs?: number | undefined;
 }

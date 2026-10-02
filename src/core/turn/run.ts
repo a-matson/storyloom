@@ -1,66 +1,21 @@
 import type { ActionLog } from '../log/actionLog';
 import type { Adventure } from '../model/types';
-import type { CompletionStats } from '../ports/provider';
-import { formatPlayerInput, joinStory, trimUnfinishedSentence } from '../text/formatting';
+import { formatPlayerInput, joinStory } from '../text/formatting';
+import { buildRequest, generate, randomSeed } from './generate';
 import { runHook } from './hooks';
 import { prepareContext } from './prepare';
+import { startRun, traced, type TurnRun } from './traced';
 import type { Generated, PlayerTurnType, PreparedContext, TurnDeps, TurnEvent } from './types';
 
-export function randomSeed(): number {
-  return Math.floor(Math.random() * 2 ** 31);
-}
+export { randomSeed };
 
-/** Stream a completion for `prepared`, then pass it through the onOutput hook. */
-async function* generate(
-  adventure: Adventure,
-  prepared: Pick<PreparedContext, 'prompt' | 'stop'>,
-  deps: TurnDeps,
-  signal?: AbortSignal,
-  opts: { slotId?: number; seed?: number } = {},
-): AsyncGenerator<TurnEvent, Generated> {
-  const s = adventure.settings.model;
-  let text = '';
-  let stats: CompletionStats | undefined;
-  const stream = deps.provider.complete(
-    {
-      prompt: prepared.prompt,
-      maxTokens: s.responseLength,
-      temperature: s.temperature,
-      topK: s.topK,
-      topP: s.topP,
-      minP: s.minP,
-      presencePenalty: s.presencePenalty,
-      frequencyPenalty: s.frequencyPenalty,
-      repetitionPenalty: s.repetitionPenalty,
-      seed: opts.seed ?? s.seed,
-      stop: [...prepared.stop, '\n> '],
-      cachePrompt: true,
-      slotId: opts.slotId ?? 0,
-    },
-    signal,
-  );
-  for await (const chunk of stream) {
-    if (chunk.text) {
-      text += chunk.text;
-      yield { type: 'token', text: chunk.text };
-    }
-    if (chunk.done) stats = chunk.stats;
-  }
-  const raw = adventure.settings.context.rawOutput ? text : trimUnfinishedSentence(text);
-  const hook = await runHook(adventure, deps, 'onOutput', raw, adventure.actions, { info: { characterNames: [], actionCount: adventure.actions.length } });
-  if (hook.error) return { text: raw, stats };
-  if (hook.state.message) yield { type: 'message', text: hook.state.message };
-  return { text: hook.text ?? raw, stats };
-}
-
-/** Errors become events; an abort becomes `stopped`. */
-async function* guarded(run: () => AsyncGenerator<TurnEvent>, signal?: AbortSignal): AsyncGenerator<TurnEvent> {
-  try {
-    yield* run();
-  } catch (e) {
-    if (signal?.aborted) yield { type: 'stopped', reason: 'cancelled' };
-    else yield { type: 'error', message: e instanceof Error ? e.message : String(e) };
-  }
+/** Build the request, stream it and note both on `run` so the trace has them even if the stream fails. */
+async function* generateFor(adventure: Adventure, run: TurnRun, prepared: PreparedContext, deps: TurnDeps, signal?: AbortSignal, seed?: number) {
+  run.prepared = prepared;
+  run.request = buildRequest(adventure, prepared, seed === undefined ? {} : { seed });
+  const generated = yield* generate(adventure, run.request, deps, signal);
+  run.generated = generated;
+  return generated;
 }
 
 /**
@@ -75,29 +30,38 @@ export function runTurn(
   deps: TurnDeps,
   signal?: AbortSignal,
 ): AsyncGenerator<TurnEvent> {
-  return guarded(async function* () {
-    if (input.type !== 'continue') {
-      const hook = await runHook(adventure, deps, 'onInput', input.text, log.actions, { info: { characterNames: [], actionCount: log.length } });
-      if (!hook.error && hook.stop) {
-        yield { type: 'stopped', reason: 'Unable to run scenario scripts' };
+  const run = startRun('turn');
+  const { turnId } = run;
+  return traced(
+    adventure,
+    deps,
+    run,
+    async function* () {
+      if (input.type !== 'continue') {
+        const hook = await runHook(adventure, deps, 'onInput', input.text, log.actions, { info: { characterNames: [], actionCount: log.length } });
+        if (!hook.error && hook.stop) {
+          yield { type: 'stopped', turnId, reason: 'Unable to run scenario scripts' };
+          return;
+        }
+        const text = hook.error ? input.text : (hook.text ?? input.text);
+        const action = log.append(input.type, formatPlayerInput(input.type, text, adventure.plot), { turnId });
+        adventure.actions = log.actions;
+        yield { type: 'player', turnId, action };
+      }
+      const prepared = await prepareContext(adventure, log.actions, deps);
+      if ('stopped' in prepared) {
+        yield { type: 'stopped', turnId, reason: prepared.stopped };
         return;
       }
-      const text = hook.error ? input.text : (hook.text ?? input.text);
-      const action = log.append(input.type, formatPlayerInput(input.type, text, adventure.plot));
+      yield { type: 'context', turnId, result: prepared.result, prompt: prepared.prompt, stop: prepared.stop };
+      const { text, stats } = yield* generateFor(adventure, run, prepared, deps, signal);
+      const action = log.append('continue', text, { turnId, ...(stats ? { stats } : {}) });
+      run.actionId = action.id;
       adventure.actions = log.actions;
-      yield { type: 'player', action };
-    }
-    const prepared = await prepareContext(adventure, log.actions, deps);
-    if ('stopped' in prepared) {
-      yield { type: 'stopped', reason: prepared.stopped };
-      return;
-    }
-    yield { type: 'context', result: prepared.result, prompt: prepared.prompt, stop: prepared.stop };
-    const { text, stats } = yield* generate(adventure, prepared, deps, signal);
-    const action = log.append('continue', text, stats ? { stats } : {});
-    adventure.actions = log.actions;
-    yield { type: 'done', action, text, stats };
-  }, signal);
+      yield { type: 'done', turnId, action, text, stats };
+    },
+    signal,
+  );
 }
 
 /**
@@ -105,24 +69,33 @@ export function runTurn(
  * log as it was before that output. Vary the seed so alternatives differ.
  */
 export function retryLast(adventure: Adventure, log: ActionLog, deps: TurnDeps, signal?: AbortSignal): AsyncGenerator<TurnEvent> {
-  return guarded(async function* () {
-    const last = log.last;
-    if (last?.type !== 'continue') {
-      yield { type: 'error', message: 'Nothing to retry: the last action is not an AI output.' };
-      return;
-    }
-    const prepared = await prepareContext(adventure, log.actions.slice(0, -1), deps);
-    if ('stopped' in prepared) {
-      yield { type: 'stopped', reason: prepared.stopped };
-      return;
-    }
-    yield { type: 'context', result: prepared.result, prompt: prepared.prompt, stop: prepared.stop };
-    const { text, stats } = yield* generate(adventure, prepared, deps, signal, { seed: randomSeed() });
-    const updated = log.addVersion(last.id, text);
-    if (!updated) throw new Error('The action being retried disappeared from the log.');
-    adventure.actions = log.actions;
-    yield { type: 'done', action: updated, text, stats };
-  }, signal);
+  const run = startRun('retry');
+  const { turnId } = run;
+  return traced(
+    adventure,
+    deps,
+    run,
+    async function* () {
+      const last = log.last;
+      if (last?.type !== 'continue') {
+        yield { type: 'error', turnId, message: 'Nothing to retry: the last action is not an AI output.' };
+        return;
+      }
+      run.actionId = last.id;
+      const prepared = await prepareContext(adventure, log.actions.slice(0, -1), deps);
+      if ('stopped' in prepared) {
+        yield { type: 'stopped', turnId, reason: prepared.stopped };
+        return;
+      }
+      yield { type: 'context', turnId, result: prepared.result, prompt: prepared.prompt, stop: prepared.stop };
+      const { text, stats } = yield* generateFor(adventure, run, prepared, deps, signal, randomSeed());
+      const updated = log.addVersion(last.id, text);
+      if (!updated) throw new Error('The action being retried disappeared from the log.');
+      adventure.actions = log.actions;
+      yield { type: 'done', turnId, action: updated, text, stats };
+    },
+    signal,
+  );
 }
 
 /**
@@ -138,7 +111,7 @@ export async function generateAlternative(
   signal?: AbortSignal,
   slotId = 1,
 ): Promise<Generated> {
-  const gen = generate(adventure, prepared, deps, signal, { slotId, seed: randomSeed() });
+  const gen = generate(adventure, buildRequest(adventure, prepared, { slotId, seed: randomSeed() }), deps, signal);
   let next = await gen.next();
   while (!next.done) next = await gen.next();
   return next.value;
