@@ -31,7 +31,7 @@
   --focus: 0 0 0 2px var(--bg-0), 0 0 0 4px var(--lantern);
 
   /* type */
-  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-display: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
   --font-ui: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
   --font-prose: var(--font-display);
