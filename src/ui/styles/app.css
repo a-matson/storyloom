@@ -1,0 +1,68 @@
+/* Tailwind with the "Lantern & Ink" tokens. Values live in theme.css (themes remap them at runtime);
+   the legacy layer sits below utilities so a utility always wins while classes migrate. */
+@layer theme, legacy, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import '../theme.css' layer(legacy);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+@theme inline {
+  /* Only design tokens: no stock palette. */
+  --color-*: initial;
+
+  /* shadcn names, so generated primitives work unchanged */
+  --color-background: var(--bg-0);
+  --color-foreground: var(--text);
+  --color-card: var(--bg-1);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--bg-1);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--lantern);
+  --color-primary-foreground: var(--lantern-ink);
+  --color-secondary: var(--bg-2);
+  --color-secondary-foreground: var(--text);
+  --color-muted: var(--bg-2);
+  --color-muted-foreground: var(--text-muted);
+  --color-accent: var(--bg-2);
+  --color-accent-foreground: var(--text);
+  --color-destructive: var(--danger);
+  --color-border: var(--border);
+  --color-input: var(--border);
+  --color-ring: var(--lantern);
+
+  /* Storyloom names */
+  --color-bar: var(--bg-bar);
+  --color-prose: var(--text-prose);
+  --color-neutral: var(--neutral);
+  --color-lantern: var(--lantern);
+  --color-lantern-soft: var(--lantern-soft);
+  --color-lantern-ink: var(--lantern-ink);
+  --color-verdigris: var(--verdigris);
+  --color-violet: var(--violet);
+  --color-rose: var(--rose);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-mode-do: var(--mode-do);
+  --color-mode-do-bg: var(--mode-do-bg);
+  --color-mode-say: var(--mode-say);
+  --color-mode-say-bg: var(--mode-say-bg);
+  --color-mode-story: var(--mode-story);
+  --color-mode-story-bg: var(--mode-story-bg);
+  --color-mode-see: var(--mode-see);
+  --color-mode-see-bg: var(--mode-see-bg);
+
+  --font-display: var(--font-display);
+  --font-sans: var(--font-ui);
+  --font-mono: var(--font-mono);
+  --font-prose: var(--font-prose);
+
+  --text-label: 11px;
+  --text-control: 13px;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --container-story: 760px;
+  --width-sidebar: 360px;
+}
