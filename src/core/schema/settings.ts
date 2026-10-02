@@ -26,9 +26,9 @@ export const MemorySettings = z.object({
 });
 
 export const ContextSettings = z.object({
-  /** History before lore: keeps a byte-stable prefix for the backend's KV cache. Off = AI Dungeon's order. */
+  /** History before lore: keeps a byte-stable prefix for the backend's KV cache. Off = AI Dungeon's order. [measured: 2026-10-02-gatev-layout.json] */
   cacheStableLayout: z._default(z.boolean(), true),
-  /** When trimming history, drop the oldest actions in blocks of this size. */
+  /** When trimming history, drop the oldest actions in blocks of this size. [measured: 2026-10-02-gatev-eviction.json] */
   evictionChunk: z._default(z.int().check(z.gt(0)), 8),
   /** Include the raw model output (no sentence trimming). */
   rawOutput: z._default(z.boolean(), false),
