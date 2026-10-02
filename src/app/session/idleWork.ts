@@ -1,5 +1,5 @@
 import type { Action, Adventure } from '@core/model';
-import { buildWarmupPrompt, generateAlternative, type TurnDeps } from '@core/turn';
+import { buildWarmupPrompt, generateAlternative, type PreparedContext, type TurnDeps } from '@core/turn';
 import type { Prefetched } from './types';
 
 interface IdleCallbacks {
@@ -14,7 +14,7 @@ interface IdleCallbacks {
 export async function runIdleWork(
   adventure: Adventure,
   actions: Action[],
-  lastPrepared: { prompt: string; stop: string[] } | null,
+  lastPrepared: PreparedContext | null,
   deps: TurnDeps,
   signal: AbortSignal,
   cb: IdleCallbacks,
@@ -29,8 +29,8 @@ export async function runIdleWork(
     jobs.push(
       (async () => {
         try {
-          const alt = await generateAlternative(adventure, lastPrepared, deps, signal, 1);
-          if (!signal.aborted && alt.text.trim()) cb.onPrefetched({ actionId: last.id, text: alt.text, stats: alt.stats });
+          const alt = await generateAlternative(adventure, lastPrepared, deps, last.id, signal, 1);
+          if (!signal.aborted && alt.text.trim()) cb.onPrefetched({ actionId: last.id, text: alt.text, stats: alt.stats, trace: alt.trace });
         } catch {
           // best-effort: Retry falls back to a normal generation
         }

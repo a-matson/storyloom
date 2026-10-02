@@ -5,7 +5,7 @@ import { ActionLog } from '@core/log';
 import { createBlankAdventure } from '@core/model';
 import { NoopScriptRunner, type CompletionRequest, type HookInput, type HookResult, type Provider } from '@core/ports';
 import { createApproxTokenizer } from '@core/text';
-import { retryLast, runTurn, type TurnDeps, type TurnEvent } from '@core/turn';
+import { generateAlternative, prepareContext, retryLast, runTurn, type TurnDeps, type TurnEvent } from '@core/turn';
 
 function setup(scripts?: TurnDeps['scripts']) {
   const handler = createFakeLlama({ wordDelayMs: 0 });
@@ -70,7 +70,7 @@ describe('retryLast', () => {
     const { adventure, log, deps } = setup();
     log.append('do', '> You wait.');
     const events = await collect(retryLast(adventure, log, deps));
-    expect(events).toEqual([{ type: 'error', message: 'Nothing to retry: the last action is not an AI output.', turnId: expect.any(String) }]);
+    expect(events).toEqual([{ type: 'error', kind: 'unknown', message: 'Nothing to retry: the last action is not an AI output.', turnId: expect.any(String) }]);
   });
 });
 
@@ -167,5 +167,23 @@ describe('turn traces', () => {
     }
     const { adventure, log, deps } = setup(new Stopper());
     expect(traces(await collect(runTurn(adventure, log, { type: 'do', text: 'x' }, deps)))).toEqual([]);
+  });
+
+  it('traces a prefetched alternative against the action it would re-roll', async () => {
+    const { adventure, log, deps } = setup();
+    const s = spy(deps.provider);
+    const d = { ...deps, provider: s.provider };
+    const turn = traces(await collect(runTurn(adventure, log, { type: 'do', text: 'wait' }, d)))[0];
+    const prepared = await prepareContext(adventure, log.actions.slice(0, -1), d);
+    if ('stopped' in prepared) throw new Error('context build stopped');
+    const alt = await generateAlternative(adventure, prepared, d, log.last?.id ?? '', undefined, 1);
+    expect(alt.trace.kind).toBe('retry');
+    expect(alt.trace.actionId).toBe(log.last?.id);
+    expect(alt.trace.outcome).toBe('done');
+    expect(alt.trace.turnId).not.toBe(turn?.turnId);
+    expect(alt.trace.sampler.seed).toBe(s.seen[1]?.seed);
+    expect(s.seen[1]?.slotId).toBe(1);
+    // The log is untouched until the player presses Retry.
+    expect(log.last?.versions).toHaveLength(1);
   });
 });

@@ -1,5 +1,5 @@
 import type { ContextBuildResult } from '@core/context';
-import type { Action, Adventure, AppSettings } from '@core/model';
+import type { Action, Adventure, AppSettings, TurnTrace } from '@core/model';
 import type { CompletionStats, Embedder, Provider, ScriptRunner, Storage } from '@core/ports';
 import type { CalibratedTokenizer } from '@core/text';
 
@@ -37,4 +37,6 @@ export interface Prefetched {
   actionId: string;
   text: string;
   stats?: CompletionStats | undefined;
+  /** Built at prefetch time; persisted only if the alternative is used. */
+  trace: TurnTrace;
 }
