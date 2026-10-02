@@ -148,7 +148,6 @@
         "src/adapters/providers/llamaServer.ts",
         "src/adapters/providers/openaiCompat.ts",
         "src/core/cards/cardGenerator.ts",
-        "src/core/context/contextBuilder.ts",
         "src/core/turn/engine.ts",
         "src/core/memory/memoryJobs.ts",
         "src/adapters/embeddings/embeddings.worker.ts"

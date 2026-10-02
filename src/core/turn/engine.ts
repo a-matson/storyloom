@@ -1,7 +1,7 @@
 import type { Action, Adventure, StoryCard } from '../model/types';
 import { actionText } from '../model/types';
 import { ActionLog } from '../log/actionLog';
-import { buildContext, type ContextBuildResult, renderBody } from '../context/contextBuilder';
+import { buildContext, type ContextBuildResult, renderBody } from '../context';
 import { formatPlayerInput, joinStory, trimUnfinishedSentence } from '../text/formatting';
 import { rankMemories, touchUsed, type RankedMemory } from '../memory/memoryBank';
 import { renderPrefix, renderTemplate } from '../text/templates';

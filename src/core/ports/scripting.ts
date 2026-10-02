@@ -1,5 +1,5 @@
 import type { Action, StoryCard } from '../model/types';
-import type { ContextSection } from '../context/contextBuilder';
+import type { ContextSection } from '../context/types';
 
 /**
  * Scripting API (AI Dungeon compatible).
