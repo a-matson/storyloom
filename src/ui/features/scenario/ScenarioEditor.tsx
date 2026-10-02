@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import type { AppSettings, Scenario } from '@core/model';
+import { placeholderQuestions, type AppSettings, type Scenario } from '@core/model';
 import { storage } from '@app/services';
+import { startScenario } from '@app/scenarios';
 import { Button } from '@ui/components/ui/button';
 import { Segmented } from '@ui/components/ui/drawer';
 import { Select } from '@ui/components/ui/field';
@@ -13,6 +14,7 @@ import { BasicsTab } from './BasicsTab';
 import { TechnicalTab } from './TechnicalTab';
 import { ScriptsTab } from './ScriptsTab';
 import { ScenarioRail } from './ScenarioRail';
+import { PrePlayDialog } from './PrePlayDialog';
 
 const TABS = [
   { id: 'basics', label: 'Basics' },
@@ -31,10 +33,11 @@ interface Props {
   id: string;
   app: AppSettings;
   onExit: () => void;
+  onPlay: (adventureId: string) => void;
 }
 
 /** Loads the scenario, then hands it to the editor; `key` resets the draft when the id changes. */
-export function ScenarioEditor({ id, app, onExit }: Props) {
+export function ScenarioEditor({ id, app, onExit, onPlay }: Props) {
   const saved = useLiveQuery(async () => (await storage.getScenario(id)) ?? null, [id]);
   if (saved === undefined) return <div className="h-full" />;
   if (saved === null)
@@ -44,14 +47,27 @@ export function ScenarioEditor({ id, app, onExit }: Props) {
         <Button onClick={onExit}>Back to library</Button>
       </div>
     );
-  return <Editor key={id} saved={saved} app={app} onExit={onExit} />;
+  return <Editor key={id} saved={saved} app={app} onExit={onExit} onPlay={onPlay} />;
 }
 
-function Editor({ saved, app, onExit }: { saved: Scenario; app: AppSettings; onExit: () => void }) {
+function Editor({ saved, app, onExit, onPlay }: Omit<Props, 'id'> & { saved: Scenario }) {
   const [error, setError] = useState<string | null>(null);
   const { draft, dirty, update, save } = useScenarioDraft(saved, setError);
   const [tab, setTab] = useState<Tab>('technical');
   const typeLabel = TYPES.find((t) => t.id === draft.type)?.label ?? draft.type;
+  const [asking, setAsking] = useState(false);
+  const begin = (answers: Record<string, string>) => {
+    startScenario(draft, answers, app).then(
+      (adv) => onPlay(adv.id),
+      (e: unknown) => setError(e instanceof Error ? e.message : String(e)),
+    );
+  };
+  // Saves first so the adventure's `scenarioId` points at what was played.
+  const playTest = async () => {
+    if (!(await save())) return;
+    if (placeholderQuestions(draft).length > 0) setAsking(true);
+    else begin({});
+  };
   const exit = () => {
     if (!dirty || confirm('Discard unsaved changes?')) onExit();
   };
@@ -80,7 +96,8 @@ function Editor({ saved, app, onExit }: { saved: Scenario; app: AppSettings; onE
             ))}
           </Select>
         </label>
-        <Button variant="primary" onClick={save} title="Ctrl/⌘+S">
+        <Button onClick={() => void playTest()}>Play test</Button>
+        <Button variant="primary" onClick={() => void save()} title="Ctrl/⌘+S">
           Save
         </Button>
       </TopBar>
@@ -92,6 +109,7 @@ function Editor({ saved, app, onExit }: { saved: Scenario; app: AppSettings; onE
         </main>
         {tab !== 'scripts' && <ScenarioRail draft={draft} update={update} app={app} />}
       </div>
+      {asking && <PrePlayDialog scenario={draft} onBegin={begin} onClose={() => setAsking(false)} />}
       {error !== null && <Toast message={error} error onDismiss={() => setError(null)} />}
     </div>
   );

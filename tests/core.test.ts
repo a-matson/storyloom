@@ -3,7 +3,7 @@ import { applyPlaceholders, findPlaceholders } from '@core/text/placeholders';
 import { formatPlayerInput, trimUnfinishedSentence } from '@core/text/formatting';
 import { guessTemplate, renderTemplate } from '@core/text/templates';
 import { createApproxTokenizer, trimToTokens } from '@core/text/tokenizer';
-import { createAdventureFromScenario, newScenario, placeholderQuestions } from '@core/model/scenario';
+import { createAdventureFromScenario, missingAnswers, newScenario, placeholderQuestions } from '@core/model/scenario';
 import * as S from '@core/schema';
 import type { Scenario } from '@core/model/types';
 
@@ -27,15 +27,28 @@ describe('placeholders', () => {
       type: 'story',
       prompt: 'You are ${character.name} the ${What is your class?}.',
       plot: { plotEssentials: '${character.name} is brave.' },
-      storyCards: [{ id: 'c', type: 'Character', name: 'Hero', entry: '${character.name} carries a lute.', triggers: ['${character.name}'] }],
+      storyCards: [
+        {
+          id: 'c',
+          type: 'Character',
+          name: 'Hero',
+          entry: '${character.name} carries a lute.',
+          triggers: ['${character.name}'],
+          notes: 'A ${What is your class?}.',
+        },
+      ],
       createdAt: 0,
       updatedAt: 0,
     };
     expect(placeholderQuestions(s).map((q) => q.key)).toEqual(['character.name', 'What is your class?']);
-    const a = createAdventureFromScenario(s, { 'character.name': 'Peach', 'What is your class?': 'bard' });
+    expect(missingAnswers(placeholderQuestions(s), { 'character.name': ' Peach ', 'What is your class?': '  ' })).toEqual(['What is your class?']);
+    expect(missingAnswers(placeholderQuestions(s), {})).toEqual(['character.name', 'What is your class?']);
+    const a = createAdventureFromScenario(s, { 'character.name': ' Peach ', 'What is your class?': 'bard\n' });
     expect(a.actions[0]!.versions[0]).toBe('You are Peach the bard.');
     expect(a.plot.plotEssentials).toBe('Peach is brave.');
+    expect(a.storyCards[0]!.entry).toBe('Peach carries a lute.');
     expect(a.storyCards[0]!.triggers).toEqual(['Peach']);
+    expect(a.storyCards[0]!.notes).toBe('A bard.');
   });
 });
 

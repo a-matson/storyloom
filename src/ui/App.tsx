@@ -32,7 +32,15 @@ export function App() {
         if (!adventure) return <div className="h-full" />;
         return <GameScreen key={adventure.id} adventure={adventure} app={app} backendLabel={backend.label} onExit={() => navigate({ name: 'library' })} />;
       case 'scenario':
-        return <ScenarioEditor key={route.id} id={route.id} app={app} onExit={() => navigate({ name: 'library' })} />;
+        return (
+          <ScenarioEditor
+            key={route.id}
+            id={route.id}
+            app={app}
+            onExit={() => navigate({ name: 'library' })}
+            onPlay={(advId) => navigate({ name: 'adventure', id: advId })}
+          />
+        );
       case 'library':
       default:
         return (
