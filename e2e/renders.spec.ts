@@ -28,6 +28,6 @@ test('render cost of one played turn', async ({ page }) => {
     renderMs: +(after.ms - before.ms).toFixed(1),
   };
   console.log(JSON.stringify(result));
-  mkdirSync('bench/results', { recursive: true });
-  writeFileSync(`bench/results/renders-${result.label}.json`, JSON.stringify(result, null, 2));
+  mkdirSync('docs/measurements', { recursive: true });
+  writeFileSync(`docs/measurements/${new Date().toISOString().slice(0, 10)}-renders-${result.label}.json`, JSON.stringify(result, null, 2));
 });

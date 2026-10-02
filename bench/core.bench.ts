@@ -1,5 +1,3 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { arch, cpus, platform } from 'node:os';
 import { Bench } from 'tinybench';
 import { test } from 'vitest';
 import { buildContext } from '@core/context';
@@ -8,6 +6,7 @@ import { findTriggeredCards } from '@core/cards/storyCards';
 import { createApproxTokenizer } from '@core/text/tokenizer';
 import { actionStoryText } from '@core/text/formatting';
 import { makeAdventure } from '../tests/fixtures/adventure';
+import { writeMeasurement } from './env';
 
 const tokenizer = createApproxTokenizer();
 const settings = { contextLength: 16384, memoryBankEnabled: true, cacheStableLayout: true, evictionChunk: 8 };
@@ -52,7 +51,5 @@ test('core benchmarks', async () => {
   console.table(results);
   console.table(sizes);
 
-  const env = { node: process.version, platform: platform(), arch: arch(), cpu: cpus()[0]?.model, date: new Date().toISOString() };
-  mkdirSync('bench/results', { recursive: true });
-  writeFileSync(`bench/results/core-${env.date.slice(0, 10)}.json`, JSON.stringify({ env, results, sizes }, null, 2));
+  console.log(writeMeasurement('core-bench', { results, sizes }));
 });
