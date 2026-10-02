@@ -75,6 +75,38 @@ test('play test asks each placeholder once, then opens the adventure', async ({ 
   await expect(page.getByRole('button', { name: 'Open Night Ferry' })).toBeVisible();
 });
 
+test('character creator: pick one card per Type, the AI writes the opening', async ({ page }) => {
+  await newScenario(page);
+  await page.getByRole('combobox', { name: 'Type' }).selectOption('characterCreator');
+  await page.getByRole('textbox', { name: 'Prompt' }).fill('You arrive at the keep.');
+  const rail = page.getByRole('complementary', { name: 'Scenario overview' });
+  for (const name of ['Mage', 'Rogue']) {
+    await rail.getByRole('button', { name: '+ New' }).click();
+    await page.locator('#card-type').selectOption('Class');
+    await page.getByRole('switch', { name: /Selectable in Character Creator/ }).click();
+    await page.locator('#card-name').fill(name);
+    await page.locator('#card-entry').fill(`You are a ${name.toLowerCase()}.`);
+    await page.locator('#card-triggers').fill(name.toLowerCase());
+    await page.locator('#card-notes').fill(`Play as a ${name.toLowerCase()}`);
+    await page.getByRole('button', { name: 'Finish' }).click();
+  }
+  await expect(rail.getByText('pick')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Play test' }).click();
+
+  const dialog = page.getByRole('dialog', { name: 'Untitled scenario' });
+  const begin = dialog.getByRole('button', { name: 'Begin' });
+  await expect(begin).toBeDisabled();
+  await dialog.getByRole('radio', { name: /Rogue/ }).check();
+  await begin.click();
+
+  await expect(page).toHaveURL(/#\/adventure\//);
+  // The demo backend's prose, not the composed prompt.
+  await expect(page.getByText(/Merav|Wind pushes salt|pinpricks|"Don't,"/).first()).toBeVisible();
+  await expect(page.getByText('You arrive at the keep.')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Story cards · 1' }).click();
+  await expect(page.getByRole('button', { name: 'Edit story card Rogue' })).toBeVisible();
+});
+
 test('play test without placeholders goes straight to the game', async ({ page }) => {
   await newScenario(page);
   await page.getByRole('textbox', { name: 'Prompt' }).fill('The ferry horn sounds twice.');

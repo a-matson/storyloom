@@ -23,24 +23,46 @@ export function missingAnswers(questions: { key: string }[], answers: Record<str
   return questions.filter((q) => !answers[q.key]?.trim()).map((q) => q.key);
 }
 
+/** Character Creator: selectable cards grouped by Type, in first-seen order; the player picks one per Type. */
+export function creatorChoices(s: Scenario): { type: string; options: StoryCard[] }[] {
+  if (s.type !== 'characterCreator') return [];
+  const groups = new Map<string, StoryCard[]>();
+  for (const c of s.storyCards) if (c.selectable) groups.set(c.type, [...(groups.get(c.type) ?? []), c]);
+  return [...groups].map(([type, options]) => ({ type, options }));
+}
+
+/**
+ * `picked` are ids of selectable cards (Character Creator). Unpicked selectable
+ * cards are not copied [provisional]; picked entries follow the prompt in the
+ * start action, which is what stays when no AI opening can be written.
+ */
 export function createAdventureFromScenario(
   s: Scenario,
   rawAnswers: Record<string, string>,
   settings: AdventureSettings = DEFAULT_ADVENTURE_SETTINGS,
-  selectedCards: StoryCard[] = [],
+  picked: string[] = [],
 ): Adventure {
   const answers = Object.fromEntries(Object.entries(rawAnswers).map(([k, v]) => [k, v.trim()]));
   const sub = (t: string | undefined) => (t ? applyPlaceholders(t, answers) : t);
-  const cards: StoryCard[] = s.storyCards.map((c) => ({
-    ...c,
-    id: newId('card_'),
-    entry: applyPlaceholders(c.entry, answers),
-    triggers: c.triggers.map((t) => applyPlaceholders(t, answers)),
-    notes: sub(c.notes),
-  }));
+  const creator = s.type === 'characterCreator';
+  const kept = (c: StoryCard) => !creator || !c.selectable || picked.includes(c.id);
+  const cards: StoryCard[] = s.storyCards.flatMap((c) =>
+    kept(c)
+      ? [
+          {
+            ...c,
+            id: newId('card_'),
+            entry: applyPlaceholders(c.entry, answers),
+            triggers: c.triggers.map((t) => applyPlaceholders(t, answers)),
+            notes: sub(c.notes),
+          },
+        ]
+      : [],
+  );
   const now = Date.now();
   const prompt = applyPlaceholders(s.prompt, answers).trim();
-  const characterIntro = selectedCards.length ? `\n\n${selectedCards.map((c) => c.entry).join('\n')}` : '';
+  const chosen = creator ? cards.filter((c) => c.selectable) : [];
+  const characterIntro = chosen.length ? `\n\n${chosen.map((c) => c.entry).join('\n')}` : '';
   return {
     id: newId('adv_'),
     title: s.title,

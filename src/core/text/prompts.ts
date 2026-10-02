@@ -26,6 +26,21 @@ export function summaryPrompt(previousSummary: string, newMemories: string[], re
   );
 }
 
+/** Character Creator openings; used when the scenario has no AI Instructions. [provisional] */
+export const OPENING_SYSTEM =
+  'You are the narrator of an interactive story. Write in second person, present tense. Output only the story text: no title, no headings, no commentary.';
+
+export function openingPrompt(opts: { brief: string; picks: { type: string; entry: string }[]; plotEssentials?: string | undefined }): string {
+  return (
+    'Write the opening scene of this interactive story.' +
+    (opts.brief ? `\n\nScenario:\n${opts.brief}` : '') +
+    (opts.picks.length ? `\n\nThe player's character:\n${opts.picks.map((p) => `- ${p.type}: ${p.entry}`).join('\n')}` : '') +
+    (opts.plotEssentials ? `\n\nStory essentials:\n${opts.plotEssentials}` : '') +
+    '\n\nWrite 2 short paragraphs in second person, present tense. End on a moment the player can act on. ' +
+    'Never decide what the player does or says.'
+  );
+}
+
 export const CARD_SYSTEM = 'You write world-building notes for an interactive story. Reply with JSON only.';
 
 export function cardPrompt(opts: {

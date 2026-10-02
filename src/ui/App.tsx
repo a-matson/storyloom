@@ -5,6 +5,7 @@ import { useAppSettings } from './shell/useAppSettings';
 import { useBackendStatus } from './shell/useBackendStatus';
 import { useRouteAdventure } from './shell/useRouteAdventure';
 import { LibraryScreen } from './features/library/LibraryScreen';
+import { Toast } from './components/ui/toast';
 
 // Only the library is on the start-up path; the other screens load on first visit.
 const GameScreen = lazy(async () => ({ default: (await import('./features/game/GameScreen')).GameScreen }));
@@ -15,6 +16,8 @@ const SetupScreen = lazy(async () => ({ default: (await import('./features/setup
 export function App() {
   const route = useRoute();
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Outlives the screen that raised it (a scenario that started with a fallback opening).
+  const [warning, setWarning] = useState<string | null>(null);
   const [app, saveSettings] = useAppSettings(route, setLoadError);
   const backend = useBackendStatus(app, route.name === 'library');
   const adventure = useRouteAdventure(app, route.name === 'adventure' ? route.id : null, setLoadError);
@@ -38,7 +41,10 @@ export function App() {
             id={route.id}
             app={app}
             onExit={() => navigate({ name: 'library' })}
-            onPlay={(advId) => navigate({ name: 'adventure', id: advId })}
+            onPlay={(advId, w) => {
+              setWarning(w ?? null);
+              navigate({ name: 'adventure', id: advId });
+            }}
           />
         );
       case 'library':
@@ -57,5 +63,10 @@ export function App() {
         );
     }
   })();
-  return <Suspense fallback={<div className="h-full" />}>{screen}</Suspense>;
+  return (
+    <>
+      <Suspense fallback={<div className="h-full" />}>{screen}</Suspense>
+      {warning !== null && <Toast message={warning} error onDismiss={() => setWarning(null)} />}
+    </>
+  );
 }

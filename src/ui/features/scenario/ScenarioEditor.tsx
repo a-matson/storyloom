@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { placeholderQuestions, type AppSettings, type Scenario } from '@core/model';
+import { creatorChoices, placeholderQuestions, type AppSettings, type Scenario } from '@core/model';
 import { storage } from '@app/services';
 import { startScenario } from '@app/scenarios';
 import { Button } from '@ui/components/ui/button';
@@ -33,7 +33,8 @@ interface Props {
   id: string;
   app: AppSettings;
   onExit: () => void;
-  onPlay: (adventureId: string) => void;
+  /** `warning`: the adventure started, but something (the AI opening) fell back. */
+  onPlay: (adventureId: string, warning?: string) => void;
 }
 
 /** Loads the scenario, then hands it to the editor; `key` resets the draft when the id changes. */
@@ -56,16 +57,21 @@ function Editor({ saved, app, onExit, onPlay }: Omit<Props, 'id'> & { saved: Sce
   const [tab, setTab] = useState<Tab>('technical');
   const typeLabel = TYPES.find((t) => t.id === draft.type)?.label ?? draft.type;
   const [asking, setAsking] = useState(false);
-  const begin = (answers: Record<string, string>) => {
-    startScenario(draft, answers, app).then(
-      (adv) => onPlay(adv.id),
-      (e: unknown) => setError(e instanceof Error ? e.message : String(e)),
+  const [starting, setStarting] = useState(false);
+  const begin = (answers: Record<string, string>, picked: string[] = []) => {
+    setStarting(true);
+    startScenario(draft, answers, app, picked).then(
+      ({ adventure, warning }) => onPlay(adventure.id, warning),
+      (e: unknown) => {
+        setStarting(false);
+        setError(e instanceof Error ? e.message : String(e));
+      },
     );
   };
   // Saves first so the adventure's `scenarioId` points at what was played.
   const playTest = async () => {
     if (!(await save())) return;
-    if (placeholderQuestions(draft).length > 0) setAsking(true);
+    if (placeholderQuestions(draft).length > 0 || creatorChoices(draft).length > 0) setAsking(true);
     else begin({});
   };
   const exit = () => {
@@ -96,7 +102,9 @@ function Editor({ saved, app, onExit, onPlay }: Omit<Props, 'id'> & { saved: Sce
             ))}
           </Select>
         </label>
-        <Button onClick={() => void playTest()}>Play test</Button>
+        <Button onClick={() => void playTest()} disabled={starting}>
+          Play test
+        </Button>
         <Button variant="primary" onClick={() => void save()} title="Ctrl/⌘+S">
           Save
         </Button>
@@ -109,7 +117,7 @@ function Editor({ saved, app, onExit, onPlay }: Omit<Props, 'id'> & { saved: Sce
         </main>
         {tab !== 'scripts' && <ScenarioRail draft={draft} update={update} app={app} />}
       </div>
-      {asking && <PrePlayDialog scenario={draft} onBegin={begin} onClose={() => setAsking(false)} />}
+      {asking && <PrePlayDialog scenario={draft} busy={starting} onBegin={begin} onClose={() => setAsking(false)} />}
       {error !== null && <Toast message={error} error onDismiss={() => setError(null)} />}
     </div>
   );
