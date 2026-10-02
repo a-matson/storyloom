@@ -6,7 +6,7 @@ import { SectionLabel } from '@ui/components/ui/section-label';
 const FIRST_MEMORY_AT = 12;
 const MEMORY_EVERY = 6;
 
-export function MemoryStatus({ adventure }: { adventure: Adventure }) {
+export function MemoryStatus({ adventure, utilityModel }: { adventure: Adventure; utilityModel: boolean }) {
   const m = adventure.settings.memory;
   const count = adventure.actions.length;
   const nextMemoryIn = MEMORY_EVERY - ((count - FIRST_MEMORY_AT) % MEMORY_EVERY);
@@ -28,6 +28,7 @@ export function MemoryStatus({ adventure }: { adventure: Adventure }) {
         <span>{m.autoSummary ? 'Auto summary on' : 'Auto summary off'}</span>
         <span>{count >= FIRST_MEMORY_AT ? `next memory in ${nextMemoryIn} actions` : `first memory at ${FIRST_MEMORY_AT} actions`}</span>
       </div>
+      <span className="text-caption text-muted-foreground">summaries: {utilityModel ? 'utility model' : 'story model'}</span>
     </Card>
   );
 }

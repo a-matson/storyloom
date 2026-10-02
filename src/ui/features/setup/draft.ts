@@ -9,14 +9,17 @@ interface Choice {
   url: string;
   theme: AppSettings['theme'];
   health: ProviderHealth | null;
+  utility: ProviderConfig | undefined;
 }
 
+const normalizeUrl = (url: string) => url.trim().replace(/\/$/, '');
+
 /** App settings with the chosen backend as default; a tested model also sets template, sampler preset and context size. */
-export function draftSettings(app: AppSettings, { current, kind, url, theme, health }: Choice): AppSettings {
+export function draftSettings(app: AppSettings, { current, kind, url, theme, health, utility }: Choice): AppSettings {
   const cfg: ProviderConfig = {
     ...current,
     kind,
-    baseUrl: url.trim().replace(/\/$/, ''),
+    baseUrl: normalizeUrl(url),
     name: `${BACKENDS.find((k) => k.kind === kind)?.name ?? kind} (${url})`,
   };
   const modelId = health?.modelId === '' ? undefined : health?.modelId;
@@ -24,7 +27,11 @@ export function draftSettings(app: AppSettings, { current, kind, url, theme, hea
   return {
     ...app,
     theme,
-    providers: [cfg, ...app.providers.filter((p) => p.id !== cfg.id)],
+    providers: [
+      cfg,
+      ...app.providers.filter((p) => p.id !== cfg.id && p.role !== 'utility'),
+      ...(utility ? [{ ...utility, baseUrl: normalizeUrl(utility.baseUrl) }] : []),
+    ],
     defaultProviderId: cfg.id,
     defaults: {
       ...app.defaults,

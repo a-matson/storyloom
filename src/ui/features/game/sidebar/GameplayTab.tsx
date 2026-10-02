@@ -2,6 +2,7 @@ import type { Adventure, AdventureSettings } from '@core/model';
 import { MODEL_PRESETS } from '@core/text';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Select } from '@ui/components/ui/field';
+import { TEMPLATES } from '@ui/features/setup/backends';
 import { ModelSettings, NUMBER_INPUT } from './ModelSettings';
 import { Section, Setting } from './Section';
 import { SettingSwitch } from './SettingSwitch';
@@ -9,13 +10,6 @@ import { SettingSwitch } from './SettingSwitch';
 type Settings = AdventureSettings;
 type Update = (patch: Partial<Settings>) => void;
 
-const TEMPLATES: { value: Settings['template']; label: string }[] = [
-  { value: 'chatml', label: 'ChatML' },
-  { value: 'llama3', label: 'Llama 3' },
-  { value: 'mistral', label: 'Mistral' },
-  { value: 'gemma', label: 'Gemma' },
-  { value: 'raw', label: 'Raw' },
-];
 const TEXT_STYLES: { value: Settings['textStyle']; label: string }[] = [
   { value: 'print', label: 'Print' },
   { value: 'clean', label: 'Clean' },

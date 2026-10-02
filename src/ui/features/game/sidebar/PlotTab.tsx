@@ -37,7 +37,7 @@ function ThirdPerson({ plot, api }: { plot: PlotComponents; api: GameApi }) {
   );
 }
 
-export function PlotTab({ adventure, api }: { adventure: Adventure; api: GameApi }) {
+export function PlotTab({ adventure, api, utilityModel }: { adventure: Adventure; api: GameApi; utilityModel: boolean }) {
   const p = adventure.plot;
   return (
     <>
@@ -59,7 +59,7 @@ export function PlotTab({ adventure, api }: { adventure: Adventure; api: GameApi
         </Section>
       ))}
       <ThirdPerson plot={p} api={api} />
-      <MemoryStatus adventure={adventure} />
+      <MemoryStatus adventure={adventure} utilityModel={utilityModel} />
     </>
   );
 }

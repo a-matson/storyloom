@@ -40,3 +40,6 @@ export function newId(prefix = ''): string {
   counter += 1;
   return `${prefix}${Date.now().toString(36)}-${counter.toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
+
+/** The second, small model server for memory jobs, if one is configured. */
+export const utilityProvider = (app: AppSettings): ProviderConfig | undefined => app.providers.find((p) => p.role === 'utility');
