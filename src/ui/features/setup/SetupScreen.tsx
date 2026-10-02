@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { AppSettings, ProviderConfig } from '@core/model';
+import { utilityProvider, type AppSettings, type ProviderConfig } from '@core/model';
 import type { ProviderCapabilities, ProviderHealth } from '@core/ports';
 import { DEFAULT_PROVIDER_CONFIG, providerFor } from '@app/services';
 import { Button } from '@ui/components/ui/button';
@@ -11,6 +11,7 @@ import { AppearanceCard } from './AppearanceCard';
 import { BackendTiles } from './BackendTiles';
 import { ConnectionCard } from './ConnectionCard';
 import { draftSettings } from './draft';
+import { UtilityCard } from './UtilityCard';
 
 interface Props {
   app: AppSettings;
@@ -28,8 +29,9 @@ export function SetupScreen({ app, onSave, onBack, firstRun = false }: Props) {
   const [caps, setCaps] = useState<ProviderCapabilities | null>(null);
   const [testing, setTesting] = useState(false);
   const [theme, setTheme] = useState(app.theme);
+  const [utility, setUtility] = useState(utilityProvider(app));
 
-  const draft = () => draftSettings(app, { current, kind, url, theme, health });
+  const draft = () => draftSettings(app, { current, kind, url, theme, health, utility });
   // A new backend or URL invalidates the last test.
   const choose = (nextKind: ProviderConfig['kind'], nextUrl: string) => {
     setKind(nextKind);
@@ -81,6 +83,7 @@ export function SetupScreen({ app, onSave, onBack, firstRun = false }: Props) {
           </div>
         </label>
         {health && <ConnectionCard health={health} caps={caps} />}
+        <UtilityCard value={utility} onChange={setUtility} />
         <AppearanceCard theme={theme} onTheme={setTheme} />
         <div className="flex items-center gap-2">
           <span className="text-caption text-muted-foreground">You can change all of this later.</span>

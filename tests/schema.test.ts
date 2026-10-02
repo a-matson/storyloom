@@ -27,6 +27,12 @@ describe('schemas', () => {
     expect(parsed.theme).toBe('dark');
   });
 
+  it('parse a provider saved before it had a template', () => {
+    const old = { providers: [{ id: 'utility', kind: 'llama-server', name: 'u', baseUrl: 'http://x', role: 'utility' }], defaultProviderId: 'local' };
+    expect(S.AppSettings.parse(old).providers[0]?.template).toBeUndefined();
+    expect(S.ProviderConfig.parse({ ...old.providers[0], template: 'gemma' }).template).toBe('gemma');
+  });
+
   it('strip unknown keys but keep arbitrary script state', () => {
     const adv = { ...makeAdventure({ actions: 1 }), legacyField: 1, scriptState: { custom: { n: 1 } } };
     const parsed = S.Adventure.parse(adv);

@@ -1,4 +1,4 @@
-import type { AppSettings, ProviderConfig } from '@core/model';
+import type { AppSettings, ProviderConfig, TemplateId } from '@core/model';
 import type { ProviderCapabilities } from '@core/ports';
 
 export const BACKENDS: { kind: ProviderConfig['kind']; name: string; blurb: string; url: string }[] = [
@@ -24,4 +24,12 @@ export const THEMES: { value: AppSettings['theme']; label: string }[] = [
   { value: 'dark', label: 'Dark (Lantern & Ink)' },
   { value: 'sepia', label: 'Sepia' },
   { value: 'light', label: 'Light' },
+];
+
+export const TEMPLATES: { value: TemplateId; label: string }[] = [
+  { value: 'chatml', label: 'ChatML' },
+  { value: 'llama3', label: 'Llama 3' },
+  { value: 'mistral', label: 'Mistral' },
+  { value: 'gemma', label: 'Gemma' },
+  { value: 'raw', label: 'Raw' },
 ];

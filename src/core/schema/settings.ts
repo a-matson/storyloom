@@ -58,6 +58,8 @@ export const ProviderConfig = z.object({
   baseUrl: z.string(),
   /** Optional: a second, small model server for summaries/cards/image prompts. */
   role: z.optional(z.enum(['story', 'utility'])),
+  /** Prompt template of the model behind this server; the story provider uses the adventure's instead. */
+  template: z.optional(TemplateId),
 });
 
 export const AppSettings = z.object({

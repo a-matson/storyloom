@@ -1,7 +1,7 @@
 import { ActionLog } from '@core/log';
 import { markStale, runMemoryMaintenance } from '@core/memory';
-import type { Adventure, AdventureSettings, AppSettings, PlotComponents, TurnTrace } from '@core/model';
-import type { Embedder } from '@core/ports';
+import { utilityProvider, type Adventure, type AdventureSettings, type AppSettings, type PlotComponents, type TemplateId, type TurnTrace } from '@core/model';
+import type { Embedder, Provider } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
 import { runIdleWork } from './idleWork';
 import type { GameSnapshot, Prefetched, SessionServices } from './types';
@@ -31,6 +31,8 @@ export class GameSession {
   private pending = '';
   /** The story provider's embedder; queries and memories must share it so vectors compare. */
   private embedder: Embedder | undefined;
+  /** Warn once per session when the utility server is down. */
+  private utilityDown = false;
 
   constructor(adventure: Adventure, app: AppSettings, services: SessionServices) {
     this.adv = adventure;
@@ -175,11 +177,22 @@ export class GameSession {
     }
   }
 
+  /** Utility server when configured and reachable, else the story provider; each prompted with its own template. */
+  private async memoryModel(): Promise<{ provider: Provider; template: TemplateId }> {
+    const utility = utilityProvider(this.app);
+    if (utility) {
+      const provider = this.svc.providerFor(this.app, utility.id);
+      if ((await provider.health()).ok) return { provider, template: utility.template ?? this.adv.settings.template };
+      if (!this.utilityDown) console.warn(`utility model at ${utility.baseUrl} is unreachable; memory jobs use the story model`);
+      this.utilityDown = true;
+    }
+    return { provider: this.svc.providerFor(this.app, this.adv.settings.providerId), template: this.adv.settings.template };
+  }
+
   private async maintainMemory(): Promise<void> {
-    const utility = this.app.providers.find((p) => p.role === 'utility');
-    const provider = this.svc.providerFor(this.app, utility?.id ?? this.adv.settings.providerId);
     try {
-      const report = await runMemoryMaintenance(this.adv, { provider, embedder: await this.resolveEmbedder(), template: this.adv.settings.template });
+      // Memories are embedded on the story side so they compare with the query vectors in `prepareContext`.
+      const report = await runMemoryMaintenance(this.adv, { ...(await this.memoryModel()), embedder: await this.resolveEmbedder() });
       if (report.memoriesWritten || report.memoriesRegenerated || report.memoriesDropped || report.summaryUpdated) {
         this.emit();
         this.save();
