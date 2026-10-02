@@ -42,7 +42,7 @@ export function useGame(initial: Adventure, app: AppSettings) {
   /** Background work between turns (cache warming, retry prefetch); cancelled when the player acts. */
   const idleAbortRef = useRef<AbortController | null>(null);
   /** A prefetched retry alternative for the action id it belongs to. */
-  const prefetchRef = useRef<{ actionId: string; text: string; stats?: CompletionStats } | null>(null);
+  const prefetchRef = useRef<{ actionId: string; text: string; stats?: CompletionStats | undefined } | null>(null);
   const [prefetchReady, setPrefetchReady] = useState(false);
   const [warm, setWarm] = useState<'idle' | 'warming' | 'warm'>('idle');
   const saveTimer = useRef<number | null>(null);

@@ -32,11 +32,11 @@ export const DEFAULT_GENERATOR_SETTINGS: CardGeneratorSettings = {
 export interface GenerateCardRequest {
   type: string;
   /** When given, only Entry (and triggers) are generated; the name is kept. */
-  name?: string;
+  name?: string | undefined;
   /** Existing entry to improve rather than replace (optional). */
   entry?: string;
   settings: CardGeneratorSettings;
-  storySummary?: string;
+  storySummary?: string | undefined;
 }
 
 export interface GeneratedCard {
@@ -98,10 +98,10 @@ export function parseCardJson(text: string): { name: string; entry: string; trig
   for (const c of candidates) {
     try {
       const obj = JSON.parse(c) as Record<string, unknown>;
-      const entry = typeof obj.entry === 'string' ? obj.entry : typeof obj.description === 'string' ? obj.description : '';
+      const entry = typeof obj['entry'] === 'string' ? obj['entry'] : typeof obj['description'] === 'string' ? obj['description'] : '';
       if (!entry.trim()) continue;
-      const name = typeof obj.name === 'string' ? obj.name : typeof obj.title === 'string' ? obj.title : '';
-      const triggersRaw = obj.triggers ?? obj.keys ?? [];
+      const name = typeof obj['name'] === 'string' ? obj['name'] : typeof obj['title'] === 'string' ? obj['title'] : '';
+      const triggersRaw = obj['triggers'] ?? obj['keys'] ?? [];
       const triggers = Array.isArray(triggersRaw)
         ? triggersRaw.filter((t): t is string => typeof t === 'string')
         : typeof triggersRaw === 'string'

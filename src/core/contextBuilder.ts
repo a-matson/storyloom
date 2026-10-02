@@ -72,9 +72,9 @@ export interface ContextBuildInput {
   /** Memories ranked by relevance to the most recent action, best first. */
   rankedMemories: RankedMemory[];
   /** Scripting: `state.memory.frontMemory`, appended after the last action. */
-  frontMemory?: string;
+  frontMemory?: string | undefined;
   /** Scripting: `state.memory.context` / `.authorsNote` take precedence over the UI values. */
-  overrides?: { plotEssentials?: string; authorsNote?: string };
+  overrides?: { plotEssentials?: string | undefined; authorsNote?: string | undefined };
   settings: ContextBuildSettings;
   tokenizer: Tokenizer;
 }
@@ -307,7 +307,7 @@ export function buildContext(input: ContextBuildInput): ContextBuildResult {
 
   const sections: ContextSection[] = [];
   const sys = required.get('instructions');
-  const system = sys ? (plotValues.instructions ?? '') : '';
+  const system = sys ? (plotValues['instructions'] ?? '') : '';
   if (sys) sections.push({ kind: 'instructions', text: sys.text, tokens: sys.tokens, cacheable: true, trimmed: sys.trimmed });
 
   if (triggeredCards.length) {

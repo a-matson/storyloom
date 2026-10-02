@@ -10,7 +10,7 @@ interface Props {
   busy: boolean;
   api: GameApi;
   onViewContext: () => void;
-  contextSummary?: string;
+  contextSummary?: string | undefined;
 }
 
 /**
@@ -64,7 +64,7 @@ function ActionBlock({
   busy: boolean;
   api: GameApi;
   onViewContext: () => void;
-  contextSummary?: string;
+  contextSummary?: string | undefined;
 }) {
   const [editing, setEditing] = useState(false);
   const ref = useRef<HTMLParagraphElement>(null);

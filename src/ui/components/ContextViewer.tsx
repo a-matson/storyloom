@@ -30,7 +30,7 @@ interface Props {
   result: ContextBuildResult;
   prompt: string;
   /** Backend statistics for the last generation, when available. */
-  stats?: CompletionStats;
+  stats?: CompletionStats | undefined;
   onClose: () => void;
 }
 
