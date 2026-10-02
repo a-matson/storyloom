@@ -15,7 +15,43 @@ export interface Embedder {
   embed(texts: string[]): Promise<number[][]>;
 }
 
-const STOP = new Set(['the', 'a', 'an', 'and', 'or', 'of', 'to', 'in', 'on', 'at', 'is', 'are', 'was', 'were', 'it', 'you', 'your', 'he', 'she', 'they', 'i', 'we', 'that', 'this', 'with', 'for', 'as', 'but', 'be', 'by', 'from', 'his', 'her', 'their', 'its']);
+const STOP = new Set([
+  'the',
+  'a',
+  'an',
+  'and',
+  'or',
+  'of',
+  'to',
+  'in',
+  'on',
+  'at',
+  'is',
+  'are',
+  'was',
+  'were',
+  'it',
+  'you',
+  'your',
+  'he',
+  'she',
+  'they',
+  'i',
+  'we',
+  'that',
+  'this',
+  'with',
+  'for',
+  'as',
+  'but',
+  'be',
+  'by',
+  'from',
+  'his',
+  'her',
+  'their',
+  'its',
+]);
 
 function fnv1a(s: string): number {
   let h = 0x811c9dc5;
@@ -59,7 +95,11 @@ export class HashEmbedder implements Embedder {
 /** Adapter over a provider's embed() when the backend serves embeddings. */
 export class ProviderEmbedder implements Embedder {
   readonly id: string;
-  constructor(private readonly fn: (texts: string[]) => Promise<number[][]>, readonly dimensions = 0, id = 'provider') {
+  constructor(
+    private readonly fn: (texts: string[]) => Promise<number[][]>,
+    readonly dimensions = 0,
+    id = 'provider',
+  ) {
     this.id = id;
   }
   embed(texts: string[]): Promise<number[][]> {

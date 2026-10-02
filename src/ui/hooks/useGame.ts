@@ -59,13 +59,16 @@ export function useGame(initial: Adventure, app: AppSettings) {
     }, 300);
   }, []);
 
-  useEffect(() => () => {
-    idleAbortRef.current?.abort();
-    if (saveTimer.current) window.clearTimeout(saveTimer.current);
-    const adv = advRef.current;
-    adv.actions = logRef.current.actions;
-    void storage.putAdventure(adv);
-  }, []);
+  useEffect(
+    () => () => {
+      idleAbortRef.current?.abort();
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+      const adv = advRef.current;
+      adv.actions = logRef.current.actions;
+      void storage.putAdventure(adv);
+    },
+    [],
+  );
 
   const deps = useMemo(() => {
     const provider = providerFor(app, advRef.current.settings.providerId);
@@ -135,7 +138,10 @@ export function useGame(initial: Adventure, app: AppSettings) {
         buildWarmupPrompt(adv, logRef.current.actions, deps)
           .then(async (prompt) => {
             if (!prompt || ac.signal.aborted) return;
-            for await (const _ of deps.provider.complete({ prompt, maxTokens: 0, temperature: 0, cachePrompt: true, slotId: 0, prefillOnly: true }, ac.signal)) {
+            for await (const _ of deps.provider.complete(
+              { prompt, maxTokens: 0, temperature: 0, cachePrompt: true, slotId: 0, prefillOnly: true },
+              ac.signal,
+            )) {
               // drain
             }
             if (!ac.signal.aborted) setWarm('warm');
@@ -267,34 +273,41 @@ export function useGame(initial: Adventure, app: AppSettings) {
     submit,
     retry,
     cancel,
-    erase: () => mutate((log, adv) => {
-      const a = log.erase();
-      if (a) adv.memories = markStale(adv.memories, new Set([a.id]));
-    }),
-    eraseTo: (id: string) => mutate((log, adv) => {
-      const removed = log.eraseTo(id);
-      adv.memories = markStale(adv.memories, new Set(removed.map((a) => a.id)));
-    }),
+    erase: () =>
+      mutate((log, adv) => {
+        const a = log.erase();
+        if (a) adv.memories = markStale(adv.memories, new Set([a.id]));
+      }),
+    eraseTo: (id: string) =>
+      mutate((log, adv) => {
+        const removed = log.eraseTo(id);
+        adv.memories = markStale(adv.memories, new Set(removed.map((a) => a.id)));
+      }),
     undo: () => mutate((log) => log.undo()),
     redo: () => mutate((log) => log.redo()),
-    edit: (id: string, text: string) => mutate((log, adv) => {
-      log.edit(id, text);
-      adv.memories = markStale(adv.memories, new Set([id]));
-    }),
+    edit: (id: string, text: string) =>
+      mutate((log, adv) => {
+        log.edit(id, text);
+        adv.memories = markStale(adv.memories, new Set([id]));
+      }),
     setVersion: (id: string, i: number) => mutate((log) => log.setActiveVersion(id, i)),
-    updatePlot: (patch: Partial<PlotComponents>) => mutate((_, adv) => {
-      adv.plot = { ...adv.plot, ...patch };
-    }),
-    updateSettings: (patch: Partial<AdventureSettings>) => mutate((_, adv) => {
-      adv.settings = { ...adv.settings, ...patch };
-    }),
+    updatePlot: (patch: Partial<PlotComponents>) =>
+      mutate((_, adv) => {
+        adv.plot = { ...adv.plot, ...patch };
+      }),
+    updateSettings: (patch: Partial<AdventureSettings>) =>
+      mutate((_, adv) => {
+        adv.settings = { ...adv.settings, ...patch };
+      }),
     updateMeta: (patch: Partial<Pick<Adventure, 'title' | 'description' | 'tags'>>) => mutate((_, adv) => Object.assign(adv, patch)),
-    setStoryCards: (cards: Adventure['storyCards']) => mutate((_, adv) => {
-      adv.storyCards = cards;
-    }),
-    setCardGenerator: (s: NonNullable<Adventure['cardGenerator']>) => mutate((_, adv) => {
-      adv.cardGenerator = s;
-    }),
+    setStoryCards: (cards: Adventure['storyCards']) =>
+      mutate((_, adv) => {
+        adv.storyCards = cards;
+      }),
+    setCardGenerator: (s: NonNullable<Adventure['cardGenerator']>) =>
+      mutate((_, adv) => {
+        adv.cardGenerator = s;
+      }),
     clearError: () => setError(null),
     clearNotice: () => setNotice(null),
     /**

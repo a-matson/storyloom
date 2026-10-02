@@ -19,9 +19,7 @@ export function renderTemplate(id: TemplateId, system: string, user: string, ass
   switch (id) {
     case 'chatml':
       return {
-        prompt:
-          (system ? `<|im_start|>system\n${system}<|im_end|>\n` : '') +
-          `<|im_start|>user\n${user}<|im_end|>\n<|im_start|>assistant\n${assistantPrefix}`,
+        prompt: (system ? `<|im_start|>system\n${system}<|im_end|>\n` : '') + `<|im_start|>user\n${user}<|im_end|>\n<|im_start|>assistant\n${assistantPrefix}`,
         stop: ['<|im_end|>', '<|im_start|>'],
       };
     case 'llama3':
@@ -36,14 +34,12 @@ export function renderTemplate(id: TemplateId, system: string, user: string, ass
     case 'mistral':
       // Mistral Small 3.x / v7 tokenizer style (SYSTEM_PROMPT + INST).
       return {
-        prompt:
-          (system ? `[SYSTEM_PROMPT]${system}[/SYSTEM_PROMPT]` : '') + `[INST]${user}[/INST]${assistantPrefix}`,
+        prompt: (system ? `[SYSTEM_PROMPT]${system}[/SYSTEM_PROMPT]` : '') + `[INST]${user}[/INST]${assistantPrefix}`,
         stop: ['[INST]', '</s>'],
       };
     case 'gemma':
       return {
-        prompt:
-          `<start_of_turn>user\n${system ? `${system}\n\n` : ''}${user}<end_of_turn>\n<start_of_turn>model\n${assistantPrefix}`,
+        prompt: `<start_of_turn>user\n${system ? `${system}\n\n` : ''}${user}<end_of_turn>\n<start_of_turn>model\n${assistantPrefix}`,
         stop: ['<end_of_turn>', '<start_of_turn>'],
       };
     case 'raw':

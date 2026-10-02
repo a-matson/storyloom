@@ -1,12 +1,4 @@
-import {
-  fetchJson,
-  readSse,
-  type CompletionChunk,
-  type CompletionRequest,
-  type Provider,
-  type ProviderCapabilities,
-  type ProviderHealth,
-} from './types';
+import { fetchJson, readSse, type CompletionChunk, type CompletionRequest, type Provider, type ProviderCapabilities, type ProviderHealth } from './types';
 
 /**
  * Generic OpenAI-compatible provider (LM Studio, vLLM, TabbyAPI, KoboldCpp's
@@ -91,7 +83,11 @@ export class OpenAICompatProvider implements Provider {
       if (choice?.text) yield { text: choice.text, done: false };
       if (choice?.finish_reason) finish = choice.finish_reason;
       if (e.usage) {
-        yield { text: '', done: true, stats: { promptTokens: e.usage.prompt_tokens, generatedTokens: e.usage.completion_tokens, stopReason: finish === 'length' ? 'length' : 'stop' } };
+        yield {
+          text: '',
+          done: true,
+          stats: { promptTokens: e.usage.prompt_tokens, generatedTokens: e.usage.completion_tokens, stopReason: finish === 'length' ? 'length' : 'stop' },
+        };
         return;
       }
     }

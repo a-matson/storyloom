@@ -49,9 +49,7 @@ export const IconSettings = (p: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 export const IconChevron = ({ open, ...p }: SVGProps<SVGSVGElement> & { open?: boolean }) => (
-  <svg {...base({ width: 14, height: 14, strokeWidth: 2.5, ...p })}>
-    {open ? <path d="m6 9 6 6 6-6" /> : <path d="m9 18 6-6-6-6" />}
-  </svg>
+  <svg {...base({ width: 14, height: 14, strokeWidth: 2.5, ...p })}>{open ? <path d="m6 9 6 6 6-6" /> : <path d="m9 18 6-6-6-6" />}</svg>
 );
 export const IconLeft = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base({ width: 12, height: 12, strokeWidth: 2.5, ...p })}>

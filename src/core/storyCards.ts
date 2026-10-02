@@ -35,9 +35,7 @@ interface Compiled {
 export function compileCards(cards: StoryCard[]): Compiled[] {
   const out: Compiled[] = [];
   for (const card of cards) {
-    const triggers = card.triggers
-      .filter((t) => t.length > 0)
-      .map((raw) => ({ raw, lower: raw.toLowerCase() }));
+    const triggers = card.triggers.filter((t) => t.length > 0).map((raw) => ({ raw, lower: raw.toLowerCase() }));
     if (triggers.length === 0 || !card.entry.trim()) continue;
     out.push({ card, triggers });
   }

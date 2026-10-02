@@ -147,11 +147,21 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
             onViewContext={openContext}
             contextSummary={ctx ? `${ctx.triggeredCards.length} story cards · ${ctx.usedMemories.length} memories used` : undefined}
           />
-          <CommandRow busy={state.busy} canRetry={last?.type === 'continue'} canErase={state.log.length > 1} status={status} api={api} onSee={() => api.clearNotice()} retryReady={state.prefetchReady} />
+          <CommandRow
+            busy={state.busy}
+            canRetry={last?.type === 'continue'}
+            canErase={state.log.length > 1}
+            status={status}
+            api={api}
+            onSee={() => api.clearNotice()}
+            retryReady={state.prefetchReady}
+          />
         </main>
         <Sidebar adventure={adv} api={api} provider={providerFor(app, adv.settings.providerId)} hidden={!showSidebar} onClose={() => setShowSidebar(false)} />
       </div>
-      {showContext && state.context && <ContextViewer result={state.context.result} prompt={state.context.prompt} stats={lastStats} onClose={() => setShowContext(false)} />}
+      {showContext && state.context && (
+        <ContextViewer result={state.context.result} prompt={state.context.prompt} stats={lastStats} onClose={() => setShowContext(false)} />
+      )}
       {state.error && (
         <div className="toast error" role="alert">
           {state.error}{' '}

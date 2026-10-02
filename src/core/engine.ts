@@ -335,7 +335,10 @@ export async function buildWarmupPrompt(adventure: Adventure, actions: Action[],
     },
     tokenizer: deps.tokenizer,
   });
-  const prefix = result.sections.filter((sec) => sec.cacheable && sec.kind !== 'instructions').map((sec) => sec.text).join('\n\n');
+  const prefix = result.sections
+    .filter((sec) => sec.cacheable && sec.kind !== 'instructions')
+    .map((sec) => sec.text)
+    .join('\n\n');
   if (!prefix) return null;
   return renderPrefix(adventure.settings.template, result.system, prefix);
 }

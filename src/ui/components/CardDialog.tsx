@@ -85,10 +85,18 @@ export function CardDialog({ adventure, provider, card, onSave, onSettings, onCl
           </div>
           <span className="grow" />
           <div className="row" style={{ gap: 2, padding: 3, borderRadius: 8, background: 'var(--bg-bar)', border: '1px solid var(--border)' }}>
-            <button className="btn ghost" style={{ height: 28, border: 'none', background: tab === 'details' ? 'var(--bg-2)' : 'transparent' }} onClick={() => setTab('details')}>
+            <button
+              className="btn ghost"
+              style={{ height: 28, border: 'none', background: tab === 'details' ? 'var(--bg-2)' : 'transparent' }}
+              onClick={() => setTab('details')}
+            >
               Details
             </button>
-            <button className="btn ghost" style={{ height: 28, border: 'none', background: tab === 'settings' ? 'var(--bg-2)' : 'transparent' }} onClick={() => setTab('settings')}>
+            <button
+              className="btn ghost"
+              style={{ height: 28, border: 'none', background: tab === 'settings' ? 'var(--bg-2)' : 'transparent' }}
+              onClick={() => setTab('settings')}
+            >
               Generator settings
             </button>
           </div>
@@ -137,7 +145,13 @@ export function CardDialog({ adventure, provider, card, onSave, onSettings, onCl
                     {busy === 'entry' ? 'Generating…' : 'Generate new'}
                   </button>
                 </span>
-                <textarea className="field" style={{ minHeight: 120 }} value={entry} onChange={(e) => setEntry(e.target.value)} placeholder="Merav leads the caravan. She is blind at night and hides it." />
+                <textarea
+                  className="field"
+                  style={{ minHeight: 120 }}
+                  value={entry}
+                  onChange={(e) => setEntry(e.target.value)}
+                  placeholder="Merav leads the caravan. She is blind at night and hides it."
+                />
               </label>
               <label className="col">
                 <span className="row">
@@ -204,14 +218,26 @@ function GeneratorSettings({ settings, onChange }: { settings: CardGeneratorSett
       </div>
       <label className="col">
         <span className="label">AI instructions</span>
-        <textarea className="field" value={settings.aiInstructions} onChange={(e) => set({ aiInstructions: e.target.value })} placeholder="Write in a noir style with short, punchy sentences. Focus on morally ambiguous characters." />
+        <textarea
+          className="field"
+          value={settings.aiInstructions}
+          onChange={(e) => set({ aiInstructions: e.target.value })}
+          placeholder="Write in a noir style with short, punchy sentences. Focus on morally ambiguous characters."
+        />
       </label>
       <label className="col">
         <span className="label">Story information</span>
-        <textarea className="field" style={{ minHeight: 120 }} value={settings.storyInformation} onChange={(e) => set({ storyInformation: e.target.value })} placeholder="Setting, lore, your character and companions, factions, magic or technology…" />
+        <textarea
+          className="field"
+          style={{ minHeight: 120 }}
+          value={settings.storyInformation}
+          onChange={(e) => set({ storyInformation: e.target.value })}
+          placeholder="Setting, lore, your character and companions, factions, magic or technology…"
+        />
       </label>
       <p className="small muted" style={{ margin: 0 }}>
-        These settings are saved with this adventure. Generation runs on your story backend (slot 1) and uses JSON-schema constrained output when the backend supports it.
+        These settings are saved with this adventure. Generation runs on your story backend (slot 1) and uses JSON-schema constrained output when the backend
+        supports it.
       </p>
     </>
   );

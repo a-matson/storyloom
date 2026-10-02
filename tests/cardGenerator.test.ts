@@ -4,15 +4,30 @@ import type { CompletionChunk, CompletionRequest, Provider, ProviderCapabilities
 
 function fakeProvider(reply: string, jsonSchema: boolean): Provider & { last?: CompletionRequest } {
   const caps: ProviderCapabilities = {
-    streaming: true, topK: true, penalties: true, minP: true, repetitionPenalty: true, seed: true, prefixCache: true,
-    parallelSlots: 2, tokenize: true, embeddings: false, grammar: jsonSchema, jsonSchema, images: false,
+    streaming: true,
+    topK: true,
+    penalties: true,
+    minP: true,
+    repetitionPenalty: true,
+    seed: true,
+    prefixCache: true,
+    parallelSlots: 2,
+    tokenize: true,
+    embeddings: false,
+    grammar: jsonSchema,
+    jsonSchema,
+    images: false,
   };
   const p: Provider & { last?: CompletionRequest } = {
     id: 'fake',
     kind: 'fake',
     baseUrl: 'http://fake',
-    async health(): Promise<ProviderHealth> { return { ok: true }; },
-    async capabilities() { return caps; },
+    async health(): Promise<ProviderHealth> {
+      return { ok: true };
+    },
+    async capabilities() {
+      return caps;
+    },
     async *complete(req: CompletionRequest): AsyncIterable<CompletionChunk> {
       p.last = req;
       yield { text: reply, done: false };
@@ -24,7 +39,11 @@ function fakeProvider(reply: string, jsonSchema: boolean): Provider & { last?: C
 
 describe('parseCardJson', () => {
   it('parses clean JSON', () => {
-    expect(parseCardJson('{"name":"Merav","entry":"Merav leads.","triggers":["merav","rider"]}')).toEqual({ name: 'Merav', entry: 'Merav leads.', triggers: ['merav', 'rider'] });
+    expect(parseCardJson('{"name":"Merav","entry":"Merav leads.","triggers":["merav","rider"]}')).toEqual({
+      name: 'Merav',
+      entry: 'Merav leads.',
+      triggers: ['merav', 'rider'],
+    });
   });
   it('tolerates prose and code fences around the JSON', () => {
     const out = parseCardJson('Sure! Here is the card:\n```json\n{"name":"X","entry":"X is here.","triggers":["x"]}\n```\nHope that helps.');

@@ -42,9 +42,7 @@ export function createAdventureFromScenario(
     tags: [...s.tags],
     coverUrl: s.coverUrl,
     scenarioId: s.id,
-    actions: prompt
-      ? [{ id: newId('act_'), type: 'start', versions: [prompt + characterIntro], active: 0, createdAt: now }]
-      : [],
+    actions: prompt ? [{ id: newId('act_'), type: 'start', versions: [prompt + characterIntro], active: 0, createdAt: now }] : [],
     plot: {
       aiInstructions: sub(s.plot.aiInstructions),
       storySummary: sub(s.plot.storySummary),

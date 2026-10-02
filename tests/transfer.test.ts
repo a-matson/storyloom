@@ -28,17 +28,56 @@ function makeZip(files: { name: string; data: string; deflate?: boolean }[]): Ar
     const name = enc.encode(f.name);
     const method = f.deflate ? 8 : 0;
     const crc = crc32(raw);
-    const local = new Uint8Array([...u32(0x04034b50), ...u16(20), ...u16(0), ...u16(method), ...u16(0), ...u16(0), ...u32(crc), ...u32(body.length), ...u32(raw.length), ...u16(name.length), ...u16(0), ...name, ...body]);
+    const local = new Uint8Array([
+      ...u32(0x04034b50),
+      ...u16(20),
+      ...u16(0),
+      ...u16(method),
+      ...u16(0),
+      ...u16(0),
+      ...u32(crc),
+      ...u32(body.length),
+      ...u32(raw.length),
+      ...u16(name.length),
+      ...u16(0),
+      ...name,
+      ...body,
+    ]);
     const central = new Uint8Array([
-      ...u32(0x02014b50), ...u16(20), ...u16(20), ...u16(0), ...u16(method), ...u16(0), ...u16(0), ...u32(crc), ...u32(body.length), ...u32(raw.length),
-      ...u16(name.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(offset), ...name,
+      ...u32(0x02014b50),
+      ...u16(20),
+      ...u16(20),
+      ...u16(0),
+      ...u16(method),
+      ...u16(0),
+      ...u16(0),
+      ...u32(crc),
+      ...u32(body.length),
+      ...u32(raw.length),
+      ...u16(name.length),
+      ...u16(0),
+      ...u16(0),
+      ...u16(0),
+      ...u16(0),
+      ...u32(0),
+      ...u32(offset),
+      ...name,
     ]);
     locals.push(local);
     centrals.push(central);
     offset += local.length;
   }
   const cdSize = centrals.reduce((n, c) => n + c.length, 0);
-  const eocd = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(cdSize), ...u32(offset), ...u16(0)]);
+  const eocd = new Uint8Array([
+    ...u32(0x06054b50),
+    ...u16(0),
+    ...u16(0),
+    ...u16(files.length),
+    ...u16(files.length),
+    ...u32(cdSize),
+    ...u32(offset),
+    ...u16(0),
+  ]);
   const total = offset + cdSize + eocd.length;
   const out = new Uint8Array(total);
   let p = 0;
@@ -51,7 +90,12 @@ function makeZip(files: { name: string; data: string; deflate?: boolean }[]): Ar
 
 describe('ZipReader', () => {
   it('lists entries and reads stored and deflated files', async () => {
-    const zip = new ZipReader(makeZip([{ name: 'a.txt', data: 'hello' }, { name: 'dir/b.json', data: JSON.stringify({ x: 1 }), deflate: true }]));
+    const zip = new ZipReader(
+      makeZip([
+        { name: 'a.txt', data: 'hello' },
+        { name: 'dir/b.json', data: JSON.stringify({ x: 1 }), deflate: true },
+      ]),
+    );
     expect(zip.entries.map((e) => e.name)).toEqual(['a.txt', 'dir/b.json']);
     expect(await zip.readText(zip.entries[0]!)).toBe('hello');
     expect(JSON.parse(await zip.readText(zip.entries[1]!))).toEqual({ x: 1 });
@@ -94,7 +138,9 @@ describe('adventure transfer', () => {
   });
 
   it('imports an AID-style zip and falls back to text exports', async () => {
-    const withJson = makeZip([{ name: 'adventure.json', data: JSON.stringify({ title: 'Z', actions: [{ text: 'Start.' }, { text: '> You go.', type: 'do' }] }), deflate: true }]);
+    const withJson = makeZip([
+      { name: 'adventure.json', data: JSON.stringify({ title: 'Z', actions: [{ text: 'Start.' }, { text: '> You go.', type: 'do' }] }), deflate: true },
+    ]);
     const a = await importAidZip(withJson);
     expect(a.title).toBe('Z');
     expect(a.actions).toHaveLength(2);

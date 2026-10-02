@@ -67,7 +67,19 @@ export function Sidebar({ adventure, api, provider, hidden, onClose }: Props) {
   );
 }
 
-function Section({ title, tokens, badge, defaultOpen = false, children }: { title: string; tokens?: number; badge?: ReactNode; defaultOpen?: boolean; children: ReactNode }) {
+function Section({
+  title,
+  tokens,
+  badge,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  tokens?: number;
+  badge?: ReactNode;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <section className="section">
@@ -92,7 +104,11 @@ function PlotTab({ adventure, api }: { adventure: Adventure; api: GameApi }) {
       <Section title="AI Instructions" tokens={tokenizer.count(p.aiInstructions ?? '')} defaultOpen>
         {field('aiInstructions', 'System prompt: how the AI should write.')}
       </Section>
-      <Section title="Story Summary" tokens={tokenizer.count(p.storySummary ?? '')} badge={adventure.settings.memory.autoSummary ? <span className="pill auto">auto</span> : undefined}>
+      <Section
+        title="Story Summary"
+        tokens={tokenizer.count(p.storySummary ?? '')}
+        badge={adventure.settings.memory.autoSummary ? <span className="pill auto">auto</span> : undefined}
+      >
         {field('storySummary', 'Maintained automatically every 15 actions; edit freely.')}
       </Section>
       <Section title="Plot Essentials" tokens={tokenizer.count(p.plotEssentials ?? '')}>
@@ -177,7 +193,9 @@ function CardsTab({ adventure, api, provider }: { adventure: Adventure; api: Gam
           + New
         </button>
       </div>
-      {cards.length === 0 && <p className="muted small">No story cards yet. Cards are sent to the AI only when one of their triggers appears in recent actions.</p>}
+      {cards.length === 0 && (
+        <p className="muted small">No story cards yet. Cards are sent to the AI only when one of their triggers appears in recent actions.</p>
+      )}
       {shown.map((c) => (
         <button key={c.id} className="section" style={{ textAlign: 'left', padding: 0, cursor: 'pointer', color: 'inherit' }} onClick={() => setEditing(c)}>
           <header style={{ cursor: 'pointer' }}>
@@ -230,7 +248,18 @@ function DetailsTab({ adventure, api }: { adventure: Adventure; api: GameApi }) 
       </label>
       <label className="col">
         <span className="label">Tags</span>
-        <input className="field" value={adventure.tags.join(', ')} onChange={(e) => api.updateMeta({ tags: e.target.value.split(',').map((t) => t.trim()).filter(Boolean) })} />
+        <input
+          className="field"
+          value={adventure.tags.join(', ')}
+          onChange={(e) =>
+            api.updateMeta({
+              tags: e.target.value
+                .split(',')
+                .map((t) => t.trim())
+                .filter(Boolean),
+            })
+          }
+        />
       </label>
       <section className="section">
         <header style={{ cursor: 'default' }}>
@@ -280,7 +309,15 @@ function GameplayTab({ adventure, api }: { adventure: Adventure; api: GameApi })
   const num = (label: string, key: keyof typeof s.model, step = 0.05, min = 0, max?: number) => (
     <div className="setting">
       <label htmlFor={`m-${key}`}>{label}</label>
-      <input id={`m-${key}`} type="number" step={step} min={min} max={max} value={s.model[key] ?? ''} onChange={(e) => setModel({ [key]: e.target.value === '' ? undefined : Number(e.target.value) })} />
+      <input
+        id={`m-${key}`}
+        type="number"
+        step={step}
+        min={min}
+        max={max}
+        value={s.model[key] ?? ''}
+        onChange={(e) => setModel({ [key]: e.target.value === '' ? undefined : Number(e.target.value) })}
+      />
     </div>
   );
   return (
@@ -288,7 +325,13 @@ function GameplayTab({ adventure, api }: { adventure: Adventure; api: GameApi })
       <Section title="Story generator" defaultOpen>
         <div className="setting">
           <label htmlFor="tpl">Prompt template</label>
-          <select id="tpl" className="field" style={{ width: 140, height: 32 }} value={s.template} onChange={(e) => api.updateSettings({ template: e.target.value as typeof s.template })}>
+          <select
+            id="tpl"
+            className="field"
+            style={{ width: 140, height: 32 }}
+            value={s.template}
+            onChange={(e) => api.updateSettings({ template: e.target.value as typeof s.template })}
+          >
             <option value="chatml">ChatML</option>
             <option value="llama3">Llama 3</option>
             <option value="mistral">Mistral</option>
@@ -321,7 +364,15 @@ function GameplayTab({ adventure, api }: { adventure: Adventure; api: GameApi })
       <Section title="Memory system" defaultOpen>
         <div className="setting">
           <label htmlFor="ctx">Context length</label>
-          <input id="ctx" type="range" min={1024} max={131072} step={1024} value={s.model.contextLength} onChange={(e) => setModel({ contextLength: Number(e.target.value) })} />
+          <input
+            id="ctx"
+            type="range"
+            min={1024}
+            max={131072}
+            step={1024}
+            value={s.model.contextLength}
+            onChange={(e) => setModel({ contextLength: Number(e.target.value) })}
+          />
           <span className="mono">{(s.model.contextLength / 1024).toFixed(0)}k</span>
         </div>
         <div className="setting">
@@ -334,19 +385,42 @@ function GameplayTab({ adventure, api }: { adventure: Adventure; api: GameApi })
         </div>
         <div className="setting">
           <label htmlFor="bank">Bank size</label>
-          <input id="bank" type="number" min={10} max={2000} step={10} value={s.memory.bankSize} onChange={(e) => setMemory({ bankSize: Number(e.target.value) })} />
+          <input
+            id="bank"
+            type="number"
+            min={10}
+            max={2000}
+            step={10}
+            value={s.memory.bankSize}
+            onChange={(e) => setMemory({ bankSize: Number(e.target.value) })}
+          />
         </div>
         <div className="setting">
           <label title="History before cards/memories so the backend reuses its KV cache">Cache-stable layout</label>
-          <button className="toggle" role="switch" aria-checked={s.context.cacheStableLayout} onClick={() => setContext({ cacheStableLayout: !s.context.cacheStableLayout })} />
+          <button
+            className="toggle"
+            role="switch"
+            aria-checked={s.context.cacheStableLayout}
+            onClick={() => setContext({ cacheStableLayout: !s.context.cacheStableLayout })}
+          />
         </div>
         <div className="setting">
           <label title="After each turn, prefill the next turn's stable prefix so the first token arrives faster">Warm cache between turns</label>
-          <button className="toggle" role="switch" aria-checked={s.context.cacheWarming ?? true} onClick={() => setContext({ cacheWarming: !(s.context.cacheWarming ?? true) })} />
+          <button
+            className="toggle"
+            role="switch"
+            aria-checked={s.context.cacheWarming ?? true}
+            onClick={() => setContext({ cacheWarming: !(s.context.cacheWarming ?? true) })}
+          />
         </div>
         <div className="setting">
           <label title="Generate one retry alternative in the background on a second slot (needs -np 2 and spare VRAM)">Prefetch a retry</label>
-          <button className="toggle" role="switch" aria-checked={s.context.retryPrefetch ?? false} onClick={() => setContext({ retryPrefetch: !(s.context.retryPrefetch ?? false) })} />
+          <button
+            className="toggle"
+            role="switch"
+            aria-checked={s.context.retryPrefetch ?? false}
+            onClick={() => setContext({ retryPrefetch: !(s.context.retryPrefetch ?? false) })}
+          />
         </div>
       </Section>
       <Section title="Model settings">
@@ -367,13 +441,24 @@ function GameplayTab({ adventure, api }: { adventure: Adventure; api: GameApi })
         </div>
         <div className="setting">
           <label title="Red ⚠ on the context meter when story cards or plot components did not fit">Context warning</label>
-          <button className="toggle" role="switch" aria-checked={s.context.contextWarning ?? true} onClick={() => setContext({ contextWarning: !(s.context.contextWarning ?? true) })} />
+          <button
+            className="toggle"
+            role="switch"
+            aria-checked={s.context.contextWarning ?? true}
+            onClick={() => setContext({ contextWarning: !(s.context.contextWarning ?? true) })}
+          />
         </div>
       </Section>
       <Section title="Appearance">
         <div className="setting">
           <label htmlFor="ts">Text style</label>
-          <select id="ts" className="field" style={{ width: 140, height: 32 }} value={s.textStyle} onChange={(e) => api.updateSettings({ textStyle: e.target.value as typeof s.textStyle })}>
+          <select
+            id="ts"
+            className="field"
+            style={{ width: 140, height: 32 }}
+            value={s.textStyle}
+            onChange={(e) => api.updateSettings({ textStyle: e.target.value as typeof s.textStyle })}
+          >
             <option value="print">Print</option>
             <option value="clean">Clean</option>
             <option value="hacker">Hacker</option>
