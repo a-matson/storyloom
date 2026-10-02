@@ -46,7 +46,7 @@ export async function* generate(adventure: Adventure, request: CompletionRequest
     }
     if (chunk.done) stats = chunk.stats;
   }
-  const raw = adventure.settings.context.rawOutput ? text : trimUnfinishedSentence(text);
+  const raw = adventure.settings.context.rawOutput ? text : trimUnfinishedSentence(text, stats?.stopReason);
   const hook = await runHook(adventure, deps, 'onOutput', raw, adventure.actions, { info: { characterNames: [], actionCount: adventure.actions.length } });
   if (hook.error) return { text: raw, stats, ttftMs };
   if (hook.state.message) yield { type: 'message', text: hook.state.message };

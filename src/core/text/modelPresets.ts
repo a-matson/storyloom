@@ -15,7 +15,8 @@ export interface ModelPreset {
   template: TemplateId;
   /** Substring to recognise the model from a GGUF file name. */
   match: RegExp;
-  settings: Omit<ModelSettings, 'contextLength'>;
+  /** Samplers only: context and response length are budgets, not model traits. */
+  settings: Omit<ModelSettings, 'contextLength' | 'responseLength'>;
   notes: string;
 }
 
@@ -28,7 +29,7 @@ export const MODEL_PRESETS: ModelPreset[] = [
     base: 'Mistral-Nemo-Base-2407',
     template: 'chatml',
     match: /muse/i,
-    settings: { responseLength: 150, temperature: 1, topK: 250, topP: 1, presencePenalty: 0.25, frequencyPenalty: 0 },
+    settings: { temperature: 1, topK: 250, topP: 1, presencePenalty: 0.25, frequencyPenalty: 0 },
     notes: 'Character- and relationship-focused; good coherence over long contexts.',
   },
   {
@@ -39,7 +40,7 @@ export const MODEL_PRESETS: ModelPreset[] = [
     base: 'Mistral-Nemo-Base-2407',
     template: 'chatml',
     match: /wayfarer-?2|wayfarer-12b/i,
-    settings: { responseLength: 150, temperature: 1.1, topK: 300, topP: 0.85, presencePenalty: 0.5, frequencyPenalty: 0.2 },
+    settings: { temperature: 1.1, topK: 300, topP: 0.85, presencePenalty: 0.5, frequencyPenalty: 0.2 },
     notes: 'Consequences, combat, death. Second person. Use Do/Say often to fight repetition.',
   },
   {
@@ -50,7 +51,7 @@ export const MODEL_PRESETS: ModelPreset[] = [
     base: 'Mistral-Small-3.1-24B-Instruct-2503',
     template: 'chatml',
     match: /harbinger/i,
-    settings: { responseLength: 150, temperature: 1.3, topK: 500, topP: 0.95, presencePenalty: 0.25, frequencyPenalty: 0 },
+    settings: { temperature: 1.3, topK: 500, topP: 0.95, presencePenalty: 0.25, frequencyPenalty: 0 },
     notes: "Wayfarer lineage with DPO polish; strong Author's Note handling and mid-sentence continuation.",
   },
   {
@@ -61,7 +62,7 @@ export const MODEL_PRESETS: ModelPreset[] = [
     base: 'Mistral-Small-3.2-24B-Instruct-2506',
     template: 'chatml',
     match: /hearthfire/i,
-    settings: { responseLength: 150, temperature: 0.9, topK: 75, topP: 0.92, presencePenalty: 1.1, frequencyPenalty: 0 },
+    settings: { temperature: 0.9, topK: 75, topP: 0.92, presencePenalty: 1.1, frequencyPenalty: 0 },
     notes: 'Slice-of-life, atmospheric, happy to linger.',
   },
   {
@@ -72,7 +73,7 @@ export const MODEL_PRESETS: ModelPreset[] = [
     base: 'gemma-4-31B-it',
     template: 'gemma',
     match: /equinox/i,
-    settings: { responseLength: 150, temperature: 1, topK: 400, topP: 0.9, presencePenalty: 0.25, frequencyPenalty: 0.1 },
+    settings: { temperature: 1, topK: 400, topP: 0.9, presencePenalty: 0.25, frequencyPenalty: 0.1 },
     notes: 'Gemma-based; second-person continuation, character continuity, fewer refusals.',
   },
   {
@@ -83,7 +84,7 @@ export const MODEL_PRESETS: ModelPreset[] = [
     base: 'Llama-3.3-70B-Instruct',
     template: 'llama3',
     match: /nova/i,
-    settings: { responseLength: 150, temperature: 1, topK: 400, topP: 0.7, presencePenalty: 0.8, frequencyPenalty: 0 },
+    settings: { temperature: 1, topK: 400, topP: 0.7, presencePenalty: 0.8, frequencyPenalty: 0 },
     notes: 'Muse training on a 70B base. Needs ~42 GB at Q4.',
   },
   {
@@ -94,7 +95,7 @@ export const MODEL_PRESETS: ModelPreset[] = [
     base: 'Llama-3.3-70B-Instruct',
     template: 'llama3',
     match: /wayfarer-large/i,
-    settings: { responseLength: 150, temperature: 1, topK: 500, topP: 0.95, presencePenalty: 0.5, frequencyPenalty: 0 },
+    settings: { temperature: 1, topK: 500, topP: 0.95, presencePenalty: 0.5, frequencyPenalty: 0 },
     notes: 'Unforgiving combat and consequence at 70B scale.',
   },
   {
@@ -105,7 +106,7 @@ export const MODEL_PRESETS: ModelPreset[] = [
     base: 'Llama-3-8B',
     template: 'llama3',
     match: /lunaris/i,
-    settings: { responseLength: 150, temperature: 1.1, topK: 100, topP: 0.95, presencePenalty: 0.25, frequencyPenalty: 0 },
+    settings: { temperature: 1.1, topK: 100, topP: 0.95, presencePenalty: 0.25, frequencyPenalty: 0 },
     notes: 'Lightweight roleplay model; fits 8 GB cards with room for context.',
   },
 ];
