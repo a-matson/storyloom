@@ -142,7 +142,17 @@
       }
     },
     {
-      "files": ["src/ui/**", "src/core/ports/provider.ts", "src/adapters/embeddings/embeddings.worker.ts"],
+      "files": [
+        "src/ui/components/*.tsx",
+        "src/ui/App.tsx",
+        "src/ui/main.tsx",
+        "src/ui/router.ts",
+        "src/ui/theme.ts",
+        "src/ui/transferUi.ts",
+        "src/ui/hooks/**",
+        "src/core/ports/provider.ts",
+        "src/adapters/embeddings/embeddings.worker.ts"
+      ],
       "rules": {
         "typescript/strict-boolean-expressions": [
           "warn",

@@ -56,8 +56,17 @@
   --font-mono: var(--font-mono);
   --font-prose: var(--font-prose);
 
+  /* Design type scale; no line-heights, so text inherits the body's leading. */
+  --text-*: initial;
+  --text-pill: 10px;
   --text-label: 11px;
+  --text-caption: 12px;
   --text-control: 13px;
+  --text-body: 14px;
+  --text-card-title: 17px;
+  --text-screen-title: 20px;
+  --text-heading: 22px;
+  --text-title: 28px;
 
   --radius-sm: 6px;
   --radius-md: 8px;
