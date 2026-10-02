@@ -6,7 +6,7 @@ import { navigate, useRoute } from './router';
 import { LibraryScreen } from './features/library/LibraryScreen';
 
 // Only the library is on the start-up path; the other screens load on first visit.
-const GameScreen = lazy(async () => ({ default: (await import('./components/GameScreen')).GameScreen }));
+const GameScreen = lazy(async () => ({ default: (await import('./features/game/GameScreen')).GameScreen }));
 const SetupScreen = lazy(async () => ({ default: (await import('./features/setup/SetupScreen')).SetupScreen }));
 
 /** Status for the library header; never throws. */
