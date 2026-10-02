@@ -5,6 +5,7 @@ import { storage } from '@app/services';
 import { startScenario } from '@app/scenarios';
 import { Button } from '@ui/components/ui/button';
 import { Pill } from '@ui/components/ui/pill';
+import { importScenarioFromFile, pickFile } from '@ui/transferUi';
 import { SCENARIO_TYPES } from '../scenario/scenarioTypes';
 
 // Its drawer primitives would otherwise join a chunk shared with the start-up path.
@@ -17,6 +18,11 @@ interface Props {
 }
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
+async function importFile(): Promise<void> {
+  const file = await pickFile('.json,application/json');
+  if (file) await storage.putScenario(await importScenarioFromFile(file));
+}
+
 const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 function summaryLine(s: Scenario): string {
@@ -94,6 +100,9 @@ export function ScenarioGrid({ app, onEdit, onPlay, onError }: Props) {
         <h2 className="m-0 font-display text-heading font-medium">My scenarios</h2>
         <span className="text-caption text-muted-foreground">{scenarios.length}</span>
         <span className="grow" />
+        <Button variant="ghost" onClick={() => void importFile().catch((e: unknown) => onError(message(e)))} title="Storyloom scenario JSON">
+          Import…
+        </Button>
         <Button variant="ghost" onClick={create}>
           + New scenario
         </Button>

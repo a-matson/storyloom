@@ -9,6 +9,7 @@ import { Select } from '@ui/components/ui/field';
 import { Toast } from '@ui/components/ui/toast';
 import { TopBar, TopBarTitle } from '@ui/components/ui/top-bar';
 import { IconHome } from '@ui/components/Icons';
+import { downloadScenarioJson } from '@ui/transferUi';
 import { useScenarioDraft } from './useScenarioDraft';
 import { BasicsTab } from './BasicsTab';
 import { TechnicalTab } from './TechnicalTab';
@@ -48,6 +49,11 @@ export function ScenarioEditor({ id, path, app, onExit, onPath, onPlay }: Props)
       </div>
     );
   return <Editor key={id} saved={saved} path={path} app={app} onExit={onExit} onPath={onPath} onPlay={onPlay} />;
+}
+
+// The whole root, options included, and only once it is saved.
+async function exportSaved(root: Scenario, save: () => Promise<boolean>): Promise<void> {
+  if (await save()) await downloadScenarioJson(root);
 }
 
 function Editor({ saved, path, app, onExit, onPath, onPlay }: Omit<Props, 'id'> & { saved: Scenario }) {
@@ -108,6 +114,7 @@ function Editor({ saved, path, app, onExit, onPath, onPlay }: Omit<Props, 'id'> 
             ))}
           </Select>
         </label>
+        <Button onClick={() => void exportSaved(draft, save).catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))}>Export</Button>
         <Button onClick={() => void playTest()} disabled={starting}>
           Play test
         </Button>
@@ -123,7 +130,7 @@ function Editor({ saved, path, app, onExit, onPath, onPlay }: Omit<Props, 'id'> 
           {tab === 'technical' && <TechnicalTab key={node.id} draft={node} update={updateNode} />}
           {tab === 'scripts' && <ScriptsTab key={node.id} draft={node} update={updateNode} />}
         </main>
-        {tab !== 'scripts' && <ScenarioRail key={node.id} draft={node} update={updateNode} app={app} />}
+        {tab !== 'scripts' && <ScenarioRail key={node.id} draft={node} update={updateNode} app={app} onError={setError} />}
       </div>
       {asking && <PrePlayDialog scenario={draft} busy={starting} onBegin={begin} onClose={() => setAsking(false)} />}
       {error !== null && <Toast message={error} error onDismiss={() => setError(null)} />}

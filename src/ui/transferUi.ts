@@ -1,4 +1,4 @@
-import type { Adventure } from '@core/model';
+import type { Adventure, Scenario } from '@core/model';
 import type { ImportResult } from '@app/transfer';
 
 // Import/export is rare; load it (zip + AI Dungeon mapping) on demand.
@@ -18,13 +18,21 @@ export function downloadText(filename: string, text: string, mime = 'application
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function safeName(s: string): string {
+function safeName(s: string, fallback = 'adventure'): string {
   return (
     s
       .replace(/[^\w.-]+/g, '_')
       .replace(/^_+|_+$/g, '')
-      .slice(0, 60) || 'adventure'
+      .slice(0, 60) || fallback
   );
+}
+
+export async function downloadScenarioJson(s: Scenario): Promise<void> {
+  downloadText(`${safeName(s.title, 'scenario')}.scenario.json`, (await transfer()).exportScenarioJson(s));
+}
+
+export async function importScenarioFromFile(file: File): Promise<Scenario> {
+  return (await transfer()).importScenarioJson(await file.text());
 }
 
 export async function downloadAdventureJson(a: Adventure): Promise<void> {
@@ -59,8 +67,8 @@ export async function importAdventureFromFile(file: File, settings: Adventure['s
   return (await transfer()).importAdventureJson(await file.text(), settings);
 }
 
-export async function downloadStoryCards(a: Adventure): Promise<void> {
-  downloadText(`${safeName(a.title) || 'cards'}.cards.json`, (await transfer()).exportStoryCardsJson(a.storyCards));
+export async function downloadStoryCards(a: Pick<Adventure, 'title' | 'storyCards'>): Promise<void> {
+  downloadText(`${safeName(a.title, 'cards')}.cards.json`, (await transfer()).exportStoryCardsJson(a.storyCards));
 }
 
 export async function importStoryCardsFromFile(file: File): Promise<{ cards: Adventure['storyCards']; warnings: string[] }> {

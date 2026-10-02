@@ -139,6 +139,23 @@ test('multiple choice: edit options, pick the second, its prompt opens the adven
   await expect(page.getByRole('button', { name: 'Open Doors' })).toBeVisible();
 });
 
+test('export a scenario, import it back as a second one', async ({ page }) => {
+  await newScenario(page);
+  await page.getByRole('button', { name: 'Basics' }).click();
+  await page.getByRole('textbox', { name: 'Title' }).fill('Night Ferry');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe('Night_Ferry.scenario.json');
+  await expect(page.getByText('Scenario · Story · saved')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Back to library' }).click();
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Import…' }).nth(1).click();
+  await (await chooser).setFiles(await file.path());
+  await expect(page.getByRole('button', { name: 'Night Ferry', exact: true })).toHaveCount(2);
+});
+
 test('play test without placeholders goes straight to the game', async ({ page }) => {
   await newScenario(page);
   await page.getByRole('textbox', { name: 'Prompt' }).fill('The ferry horn sounds twice.');
