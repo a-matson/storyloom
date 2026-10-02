@@ -1,0 +1,7 @@
+pre-commit:
+  jobs:
+    - name: format
+      glob: '*.{ts,tsx,js,mjs,json,css,md,yml,yaml,html}'
+      exclude: [pnpm-lock.yaml]
+      run: pnpm exec oxfmt --no-error-on-unmatched-pattern {staged_files}
+      stage_fixed: true
