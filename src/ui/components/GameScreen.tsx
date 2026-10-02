@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { Adventure, AppSettings } from '@core/types';
+import type { Adventure, AppSettings } from '@core/model/types';
 import { useGame } from '../hooks/useGame';
-import { applyTheme, providerFor, tokenizer } from '../services';
+import { applyTheme, providerFor, tokenizer } from '@app/services';
 import { StoryView } from './StoryView';
 import { CommandRow } from './CommandRow';
 import { Sidebar } from './Sidebar';

@@ -1,11 +1,11 @@
 import { useState, type ReactNode } from 'react';
-import type { Adventure, StoryCard } from '@core/types';
-import { MAX_STORY_CARDS } from '@core/storyCards';
-import type { Provider } from '@providers/types';
+import type { Adventure, StoryCard } from '@core/model/types';
+import { MAX_STORY_CARDS } from '@core/cards/storyCards';
+import type { Provider } from '@core/ports/provider';
 import { CardDialog } from './CardDialog';
-import { MODEL_PRESETS } from '@core/modelPresets';
-import { exportStoryCardsJson, importStoryCardsJson } from '@storage/transfer';
-import { tokenizer } from '../services';
+import { MODEL_PRESETS } from '@core/text/modelPresets';
+import { exportStoryCardsJson, importStoryCardsJson } from '@adapters/storage/transfer';
+import { tokenizer } from '@app/services';
 import { downloadAdventureJson, downloadAdventureText, downloadText, pickFile } from '../transferUi';
 import type { GameApi } from '../hooks/useGame';
 import { IconChevron } from './Icons';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { cosine, dueMemoryRanges, evictToSize, markStale, rankMemories, summaryDue } from '@core/memoryBank';
-import type { Memory } from '@core/types';
+import { cosine, dueMemoryRanges, evictToSize, markStale, rankMemories, summaryDue } from '@core/memory/memoryBank';
+import type { Memory } from '@core/model/types';
 
 const mem = (id: string, from: number, useCount = 0, createdAt = 0, embedding?: number[]): Memory => ({
   id,

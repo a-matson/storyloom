@@ -2,11 +2,11 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { arch, cpus, platform } from 'node:os';
 import { Bench } from 'tinybench';
 import { test } from 'vitest';
-import { buildContext } from '@core/contextBuilder';
-import { rankMemories } from '@core/memoryBank';
-import { findTriggeredCards } from '@core/storyCards';
-import { createApproxTokenizer } from '@core/tokenizer';
-import { actionStoryText } from '@core/formatting';
+import { buildContext } from '@core/context/contextBuilder';
+import { rankMemories } from '@core/memory/memoryBank';
+import { findTriggeredCards } from '@core/cards/storyCards';
+import { createApproxTokenizer } from '@core/text/tokenizer';
+import { actionStoryText } from '@core/text/formatting';
 import { makeAdventure } from '../tests/fixtures/adventure';
 
 const tokenizer = createApproxTokenizer();

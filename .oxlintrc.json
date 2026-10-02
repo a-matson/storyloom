@@ -36,15 +36,17 @@
     {
       "files": [
         "src/ui/**",
-        "src/storage/**",
-        "src/providers/types.ts",
-        "src/providers/llamaServer.ts",
-        "src/providers/openaiCompat.ts",
-        "src/core/cardGenerator.ts",
-        "src/core/contextBuilder.ts",
-        "src/core/engine.ts",
-        "src/core/memoryJobs.ts",
-        "src/embeddings/embeddings.worker.ts"
+        "src/app/**",
+        "src/core/ports/provider.ts",
+        "src/adapters/storage/**",
+        "src/adapters/providers/http.ts",
+        "src/adapters/providers/llamaServer.ts",
+        "src/adapters/providers/openaiCompat.ts",
+        "src/core/cards/cardGenerator.ts",
+        "src/core/context/contextBuilder.ts",
+        "src/core/turn/engine.ts",
+        "src/core/memory/memoryJobs.ts",
+        "src/adapters/embeddings/embeddings.worker.ts"
       ],
       "rules": {
         "typescript/strict-boolean-expressions": ["warn", { "allowNullableString": true, "allowNullableBoolean": true }],

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
-import type { PlayerTurnType } from '@core/engine';
+import type { PlayerTurnType } from '@core/turn/engine';
 import type { GameApi } from '../hooks/useGame';
 import { IconSend, IconStop } from './Icons';
 

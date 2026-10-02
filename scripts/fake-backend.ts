@@ -3,7 +3,7 @@
  * Echoes every prompt to stdout so you can eyeball what the context builder produced.
  */
 import { serve } from 'srvx';
-import { createFakeLlama } from '../src/providers/demo/fakeLlama.ts';
+import { createFakeLlama } from '../src/adapters/providers/demo/fakeLlama.ts';
 
 const port = Number(process.argv[2] ?? 8080);
 const handler = createFakeLlama({

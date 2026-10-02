@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import type { AppSettings, ProviderConfig } from '@core/types';
-import { guessTemplate } from '@core/templates';
-import { findPreset } from '@core/modelPresets';
-import { providerFor } from '../services';
-import type { ProviderCapabilities, ProviderHealth } from '@providers/types';
+import type { AppSettings, ProviderConfig } from '@core/model/types';
+import { guessTemplate } from '@core/text/templates';
+import { findPreset } from '@core/text/modelPresets';
+import { providerFor } from '@app/services';
+import type { ProviderCapabilities, ProviderHealth } from '@core/ports/provider';
 import { IconBack } from './Icons';
 
 interface Props {

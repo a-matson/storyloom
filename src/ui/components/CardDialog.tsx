@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import type { Adventure, StoryCard } from '@core/types';
-import { newId } from '@core/types';
-import { parseTriggers } from '@core/storyCards';
-import { DEFAULT_GENERATOR_SETTINGS, generateStoryCard, normaliseTriggers, type CardGeneratorSettings } from '@core/cardGenerator';
-import type { Provider } from '@providers/types';
+import type { Adventure, StoryCard } from '@core/model/types';
+import { newId } from '@core/model/types';
+import { parseTriggers } from '@core/cards/storyCards';
+import { DEFAULT_GENERATOR_SETTINGS, generateStoryCard, normaliseTriggers, type CardGeneratorSettings } from '@core/cards/cardGenerator';
+import type { Provider } from '@core/ports/provider';
 import { IconClose } from './Icons';
 
 const TYPES = ['Character', 'Class', 'Race', 'Location', 'Faction', 'Custom'];

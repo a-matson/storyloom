@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { buildContext, chunkedStart, type ContextBuildInput } from '@core/contextBuilder';
-import type { Action, Memory, StoryCard } from '@core/types';
-import type { Tokenizer } from '@core/tokenizer';
+import { buildContext, chunkedStart, type ContextBuildInput } from '@core/context/contextBuilder';
+import type { Action, Memory, StoryCard } from '@core/model/types';
+import type { Tokenizer } from '@core/text/tokenizer';
 
 /** Deterministic tokenizer for tests: 1 token per 4 characters. */
 const tok: Tokenizer = { count: (t) => (t ? Math.ceil(t.length / 4) : 0) };

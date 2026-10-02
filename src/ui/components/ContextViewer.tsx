@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { ContextBuildResult, SectionKind } from '@core/contextBuilder';
-import type { CompletionStats } from '@providers/types';
+import type { ContextBuildResult, SectionKind } from '@core/context/contextBuilder';
+import type { CompletionStats } from '@core/ports/provider';
 import { IconClose } from './Icons';
 
 const COLORS: Record<SectionKind, string> = {
