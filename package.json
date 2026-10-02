@@ -24,6 +24,9 @@
     "measure:renders": "VITE_MEASURE_RENDERS=1 vite build --outDir dist-measure && MEASURE_RENDERS=1 playwright test e2e/renders.spec.ts --config playwright.measure.config.ts"
   },
   "dependencies": {
+    "@fontsource-variable/fraunces": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
     "class-variance-authority": "0.7.1",
     "clsx": "^2.1.1",
     "dexie": "^4.4.6",
