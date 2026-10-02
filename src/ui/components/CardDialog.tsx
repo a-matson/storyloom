@@ -43,24 +43,27 @@ export function CardDialog({ adventure, provider, card, onSave, onSettings, onCl
   const generate = async (what: 'name' | 'entry') => {
     setBusy(what);
     setError(null);
-    try {
-      const g = await generateStoryCard(
-        { type: effectiveType, name: what === 'entry' ? name.trim() || undefined : undefined, settings, storySummary: adventure.plot.storySummary },
-        { provider, template: adventure.settings.template },
-      );
-      if (what === 'name') {
-        setName(g.name);
-        setTriggers(g.triggers.join(','));
-      } else if (!triggers.trim()) {
-        setTriggers(normaliseTriggers(g.triggers, name.trim() || g.name).join(','));
-      }
-      setEntry(g.entry);
-      if (settings.logToNotes) setNotes((n) => `${n ? `${n}\n\n` : ''}— generated ${new Date().toLocaleTimeString()} —\n${g.entry}`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(null);
+    const result = await generateStoryCard(
+      { type: effectiveType, name: what === 'entry' ? name.trim() || undefined : undefined, settings, storySummary: adventure.plot.storySummary },
+      { provider, template: adventure.settings.template },
+    ).then(
+      (g) => ({ ok: true as const, g }),
+      (e: unknown) => ({ ok: false as const, error: e instanceof Error ? e.message : String(e) }),
+    );
+    setBusy(null);
+    if (!result.ok) {
+      setError(result.error);
+      return;
     }
+    const { g } = result;
+    if (what === 'name') {
+      setName(g.name);
+      setTriggers(g.triggers.join(','));
+    } else if (!triggers.trim()) {
+      setTriggers(normaliseTriggers(g.triggers, name.trim() || g.name).join(','));
+    }
+    setEntry(g.entry);
+    if (settings.logToNotes) setNotes((n) => `${n ? `${n}\n\n` : ''}— generated ${new Date().toLocaleTimeString()} —\n${g.entry}`);
   };
 
   const build = (): StoryCard => ({

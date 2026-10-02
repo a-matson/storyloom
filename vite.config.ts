@@ -5,8 +5,15 @@ import react from '@vitejs/plugin-react';
 // produces ./dist, which `llama-server --path ./dist` can serve directly so
 // the UI and the inference server share one origin (no CORS).
 export default defineConfig({
-  plugins: [react()],
-  resolve: { tsconfigPaths: true },
+  plugins: [
+    // React Compiler (Oxc's Rust port). CI fails on any component it can't optimise; locally a bailout must not break HMR.
+    react({ compiler: { panicThreshold: process.env['CI'] ? 'all_errors' : 'none' } }),
+  ],
+  resolve: {
+    tsconfigPaths: true,
+    // Measurement builds need React's profiling build, or <Profiler> reports nothing.
+    alias: process.env['VITE_MEASURE_RENDERS'] === '1' ? { 'react-dom/client': 'react-dom/profiling' } : {},
+  },
   server: {
     port: 5173,
     // Local inference servers are called directly from the browser at

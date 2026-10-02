@@ -73,7 +73,7 @@ function Section({
   title,
   tokens,
   badge,
-  defaultOpen = false,
+  defaultOpen,
   children,
 }: {
   title: string;
@@ -82,7 +82,7 @@ function Section({
   defaultOpen?: boolean;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(defaultOpen ?? false);
   return (
     <section className="section">
       <header onClick={() => setOpen((o) => !o)}>

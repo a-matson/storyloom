@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import type { Adventure, AppSettings } from '@core/model';
 import { DEFAULT_APP_SETTINGS, providerFor, storage } from '@app/services';
 import { applyTheme } from './theme';
@@ -6,6 +6,16 @@ import { navigate, useRoute } from './router';
 import { LibraryScreen } from './components/LibraryScreen';
 import { GameScreen } from './components/GameScreen';
 import { SetupScreen } from './components/SetupScreen';
+
+/** Status for the library header; never throws. */
+async function probeBackend(settings: AppSettings): Promise<{ ok: boolean; label: string }> {
+  try {
+    const h = await providerFor(settings, settings.defaultProviderId).health();
+    return { ok: h.ok, label: h.ok ? (h.modelId ?? settings.providers[0]?.name ?? 'backend') : 'backend offline' };
+  } catch {
+    return { ok: false, label: 'backend offline' };
+  }
+}
 
 /**
  * Shell: loads settings + storage, then renders the screen for the current
@@ -20,6 +30,14 @@ export function App() {
   const [backendOk, setBackendOk] = useState<boolean | null>(null);
   const [backendLabel, setBackendLabel] = useState('no backend');
 
+  // First run (no saved settings) goes to setup unless already there; reads the route at that moment.
+  const onLoaded = useEffectEvent((saved: AppSettings | undefined) => {
+    const settings = saved ?? DEFAULT_APP_SETTINGS;
+    setApp(settings);
+    applyTheme(settings);
+    if (!saved && route.name !== 'setup') navigate({ name: 'setup' }, true);
+  });
+
   useEffect(() => {
     void (async () => {
       let saved: AppSettings | undefined;
@@ -29,29 +47,18 @@ export function App() {
       } catch (e) {
         setLoadError(`Storage problem — using default settings. ${e instanceof Error ? e.message : String(e)}`);
       }
-      const settings = saved ?? DEFAULT_APP_SETTINGS;
-      setApp(settings);
-      applyTheme(settings);
-      if (!saved && route.name !== 'setup') navigate({ name: 'setup' }, true);
+      onLoaded(saved);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const probe = useCallback(async (settings: AppSettings) => {
-    try {
-      const p = providerFor(settings, settings.defaultProviderId);
-      const h = await p.health();
-      setBackendOk(h.ok);
-      setBackendLabel(h.ok ? (h.modelId ?? settings.providers[0]?.name ?? 'backend') : 'backend offline');
-    } catch {
-      setBackendOk(false);
-      setBackendLabel('backend offline');
-    }
   }, []);
 
   useEffect(() => {
-    if (app && route.name === 'library') void probe(app);
-  }, [route.name, app, probe]);
+    if (!app || route.name !== 'library') return;
+    void (async () => {
+      const { ok, label } = await probeBackend(app);
+      setBackendOk(ok);
+      setBackendLabel(label);
+    })();
+  }, [route.name, app]);
 
   // Load the adventure named by the route.
   useEffect(() => {
