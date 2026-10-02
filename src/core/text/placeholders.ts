@@ -15,21 +15,23 @@ const RE = /\$\{([^}]+)\}/g;
 export interface PlaceholderQuestion {
   key: string;
   label: string;
+  /** Occurrences across all texts; the player is still asked once. */
+  uses: number;
 }
 
 export function findPlaceholders(texts: (string | undefined)[]): PlaceholderQuestion[] {
-  const seen = new Set<string>();
-  const out: PlaceholderQuestion[] = [];
+  const seen = new Map<string, PlaceholderQuestion>();
   for (const t of texts) {
     if (!t) continue;
     for (const m of t.matchAll(RE)) {
       const key = m[1] ?? '';
-      if (!key || seen.has(key)) continue;
-      seen.add(key);
-      out.push({ key, label: key === CHARACTER_NAME ? "Enter your character's name…" : key });
+      if (!key) continue;
+      const q = seen.get(key);
+      if (q) q.uses++;
+      else seen.set(key, { key, label: key === CHARACTER_NAME ? "Enter your character's name…" : key, uses: 1 });
     }
   }
-  return out;
+  return [...seen.values()];
 }
 
 export function applyPlaceholders(text: string, answers: Record<string, string>): string {

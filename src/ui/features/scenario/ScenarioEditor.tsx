@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import type { Scenario } from '@core/model';
+import type { AppSettings, Scenario } from '@core/model';
 import { storage } from '@app/services';
 import { Button } from '@ui/components/ui/button';
 import { Segmented } from '@ui/components/ui/drawer';
@@ -12,6 +12,7 @@ import { useScenarioDraft } from './useScenarioDraft';
 import { BasicsTab } from './BasicsTab';
 import { TechnicalTab } from './TechnicalTab';
 import { ScriptsTab } from './ScriptsTab';
+import { ScenarioRail } from './ScenarioRail';
 
 const TABS = [
   { id: 'basics', label: 'Basics' },
@@ -28,11 +29,12 @@ const TYPES: { id: Scenario['type']; label: string }[] = [
 
 interface Props {
   id: string;
+  app: AppSettings;
   onExit: () => void;
 }
 
 /** Loads the scenario, then hands it to the editor; `key` resets the draft when the id changes. */
-export function ScenarioEditor({ id, onExit }: Props) {
+export function ScenarioEditor({ id, app, onExit }: Props) {
   const saved = useLiveQuery(async () => (await storage.getScenario(id)) ?? null, [id]);
   if (saved === undefined) return <div className="h-full" />;
   if (saved === null)
@@ -42,10 +44,10 @@ export function ScenarioEditor({ id, onExit }: Props) {
         <Button onClick={onExit}>Back to library</Button>
       </div>
     );
-  return <Editor key={id} saved={saved} onExit={onExit} />;
+  return <Editor key={id} saved={saved} app={app} onExit={onExit} />;
 }
 
-function Editor({ saved, onExit }: { saved: Scenario; onExit: () => void }) {
+function Editor({ saved, app, onExit }: { saved: Scenario; app: AppSettings; onExit: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const { draft, dirty, update, save } = useScenarioDraft(saved, setError);
   const [tab, setTab] = useState<Tab>('technical');
@@ -82,11 +84,14 @@ function Editor({ saved, onExit }: { saved: Scenario; onExit: () => void }) {
           Save
         </Button>
       </TopBar>
-      <main className="flex grow flex-col gap-4.5 overflow-y-auto px-7 py-6 max-sm:p-4">
-        {tab === 'basics' && <BasicsTab draft={draft} update={update} />}
-        {tab === 'technical' && <TechnicalTab draft={draft} update={update} />}
-        {tab === 'scripts' && <ScriptsTab draft={draft} update={update} />}
-      </main>
+      <div className="flex min-h-0 grow max-lg:flex-col max-lg:overflow-y-auto">
+        <main className="flex grow flex-col gap-4.5 overflow-y-auto px-7 py-6 max-lg:overflow-visible max-sm:p-4">
+          {tab === 'basics' && <BasicsTab draft={draft} update={update} />}
+          {tab === 'technical' && <TechnicalTab draft={draft} update={update} />}
+          {tab === 'scripts' && <ScriptsTab draft={draft} update={update} />}
+        </main>
+        {tab !== 'scripts' && <ScenarioRail draft={draft} update={update} app={app} />}
+      </div>
       {error !== null && <Toast message={error} error onDismiss={() => setError(null)} />}
     </div>
   );

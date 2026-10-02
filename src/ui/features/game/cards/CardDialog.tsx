@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Adventure, StoryCard } from '@core/model';
+import type { StoryCard } from '@core/model';
 import type { CardGeneratorSettings } from '@core/cards';
 import type { Provider } from '@core/ports';
 import { Button } from '@ui/components/ui/button';
@@ -7,10 +7,10 @@ import { Drawer, DrawerBody, DrawerHeader, Segmented } from '@ui/components/ui/d
 import { TopBarTitle } from '@ui/components/ui/top-bar';
 import { CardDetails } from './CardDetails';
 import { GeneratorSettings } from './GeneratorSettings';
-import { useCardDraft } from './useCardDraft';
+import { useCardDraft, type CardContext } from './useCardDraft';
 
 interface Props {
-  adventure: Adventure;
+  context: CardContext;
   provider: Provider;
   /** Existing card to edit; omit to create. */
   card?: StoryCard | undefined;
@@ -25,9 +25,9 @@ const VIEWS = [
 ] as const;
 
 /** Story card create/edit with AI generation, following AI Dungeon's flow. */
-export function CardDialog({ adventure, provider, card, onSave, onSettings, onClose }: Props) {
+export function CardDialog({ context, provider, card, onSave, onSettings, onClose }: Props) {
   const [view, setView] = useState<'details' | 'settings'>('details');
-  const draft = useCardDraft(adventure, provider, card);
+  const draft = useCardDraft(context, provider, card);
   const title = card ? 'Edit story card' : 'New story card';
   // Speed create keeps the dialog open for the next new card.
   const next = draft.settings.speedCreate && !card ? 'new' : 'close';

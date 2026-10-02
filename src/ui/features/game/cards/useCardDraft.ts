@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import type { Adventure, StoryCard } from '@core/model';
+import type { AdventureSettings, StoryCard } from '@core/model';
 import { newId } from '@core/model';
-import { DEFAULT_GENERATOR_SETTINGS, generateStoryCard, normaliseTriggers, parseTriggers } from '@core/cards';
+import { generateStoryCard, normaliseTriggers, parseTriggers, type CardGeneratorSettings } from '@core/cards';
 import type { Provider } from '@core/ports';
 
 export const CARD_TYPES = ['Character', 'Class', 'Race', 'Location', 'Faction', 'Custom'];
@@ -9,9 +9,16 @@ export const CARD_TYPES = ['Character', 'Class', 'Race', 'Location', 'Faction', 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const orUndefined = (s: string) => (s === '' ? undefined : s);
 
+/** What generation needs from the story; the game passes its adventure's, the scenario editor defaults. */
+export interface CardContext {
+  generator: CardGeneratorSettings;
+  storySummary: string | undefined;
+  template: AdventureSettings['template'];
+}
+
 /** Form state for one story card, plus AI generation of name/entry/triggers. */
-export function useCardDraft(adventure: Adventure, provider: Provider, card: StoryCard | undefined) {
-  const settings = adventure.cardGenerator ?? DEFAULT_GENERATOR_SETTINGS;
+export function useCardDraft(context: CardContext, provider: Provider, card: StoryCard | undefined) {
+  const settings = context.generator;
   const custom = card !== undefined && (!CARD_TYPES.includes(card.type) || card.type === 'Custom');
   const [type, setType] = useState(card?.type ?? 'Character');
   const [customType, setCustomType] = useState(custom ? card.type : '');
@@ -27,8 +34,8 @@ export function useCardDraft(adventure: Adventure, provider: Provider, card: Sto
   const generate = async (what: 'name' | 'entry') => {
     setBusy(what);
     setError(null);
-    const request = { type: effectiveType, name: what === 'entry' ? orUndefined(name.trim()) : undefined, settings, storySummary: adventure.plot.storySummary };
-    const result = await generateStoryCard(request, { provider, template: adventure.settings.template }).then(
+    const request = { type: effectiveType, name: what === 'entry' ? orUndefined(name.trim()) : undefined, settings, storySummary: context.storySummary };
+    const result = await generateStoryCard(request, { provider, template: context.template }).then(
       (g) => ({ ok: true as const, g }),
       (e: unknown) => ({ ok: false as const, error: message(e) }),
     );

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Adventure, StoryCard } from '@core/model';
-import { MAX_STORY_CARDS } from '@core/cards';
+import { DEFAULT_GENERATOR_SETTINGS, MAX_STORY_CARDS } from '@core/cards';
 import type { Provider } from '@core/ports';
 import { tokenizer } from '@app/services';
 import type { GameApi } from '@ui/hooks/useGameSession';
@@ -8,9 +8,8 @@ import { Button } from '@ui/components/ui/button';
 import { Input } from '@ui/components/ui/field';
 import { Pill } from '@ui/components/ui/pill';
 import { CardDialog } from '../cards/CardDialog';
+import { tone } from '../cards/tone';
 import { SECTION, SECTION_HEADER } from './Section';
-
-const tone = (type: string) => (type.toLowerCase() === 'character' ? 'do' : type.toLowerCase() === 'location' ? 'say' : 'plain');
 
 function CardRow({ card, onOpen }: { card: StoryCard; onOpen: () => void }) {
   return (
@@ -66,7 +65,11 @@ export function CardsTab({ adventure, api, provider }: { adventure: Adventure; a
       {editing !== null && (
         <CardDialog
           key={dialogKey}
-          adventure={adventure}
+          context={{
+            generator: adventure.cardGenerator ?? DEFAULT_GENERATOR_SETTINGS,
+            storySummary: adventure.plot.storySummary,
+            template: adventure.settings.template,
+          }}
           provider={provider}
           card={editing === 'new' ? undefined : editing}
           onSave={save}
