@@ -156,9 +156,12 @@ export class GameSession {
   }
 
   private afterTurn(): void {
-    this.svc.idle(() => void this.maintainMemory());
     const ac = new AbortController();
     this.idleAbort = ac;
+    // Slots share one GPU: memory work waits for the next idle period once a turn starts.
+    this.svc.idle(() => {
+      if (!ac.signal.aborted) void this.maintainMemory(ac.signal);
+    });
     void runIdleWork(this.adv, this.log.actions, this.lastPrepared, this.deps(), ac.signal, {
       onPrefetched: (p) => {
         this.prefetched = p;
@@ -189,11 +192,11 @@ export class GameSession {
     return { provider: this.svc.providerFor(this.app, this.adv.settings.providerId), template: this.adv.settings.template };
   }
 
-  private async maintainMemory(): Promise<void> {
+  private async maintainMemory(signal: AbortSignal): Promise<void> {
     try {
       // Memories are embedded on the story side so they compare with the query vectors in `prepareContext`.
       const { runMemoryMaintenance } = await loadMemoryJobs();
-      const report = await runMemoryMaintenance(this.adv, { ...(await this.memoryModel()), embedder: await this.resolveEmbedder() });
+      const report = await runMemoryMaintenance(this.adv, { ...(await this.memoryModel()), embedder: await this.resolveEmbedder(), signal });
       if (report.memoriesWritten || report.memoriesRegenerated || report.memoriesDropped || report.summaryUpdated) {
         this.emit();
         this.save();

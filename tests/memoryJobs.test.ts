@@ -11,9 +11,11 @@ function fakeDeps(adv: Adventure, opts: { abortAfter?: number } = {}) {
   const ac = new AbortController();
   const provider = {
     id: 'fake',
-    async *complete(req: CompletionRequest) {
+    async *complete(req: CompletionRequest, signal?: AbortSignal) {
       calls.push(req.prompt);
       if (calls.length === opts.abortAfter) ac.abort();
+      // A real backend drops the stream when its signal fires.
+      if (signal?.aborted) throw new DOMException('aborted', 'AbortError');
       const passage = req.prompt.match(/EDITED|\w+/g)?.find((w) => w === 'EDITED') ?? 'text';
       yield { text: `sum:${passage}`, done: true };
     },
@@ -68,6 +70,15 @@ describe('memory maintenance', () => {
     await runMemoryMaintenance(adv, aborting.deps);
     expect(aborting.calls).toHaveLength(1);
     expect(adv.memories.filter((m) => m.stale)).toHaveLength(3);
+  });
+
+  it('lets a streaming memory call finish when aborted, then defers the rest and the summary', async () => {
+    const adv = adventure(30);
+    adv.settings.memory.autoSummary = true;
+    const { deps, calls } = fakeDeps(adv, { abortAfter: 1 });
+    const report = await runMemoryMaintenance(adv, deps);
+    expect(calls).toHaveLength(1);
+    expect(report).toMatchObject({ memoriesWritten: 1, summaryUpdated: false });
   });
 
   it('never summarises an evicted range twice on a long adventure', async () => {
