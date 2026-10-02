@@ -3,7 +3,7 @@ import { DEFAULT_ADVENTURE_SETTINGS } from '@core/model';
 import { adventureFromData, type ImportResult } from './zip';
 
 export { exportStoryCardsJson, importStoryCardsJson } from './cards';
-export { exportAdventureJson, exportAdventureText } from './own';
+export { exportAdventureJson, exportAdventureText, exportTracesJsonl } from './own';
 export { importAidZip, type ImportResult } from './zip';
 
 /** Our JSON export, a bare adventure, or an AI Dungeon adventure JSON. */

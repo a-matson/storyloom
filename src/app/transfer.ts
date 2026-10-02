@@ -3,6 +3,7 @@ export {
   exportAdventureJson,
   exportAdventureText,
   exportStoryCardsJson,
+  exportTracesJsonl,
   importAdventureJson,
   importAidZip,
   importStoryCardsJson,

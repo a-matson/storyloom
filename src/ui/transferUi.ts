@@ -35,6 +35,11 @@ export async function downloadAdventureText(a: Adventure): Promise<void> {
   downloadText(`${safeName(a.title)}.txt`, (await transfer()).exportAdventureText(a), 'text/plain');
 }
 
+export async function downloadTraces(a: Adventure): Promise<void> {
+  const { storage } = await import('@app/services');
+  downloadText(`${safeName(a.title)}.traces.jsonl`, (await transfer()).exportTracesJsonl(await storage.listTraces(a.id)), 'application/x-ndjson');
+}
+
 export function pickFile(accept: string): Promise<File | null> {
   return new Promise((resolve) => {
     const input = document.createElement('input');

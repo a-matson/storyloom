@@ -1,5 +1,5 @@
 import { z } from 'zod/mini';
-import type { Adventure } from '@core/model';
+import type { Adventure, TurnTrace } from '@core/model';
 import { newId } from '@core/model';
 import * as S from '@core/schema';
 
@@ -17,6 +17,16 @@ export function exportAdventureText(a: Adventure): string {
     .filter((x) => x.type !== 'see')
     .map((x) => x.versions[x.active] ?? '')
     .join('\n\n');
+}
+
+/** One trace per line, oldest first, prompt text included (local-only debugging record). */
+export function exportTracesJsonl(traces: readonly TurnTrace[]): string {
+  return (
+    traces
+      .toSorted((a, b) => a.createdAt - b.createdAt)
+      .map((t) => JSON.stringify(t))
+      .join('\n') + (traces.length ? '\n' : '')
+  );
 }
 
 /** Our export or a bare adventure; undefined when the data is neither. Throws with the field path when it is ours but damaged. */

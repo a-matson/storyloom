@@ -1,6 +1,15 @@
 import { strToU8, zipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
-import { exportAdventureJson, exportAdventureText, exportStoryCardsJson, importAdventureJson, importAidZip, importStoryCardsJson } from '@adapters/transfer';
+import {
+  exportAdventureJson,
+  exportAdventureText,
+  exportStoryCardsJson,
+  exportTracesJsonl,
+  importAdventureJson,
+  importAidZip,
+  importStoryCardsJson,
+} from '@adapters/transfer';
+import { makeTrace } from './fixtures/trace';
 import { createBlankAdventure, DEFAULT_ADVENTURE_SETTINGS } from '@core/model';
 
 const zip = (files: Record<string, string>, level: 0 | 6 = 6): ArrayBuffer =>
@@ -101,5 +110,19 @@ describe('text export', () => {
       { id: 'y', type: 'continue', versions: ['old', 'new'], active: 1, createdAt: 0 },
     );
     expect(exportAdventureText(a)).toBe('Opening.\n\nnew');
+  });
+});
+
+describe('traces JSONL', () => {
+  it('writes one trace per line, oldest first, with the prompt', () => {
+    const out = exportTracesJsonl([makeTrace({ turnId: 'b', createdAt: 2 }), makeTrace({ turnId: 'a', createdAt: 1, prompt: 'hello' })]);
+    const rows = out
+      .trimEnd()
+      .split('\n')
+      .map((l) => JSON.parse(l));
+    expect(rows.map((r) => r.turnId)).toEqual(['a', 'b']);
+    expect(rows[0].prompt).toBe('hello');
+    expect(out.endsWith('\n')).toBe(true);
+    expect(exportTracesJsonl([])).toBe('');
   });
 });
