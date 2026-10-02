@@ -26,5 +26,5 @@
       "@ui/*": ["./src/ui/*"]
     }
   },
-  "include": ["src", "tests", "vite.config.ts", "scripts"]
+  "include": ["src", "tests", "vite.config.ts", "scripts", "e2e", "playwright.config.ts"]
 }

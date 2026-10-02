@@ -27,13 +27,16 @@ export function Sidebar({ adventure, api, provider, hidden, onClose }: Props) {
   const [sub, setSub] = useState<SubTab>('plot');
   return (
     <aside className="sidebar" hidden={hidden} aria-label="Adventure settings">
-      <div className="tabs" role="tablist">
-        <button role="tab" aria-selected={tab === 'adventure'} onClick={() => setTab('adventure')}>
-          Adventure
-        </button>
-        <button role="tab" aria-selected={tab === 'gameplay'} onClick={() => setTab('gameplay')}>
-          Gameplay
-        </button>
+      <div className="tabs">
+        {/* A tablist may only contain tabs, so the close button sits outside it. */}
+        <div role="tablist" aria-label="Settings sections" style={{ display: 'contents' }}>
+          <button role="tab" aria-selected={tab === 'adventure'} onClick={() => setTab('adventure')}>
+            Adventure
+          </button>
+          <button role="tab" aria-selected={tab === 'gameplay'} onClick={() => setTab('gameplay')}>
+            Gameplay
+          </button>
+        </div>
         <span className="grow" />
         <button className="btn ghost icon" aria-label="Close settings" onClick={onClose} style={{ height: 32, width: 32 }}>
           ×
