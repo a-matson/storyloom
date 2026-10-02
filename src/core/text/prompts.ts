@@ -41,6 +41,14 @@ export function openingPrompt(opts: { brief: string; picks: { type: string; entr
   );
 }
 
+/** "Surprise me": an opening from nothing but a genre. Runs under OPENING_SYSTEM. [provisional] */
+export function surprisePrompt(genre: string): string {
+  return (
+    `Invent the opening of a new ${genre} interactive story. Write 2–3 sentences in second person, present tense. ` +
+    'Put the player in a concrete situation and end on a hook they can act on. Never decide what the player does or says.'
+  );
+}
+
 export const CARD_SYSTEM = 'You write world-building notes for an interactive story. Reply with JSON only.';
 
 export function cardPrompt(opts: {

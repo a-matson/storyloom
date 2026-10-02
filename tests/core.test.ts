@@ -3,7 +3,7 @@ import { applyPlaceholders, findPlaceholders } from '@core/text/placeholders';
 import { formatPlayerInput, trimUnfinishedSentence } from '@core/text/formatting';
 import { guessTemplate, renderTemplate } from '@core/text/templates';
 import { createApproxTokenizer, trimToTokens } from '@core/text/tokenizer';
-import { createAdventureFromScenario, missingAnswers, newScenario, placeholderQuestions } from '@core/model/scenario';
+import { createAdventureFromScenario, missingAnswers, newScenario, placeholderQuestions, scenarioSummary } from '@core/model/scenario';
 import { childAt, newOption, withChild } from '@core/model/scenarioTypes';
 import * as S from '@core/schema';
 import type { Scenario } from '@core/model/types';
@@ -79,6 +79,21 @@ describe('newScenario', () => {
     expect(s.type).toBe('story');
     expect(placeholderQuestions(s)).toEqual([]);
     expect(s.plot.aiInstructions).toMatch(/narrator/);
+  });
+});
+
+describe('scenarioSummary', () => {
+  it('counts each placeholder once across prompt and cards, cards, branches and non-empty scripts', () => {
+    const s: Scenario = {
+      ...newScenario('S', 'You are ${character.name}.'),
+      storyCards: [
+        { id: 'a', type: 'NPC', name: 'a', entry: '${character.name} and ${Rival?}', triggers: [] },
+        { id: 'b', type: 'NPC', name: 'b', entry: 'b', triggers: [] },
+      ],
+      scripts: { library: '', input: 'x', context: ' ', output: 'y' },
+    };
+    expect(scenarioSummary(s)).toEqual({ type: 'story', placeholders: 2, cards: 2, branches: 0, scripts: 2 });
+    expect(scenarioSummary({ ...newScenario(), type: 'multipleChoice', options: [newScenario(), newScenario()] })).toMatchObject({ branches: 2, scripts: 0 });
   });
 });
 

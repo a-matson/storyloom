@@ -18,6 +18,17 @@ export function placeholderQuestions(s: Scenario) {
   ]);
 }
 
+/** Library card counts. `scripts`: how many of the four hooks have code. */
+export function scenarioSummary(s: Scenario) {
+  return {
+    type: s.type,
+    placeholders: placeholderQuestions(s).length,
+    cards: s.storyCards.length,
+    branches: s.options?.length ?? 0,
+    scripts: Object.values(s.scripts ?? {}).filter((code) => code.trim() !== '').length,
+  };
+}
+
 /** Question keys still unanswered (trimmed empty), in question order. All answers are required. [provisional] */
 export function missingAnswers(questions: { key: string }[], answers: Record<string, string>): string[] {
   return questions.filter((q) => !answers[q.key]?.trim()).map((q) => q.key);

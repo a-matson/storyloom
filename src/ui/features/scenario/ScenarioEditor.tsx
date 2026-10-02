@@ -16,6 +16,7 @@ import { ScriptsTab } from './ScriptsTab';
 import { ScenarioRail } from './ScenarioRail';
 import { PrePlayDialog } from './PrePlayDialog';
 import { OptionsList } from './OptionsList';
+import { SCENARIO_TYPES as TYPES } from './scenarioTypes';
 
 const TABS = [
   { id: 'basics', label: 'Basics' },
@@ -23,12 +24,6 @@ const TABS = [
   { id: 'scripts', label: 'Scripts' },
 ] as const;
 type Tab = (typeof TABS)[number]['id'];
-
-const TYPES: { id: Scenario['type']; label: string }[] = [
-  { id: 'story', label: 'Story' },
-  { id: 'characterCreator', label: 'Character creator' },
-  { id: 'multipleChoice', label: 'Multiple choice' },
-];
 
 interface Props {
   id: string;
