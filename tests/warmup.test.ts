@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { renderPrefix, renderTemplate } from '@core/text/templates';
-import { buildWarmupPrompt, prepareContext } from '@core/turn/engine';
+import { buildWarmupPrompt, prepareContext } from '@core/turn';
 import { createBlankAdventure } from '@core/model/scenario';
 import { ActionLog } from '@core/log/actionLog';
 import type { CompletionChunk, Provider, ProviderCapabilities, ProviderHealth } from '@core/ports/provider';

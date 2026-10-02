@@ -157,7 +157,7 @@ export interface Adventure {
   storyCards: StoryCard[];
   memories: Memory[];
   /** Persistent object scripts may read/write (`state` in the scripting API). */
-  scriptState: Record<string, unknown>;
+  scriptState: ScriptState;
   /** Answers given to ${placeholders} when the adventure was created. */
   placeholders: { question: string; answer: string }[];
   settings: AdventureSettings;
@@ -255,4 +255,21 @@ export function newId(prefix = ''): string {
   if (c && typeof c.randomUUID === 'function') return prefix + c.randomUUID();
   counter += 1;
   return `${prefix}${Date.now().toString(36)}-${counter.toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/** `state.memory` in the scripting API: overrides for plot essentials / author's note, plus front memory. */
+export interface ScriptMemory {
+  context?: string | undefined;
+  authorsNote?: string | undefined;
+  frontMemory?: string | undefined;
+}
+
+/** Persistent object scripts read/write (`state` in the scripting API). */
+export interface ScriptState {
+  memory?: ScriptMemory | undefined;
+  message?: string | undefined;
+  placeholders?: { question: string; answer: string }[] | undefined;
+  /** Action count at the last Story Summary refresh (memory jobs). */
+  __summaryAt?: number | undefined;
+  [key: string]: unknown;
 }

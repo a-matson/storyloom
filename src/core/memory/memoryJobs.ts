@@ -61,7 +61,7 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
   }
 
   if (settings.autoSummary) {
-    const lastAt = Number((adventure.scriptState['__summaryAt'] as number | undefined) ?? 0);
+    const lastAt = adventure.scriptState.__summaryAt ?? 0;
     if (summaryDue(count, lastAt)) {
       const since = adventure.memories.filter((m) => m.fromAction >= lastAt).map((m) => m.text);
       const recent = actions

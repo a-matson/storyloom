@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildContext, chunkedStart, type ContextBuildInput } from '@core/context/contextBuilder';
+import { buildContext, chunkedStart, type ContextBuildInput } from '@core/context';
 import type { Action, Memory, StoryCard } from '@core/model/types';
 import type { Tokenizer } from '@core/text/tokenizer';
 
