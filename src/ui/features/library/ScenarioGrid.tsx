@@ -2,13 +2,13 @@ import { lazy, Suspense, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { newScenario, scenarioSummary, type AppSettings, type Scenario } from '@core/model';
 import { storage } from '@app/services';
+import { startScenario } from '@app/scenarios';
 import { Button } from '@ui/components/ui/button';
 import { Pill } from '@ui/components/ui/pill';
 import { SCENARIO_TYPES } from '../scenario/scenarioTypes';
 
-// Off the start-up chunk: the dialog, and `startScenario` with the opening writer, load on Play.
+// Its drawer primitives would otherwise join a chunk shared with the start-up path.
 const PrePlayDialog = lazy(async () => ({ default: (await import('../scenario/PrePlayDialog')).PrePlayDialog }));
-
 interface Props {
   app: AppSettings;
   onEdit: (id: string) => void;
@@ -77,16 +77,15 @@ export function ScenarioGrid({ app, onEdit, onPlay, onError }: Props) {
     if (!confirm(`Delete the scenario "${s.title || 'Untitled scenario'}"? Adventures started from it are kept.`)) return;
     storage.deleteScenario(s.id).catch((e: unknown) => onError(message(e)));
   };
-  const begin = async (root: Scenario, leaf: Scenario, answers: Record<string, string>, picked: string[]) => {
+  const begin = (root: Scenario, leaf: Scenario, answers: Record<string, string>, picked: string[]) => {
     setStarting(true);
-    try {
-      const { startScenario } = await import('@app/scenarios');
-      const { adventure, warning } = await startScenario(leaf, answers, app, picked, root);
-      onPlay(adventure.id, warning);
-    } catch (e) {
-      setStarting(false);
-      onError(message(e));
-    }
+    startScenario(leaf, answers, app, picked, root).then(
+      ({ adventure, warning }) => onPlay(adventure.id, warning),
+      (e: unknown) => {
+        setStarting(false);
+        onError(message(e));
+      },
+    );
   };
 
   return (
@@ -112,7 +111,7 @@ export function ScenarioGrid({ app, onEdit, onPlay, onError }: Props) {
           <PrePlayDialog
             scenario={playing}
             busy={starting}
-            onBegin={(leaf, answers, picked) => void begin(playing, leaf, answers, picked)}
+            onBegin={(leaf, answers, picked) => begin(playing, leaf, answers, picked)}
             onClose={() => setPlaying(null)}
           />
         </Suspense>

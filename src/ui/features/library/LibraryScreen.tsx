@@ -28,6 +28,11 @@ interface Props {
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
+// Outside the component: the React Compiler cannot lower `import()` expressions.
+async function surpriseAdventure(app: AppSettings) {
+  return (await import('@app/scenarios')).surpriseAdventure(app);
+}
+
 async function remove(id: string): Promise<void> {
   if (!confirm('Delete this adventure? This cannot be undone.')) return;
   await storage.deleteAdventure(id);
@@ -49,7 +54,6 @@ export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissN
 
   const surprise = async () => {
     try {
-      const { surpriseAdventure } = await import('@app/scenarios');
       onOpen((await surpriseAdventure(app)).id);
     } catch (e) {
       setError(message(e));
