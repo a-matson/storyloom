@@ -11,8 +11,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "pnpm typecheck && pnpm test",
-    "fake-backend": "node scripts/fake-backend.ts"
+    "check": "pnpm typecheck && pnpm format:check && pnpm test",
+    "fake-backend": "node scripts/fake-backend.ts",
+    "format": "oxfmt src tests scripts .github index.html vite.config.ts README.md package.json tsconfig.json lefthook.yml .oxfmtrc.json",
+    "format:check": "oxfmt --check src tests scripts .github index.html vite.config.ts README.md package.json tsconfig.json lefthook.yml .oxfmtrc.json"
   },
   "dependencies": {
     "react": "^19.3.0",
@@ -23,6 +25,8 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
+    "lefthook": "2.1.15",
+    "oxfmt": "0.71.0",
     "srvx": "^1.0.5",
     "typescript": "^7.0.2",
     "vite": "^8.3.1",
@@ -31,5 +35,10 @@
   "engines": {
     "node": ">=22.18"
   },
-  "packageManager": "pnpm@12.6.0"
+  "packageManager": "pnpm@12.6.0",
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "all",
+    "printWidth": 160
+  }
 }

@@ -55,7 +55,18 @@ export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissN
     <div className="app">
       <header className="topbar" style={{ height: 60, padding: '0 32px' }}>
         <div className="row" style={{ gap: 10 }}>
-          <span style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--lantern)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--lantern-ink)' }}>
+          <span
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              background: 'var(--lantern)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--lantern-ink)',
+            }}
+          >
             <IconBook width={16} height={16} />
           </span>
           <span className="title" style={{ fontWeight: 600 }}>
@@ -72,11 +83,19 @@ export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissN
       <div className="page">
         <div className="row" style={{ gap: 20, alignItems: 'stretch' }}>
           {latest ? (
-            <button className="tile" style={{ flexGrow: 1, flexDirection: 'row', alignItems: 'center', gap: 20, padding: 20 }} onClick={() => onOpen(latest.id)}>
+            <button
+              className="tile"
+              style={{ flexGrow: 1, flexDirection: 'row', alignItems: 'center', gap: 20, padding: 20 }}
+              onClick={() => onOpen(latest.id)}
+            >
               <div className="cover" style={{ width: 180, height: 120, flexShrink: 0 }} />
               <div className="col" style={{ gap: 6, flexGrow: 1 }}>
-                <span className="label" style={{ color: 'var(--lantern)' }}>Continue</span>
-                <span className="name" style={{ fontSize: 28 }}>{latest.title}</span>
+                <span className="label" style={{ color: 'var(--lantern)' }}>
+                  Continue
+                </span>
+                <span className="name" style={{ fontSize: 28 }}>
+                  {latest.title}
+                </span>
                 <span className="small muted">
                   {latest.actionCount} actions · {latest.modelId ?? 'local model'} · {timeAgo(latest.updatedAt)}
                 </span>
@@ -132,7 +151,11 @@ export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissN
             {adventures.map((a) => (
               <div key={a.id} className="tile" style={{ position: 'relative' }}>
                 <button className="cover" style={{ border: 'none', cursor: 'pointer' }} aria-label={`Open ${a.title}`} onClick={() => onOpen(a.id)} />
-                <button className="name" style={{ background: 'transparent', border: 'none', textAlign: 'left', padding: 0, color: 'inherit' }} onClick={() => onOpen(a.id)}>
+                <button
+                  className="name"
+                  style={{ background: 'transparent', border: 'none', textAlign: 'left', padding: 0, color: 'inherit' }}
+                  onClick={() => onOpen(a.id)}
+                >
                   {a.title}
                 </button>
                 <div className="row small muted">

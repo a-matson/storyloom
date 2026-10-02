@@ -51,7 +51,7 @@ export const MODEL_PRESETS: ModelPreset[] = [
     template: 'chatml',
     match: /harbinger/i,
     settings: { responseLength: 150, temperature: 1.3, topK: 500, topP: 0.95, presencePenalty: 0.25, frequencyPenalty: 0 },
-    notes: 'Wayfarer lineage with DPO polish; strong Author\'s Note handling and mid-sentence continuation.',
+    notes: "Wayfarer lineage with DPO polish; strong Author's Note handling and mid-sentence continuation.",
   },
   {
     id: 'hearthfire-24b',

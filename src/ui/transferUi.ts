@@ -16,7 +16,12 @@ export function downloadText(filename: string, text: string, mime = 'application
 }
 
 function safeName(s: string): string {
-  return s.replace(/[^\w.-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60) || 'adventure';
+  return (
+    s
+      .replace(/[^\w.-]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 60) || 'adventure'
+  );
 }
 
 export function downloadAdventureJson(a: Adventure): void {

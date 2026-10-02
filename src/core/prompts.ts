@@ -26,8 +26,7 @@ export function summaryPrompt(previousSummary: string, newMemories: string[], re
   );
 }
 
-export const CARD_SYSTEM =
-  'You write world-building notes for an interactive story. Reply with JSON only.';
+export const CARD_SYSTEM = 'You write world-building notes for an interactive story. Reply with JSON only.';
 
 export function cardPrompt(opts: { type: string; name?: string; instructions?: string; storyInfo?: string; summary?: string }): string {
   return (

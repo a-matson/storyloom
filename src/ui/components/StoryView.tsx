@@ -51,7 +51,21 @@ export function StoryView({ actions, streaming, busy, api, onViewContext, contex
   );
 }
 
-function ActionBlock({ action, isLast, busy, api, onViewContext, contextSummary }: { action: Action; isLast: boolean; busy: boolean; api: GameApi; onViewContext: () => void; contextSummary?: string }) {
+function ActionBlock({
+  action,
+  isLast,
+  busy,
+  api,
+  onViewContext,
+  contextSummary,
+}: {
+  action: Action;
+  isLast: boolean;
+  busy: boolean;
+  api: GameApi;
+  onViewContext: () => void;
+  contextSummary?: string;
+}) {
   const [editing, setEditing] = useState(false);
   const ref = useRef<HTMLParagraphElement>(null);
   const text = actionText(action);
@@ -89,7 +103,9 @@ function ActionBlock({ action, isLast, busy, api, onViewContext, contextSummary 
     return (
       <figure style={{ margin: 0 }}>
         <img src={action.image.url} alt={action.image.prompt} style={{ maxWidth: '100%', borderRadius: 12 }} />
-        <figcaption className="muted small" style={{ fontFamily: 'var(--font-ui)' }}>{action.image.prompt}</figcaption>
+        <figcaption className="muted small" style={{ fontFamily: 'var(--font-ui)' }}>
+          {action.image.prompt}
+        </figcaption>
       </figure>
     );
   }
@@ -114,7 +130,11 @@ function ActionBlock({ action, isLast, busy, api, onViewContext, contextSummary 
               <span className="mono">
                 {action.active + 1} of {action.versions.length}
               </span>
-              <button aria-label="Next retry" onClick={() => api.setVersion(action.id, action.active + 1)} disabled={action.active === action.versions.length - 1}>
+              <button
+                aria-label="Next retry"
+                onClick={() => api.setVersion(action.id, action.active + 1)}
+                disabled={action.active === action.versions.length - 1}
+              >
                 <IconRight />
               </button>
             </span>

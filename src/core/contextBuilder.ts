@@ -131,12 +131,7 @@ export function findLastActionIndex(actions: Action[]): number {
  * Walk backwards from `end` (exclusive) accumulating actions until `budget`
  * tokens are used. Returns the start index of the fitting window.
  */
-export function historyWindowStart(
-  actions: Action[],
-  end: number,
-  budget: number,
-  tokenizer: Tokenizer,
-): { start: number; tokens: number } {
+export function historyWindowStart(actions: Action[], end: number, budget: number, tokenizer: Tokenizer): { start: number; tokens: number } {
   let used = 0;
   let start = end;
   for (let i = end - 1; i >= 0; i--) {
@@ -312,7 +307,7 @@ export function buildContext(input: ContextBuildInput): ContextBuildResult {
 
   const sections: ContextSection[] = [];
   const sys = required.get('instructions');
-  const system = sys ? plotValues.instructions ?? '' : '';
+  const system = sys ? (plotValues.instructions ?? '') : '';
   if (sys) sections.push({ kind: 'instructions', text: sys.text, tokens: sys.tokens, cacheable: true, trimmed: sys.trimmed });
 
   if (triggeredCards.length) {

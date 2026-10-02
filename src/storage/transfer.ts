@@ -192,7 +192,11 @@ export async function importAidZip(buffer: ArrayBuffer, settings: AdventureSetti
     const paragraphs = text.split(/\n{2,}/).filter(Boolean);
     return {
       id: newId('adv_'),
-      title: textEntry.name.replace(/\.(txt|md)$/i, '').split('/').pop() ?? 'Imported adventure',
+      title:
+        textEntry.name
+          .replace(/\.(txt|md)$/i, '')
+          .split('/')
+          .pop() ?? 'Imported adventure',
       description: 'Imported from a text export; actions were split on blank lines.',
       tags: [],
       actions: paragraphs.map((p, i) => ({
@@ -212,7 +216,12 @@ export async function importAidZip(buffer: ArrayBuffer, settings: AdventureSetti
       updatedAt: now,
     };
   }
-  throw new Error(`No adventure found in zip (${zip.entries.length} entries: ${zip.entries.slice(0, 5).map((e) => e.name).join(', ')}…)`);
+  throw new Error(
+    `No adventure found in zip (${zip.entries.length} entries: ${zip.entries
+      .slice(0, 5)
+      .map((e) => e.name)
+      .join(', ')}…)`,
+  );
 }
 
 /** Story cards alone (AI Dungeon's card export is a JSON array of {keys, entry, type, title}). */

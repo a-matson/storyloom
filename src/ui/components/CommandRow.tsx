@@ -101,7 +101,16 @@ export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retry
             <span className="prefix" aria-hidden>
               {m.prefix}
             </span>
-            <input id="turn-input" ref={inputRef} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={onKey} placeholder={m.hint} disabled={busy} autoComplete="off" />
+            <input
+              id="turn-input"
+              ref={inputRef}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={onKey}
+              placeholder={m.hint}
+              disabled={busy}
+              autoComplete="off"
+            />
             {busy ? (
               <button className="send" aria-label="Stop generating" onClick={api.cancel} style={{ background: 'var(--danger)' }}>
                 <IconStop />
@@ -115,7 +124,13 @@ export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retry
           <button className="btn lg" onClick={() => api.submit('continue', '')} disabled={busy}>
             Continue
           </button>
-          <button className="btn lg" onClick={api.retry} disabled={busy || !canRetry} title={retryReady ? 'An alternative is ready — retry is instant' : undefined} style={retryReady ? { borderColor: 'var(--verdigris)' } : undefined}>
+          <button
+            className="btn lg"
+            onClick={api.retry}
+            disabled={busy || !canRetry}
+            title={retryReady ? 'An alternative is ready — retry is instant' : undefined}
+            style={retryReady ? { borderColor: 'var(--verdigris)' } : undefined}
+          >
             Retry{retryReady ? ' ·' : ''}
           </button>
           <button className="btn lg danger" onClick={api.erase} disabled={busy || !canErase}>

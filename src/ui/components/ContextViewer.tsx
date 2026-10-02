@@ -56,10 +56,18 @@ export function ContextViewer({ result, prompt, stats, onClose }: Props) {
           </div>
           <span className="grow" />
           <div className="row" style={{ gap: 2, padding: 3, borderRadius: 8, background: 'var(--bg-bar)', border: '1px solid var(--border)' }}>
-            <button className="btn ghost" style={{ height: 28, border: 'none', background: tab === 'budget' ? 'var(--bg-2)' : 'transparent' }} onClick={() => setTab('budget')}>
+            <button
+              className="btn ghost"
+              style={{ height: 28, border: 'none', background: tab === 'budget' ? 'var(--bg-2)' : 'transparent' }}
+              onClick={() => setTab('budget')}
+            >
               Budget
             </button>
-            <button className="btn ghost" style={{ height: 28, border: 'none', background: tab === 'raw' ? 'var(--bg-2)' : 'transparent' }} onClick={() => setTab('raw')}>
+            <button
+              className="btn ghost"
+              style={{ height: 28, border: 'none', background: tab === 'raw' ? 'var(--bg-2)' : 'transparent' }}
+              onClick={() => setTab('raw')}
+            >
               Raw prompt
             </button>
           </div>
@@ -77,7 +85,11 @@ export function ContextViewer({ result, prompt, stats, onClose }: Props) {
               </div>
               <div className="col" style={{ gap: 6 }}>
                 {result.sections.map((s) => (
-                  <div key={s.kind} className="row" style={{ padding: '8px 12px', borderRadius: 8, background: 'var(--bg-bar)', border: '1px solid var(--border)' }}>
+                  <div
+                    key={s.kind}
+                    className="row"
+                    style={{ padding: '8px 12px', borderRadius: 8, background: 'var(--bg-bar)', border: '1px solid var(--border)' }}
+                  >
                     <span style={{ width: 8, height: 8, borderRadius: 2, background: COLORS[s.kind] }} />
                     <span style={{ fontWeight: 500, flexGrow: 1 }}>
                       {LABELS[s.kind]}
@@ -110,7 +122,8 @@ export function ContextViewer({ result, prompt, stats, onClose }: Props) {
                     <div key={m.card.id} className="row small" style={{ color: 'var(--text-prose)' }}>
                       <span style={{ fontWeight: 500 }}>{m.card.name}</span>
                       <span className="muted">
-                        hit “{m.triggers.join('”, “')}” {m.lastHitDistance === 0 ? 'in the last action' : `${m.lastHitDistance} actions ago`} · frequency {m.hits}
+                        hit “{m.triggers.join('”, “')}” {m.lastHitDistance === 0 ? 'in the last action' : `${m.lastHitDistance} actions ago`} · frequency{' '}
+                        {m.hits}
                       </span>
                     </div>
                   ))}

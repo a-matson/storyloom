@@ -44,7 +44,10 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
       if (!passage.trim()) continue;
       const prompt = renderTemplate(deps.template, MEMORY_SYSTEM, memoryPrompt(passage));
       const { text } = await collect(
-        deps.provider.complete({ prompt: prompt.prompt, maxTokens: 120, temperature: 0.3, topP: 0.9, stop: prompt.stop, cachePrompt: false, slotId: 1 }, deps.signal),
+        deps.provider.complete(
+          { prompt: prompt.prompt, maxTokens: 120, temperature: 0.3, topP: 0.9, stop: prompt.stop, cachePrompt: false, slotId: 1 },
+          deps.signal,
+        ),
       );
       const memoryText = text.trim();
       if (!memoryText) continue;
@@ -61,10 +64,16 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
     const lastAt = Number((adventure.scriptState.__summaryAt as number | undefined) ?? 0);
     if (summaryDue(count, lastAt)) {
       const since = adventure.memories.filter((m) => m.fromAction >= lastAt).map((m) => m.text);
-      const recent = actions.slice(Math.max(0, count - 6)).map(actionText).join('\n\n');
+      const recent = actions
+        .slice(Math.max(0, count - 6))
+        .map(actionText)
+        .join('\n\n');
       const prompt = renderTemplate(deps.template, SUMMARY_SYSTEM, summaryPrompt(adventure.plot.storySummary ?? '', since, recent));
       const { text } = await collect(
-        deps.provider.complete({ prompt: prompt.prompt, maxTokens: 400, temperature: 0.3, topP: 0.9, stop: prompt.stop, cachePrompt: false, slotId: 1 }, deps.signal),
+        deps.provider.complete(
+          { prompt: prompt.prompt, maxTokens: 400, temperature: 0.3, topP: 0.9, stop: prompt.stop, cachePrompt: false, slotId: 1 },
+          deps.signal,
+        ),
       );
       if (text.trim()) {
         adventure.plot = { ...adventure.plot, storySummary: text.trim() };

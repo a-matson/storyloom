@@ -17,7 +17,21 @@ const provider: Provider = {
     return { ok: true };
   },
   async capabilities(): Promise<ProviderCapabilities> {
-    return { streaming: true, topK: true, penalties: true, minP: true, repetitionPenalty: true, seed: true, prefixCache: true, parallelSlots: 2, tokenize: true, embeddings: false, grammar: true, jsonSchema: true, images: false };
+    return {
+      streaming: true,
+      topK: true,
+      penalties: true,
+      minP: true,
+      repetitionPenalty: true,
+      seed: true,
+      prefixCache: true,
+      parallelSlots: 2,
+      tokenize: true,
+      embeddings: false,
+      grammar: true,
+      jsonSchema: true,
+      images: false,
+    };
   },
   async *complete(): AsyncIterable<CompletionChunk> {
     yield { text: '', done: true };

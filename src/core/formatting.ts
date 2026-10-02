@@ -70,7 +70,16 @@ export function trimUnfinishedSentence(output: string): string {
   const s = output.replace(/\s+$/, '');
   if (!s) return s;
   if (/[.!?…"”'’)\]]$/.test(s)) return s;
-  const idx = Math.max(s.lastIndexOf('. '), s.lastIndexOf('! '), s.lastIndexOf('? '), s.lastIndexOf('.\n'), s.lastIndexOf('!\n'), s.lastIndexOf('?\n'), s.lastIndexOf('”'), s.lastIndexOf('"'));
+  const idx = Math.max(
+    s.lastIndexOf('. '),
+    s.lastIndexOf('! '),
+    s.lastIndexOf('? '),
+    s.lastIndexOf('.\n'),
+    s.lastIndexOf('!\n'),
+    s.lastIndexOf('?\n'),
+    s.lastIndexOf('”'),
+    s.lastIndexOf('"'),
+  );
   if (idx <= 0) return s; // nothing to cut back to; keep as is
   return s.slice(0, idx + 1).trimEnd();
 }

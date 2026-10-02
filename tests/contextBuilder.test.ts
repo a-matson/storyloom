@@ -67,7 +67,13 @@ describe('required elements', () => {
   });
 
   it('script overrides take precedence over UI plot essentials and author note', () => {
-    const r = buildContext(base({ actions: [act('start', 'Go.')], plot: { plotEssentials: 'UI', authorsNote: 'UI-AN' }, overrides: { plotEssentials: 'SCRIPT', authorsNote: 'SCRIPT-AN' } }));
+    const r = buildContext(
+      base({
+        actions: [act('start', 'Go.')],
+        plot: { plotEssentials: 'UI', authorsNote: 'UI-AN' },
+        overrides: { plotEssentials: 'SCRIPT', authorsNote: 'SCRIPT-AN' },
+      }),
+    );
     expect(r.sections.find((s) => s.kind === 'plotEssentials')?.text).toBe('SCRIPT');
     expect(r.sections.find((s) => s.kind === 'authorsNote')?.text).toBe("[Author's note: SCRIPT-AN]");
   });
@@ -82,13 +88,19 @@ describe('dynamic elements', () => {
   });
 
   it('gives history everything after cards when the memory bank is off', () => {
-    const r = buildContext(base({ actions: [act('start', 'Go.')], settings: { contextLength: 400, memoryBankEnabled: false, cacheStableLayout: false, evictionChunk: 8 } }));
+    const r = buildContext(
+      base({ actions: [act('start', 'Go.')], settings: { contextLength: 400, memoryBankEnabled: false, cacheStableLayout: false, evictionChunk: 8 } }),
+    );
     expect(r.budget.historyBudget).toBe(r.budget.dynamicAvailable);
     expect(r.budget.memoriesBudget).toBe(0);
   });
 
   it('includes history newest-first and reports whether it fully fit', () => {
-    const actions = [act('start', 'Opening paragraph here.'), ...Array.from({ length: 30 }, (_, i) => act('continue', `Paragraph ${i} ${long(20)}`)), act('do', '> You wait.')];
+    const actions = [
+      act('start', 'Opening paragraph here.'),
+      ...Array.from({ length: 30 }, (_, i) => act('continue', `Paragraph ${i} ${long(20)}`)),
+      act('do', '> You wait.'),
+    ];
     const r = buildContext(base({ actions }));
     expect(r.historyFullyIncluded).toBe(false);
     expect(r.historyRange).not.toBeNull();
@@ -109,7 +121,11 @@ describe('dynamic elements', () => {
   });
 
   it('retrieves memories only when history overflows, skipping ranges still in history', () => {
-    const actions = [act('start', 'Opening.'), ...Array.from({ length: 40 }, (_, i) => act('continue', `Paragraph ${i} ${long(20)}`)), act('do', '> You wait.')];
+    const actions = [
+      act('start', 'Opening.'),
+      ...Array.from({ length: 40 }, (_, i) => act('continue', `Paragraph ${i} ${long(20)}`)),
+      act('do', '> You wait.'),
+    ];
     const r = buildContext(
       base({
         actions,
@@ -128,8 +144,16 @@ describe('dynamic elements', () => {
 
 describe('story cards', () => {
   it('adds triggered cards under a World Lore header, ranked by recency then frequency', () => {
-    const actions = [act('start', 'You meet Amanda at the gate.'), act('continue', 'Amanda smiles. The Fossil Garden is close.'), act('do', '> You walk to the Fossil Garden.')];
-    const cards = [card('Amanda', ['Amanda'], 'Amanda is your daughter.'), card('Garden', ['Fossil Garden'], 'Fossil Garden is a park of petrified trees.'), card('Bob', ['Bob'], 'Bob is nobody.')];
+    const actions = [
+      act('start', 'You meet Amanda at the gate.'),
+      act('continue', 'Amanda smiles. The Fossil Garden is close.'),
+      act('do', '> You walk to the Fossil Garden.'),
+    ];
+    const cards = [
+      card('Amanda', ['Amanda'], 'Amanda is your daughter.'),
+      card('Garden', ['Fossil Garden'], 'Fossil Garden is a park of petrified trees.'),
+      card('Bob', ['Bob'], 'Bob is nobody.'),
+    ];
     const r = buildContext(base({ actions, storyCards: cards }));
     expect(r.triggeredCards.map((m) => m.card.name)).toEqual(['Garden', 'Amanda']);
     expect(r.sections.find((s) => s.kind === 'storyCards')?.text).toBe('World Lore:\nFossil Garden is a park of petrified trees.\n\nAmanda is your daughter.');
@@ -138,7 +162,9 @@ describe('story cards', () => {
   it('drops cards that do not fit the 25% budget and reports them', () => {
     const actions = [act('start', 'Meet Amanda.'), act('do', '> You greet Amanda and Bob.')];
     const cards = [card('Amanda', ['Amanda'], long(60)), card('Bob', ['Bob'], long(60))];
-    const r = buildContext(base({ actions, storyCards: cards, settings: { contextLength: 200, memoryBankEnabled: true, cacheStableLayout: false, evictionChunk: 8 } }));
+    const r = buildContext(
+      base({ actions, storyCards: cards, settings: { contextLength: 200, memoryBankEnabled: true, cacheStableLayout: false, evictionChunk: 8 } }),
+    );
     expect(r.triggeredCards.length + r.droppedCards.length).toBe(2);
     expect(r.droppedCards.length).toBeGreaterThan(0);
     expect(r.budget.cardsUsed).toBeLessThanOrEqual(r.budget.cardsBudget);
@@ -146,20 +172,50 @@ describe('story cards', () => {
 });
 
 describe('ordering', () => {
-  const actions = [act('start', 'Meet Amanda.'), ...Array.from({ length: 40 }, (_, i) => act('continue', `Amanda ${i} ${long(15)}`)), act('do', '> You wave at Amanda.')];
+  const actions = [
+    act('start', 'Meet Amanda.'),
+    ...Array.from({ length: 40 }, (_, i) => act('continue', `Amanda ${i} ${long(15)}`)),
+    act('do', '> You wave at Amanda.'),
+  ];
   const plot = { aiInstructions: 'SYS', plotEssentials: 'ESS', storySummary: 'SUM', authorsNote: 'AN' };
   const cards = [card('Amanda', ['Amanda'], 'Amanda is your daughter.')];
   const memories = [{ memory: mem('Old memory', 0, 6), score: 1 }];
 
   it("original layout follows AI Dungeon's documented order", () => {
     const r = buildContext(base({ actions, plot, storyCards: cards, rankedMemories: memories }));
-    expect(r.sections.map((s) => s.kind)).toEqual(['instructions', 'plotEssentials', 'storyCards', 'storySummary', 'memories', 'history', 'authorsNote', 'lastAction']);
+    expect(r.sections.map((s) => s.kind)).toEqual([
+      'instructions',
+      'plotEssentials',
+      'storyCards',
+      'storySummary',
+      'memories',
+      'history',
+      'authorsNote',
+      'lastAction',
+    ]);
     expect(r.sections.filter((s) => s.cacheable).map((s) => s.kind)).toEqual(['instructions', 'plotEssentials']);
   });
 
   it('cache-stable layout puts history before volatile sections and marks the prefix', () => {
-    const r = buildContext(base({ actions, plot, storyCards: cards, rankedMemories: memories, settings: { contextLength: 400, memoryBankEnabled: true, cacheStableLayout: true, evictionChunk: 8 } }));
-    expect(r.sections.map((s) => s.kind)).toEqual(['instructions', 'plotEssentials', 'history', 'storyCards', 'storySummary', 'memories', 'authorsNote', 'lastAction']);
+    const r = buildContext(
+      base({
+        actions,
+        plot,
+        storyCards: cards,
+        rankedMemories: memories,
+        settings: { contextLength: 400, memoryBankEnabled: true, cacheStableLayout: true, evictionChunk: 8 },
+      }),
+    );
+    expect(r.sections.map((s) => s.kind)).toEqual([
+      'instructions',
+      'plotEssentials',
+      'history',
+      'storyCards',
+      'storySummary',
+      'memories',
+      'authorsNote',
+      'lastAction',
+    ]);
     expect(r.sections.filter((s) => s.cacheable).map((s) => s.kind)).toEqual(['instructions', 'plotEssentials', 'history']);
     expect(r.body.startsWith('ESS\n\nRecent Story:\n')).toBe(true);
   });
