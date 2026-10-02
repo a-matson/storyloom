@@ -61,10 +61,15 @@ describe('zip import', () => {
     expect(adventure.actions.map((x) => x.type)).toEqual(['start', 'do', 'continue']);
   });
 
-  it('refuses a zip that expands past the size cap', () => {
-    const bomb = zipSync({ 'a.txt': new Uint8Array(65 * 1024 * 1024) }, { level: 9 }).buffer;
-    expect(bomb.byteLength).toBeLessThan(200_000);
-    expect(() => importAidZip(bomb, settings)).toThrow(/refusing to import/);
+  it('refuses a zip that claims to expand past the size cap', () => {
+    // A tiny zip whose headers declare 65 MB: tests the cap without building a real 65 MB file.
+    const bytes = new Uint8Array(zip({ 'a.txt': 'x' }));
+    const view = new DataView(bytes.buffer);
+    for (let i = 0; i < bytes.length - 4; i++) {
+      if (view.getUint32(i, true) === 0x04034b50) view.setUint32(i + 22, 65 * 1024 * 1024, true); // local header
+      if (view.getUint32(i, true) === 0x02014b50) view.setUint32(i + 24, 65 * 1024 * 1024, true); // central directory
+    }
+    expect(() => importAidZip(bytes.buffer, settings)).toThrow(/refusing to import/);
   });
 
   it('rejects truncated or non-zip data', () => {
