@@ -142,7 +142,7 @@
       }
     },
     {
-      "files": ["src/ui/**", "src/app/**", "src/core/ports/provider.ts", "src/adapters/embeddings/embeddings.worker.ts"],
+      "files": ["src/ui/**", "src/core/ports/provider.ts", "src/adapters/embeddings/embeddings.worker.ts"],
       "rules": {
         "typescript/strict-boolean-expressions": [
           "warn",

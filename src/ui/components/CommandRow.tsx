@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import type { PlayerTurnType } from '@core/turn';
-import type { GameApi } from '../hooks/useGame';
+import type { GameApi } from '../hooks/useGameSession';
 import { IconSend, IconStop } from './Icons';
 
 type Mode = PlayerTurnType | 'see';

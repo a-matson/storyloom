@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Action } from '@core/model';
 import { actionText } from '@core/model';
-import type { GameApi } from '../hooks/useGame';
+import type { GameApi } from '../hooks/useGameSession';
 import { IconLeft, IconRight } from './Icons';
 
 interface Props {
