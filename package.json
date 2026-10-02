@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "test:watch": "vitest",
     "check": "pnpm typecheck && pnpm format:check && pnpm test",
     "fake-backend": "node scripts/fake-backend.ts",
@@ -17,7 +17,8 @@
     "format:check": "oxfmt --check src tests e2e playwright.config.ts scripts bench .github index.html vite.config.ts README.md package.json tsconfig.json lefthook.yml .oxfmtrc.json",
     "e2e": "playwright test",
     "e2e:update-screenshots": "docker run --rm --ipc=host -v \"$PWD\":/work -v /work/node_modules -w /work mcr.microsoft.com/playwright:v1.63.0-noble sh -c \"corepack enable && pnpm install --frozen-lockfile && pnpm exec playwright test e2e/visual.spec.ts --update-snapshots\"",
-    "bench": "vitest run --config bench/vitest.config.ts"
+    "bench": "vitest run --config bench/vitest.config.ts",
+    "size": "size-limit"
   },
   "dependencies": {
     "react": "^19.3.0",
@@ -26,12 +27,15 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.63.0",
+    "@size-limit/file": "^14.1.0",
     "@types/node": "^22.20.4",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
+    "@vitest/coverage-v8": "^5.0.3",
     "lefthook": "2.1.15",
     "oxfmt": "0.71.0",
+    "size-limit": "^14.1.0",
     "srvx": "^1.0.5",
     "tinybench": "^6.2.0",
     "typescript": "^7.0.2",
