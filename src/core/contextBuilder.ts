@@ -9,7 +9,7 @@ import type { RankedMemory } from './memoryBank';
  * Context builder — the engine of the game.
  *
  * Pure function: (adventure state, settings, tokenizer) → prompt sections.
- * Implements the budget rules AI Dungeon documents (docs/SPEC-context-builder.md)
+ * Implements the budget rules AI Dungeon documents
  * and adds an optional cache-stable layout that keeps a byte-stable,
  * append-only prefix so local backends reuse their KV cache every turn.
  *

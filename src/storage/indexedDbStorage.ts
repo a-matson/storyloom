@@ -6,7 +6,7 @@ import { summarise, type AdventureSummary, type Storage } from './types';
  * Adventures are stored whole (actions included); at 5,000 actions that is a
  * few MB per record, well within limits. A SQLite backend (wa-sqlite on OPFS,
  * or Tauri's native SQLite) is the planned upgrade once per-action queries or
- * full-text search are needed — see docs/DECISIONS.md.
+ * full-text search are needed.
  */
 const DB_NAME = 'storyloom';
 const DB_VERSION = 1;

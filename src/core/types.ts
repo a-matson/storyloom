@@ -2,7 +2,7 @@
  * Core data model. Everything here is plain JSON-serialisable data so it can
  * live in IndexedDB/SQLite, be exported as a zip, and be passed to workers.
  *
- * Naming follows the AI Dungeon vocabulary (documented in docs/FEATURES.md)
+ * Naming follows the AI Dungeon vocabulary
  * so community knowledge and scripts transfer: Adventure, Scenario,
  * Story Card, Plot Essentials, Author's Note, Memory Bank, Story Summary.
  */
@@ -117,7 +117,7 @@ export interface ContextSettings {
   /**
    * Reorder the prompt so history comes before triggered cards/memories,
    * keeping a byte-stable, append-only prefix for the backend's KV cache.
-   * Off = AI Dungeon's documented ordering. See docs/SPEC-context-builder.md.
+   * Off = AI Dungeon's documented ordering.
    */
   cacheStableLayout: boolean;
   /** When trimming history, drop the oldest actions in blocks of this size. */

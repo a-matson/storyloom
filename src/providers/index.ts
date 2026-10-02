@@ -9,7 +9,7 @@ import type { Provider } from './types';
  * KoboldCpp and Ollama both speak the OpenAI completion API well enough for
  * milestone 1; dedicated adapters (KoboldCpp's /api/extra/generate/stream
  * with its own sampler set, Ollama's /api/generate with keep_alive) are
- * milestone-3 work — see docs/MILESTONES.md.
+ * milestone-3 work.
  */
 export function createProvider(cfg: ProviderConfig): Provider {
   switch (cfg.kind) {

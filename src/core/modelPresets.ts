@@ -4,7 +4,7 @@ import type { ModelSettings, TemplateId } from './types';
  * Sampler presets for the open-weight storytelling fine-tunes AI Dungeon
  * publishes (Hugging Face: LatitudeGames/*) plus a few community models.
  * Values are the community example settings from the AI Dungeon guidebook;
- * treat them as starting points. Hardware notes live in docs/MODELS.md.
+ * treat them as starting points.
  */
 export interface ModelPreset {
   id: string;

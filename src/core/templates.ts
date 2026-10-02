@@ -72,8 +72,7 @@ export function renderPrefix(id: TemplateId, system: string, userPrefix: string)
  * Guess a template from a model id / GGUF name. Latitude's fine-tunes are
  * generally trained with ChatML regardless of base model; the Llama 3.3
  * based ones (Nova, Wayfarer Large) use the Llama 3 format and Equinox uses
- * Gemma's. Always confirm against the model card — docs/MODELS.md tracks
- * what has been verified.
+ * Gemma's. Always confirm against the model card.
  */
 export function guessTemplate(modelId: string): TemplateId {
   const m = modelId.toLowerCase();

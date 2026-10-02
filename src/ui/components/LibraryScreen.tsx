@@ -155,7 +155,7 @@ export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissN
             <span className="small muted">coming in milestone 5</span>
           </div>
           <p className="muted small" style={{ margin: 0 }}>
-            Scenarios are reusable templates with placeholders, story cards and scripts. The editor is specified in docs/DESIGN.md and docs/MILESTONES.md.
+            Scenarios are reusable templates with placeholders, story cards and scripts.
           </p>
         </section>
       </div>

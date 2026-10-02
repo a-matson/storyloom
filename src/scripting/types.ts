@@ -2,7 +2,7 @@ import type { Action, StoryCard } from '@core/types';
 import type { ContextSection } from '@core/contextBuilder';
 
 /**
- * Scripting API (AI Dungeon compatible). See docs/SPEC-scripting-api.md.
+ * Scripting API (AI Dungeon compatible).
  *
  * Three hooks, each a JavaScript "modifier" ending in `modifier(text)`:
  *   onInput        — rewrite the player's input text

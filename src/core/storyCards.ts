@@ -3,7 +3,7 @@ import type { StoryCard } from './types';
 /**
  * Story card trigger matching and ranking.
  *
- * Rules (from AI Dungeon's documentation, see docs/SPEC-context-builder.md):
+ * Rules (from AI Dungeon's documentation):
  *  - triggers are case-insensitive substrings, sensitive to leading/trailing
  *    spaces ("cat " ≠ "cat");
  *  - a card matches when any trigger occurs in a player input or AI output
