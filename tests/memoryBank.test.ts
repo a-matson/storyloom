@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { cosine, dueMemoryRanges, evictToSize, markStale, rankMemories, summaryDue } from '@core/memory/memoryBank';
+import { runMemoryMaintenance } from '@core/memory/memoryJobs';
+import { createBlankAdventure } from '@core/model';
 import type { Memory } from '@core/model/types';
+import type { Embedder, Provider } from '@core/ports';
 
 const mem = (id: string, from: number, useCount = 0, createdAt = 0, embedding?: number[]): Memory => ({
   id,
@@ -50,5 +53,43 @@ describe('retrieval and eviction', () => {
   it('marks memories stale when their actions change', () => {
     const out = markStale([mem('a', 0), mem('b', 6)], new Set(['a6']));
     expect(out.map((m) => !!m.stale)).toEqual([false, true]);
+  });
+});
+
+describe('embedder changes', () => {
+  it('ignores vectors from another embedder when ranking', () => {
+    const old = mem('old', 0, 0, 9, [1, 0, 0]);
+    const cur = mem('cur', 6, 0, 1, [0, 1]);
+    expect(rankMemories([old, cur], [0, 1]).map((r) => [r.memory.id, r.score])).toEqual([
+      ['cur', 1],
+      ['old', 0],
+    ]);
+  });
+
+  it('re-embeds memories whose vectors came from another embedder', async () => {
+    const adventure = createBlankAdventure('T', 'Start.');
+    adventure.settings.memory.memoryBank = true;
+    adventure.memories = [mem('old', 0, 0, 0, [1, 0, 0]), mem('none', 6), { ...mem('stale', 12, 0, 0, [1]), stale: true }, mem('ok', 18, 0, 0, [0, 1])];
+    const embedded: string[] = [];
+    const embedder: Embedder = {
+      id: 'new',
+      dimensions: 2,
+      embed: (texts) => {
+        embedded.push(...texts);
+        return Promise.resolve(texts.map(() => [1, 0]));
+      },
+    };
+    const provider = { id: 'p' } as unknown as Provider; // nothing is due, so it is never called
+    await runMemoryMaintenance(adventure, { provider, embedder, template: adventure.settings.template });
+    expect(embedded).toEqual(['old', 'none']);
+    expect(adventure.memories.map((m) => m.embedding)).toEqual([[1, 0], [1, 0], [1], [0, 1]]);
+  });
+
+  it('waits for the embedder to report its dimensions', async () => {
+    const adventure = createBlankAdventure('T', 'Start.');
+    adventure.memories = [mem('old', 0, 0, 0, [1, 0, 0])];
+    const embedder: Embedder = { id: 'new', dimensions: 0, embed: () => Promise.reject(new Error('not called')) };
+    await runMemoryMaintenance(adventure, { provider: { id: 'p' } as unknown as Provider, embedder, template: adventure.settings.template });
+    expect(adventure.memories[0]?.embedding).toEqual([1, 0, 0]);
   });
 });

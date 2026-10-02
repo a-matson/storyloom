@@ -84,14 +84,20 @@ export class HashEmbedder implements Embedder {
 /** Adapter over a provider's embed() when the backend serves embeddings. */
 export class ProviderEmbedder implements Embedder {
   readonly id: string;
-  readonly dimensions: number;
+  /** Learnt from the first result when not given. */
+  dimensions: number;
   private readonly fn: (texts: string[]) => Promise<number[][]>;
   constructor(fn: (texts: string[]) => Promise<number[][]>, dimensions = 0, id = 'provider') {
     this.fn = fn;
     this.dimensions = dimensions;
     this.id = id;
   }
-  embed(texts: string[]): Promise<number[][]> {
-    return this.fn(texts);
+  async embed(texts: string[]): Promise<number[][]> {
+    const vectors = await this.fn(texts);
+    this.dimensions = vectors[0]?.length ?? this.dimensions;
+    return vectors;
   }
 }
+
+/** Lazy, so the worker client stays out of the start-up bundle. Rejects when no model is present. */
+export const loadInBrowserEmbedder = (): Promise<Embedder> => import('./workerEmbedder').then((m) => m.loadWorkerEmbedder());
