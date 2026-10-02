@@ -75,6 +75,8 @@ export interface ContextBuildResult {
   triggeredCards: CardMatch[];
   droppedCards: CardMatch[];
   usedMemories: Memory[];
+  /** The ranking the memories were picked from, so the viewer can show scores as sent. */
+  rankedMemories: RankedMemory[];
   /** Action indices [from, to) included in the history block; null if none. */
   historyRange: { from: number; to: number } | null;
   /** Index of the action used as "last action"; -1 if none. */
