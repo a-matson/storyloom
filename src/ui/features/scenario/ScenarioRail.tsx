@@ -17,6 +17,7 @@ const FIRST = 4;
 /** Right rail of the editor: what the player will be asked, the cards, which scripts exist. */
 export function ScenarioRail({ draft, update, app }: TabProps & { app: AppSettings }) {
   const cards = draft.storyCards;
+  const creator = draft.type === 'characterCreator';
   const [all, setAll] = useState(false);
   const [editing, setEditing] = useState<StoryCard | 'new' | null>(null);
   const [dialogKey, setDialogKey] = useState(0);
@@ -55,6 +56,7 @@ export function ScenarioRail({ draft, update, app }: TabProps & { app: AppSettin
           >
             <Pill tone={tone(c.type)}>{c.type}</Pill>
             <span className="truncate text-control font-medium">{c.name}</span>
+            {creator && c.selectable && <Pill tone="auto">pick</Pill>}
             <span className="grow" />
             <span className="max-w-35 truncate font-mono text-label text-muted-foreground">{c.triggers.join(', ')}</span>
           </button>
@@ -71,7 +73,7 @@ export function ScenarioRail({ draft, update, app }: TabProps & { app: AppSettin
       {editing !== null && (
         <CardDialog
           key={dialogKey}
-          context={{ generator, storySummary: draft.plot.storySummary, template: app.defaults.template }}
+          context={{ generator, storySummary: draft.plot.storySummary, template: app.defaults.template, creator }}
           provider={providerFor(app, app.defaultProviderId)}
           card={editing === 'new' ? undefined : editing}
           onSave={save}

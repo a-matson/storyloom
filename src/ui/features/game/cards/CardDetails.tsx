@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Button } from '@ui/components/ui/button';
 import { Input, Select } from '@ui/components/ui/field';
 import { SectionLabel } from '@ui/components/ui/section-label';
+import { Switch } from '@ui/components/ui/switch';
 import { Textarea } from '@ui/components/ui/textarea';
 import { CARD_TYPES, type CardDraft } from './useCardDraft';
 
@@ -50,6 +51,13 @@ export function CardDetails({ draft }: { draft: CardDraft }) {
           </div>
         )}
       </div>
+      {draft.creator && (
+        <label htmlFor="card-selectable" className="flex items-center gap-2.5 text-control">
+          <Switch id="card-selectable" checked={f.selectable} onChange={set.setSelectable} />
+          Selectable in Character Creator
+          <span className="text-caption text-muted-foreground">players pick one card per Type; Notes is the option text</span>
+        </label>
+      )}
       <Field id="card-name" label="Name" hint="for you only — the AI never sees it" action={<GenerateButton draft={draft} what="name" />}>
         <Input id="card-name" value={f.name} onChange={(e) => set.setName(e.target.value)} placeholder="Merav" />
       </Field>

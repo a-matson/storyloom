@@ -14,6 +14,8 @@ export interface CardContext {
   generator: CardGeneratorSettings;
   storySummary: string | undefined;
   template: AdventureSettings['template'];
+  /** Opened from a Character Creator scenario: cards can be made selectable. */
+  creator?: boolean;
 }
 
 /** Form state for one story card, plus AI generation of name/entry/triggers. */
@@ -26,6 +28,7 @@ export function useCardDraft(context: CardContext, provider: Provider, card: Sto
   const [entry, setEntry] = useState(card?.entry ?? '');
   const [triggers, setTriggers] = useState(card?.triggers.join(',') ?? '');
   const [notes, setNotes] = useState(card?.notes ?? '');
+  const [selectable, setSelectable] = useState(card?.selectable ?? false);
   const [busy, setBusy] = useState<'name' | 'entry' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const effectiveType = type === 'Custom' ? (orUndefined(customType.trim()) ?? 'Custom') : type;
@@ -59,13 +62,13 @@ export function useCardDraft(context: CardContext, provider: Provider, card: Sto
     entry: entry.trim(),
     triggers: parseTriggers(triggers),
     notes: orUndefined(notes.trim()),
-    selectable: card?.selectable,
+    selectable: selectable || undefined,
   });
 
-  const fields = { type, customType, name, entry, triggers, notes };
-  const set = { setType, setCustomType, setName, setEntry, setTriggers, setNotes };
+  const fields = { type, customType, name, entry, triggers, notes, selectable };
+  const set = { setType, setCustomType, setName, setEntry, setTriggers, setNotes, setSelectable };
   const canSave = entry.trim() !== '' && parseTriggers(triggers).length > 0;
-  return { settings, fields, set, busy, error, generate, build, canSave };
+  return { settings, creator: context.creator === true, fields, set, busy, error, generate, build, canSave };
 }
 
 export type CardDraft = ReturnType<typeof useCardDraft>;
