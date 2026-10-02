@@ -64,7 +64,10 @@ function fnv1a(s: string): number {
 
 export class HashEmbedder implements Embedder {
   readonly id = 'hash-bow';
-  constructor(readonly dimensions = 512) {}
+  readonly dimensions: number;
+  constructor(dimensions = 512) {
+    this.dimensions = dimensions;
+  }
 
   async embed(texts: string[]): Promise<number[][]> {
     return texts.map((t) => this.one(t));
@@ -95,11 +98,11 @@ export class HashEmbedder implements Embedder {
 /** Adapter over a provider's embed() when the backend serves embeddings. */
 export class ProviderEmbedder implements Embedder {
   readonly id: string;
-  constructor(
-    private readonly fn: (texts: string[]) => Promise<number[][]>,
-    readonly dimensions = 0,
-    id = 'provider',
-  ) {
+  readonly dimensions: number;
+  private readonly fn: (texts: string[]) => Promise<number[][]>;
+  constructor(fn: (texts: string[]) => Promise<number[][]>, dimensions = 0, id = 'provider') {
+    this.fn = fn;
+    this.dimensions = dimensions;
     this.id = id;
   }
   embed(texts: string[]): Promise<number[][]> {

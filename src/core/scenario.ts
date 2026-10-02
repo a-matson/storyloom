@@ -79,7 +79,7 @@ export function createBlankAdventure(title: string, opening: string, settings: A
     updatedAt: Date.now(),
   };
   const adv = createAdventureFromScenario(scenario, {}, settings);
-  adv.scenarioId = undefined;
+  delete adv.scenarioId;
   return adv;
 }
 

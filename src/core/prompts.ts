@@ -28,7 +28,13 @@ export function summaryPrompt(previousSummary: string, newMemories: string[], re
 
 export const CARD_SYSTEM = 'You write world-building notes for an interactive story. Reply with JSON only.';
 
-export function cardPrompt(opts: { type: string; name?: string; instructions?: string; storyInfo?: string; summary?: string }): string {
+export function cardPrompt(opts: {
+  type: string;
+  name?: string | undefined;
+  instructions?: string | undefined;
+  storyInfo?: string | undefined;
+  summary?: string | undefined;
+}): string {
   return (
     `Create a ${opts.type} story card.` +
     (opts.name ? ` Its name is "${opts.name}".` : '') +

@@ -28,11 +28,11 @@ export interface ProviderCapabilities {
 
 export interface ProviderHealth {
   ok: boolean;
-  version?: string;
-  modelId?: string;
+  version?: string | undefined;
+  modelId?: string | undefined;
   /** Context size loaded in the server, if it reports one. */
-  contextSize?: number;
-  slots?: number;
+  contextSize?: number | undefined;
+  slots?: number | undefined;
   message?: string;
 }
 
@@ -40,39 +40,39 @@ export interface CompletionRequest {
   prompt: string;
   maxTokens: number;
   temperature: number;
-  topK?: number;
-  topP?: number;
-  minP?: number;
-  presencePenalty?: number;
-  frequencyPenalty?: number;
-  repetitionPenalty?: number;
-  seed?: number;
-  stop?: string[];
+  topK?: number | undefined;
+  topP?: number | undefined;
+  minP?: number | undefined;
+  presencePenalty?: number | undefined;
+  frequencyPenalty?: number | undefined;
+  repetitionPenalty?: number | undefined;
+  seed?: number | undefined;
+  stop?: string[] | undefined;
   /** Ask the backend to reuse its KV cache for the common prefix. */
-  cachePrompt?: boolean;
+  cachePrompt?: boolean | undefined;
   /** Pin the request to a slot so its cache survives (llama-server). */
-  slotId?: number;
+  slotId?: number | undefined;
   /** GBNF grammar (llama.cpp). */
-  grammar?: string;
+  grammar?: string | undefined;
   /** JSON schema the output must satisfy. */
-  jsonSchema?: Record<string, unknown>;
+  jsonSchema?: Record<string, unknown> | undefined;
   /** Prefill only: process the prompt, generate nothing (cache warming). */
-  prefillOnly?: boolean;
+  prefillOnly?: boolean | undefined;
 }
 
 export interface CompletionStats {
-  promptTokens?: number;
-  cachedTokens?: number;
-  generatedTokens?: number;
-  promptMs?: number;
-  generationMs?: number;
+  promptTokens?: number | undefined;
+  cachedTokens?: number | undefined;
+  generatedTokens?: number | undefined;
+  promptMs?: number | undefined;
+  generationMs?: number | undefined;
   stopReason?: 'stop' | 'length' | 'eos' | 'abort' | 'unknown';
 }
 
 export interface CompletionChunk {
   text: string;
   done: boolean;
-  stats?: CompletionStats;
+  stats?: CompletionStats | undefined;
 }
 
 export interface Provider {
@@ -88,7 +88,7 @@ export interface Provider {
 }
 
 /** Collect a stream into a string (used for utility calls: summaries, cards). */
-export async function collect(stream: AsyncIterable<CompletionChunk>): Promise<{ text: string; stats?: CompletionStats }> {
+export async function collect(stream: AsyncIterable<CompletionChunk>): Promise<{ text: string; stats?: CompletionStats | undefined }> {
   let text = '';
   let stats: CompletionStats | undefined;
   for await (const c of stream) {
@@ -136,17 +136,16 @@ export async function* readSse(res: Response, signal?: AbortSignal): AsyncGenera
 }
 
 export class ProviderError extends Error {
-  constructor(
-    message: string,
-    public readonly status?: number,
-  ) {
+  readonly status: number | undefined;
+  constructor(message: string, status?: number) {
     super(message);
     this.name = 'ProviderError';
+    this.status = status;
   }
 }
 
 export async function fetchJson<T>(url: string, init: RequestInit = {}, signal?: AbortSignal, fetchFn: typeof fetch = fetch): Promise<T> {
-  const res = await fetchFn(url, { ...init, signal });
+  const res = await fetchFn(url, { ...init, signal: signal ?? null });
   if (!res.ok) throw new ProviderError(`${init.method ?? 'GET'} ${url} → ${res.status} ${res.statusText}`, res.status);
   return (await res.json()) as T;
 }

@@ -33,7 +33,7 @@ export type TurnEvent =
   | { type: 'player'; action: Action }
   | { type: 'context'; result: ContextBuildResult; prompt: string; stop: string[] }
   | { type: 'token'; text: string }
-  | { type: 'done'; action: Action; text: string; stats?: CompletionStats }
+  | { type: 'done'; action: Action; text: string; stats?: CompletionStats | undefined }
   | { type: 'stopped'; reason: string }
   | { type: 'message'; text: string }
   | { type: 'error'; message: string };
@@ -78,7 +78,7 @@ export async function prepareContext(adventure: Adventure, actions: Action[], de
   const scripts = deps.scripts ?? new NoopScriptRunner();
   const lastText = actions.length ? actionText(actions[actions.length - 1]!) : '';
   const rankedMemories = await rankForQuery(adventure, lastText, deps.embedder);
-  const scriptMemory = (adventure.scriptState.memory ?? {}) as { context?: string; authorsNote?: string; frontMemory?: string };
+  const scriptMemory = (adventure.scriptState['memory'] ?? {}) as { context?: string; authorsNote?: string; frontMemory?: string };
 
   const result = buildContext({
     actions,
@@ -137,7 +137,7 @@ async function* generate(
   deps: TurnDeps,
   signal?: AbortSignal,
   opts: { slotId?: number; seed?: number } = {},
-): AsyncGenerator<TurnEvent, { text: string; stats?: CompletionStats }> {
+): AsyncGenerator<TurnEvent, { text: string; stats?: CompletionStats | undefined }> {
   const s = adventure.settings.model;
   let text = '';
   let stats: CompletionStats | undefined;
@@ -301,7 +301,7 @@ export async function generateAlternative(
   deps: TurnDeps,
   signal?: AbortSignal,
   slotId = 1,
-): Promise<{ text: string; stats?: CompletionStats }> {
+): Promise<{ text: string; stats?: CompletionStats | undefined }> {
   const gen = generate(adventure, prepared, deps, signal, { slotId, seed: randomSeed() });
   let next = await gen.next();
   while (!next.done) next = await gen.next();
@@ -319,7 +319,7 @@ export async function buildWarmupPrompt(adventure: Adventure, actions: Action[],
   if (!adventure.settings.context.cacheStableLayout) return null;
   const placeholder: Action = { id: 'warmup', type: 'do', versions: ['> You wait.'], active: 0, createdAt: Date.now() };
   const rankedMemories: RankedMemory[] = []; // memories are not part of the cached prefix
-  const scriptMemory = (adventure.scriptState.memory ?? {}) as { context?: string; authorsNote?: string; frontMemory?: string };
+  const scriptMemory = (adventure.scriptState['memory'] ?? {}) as { context?: string; authorsNote?: string; frontMemory?: string };
   const result = buildContext({
     actions: [...actions, placeholder],
     plot: adventure.plot,

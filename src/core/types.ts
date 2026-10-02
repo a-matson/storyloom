@@ -12,11 +12,11 @@ export type ActionType = 'start' | 'continue' | 'do' | 'say' | 'story' | 'see';
 /** Statistics captured from the provider for a generated action. */
 export interface GenerationStats {
   model?: string;
-  promptTokens?: number;
-  cachedTokens?: number;
-  generatedTokens?: number;
-  promptMs?: number;
-  generationMs?: number;
+  promptTokens?: number | undefined;
+  cachedTokens?: number | undefined;
+  generatedTokens?: number | undefined;
+  promptMs?: number | undefined;
+  generationMs?: number | undefined;
 }
 
 /**
@@ -36,7 +36,7 @@ export interface Action {
   createdAt: number;
   /** Present for `see` actions (image generation). */
   image?: { url: string; prompt: string; model?: string };
-  stats?: GenerationStats;
+  stats?: GenerationStats | undefined;
 }
 
 export function actionText(a: Action): string {
@@ -46,15 +46,15 @@ export function actionText(a: Action): string {
 /** Always-on prompt pieces ("Plot Components"). All optional. */
 export interface PlotComponents {
   /** Sent as the system prompt. */
-  aiInstructions?: string;
+  aiInstructions?: string | undefined;
   /** Maintained by auto-summarisation, hand-editable. */
-  storySummary?: string;
+  storySummary?: string | undefined;
   /** Formerly "Memory": key facts always in context. */
-  plotEssentials?: string;
+  plotEssentials?: string | undefined;
   /** Short style/tone guidance injected near the end of the prompt. */
-  authorsNote?: string;
+  authorsNote?: string | undefined;
   /** Replace "You" in Do/Say actions with a character name. */
-  thirdPerson?: { enabled: boolean; name: string };
+  thirdPerson?: { enabled: boolean; name: string } | undefined;
 }
 
 export interface StoryCard {
@@ -68,9 +68,9 @@ export interface StoryCard {
   /** Case-insensitive substrings; sensitive to leading/trailing spaces. */
   triggers: string[];
   /** Never sent to the AI (except as an option description in Character Creator). */
-  notes?: string;
+  notes?: string | undefined;
   /** Character Creator: whether players can pick this card. */
-  selectable?: boolean;
+  selectable?: boolean | undefined;
 }
 
 /** An AI-written summary of a run of six actions, embedded for retrieval. */
@@ -82,7 +82,7 @@ export interface Memory {
   toAction: number;
   /** Action ids covered, so edits can mark the memory stale. */
   actionIds: string[];
-  embedding?: number[];
+  embedding?: number[] | undefined;
   useCount: number;
   createdAt: number;
   lastUsedAt?: number;
@@ -101,7 +101,7 @@ export interface ModelSettings {
   topP: number;
   presencePenalty: number;
   frequencyPenalty: number;
-  minP?: number;
+  minP?: number | undefined;
   repetitionPenalty?: number;
   seed?: number;
 }
@@ -135,7 +135,7 @@ export interface ContextSettings {
 export interface AdventureSettings {
   providerId: string;
   /** Model id as reported by the provider (e.g. GGUF file name). */
-  modelId?: string;
+  modelId?: string | undefined;
   template: TemplateId;
   model: ModelSettings;
   memory: MemorySettings;
@@ -149,7 +149,7 @@ export interface Adventure {
   title: string;
   description: string;
   tags: string[];
-  coverUrl?: string;
+  coverUrl?: string | undefined;
   scenarioId?: string;
   /** Active path of the story, in order. */
   actions: Action[];
@@ -187,7 +187,7 @@ export interface Scenario {
   title: string;
   description: string;
   tags: string[];
-  coverUrl?: string;
+  coverUrl?: string | undefined;
   type: ScenarioType;
   /** The first action of a new adventure. May contain ${placeholders}. */
   prompt: string;

@@ -10,8 +10,8 @@ export interface AdventureSummary {
   title: string;
   actionCount: number;
   updatedAt: number;
-  coverUrl?: string;
-  modelId?: string;
+  coverUrl?: string | undefined;
+  modelId?: string | undefined;
 }
 
 export interface Storage {
@@ -31,7 +31,7 @@ export interface Storage {
   putSettings(s: AppSettings): Promise<void>;
 
   /** Everything, for backup. */
-  exportAll(): Promise<{ adventures: Adventure[]; scenarios: Scenario[]; settings?: AppSettings }>;
+  exportAll(): Promise<{ adventures: Adventure[]; scenarios: Scenario[]; settings?: AppSettings | undefined }>;
   importAll(data: { adventures?: Adventure[]; scenarios?: Scenario[] }): Promise<void>;
 }
 

@@ -12,11 +12,14 @@ export class OpenAICompatProvider implements Provider {
   readonly kind = 'openai-compat';
   private modelName: string | undefined;
 
-  constructor(
-    readonly id: string,
-    readonly baseUrl: string,
-    private readonly opts: { model?: string; apiKey?: string; supportsTopK?: boolean } = {},
-  ) {
+  readonly id: string;
+  readonly baseUrl: string;
+  private readonly opts: { model?: string; apiKey?: string; supportsTopK?: boolean };
+
+  constructor(id: string, baseUrl: string, opts: { model?: string; apiKey?: string; supportsTopK?: boolean } = {}) {
+    this.id = id;
+    this.baseUrl = baseUrl;
+    this.opts = opts;
     this.modelName = opts.model;
   }
 
@@ -26,7 +29,7 @@ export class OpenAICompatProvider implements Provider {
 
   private headers(): Record<string, string> {
     const h: Record<string, string> = { 'content-type': 'application/json' };
-    if (this.opts.apiKey) h.authorization = `Bearer ${this.opts.apiKey}`;
+    if (this.opts.apiKey) h['authorization'] = `Bearer ${this.opts.apiKey}`;
     return h;
   }
 
@@ -71,10 +74,10 @@ export class OpenAICompatProvider implements Provider {
       stop: req.stop ?? [],
       stream: true,
     };
-    if (req.seed !== undefined) body.seed = req.seed;
-    if (this.opts.supportsTopK && req.topK) body.top_k = req.topK;
+    if (req.seed !== undefined) body['seed'] = req.seed;
+    if (this.opts.supportsTopK && req.topK) body['top_k'] = req.topK;
 
-    const res = await fetch(this.url('/v1/completions'), { method: 'POST', headers: this.headers(), body: JSON.stringify(body), signal });
+    const res = await fetch(this.url('/v1/completions'), { method: 'POST', headers: this.headers(), body: JSON.stringify(body), signal: signal ?? null });
     if (!res.ok) throw new Error(`/v1/completions → ${res.status} ${res.statusText}`);
     let finish: string | undefined;
     for await (const evt of readSse(res, signal)) {

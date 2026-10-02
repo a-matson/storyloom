@@ -33,7 +33,7 @@ export interface ScriptStoryCard {
 
 export interface ScriptMemory {
   context?: string;
-  authorsNote?: string;
+  authorsNote?: string | undefined;
   frontMemory?: string;
 }
 
@@ -64,7 +64,7 @@ export interface HookInput {
    * `sections` keeps the prefix cache; a script that returns `text` replaces
    * the whole prompt (cache miss every turn).
    */
-  sections?: ContextSection[];
+  sections?: ContextSection[] | undefined;
 }
 
 export interface HookResult {
@@ -72,7 +72,7 @@ export interface HookResult {
   stop?: boolean;
   state: ScriptState;
   storyCards: ScriptStoryCard[];
-  sections?: ContextSection[];
+  sections?: ContextSection[] | undefined;
   logs: string[];
   error?: string;
   /** Wall time in ms. */

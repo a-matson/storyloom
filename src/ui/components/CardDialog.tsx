@@ -12,7 +12,7 @@ interface Props {
   adventure: Adventure;
   provider: Provider;
   /** Existing card to edit; omit to create. */
-  card?: StoryCard;
+  card?: StoryCard | undefined;
   onSave: (card: StoryCard, next?: 'close' | 'new') => void;
   onSettings: (s: CardGeneratorSettings) => void;
   onClose: () => void;

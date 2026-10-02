@@ -19,11 +19,15 @@ export class LlamaServerProvider implements Provider {
   private caps: ProviderCapabilities | null = null;
   private props: LlamaProps | null = null;
 
-  constructor(
-    readonly id: string,
-    readonly baseUrl: string,
-    private readonly fetchFn: typeof fetch = (...a) => fetch(...a),
-  ) {}
+  readonly id: string;
+  readonly baseUrl: string;
+  private readonly fetchFn: typeof fetch;
+
+  constructor(id: string, baseUrl: string, fetchFn: typeof fetch = (...a) => fetch(...a)) {
+    this.id = id;
+    this.baseUrl = baseUrl;
+    this.fetchFn = fetchFn;
+  }
 
   private url(path: string): string {
     return this.baseUrl.replace(/\/$/, '') + path;
@@ -107,16 +111,16 @@ export class LlamaServerProvider implements Provider {
       cache_prompt: req.cachePrompt ?? true,
       stream: !req.prefillOnly,
     };
-    if (req.seed !== undefined) body.seed = req.seed;
-    if (req.slotId !== undefined) body.id_slot = req.slotId;
-    if (req.grammar) body.grammar = req.grammar;
-    if (req.jsonSchema) body.json_schema = req.jsonSchema;
+    if (req.seed !== undefined) body['seed'] = req.seed;
+    if (req.slotId !== undefined) body['id_slot'] = req.slotId;
+    if (req.grammar) body['grammar'] = req.grammar;
+    if (req.jsonSchema) body['json_schema'] = req.jsonSchema;
 
     const res = await this.fetchFn(this.url('/completion'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
-      signal,
+      signal: signal ?? null,
     });
     if (!res.ok) throw new Error(`llama-server /completion → ${res.status} ${res.statusText}`);
 
