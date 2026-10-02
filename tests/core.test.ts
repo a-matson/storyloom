@@ -4,6 +4,7 @@ import { formatPlayerInput, trimUnfinishedSentence } from '@core/text/formatting
 import { guessTemplate, renderTemplate } from '@core/text/templates';
 import { createApproxTokenizer, trimToTokens } from '@core/text/tokenizer';
 import { createAdventureFromScenario, missingAnswers, newScenario, placeholderQuestions } from '@core/model/scenario';
+import { childAt, newOption, withChild } from '@core/model/scenarioTypes';
 import * as S from '@core/schema';
 import type { Scenario } from '@core/model/types';
 
@@ -49,6 +50,25 @@ describe('placeholders', () => {
     expect(a.storyCards[0]!.entry).toBe('Peach carries a lute.');
     expect(a.storyCards[0]!.triggers).toEqual(['Peach']);
     expect(a.storyCards[0]!.notes).toBe('A bard.');
+  });
+});
+
+describe('multiple choice tree', () => {
+  it('finds and replaces nested options without touching the input', () => {
+    const root: Scenario = { ...newScenario('Root'), type: 'multipleChoice' };
+    const a = { ...newOption(root), title: 'A', type: 'multipleChoice' as const };
+    const b = { ...newOption(a), title: 'B' };
+    root.options = [a, newOption(root)];
+    a.options = [b];
+    expect(a.parentId).toBe(root.id);
+    expect(childAt(root, [a.id, b.id])?.title).toBe('B');
+    expect(childAt(root, [])).toBe(root);
+    expect(childAt(root, ['missing'])).toBeUndefined();
+    const next = withChild(root, [a.id, b.id], { ...b, title: 'B2' });
+    expect(childAt(next, [a.id, b.id])?.title).toBe('B2');
+    expect(b.title).toBe('B');
+    expect(next.options?.[1]).toBe(root.options[1]);
+    expect(S.Scenario.parse(JSON.parse(JSON.stringify(next)))).toEqual(next);
   });
 });
 

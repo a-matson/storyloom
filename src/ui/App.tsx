@@ -39,8 +39,10 @@ export function App() {
           <ScenarioEditor
             key={route.id}
             id={route.id}
+            path={route.path}
             app={app}
             onExit={() => navigate({ name: 'library' })}
+            onPath={(path) => navigate({ name: 'scenario', id: route.id, path })}
             onPlay={(advId, w) => {
               setWarning(w ?? null);
               navigate({ name: 'adventure', id: advId });

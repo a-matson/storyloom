@@ -8,9 +8,12 @@ export interface Started {
   warning?: string | undefined;
 }
 
-/** The one way a scenario becomes a stored adventure (play-test now, the library later). */
-export async function startScenario(s: Scenario, answers: Record<string, string>, app: AppSettings, picked: string[] = []): Promise<Started> {
-  let adventure = createAdventureFromScenario(s, answers, app.defaults, picked);
+/**
+ * The one way a scenario becomes a stored adventure (play-test now, the library later).
+ * `s` is the leaf the player reached; `root` (a Multiple Choice tree) names the adventure.
+ */
+export async function startScenario(s: Scenario, answers: Record<string, string>, app: AppSettings, picked: string[] = [], root = s): Promise<Started> {
+  let adventure = { ...createAdventureFromScenario(s, answers, app.defaults, picked), scenarioId: root.id, title: root.title };
   let warning: string | undefined;
   const start = adventure.actions[0];
   if (s.type === 'characterCreator' && start) {
