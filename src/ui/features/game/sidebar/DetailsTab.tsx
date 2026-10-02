@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Adventure } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
-import { downloadAdventureJson, downloadAdventureText, downloadStoryCards, importStoryCardsFromFile, pickFile } from '@ui/transferUi';
+import { downloadAdventureJson, downloadAdventureText, downloadStoryCards, downloadTraces, importStoryCardsFromFile, pickFile } from '@ui/transferUi';
 import { Button } from '@ui/components/ui/button';
 import { Input } from '@ui/components/ui/field';
 import { SectionLabel } from '@ui/components/ui/section-label';
@@ -81,6 +81,7 @@ export function DetailsTab({ adventure, api }: { adventure: Adventure; api: Game
       <Group title="Download adventure" note="The JSON backup restores everything, including retries and settings; import it from the Library.">
         <Button onClick={() => void downloadAdventureJson(adventure).catch(fail)}>JSON (full backup)</Button>
         <Button onClick={() => void downloadAdventureText(adventure).catch(fail)}>Plain text</Button>
+        <Button onClick={() => void downloadTraces(adventure).catch(fail)}>Turn traces (JSONL)</Button>
       </Group>
     </>
   );
