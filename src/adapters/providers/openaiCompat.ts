@@ -1,4 +1,5 @@
-import { fetchJson, readSse } from './http';
+import { ensureOk, fetchJson, sseEvents } from './http';
+import { OpenAiCompletionEvent, OpenAiEmbeddings, OpenAiModels } from './schemas';
 import { type CompletionChunk, type CompletionRequest, type Provider, type ProviderCapabilities, type ProviderHealth } from '@core/ports';
 
 /**
@@ -16,8 +17,15 @@ export class OpenAICompatProvider implements Provider {
   readonly id: string;
   readonly baseUrl: string;
   private readonly opts: { model?: string; apiKey?: string; supportsTopK?: boolean };
+  private readonly fetchFn: typeof fetch;
 
-  constructor(id: string, baseUrl: string, opts: { model?: string; apiKey?: string; supportsTopK?: boolean } = {}) {
+  constructor(
+    id: string,
+    baseUrl: string,
+    opts: { model?: string; apiKey?: string; supportsTopK?: boolean } = {},
+    fetchFn: typeof fetch = (...a) => fetch(...a),
+  ) {
+    this.fetchFn = fetchFn;
     this.id = id;
     this.baseUrl = baseUrl;
     this.opts = opts;
@@ -36,7 +44,7 @@ export class OpenAICompatProvider implements Provider {
 
   async health(signal?: AbortSignal): Promise<ProviderHealth> {
     try {
-      const json = await fetchJson<{ data?: { id: string }[] }>(this.url('/v1/models'), { headers: this.headers() }, signal);
+      const json = await fetchJson(this.fetchFn, this.url('/v1/models'), OpenAiModels, { headers: this.headers() }, signal);
       const first = json.data?.[0]?.id;
       if (!this.modelName) this.modelName = first;
       return { ok: true, modelId: this.modelName };
@@ -76,13 +84,17 @@ export class OpenAICompatProvider implements Provider {
       stream: true,
     };
     if (req.seed !== undefined) body['seed'] = req.seed;
-    if (this.opts.supportsTopK && req.topK) body['top_k'] = req.topK;
+    if (this.opts.supportsTopK && (req.topK ?? 0) > 0) body['top_k'] = req.topK;
 
-    const res = await fetch(this.url('/v1/completions'), { method: 'POST', headers: this.headers(), body: JSON.stringify(body), signal: signal ?? null });
-    if (!res.ok) throw new Error(`/v1/completions → ${res.status} ${res.statusText}`);
+    const res = await this.fetchFn(this.url('/v1/completions'), {
+      method: 'POST',
+      headers: this.headers(),
+      body: JSON.stringify(body),
+      signal: signal ?? null,
+    });
+    ensureOk(res, '/v1/completions');
     let finish: string | undefined;
-    for await (const evt of readSse(res, signal)) {
-      const e = evt as { choices?: { text?: string; finish_reason?: string | null }[]; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+    for await (const e of sseEvents(res, OpenAiCompletionEvent, signal)) {
       const choice = e.choices?.[0];
       if (choice?.text) yield { text: choice.text, done: false };
       if (choice?.finish_reason) finish = choice.finish_reason;
@@ -99,8 +111,10 @@ export class OpenAICompatProvider implements Provider {
   }
 
   async embed(texts: string[], signal?: AbortSignal): Promise<number[][]> {
-    const json = await fetchJson<{ data: { embedding: number[] }[] }>(
+    const json = await fetchJson(
+      this.fetchFn,
       this.url('/v1/embeddings'),
+      OpenAiEmbeddings,
       { method: 'POST', headers: this.headers(), body: JSON.stringify({ model: this.modelName, input: texts }) },
       signal,
     );

@@ -15,3 +15,20 @@ export const StoryCard = z.object({
   /** Character Creator: whether players can pick this card. */
   selectable: z.optional(z.boolean()),
 });
+
+/** What the story card generator asks the model to return (also sent as llama-server `json_schema`). */
+export const GeneratedCardJson = z.object({
+  name: z.string(),
+  entry: z.string(),
+  triggers: z.array(z.string()).check(z.minLength(1), z.maxLength(8)),
+});
+
+/** What models actually return: AID-style aliases (title/description/keys), triggers as array or CSV. */
+export const LooseCardJson = z.object({
+  name: z.optional(z.string()),
+  title: z.optional(z.string()),
+  entry: z.optional(z.string()),
+  description: z.optional(z.string()),
+  triggers: z.optional(z.union([z.array(z.unknown()), z.string()])),
+  keys: z.optional(z.union([z.array(z.unknown()), z.string()])),
+});
