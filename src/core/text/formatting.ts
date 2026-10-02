@@ -1,5 +1,6 @@
 import type { Action, ActionType, PlotComponents } from '../model/types';
 import { actionText } from '../model/types';
+import type { CompletionStats } from '../ports/provider';
 
 /**
  * Turn a player's raw input into the line that goes into the story text.
@@ -64,22 +65,35 @@ export function joinStory(actions: Action[]): string {
 /**
  * Post-process a raw model output the way AI Dungeon does by default: drop a
  * trailing unfinished sentence so the story never ends mid-word. Players can
- * turn this off with the Raw Model Output setting.
+ * turn this off with the Raw Model Output setting. An output the model ended
+ * itself (`stop`/`eos`) is complete; only an unmatched trailing quote goes,
+ * since it would sit in history and the next prompt. [AID-doc]
  */
-export function trimUnfinishedSentence(output: string): string {
-  const s = output.replace(/\s+$/, '');
-  if (!s) return s;
-  if (/[.!?…"”'’)\]]$/.test(s)) return s;
-  const idx = Math.max(
-    s.lastIndexOf('. '),
-    s.lastIndexOf('! '),
-    s.lastIndexOf('? '),
-    s.lastIndexOf('.\n'),
-    s.lastIndexOf('!\n'),
-    s.lastIndexOf('?\n'),
-    s.lastIndexOf('”'),
-    s.lastIndexOf('"'),
-  );
-  if (idx <= 0) return s; // nothing to cut back to; keep as is
-  return s.slice(0, idx + 1).trimEnd();
+export function trimUnfinishedSentence(output: string, stopReason?: CompletionStats['stopReason']): string {
+  const s = output.trimEnd();
+  const ended = stopReason === 'stop' || stopReason === 'eos';
+  const kept = ended ? s : s.slice(0, lastSentenceEnd(s) || s.length).trimEnd();
+  const openQuote = kept.endsWith('“') || (kept.endsWith('"') && (kept.match(/"/g)?.length ?? 0) % 2 === 1);
+  return openQuote ? kept.slice(0, -1).trimEnd() : kept;
+}
+
+/**
+ * Index just past the last complete sentence, 0 if none. Terminal punctuation
+ * inside open dialogue does not count (cutting there leaves an unmatched
+ * quote); a quote closed after terminal punctuation or a dash does.
+ */
+function lastSentenceEnd(s: string): number {
+  let open = false;
+  let end = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charAt(i);
+    const afterTerminal = /[.!?…]/.test(s.charAt(i - 1));
+    if (c === '“' || (c === '"' && !open)) open = true;
+    else if (c === '”' || c === '"') {
+      open = false;
+      if (afterTerminal || s.charAt(i - 1) === '—') end = i + 1;
+    } else if (/[)\]’]/.test(c) && afterTerminal) end = i + 1;
+    else if (!open && /[.!?…]/.test(c) && /^\s?$/.test(s.charAt(i + 1))) end = i + 1;
+  }
+  return end;
 }

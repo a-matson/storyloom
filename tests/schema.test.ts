@@ -8,7 +8,7 @@ describe('schemas', () => {
     expect(DEFAULT_ADVENTURE_SETTINGS).toEqual({
       providerId: 'local',
       template: 'chatml',
-      model: { contextLength: 8192, responseLength: 150, temperature: 1.0, topK: 250, topP: 0.95, presencePenalty: 0.25, frequencyPenalty: 0 },
+      model: { contextLength: 8192, responseLength: 200, temperature: 1.0, topK: 250, topP: 0.95, presencePenalty: 0.25, frequencyPenalty: 0 },
       memory: { autoSummary: true, memoryBank: true, bankSize: 200 },
       context: { cacheStableLayout: true, evictionChunk: 8, rawOutput: false, contextWarning: true, cacheWarming: true, retryPrefetch: false },
       textStyle: 'print',

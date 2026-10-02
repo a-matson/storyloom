@@ -110,6 +110,25 @@ describe('player input formatting', () => {
     expect(trimUnfinishedSentence('Complete sentence.')).toBe('Complete sentence.');
     expect(trimUnfinishedSentence('no punctuation at all')).toBe('no punctuation at all');
   });
+  it.each([
+    ['dangling opening quote', 'He turns.\n\n"', 'He turns.'],
+    ['open dialogue fragment', 'He turns. "Wait, I', 'He turns.'],
+    ['comma-closed fragment', 'He turns.\n\n"…still,"', 'He turns.'],
+    ['sentence inside open dialogue', 'She nods. "Run. Now, before', 'She nods.'],
+    ['closed dialogue', 'She nods. "Run." The rider', 'She nods. "Run."'],
+    ['interrupted speech', '"I don—" He stops and', '"I don—"'],
+    ['curly quotes', 'She nods. “Run.” The rider', 'She nods. “Run.”'],
+    ['ellipsis', 'It fades… and then', 'It fades…'],
+    ['one sentence only', 'The door opens and', 'The door opens and'],
+  ])('trims a length cut: %s', (_, out, want) => {
+    expect(trimUnfinishedSentence(out, 'length')).toBe(want);
+  });
+  it('keeps stop-terminated output but drops an unmatched trailing quote', () => {
+    expect(trimUnfinishedSentence('She turns. The door opens and', 'eos')).toBe('She turns. The door opens and');
+    expect(trimUnfinishedSentence('She turns.\n\n"', 'stop')).toBe('She turns.');
+    expect(trimUnfinishedSentence('She says, “', 'stop')).toBe('She says,');
+    expect(trimUnfinishedSentence('"Go."', 'stop')).toBe('"Go."');
+  });
 });
 
 describe('templates', () => {
