@@ -79,4 +79,15 @@ describe('memory maintenance', () => {
     await runMemoryMaintenance(adv, deps);
     expect(calls).toHaveLength(65);
   });
+
+  it('builds the next summary on top of the player-edited one', async () => {
+    const adv = adventure(15);
+    adv.settings.memory.autoSummary = true;
+    adv.plot.storySummary = 'The player rewrote this: Mira owes the ferryman.';
+    const { deps, calls } = fakeDeps(adv);
+    const report = await runMemoryMaintenance(adv, deps);
+    expect(report.summaryUpdated).toBe(true);
+    expect(calls.at(-1)).toContain('Current summary:\nThe player rewrote this: Mira owes the ferryman.');
+    expect(adv.scriptState.__summaryAt).toBe(adv.actions.length);
+  });
 });

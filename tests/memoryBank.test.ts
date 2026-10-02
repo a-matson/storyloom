@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cosine, dueMemoryRanges, evictToSize, markStale, rankMemories, summaryDue } from '@core/memory/memoryBank';
+import { actionsUntilMemory, actionsUntilSummary, cosine, dueMemoryRanges, evictToSize, markStale, rankMemories, summaryDue } from '@core/memory/memoryBank';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import { createBlankAdventure } from '@core/model';
 import type { Memory } from '@core/model/types';
@@ -31,6 +31,19 @@ describe('memory scheduling', () => {
     expect(summaryDue(15, 0)).toBe(true);
     expect(summaryDue(29, 15)).toBe(false);
     expect(summaryDue(30, 15)).toBe(true);
+  });
+
+  it('counts down to the next summary and the next memory', () => {
+    expect(actionsUntilSummary(15, 0)).toBe(0);
+    expect(actionsUntilSummary(10, 0)).toBe(5);
+    expect(actionsUntilSummary(20, 15)).toBe(10);
+    expect(actionsUntilSummary(50, 15)).toBe(0);
+    expect(actionsUntilMemory(11, [])).toBe(1);
+    expect(actionsUntilMemory(12, [])).toBe(0);
+    expect(actionsUntilMemory(13, [mem('m0', 0)])).toBe(5);
+    expect(actionsUntilMemory(17, [mem('m0', 0)])).toBe(1);
+    expect(actionsUntilMemory(18, [mem('m0', 0)])).toBe(0);
+    expect(actionsUntilMemory(30, [mem('m0', 0)])).toBe(0);
   });
 });
 

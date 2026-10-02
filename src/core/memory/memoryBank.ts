@@ -56,6 +56,15 @@ export function summaryDue(actionCount: number, lastSummarisedAt: number): boole
   return actionCount - lastSummarisedAt >= SUMMARY_INTERVAL;
 }
 
+/** Actions until `summaryDue` turns true; 0 when it already is. */
+export const actionsUntilSummary = (actionCount: number, lastSummarisedAt: number): number => Math.max(0, lastSummarisedAt + SUMMARY_INTERVAL - actionCount);
+
+/** Actions until `dueMemoryRanges` is non-empty; 0 when a range is already due. */
+export function actionsUntilMemory(actionCount: number, existing: Pick<Memory, 'toAction'>[]): number {
+  const start = existing.reduce((n, m) => Math.max(n, m.toAction), 0);
+  return Math.max(0, start + MEMORY_LAG - actionCount);
+}
+
 export function createMemory(text: string, actions: Action[], range: MemoryRange, embedding?: number[]): Memory {
   return {
     id: newId('mem_'),
