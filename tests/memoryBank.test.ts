@@ -43,11 +43,35 @@ describe('retrieval and eviction', () => {
     expect(rankMemories([a, b, c], [1, 0]).map((r) => r.memory.id)).toEqual(['a', 'b']);
   });
 
-  it('forgets the least-used, then oldest, memories', () => {
+  it('forgets the least-used, then oldest, memories but keeps them flagged', () => {
     const memories = [mem('old-unused', 0, 0, 0), mem('new-unused', 6, 0, 5), mem('used', 12, 3, 1)];
-    const { kept, forgotten } = evictToSize(memories, 2);
-    expect(forgotten.map((m) => m.id)).toEqual(['old-unused']);
-    expect(kept.map((m) => m.id)).toEqual(['new-unused', 'used']);
+    const out = evictToSize(memories, 2);
+    expect(out.forgotten).toBe(1);
+    expect(out.memories.map((m) => [m.id, !!m.forgotten])).toEqual([
+      ['old-unused', true],
+      ['new-unused', false],
+      ['used', false],
+    ]);
+    expect(evictToSize(out.memories, 2)).toEqual({ memories: out.memories, forgotten: 0 });
+  });
+
+  it('does not summarise a forgotten range again', () => {
+    const { memories } = evictToSize([mem('a', 0, 0, 0), mem('b', 6, 1, 1)], 1);
+    expect(dueMemoryRanges(18, memories)).toEqual([]);
+    // the cap may drop old forgotten memories; their ranges still precede the newest one
+    expect(dueMemoryRanges(18, [mem('b', 6)])).toEqual([]);
+  });
+
+  it('leaves forgotten memories out of ranking and the bank count', () => {
+    const f = { ...mem('f', 0, 0, 9, [1, 0]), forgotten: true };
+    const a = mem('a', 6, 0, 1, [0, 1]);
+    expect(rankMemories([f, a], [1, 0]).map((r) => r.memory.id)).toEqual(['a']);
+    expect(evictToSize([f, a], 1).forgotten).toBe(0);
+  });
+
+  it('keeps at most bankSize forgotten memories, dropping the oldest', () => {
+    const memories = [0, 1, 2, 3].map((i) => ({ ...mem(`f${i}`, i * 6, 0, i), forgotten: true }));
+    expect(evictToSize([...memories, mem('a', 24, 0, 9)], 2).memories.map((m) => m.id)).toEqual(['f2', 'f3', 'a']);
   });
 
   it('marks memories stale when their actions change', () => {
@@ -82,7 +106,12 @@ describe('embedder changes', () => {
     const provider = { id: 'p' } as unknown as Provider; // nothing is due, so it is never called
     await runMemoryMaintenance(adventure, { provider, embedder, template: adventure.settings.template });
     expect(embedded).toEqual(['old', 'none']);
-    expect(adventure.memories.map((m) => m.embedding)).toEqual([[1, 0], [1, 0], [1], [0, 1]]);
+    // the stale memory's actions do not exist here, so it is dropped rather than re-embedded
+    expect(adventure.memories.map((m) => m.embedding)).toEqual([
+      [1, 0],
+      [1, 0],
+      [0, 1],
+    ]);
   });
 
   it('waits for the embedder to report its dimensions', async () => {

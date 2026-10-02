@@ -14,4 +14,6 @@ export const Memory = z.object({
   createdAt: z.number(),
   lastUsedAt: z.optional(z.number()),
   stale: z.optional(z.boolean()),
+  /** Evicted from the bank but kept, so its range is not summarised again. */
+  forgotten: z.optional(z.boolean()),
 });

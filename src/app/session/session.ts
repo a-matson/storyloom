@@ -180,7 +180,7 @@ export class GameSession {
     const provider = this.svc.providerFor(this.app, utility?.id ?? this.adv.settings.providerId);
     try {
       const report = await runMemoryMaintenance(this.adv, { provider, embedder: await this.resolveEmbedder(), template: this.adv.settings.template });
-      if (report.memoriesWritten || report.summaryUpdated) {
+      if (report.memoriesWritten || report.memoriesRegenerated || report.memoriesDropped || report.summaryUpdated) {
         this.emit();
         this.save();
       }
