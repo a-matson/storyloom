@@ -21,6 +21,8 @@
     "bench": "vitest run --config bench/vitest.config.ts",
     "measure": "node scripts/measure.ts",
     "size": "node scripts/size.ts",
+    "knip": "knip",
+    "mutate": "stryker run",
     "lint": "oxlint --type-aware --max-warnings=0 src tests e2e bench scripts",
     "measure:renders": "VITE_MEASURE_RENDERS=1 vite build --outDir dist-measure && MEASURE_RENDERS=1 playwright test e2e/renders.spec.ts --config playwright.measure.config.ts"
   },
@@ -43,6 +45,8 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.63.0",
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/vitest-runner": "^10.0.0",
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "^22.20.4",
     "@types/react": "^19.3.0",
@@ -50,6 +54,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "@vitest/coverage-v8": "^5.0.3",
     "fake-indexeddb": "^6.2.5",
+    "knip": "^6.39.0",
     "lefthook": "2.1.15",
     "oxc-transform-react": "^0.152.0",
     "oxfmt": "0.71.0",

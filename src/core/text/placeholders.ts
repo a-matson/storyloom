@@ -35,7 +35,3 @@ export function findPlaceholders(texts: (string | undefined)[]): PlaceholderQues
 export function applyPlaceholders(text: string, answers: Record<string, string>): string {
   return text.replace(RE, (whole, key: string) => (key in answers ? (answers[key] ?? '') : whole));
 }
-
-export function hasPlaceholders(text: string | undefined): boolean {
-  return !!text && /\$\{[^}]+\}/.test(text);
-}

@@ -1,6 +1,6 @@
 import type { ActionLog } from '../log/actionLog';
 import type { Adventure, TurnTrace } from '../model/types';
-import { formatPlayerInput, joinStory } from '../text/formatting';
+import { formatPlayerInput } from '../text/formatting';
 import { buildRequest, generate, randomSeed } from './generate';
 import { runHook } from './hooks';
 import { prepareContext } from './prepare';
@@ -120,9 +120,4 @@ export async function generateAlternative(
   while (!next.done) next = await gen.next();
   run.generated = next.value;
   return { ...next.value, trace: traceOf(adventure, deps, run, 'done') };
-}
-
-/** Full story text of the active path (for export and summarisation). */
-export function storyText(adventure: Adventure): string {
-  return joinStory(adventure.actions);
 }

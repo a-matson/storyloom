@@ -44,13 +44,3 @@ export function cardPrompt(opts: {
     '\n\nReturn {"name": string, "entry": string (2–4 plain sentences that mention the name), "triggers": string[] (3–6 lower-case keywords)}.'
   );
 }
-
-export function imagePromptPrompt(recent: string, cards: string[], essentials: string): string {
-  return (
-    'Write a single-line image generation prompt (under 300 characters) for the current scene: subject, setting, ' +
-    'lighting, mood, art style. No names of real people. Output only the prompt.\n\n' +
-    (essentials ? `Setting: ${essentials}\n` : '') +
-    (cards.length ? `Lore: ${cards.join(' ')}\n` : '') +
-    `Scene:\n${recent}\n\nPrompt:`
-  );
-}

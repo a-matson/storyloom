@@ -10,10 +10,6 @@ import { actionText, newId } from '../model/types';
  * previous array is kept on the undo stack. This makes undo/redo O(1) and
  * means nothing is destroyed until the adventure is saved without it.
  */
-export interface LogState {
-  actions: Action[];
-}
-
 export class ActionLog {
   private undoStack: Action[][] = [];
   private redoStack: Action[][] = [];

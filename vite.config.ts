@@ -41,7 +41,7 @@ export default defineConfig({
       // Unit coverage of logic; the UI is covered by Playwright, not counted here.
       include: ['src/core/**', 'src/adapters/**', 'src/app/**'],
       reporter: ['text-summary'],
-      thresholds: { statements: 80, branches: 67, functions: 79, lines: 84 },
+      thresholds: { statements: 82, branches: 69, functions: 82, lines: 86 },
     },
   },
 });
