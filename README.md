@@ -2,7 +2,7 @@
 
 A single-user, local-first AI text adventure engine in the style of AI Dungeon. The browser runs the whole game — story cards, memory system, scripting, context assembly — and a local inference server (llama-server, KoboldCpp, Ollama, LM Studio…) generates the text. No accounts, no cloud, no paid services.
 
-Requires Node ≥ 22 and pnpm.
+Requires Node ≥ 22.18 and pnpm.
 
 ```
 pnpm install
