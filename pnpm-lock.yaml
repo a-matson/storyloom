@@ -200,6 +200,9 @@ importers:
       srvx:
         specifier: ^1.0.5
         version: 1.0.5
+      tinybench:
+        specifier: ^6.2.0
+        version: 6.2.0
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
