@@ -1,15 +1,15 @@
-import { z } from 'zod';
+import { z } from 'zod/mini';
 
 /**
  * In-process fake llama-server: a `fetch`-shaped handler that streams canned prose.
  * Used by the "Demo (no GPU)" provider and by `scripts/fake-backend.ts`.
  */
 const CompletionBody = z.object({
-  prompt: z.string().optional(),
-  content: z.string().optional(),
-  n_predict: z.number().optional(),
-  id_slot: z.number().optional(),
-  json_schema: z.unknown().optional(),
+  prompt: z.optional(z.string()),
+  content: z.optional(z.string()),
+  n_predict: z.optional(z.number()),
+  id_slot: z.optional(z.number()),
+  json_schema: z.optional(z.unknown()),
 });
 export type CompletionBody = z.infer<typeof CompletionBody>;
 

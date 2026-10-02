@@ -1,252 +1,39 @@
-/**
- * Core data model. Everything here is plain JSON-serialisable data so it can
- * live in IndexedDB/SQLite, be exported as a zip, and be passed to workers.
- *
- * Naming follows the AI Dungeon vocabulary
- * so community knowledge and scripts transfer: Adventure, Scenario,
- * Story Card, Plot Essentials, Author's Note, Memory Bank, Story Summary.
- */
-
-export type ActionType = 'start' | 'continue' | 'do' | 'say' | 'story' | 'see';
-
-/** Statistics captured from the provider for a generated action. */
-export interface GenerationStats {
-  model?: string;
-  promptTokens?: number | undefined;
-  cachedTokens?: number | undefined;
-  generatedTokens?: number | undefined;
-  promptMs?: number | undefined;
-  generationMs?: number | undefined;
-}
+import type { z } from 'zod/mini';
+import * as S from '../schema';
 
 /**
- * One entry in the adventure's action log.
+ * Core data model: types inferred from the zod schemas in `core/schema`, the single source of truth.
+ * Everything is plain JSON-serialisable data so it can live in IndexedDB, be exported, and cross to workers.
  *
- * `versions` holds every text this action has had: for AI outputs these are
- * the retry alternatives ("retry stack"), for any action an Edit pushes a new
- * version. `active` points at the version currently shown and sent to the AI.
- * Actions are treated as immutable values: mutating operations return a new
- * object (see actionLog.ts), which is what makes undo/redo cheap.
+ * Naming follows the AI Dungeon vocabulary so community knowledge and scripts transfer:
+ * Adventure, Scenario, Story Card, Plot Essentials, Author's Note, Memory Bank, Story Summary.
  */
-export interface Action {
-  id: string;
-  type: ActionType;
-  versions: string[];
-  active: number;
-  createdAt: number;
-  /** Present for `see` actions (image generation). */
-  image?: { url: string; prompt: string; model?: string };
-  stats?: GenerationStats | undefined;
-}
+export type ActionType = z.output<typeof S.ActionType>;
+export type GenerationStats = z.output<typeof S.GenerationStats>;
+export type Action = z.output<typeof S.Action>;
+export type PlotComponents = z.output<typeof S.PlotComponents>;
+export type StoryCard = z.output<typeof S.StoryCard>;
+export type Memory = z.output<typeof S.Memory>;
+export type TemplateId = z.output<typeof S.TemplateId>;
+export type ModelSettings = z.output<typeof S.ModelSettings>;
+export type MemorySettings = z.output<typeof S.MemorySettings>;
+export type ContextSettings = z.output<typeof S.ContextSettings>;
+export type AdventureSettings = z.output<typeof S.AdventureSettings>;
+export type ScriptMemory = z.output<typeof S.ScriptMemory>;
+export type ScriptState = z.output<typeof S.ScriptState>;
+export type Adventure = z.output<typeof S.Adventure>;
+export type ScenarioType = z.output<typeof S.ScenarioType>;
+export type ScenarioScripts = z.output<typeof S.ScenarioScripts>;
+export type Scenario = z.output<typeof S.Scenario>;
+export type ProviderConfig = z.output<typeof S.ProviderConfig>;
+export type AppSettings = z.output<typeof S.AppSettings>;
 
 export function actionText(a: Action): string {
-  return a.versions[a.active] ?? a.versions[a.versions.length - 1] ?? '';
+  return a.versions[a.active] ?? a.versions.at(-1) ?? '';
 }
 
-/** Always-on prompt pieces ("Plot Components"). All optional. */
-export interface PlotComponents {
-  /** Sent as the system prompt. */
-  aiInstructions?: string | undefined;
-  /** Maintained by auto-summarisation, hand-editable. */
-  storySummary?: string | undefined;
-  /** Formerly "Memory": key facts always in context. */
-  plotEssentials?: string | undefined;
-  /** Short style/tone guidance injected near the end of the prompt. */
-  authorsNote?: string | undefined;
-  /** Replace "You" in Do/Say actions with a character name. */
-  thirdPerson?: { enabled: boolean; name: string } | undefined;
-}
-
-export interface StoryCard {
-  id: string;
-  /** Character | Class | Race | Location | Faction | custom string. Not seen by the AI. */
-  type: string;
-  /** For the player only; the AI never sees it. */
-  name: string;
-  /** What the AI sees, prefixed by "World Lore:" in context. */
-  entry: string;
-  /** Case-insensitive substrings; sensitive to leading/trailing spaces. */
-  triggers: string[];
-  /** Never sent to the AI (except as an option description in Character Creator). */
-  notes?: string | undefined;
-  /** Character Creator: whether players can pick this card. */
-  selectable?: boolean | undefined;
-}
-
-/** An AI-written summary of a run of six actions, embedded for retrieval. */
-export interface Memory {
-  id: string;
-  text: string;
-  /** Inclusive start / exclusive end index into the action log at creation time. */
-  fromAction: number;
-  toAction: number;
-  /** Action ids covered, so edits can mark the memory stale. */
-  actionIds: string[];
-  embedding?: number[] | undefined;
-  useCount: number;
-  createdAt: number;
-  lastUsedAt?: number;
-  stale?: boolean;
-}
-
-export type TemplateId = 'chatml' | 'llama3' | 'mistral' | 'gemma' | 'raw';
-
-export interface ModelSettings {
-  /** Input budget in tokens (what the context builder may fill). */
-  contextLength: number;
-  /** Max tokens to generate per turn. */
-  responseLength: number;
-  temperature: number;
-  topK: number;
-  topP: number;
-  presencePenalty: number;
-  frequencyPenalty: number;
-  minP?: number | undefined;
-  repetitionPenalty?: number;
-  seed?: number;
-}
-
-export interface MemorySettings {
-  autoSummary: boolean;
-  memoryBank: boolean;
-  /** Max memories kept per adventure (AID tiers: 25/100/200/400/800). */
-  bankSize: number;
-}
-
-export interface ContextSettings {
-  /**
-   * Reorder the prompt so history comes before triggered cards/memories,
-   * keeping a byte-stable, append-only prefix for the backend's KV cache.
-   * Off = AI Dungeon's documented ordering.
-   */
-  cacheStableLayout: boolean;
-  /** When trimming history, drop the oldest actions in blocks of this size. */
-  evictionChunk: number;
-  /** Include the raw model output (no sentence trimming). */
-  rawOutput: boolean;
-  /** Show a warning on the context meter when cards or plot components did not fit. */
-  contextWarning?: boolean;
-  /** After each turn, prefill the next turn's stable prefix so the backend's KV cache is warm. */
-  cacheWarming?: boolean;
-  /** After each turn, generate one retry alternative in the background on a second slot. */
-  retryPrefetch?: boolean;
-}
-
-export interface AdventureSettings {
-  providerId: string;
-  /** Model id as reported by the provider (e.g. GGUF file name). */
-  modelId?: string | undefined;
-  template: TemplateId;
-  model: ModelSettings;
-  memory: MemorySettings;
-  context: ContextSettings;
-  /** Cosmetic: 'print' | 'clean' | 'hacker'. */
-  textStyle: 'print' | 'clean' | 'hacker';
-}
-
-export interface Adventure {
-  id: string;
-  title: string;
-  description: string;
-  tags: string[];
-  coverUrl?: string | undefined;
-  scenarioId?: string;
-  /** Active path of the story, in order. */
-  actions: Action[];
-  plot: PlotComponents;
-  storyCards: StoryCard[];
-  memories: Memory[];
-  /** Persistent object scripts may read/write (`state` in the scripting API). */
-  scriptState: ScriptState;
-  /** Answers given to ${placeholders} when the adventure was created. */
-  placeholders: { question: string; answer: string }[];
-  settings: AdventureSettings;
-  /** Story-card generator settings (AI instructions, story information…). Per adventure, like AI Dungeon. */
-  cardGenerator?: {
-    speedCreate: boolean;
-    includeSummary: boolean;
-    logToNotes: boolean;
-    aiInstructions: string;
-    storyInformation: string;
-  };
-  createdAt: number;
-  updatedAt: number;
-}
-
-export type ScenarioType = 'story' | 'characterCreator' | 'multipleChoice';
-
-export interface ScenarioScripts {
-  library: string;
-  input: string;
-  context: string;
-  output: string;
-}
-
-export interface Scenario {
-  id: string;
-  title: string;
-  description: string;
-  tags: string[];
-  coverUrl?: string | undefined;
-  type: ScenarioType;
-  /** The first action of a new adventure. May contain ${placeholders}. */
-  prompt: string;
-  plot: PlotComponents;
-  storyCards: StoryCard[];
-  scripts?: ScenarioScripts;
-  /** Multiple choice: child scenarios, each a full scenario. */
-  options?: Scenario[];
-  parentId?: string;
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface AppSettings {
-  providers: ProviderConfig[];
-  defaultProviderId: string;
-  defaults: AdventureSettings;
-  theme: 'dark' | 'light' | 'sepia';
-  highContrast: boolean;
-  textAnimation: boolean;
-  textSize: 'default' | 'large' | 'larger';
-  stickyInput: boolean;
-  compactButtons: boolean;
-}
-
-export interface ProviderConfig {
-  id: string;
-  kind: 'demo' | 'llama-server' | 'openai-compat' | 'koboldcpp' | 'ollama';
-  name: string;
-  baseUrl: string;
-  /** Optional: a second, small model server for summaries/cards/image prompts. */
-  role?: 'story' | 'utility';
-}
-
-export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
-  contextLength: 8192,
-  responseLength: 150,
-  temperature: 1.0,
-  topK: 250,
-  topP: 0.95,
-  presencePenalty: 0.25,
-  frequencyPenalty: 0,
-};
-
-export const DEFAULT_ADVENTURE_SETTINGS: AdventureSettings = {
-  providerId: 'local',
-  template: 'chatml',
-  model: DEFAULT_MODEL_SETTINGS,
-  memory: { autoSummary: true, memoryBank: true, bankSize: 200 },
-  context: {
-    cacheStableLayout: true,
-    evictionChunk: 8,
-    rawOutput: false,
-    contextWarning: true,
-    cacheWarming: true,
-    retryPrefetch: false,
-  },
-  textStyle: 'print',
-};
+export const DEFAULT_MODEL_SETTINGS: ModelSettings = S.ModelSettings.parse({});
+export const DEFAULT_ADVENTURE_SETTINGS: AdventureSettings = S.AdventureSettings.parse({});
 
 let counter = 0;
 /** Small unique id; prefer crypto.randomUUID when available. */
@@ -255,21 +42,4 @@ export function newId(prefix = ''): string {
   if (c && typeof c.randomUUID === 'function') return prefix + c.randomUUID();
   counter += 1;
   return `${prefix}${Date.now().toString(36)}-${counter.toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-/** `state.memory` in the scripting API: overrides for plot essentials / author's note, plus front memory. */
-export interface ScriptMemory {
-  context?: string | undefined;
-  authorsNote?: string | undefined;
-  frontMemory?: string | undefined;
-}
-
-/** Persistent object scripts read/write (`state` in the scripting API). */
-export interface ScriptState {
-  memory?: ScriptMemory | undefined;
-  message?: string | undefined;
-  placeholders?: { question: string; answer: string }[] | undefined;
-  /** Action count at the last Story Summary refresh (memory jobs). */
-  __summaryAt?: number | undefined;
-  [key: string]: unknown;
 }
