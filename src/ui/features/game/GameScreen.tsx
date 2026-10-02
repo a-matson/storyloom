@@ -6,6 +6,7 @@ import { applyTheme } from '@ui/theme';
 import { Toast } from '@ui/components/ui/toast';
 import { Sidebar } from './sidebar/Sidebar';
 import { ContextViewer } from './context/ContextViewer';
+import { TraceViewer } from './context/TraceViewer';
 import { CommandRow } from './CommandRow';
 import { ContextMeter } from './ContextMeter';
 import { GameHeader } from './GameHeader';
@@ -24,6 +25,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
   const [state, api] = useGameSession(initial, app);
   const [showSidebar, setShowSidebar] = useState(sidebarOpenByDefault);
   const [showContext, setShowContext] = useState(false);
+  const [traceAction, setTraceAction] = useState<string | null>(null);
   const adv = state.adventure;
   useGameKeys(showContext, showSidebar, setShowContext, setShowSidebar);
 
@@ -74,6 +76,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
             busy={state.busy}
             api={api}
             onViewContext={openContext}
+            onViewTrace={() => last && setTraceAction(last.id)}
             contextSummary={ctx ? `${ctx.triggeredCards.length} story cards · ${ctx.usedMemories.length} memories used` : undefined}
           />
           <CommandRow
@@ -91,6 +94,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
       {showContext && state.context && (
         <ContextViewer result={state.context.result} prompt={state.context.prompt} stats={last?.stats} onClose={() => setShowContext(false)} />
       )}
+      {traceAction !== null && <TraceViewer adventureId={adv.id} actionId={traceAction} onClose={() => setTraceAction(null)} />}
       {state.error !== null && <Toast message={state.error} error onDismiss={api.clearError} />}
       {state.notice !== null && state.error === null && <Toast message={state.notice} />}
     </div>

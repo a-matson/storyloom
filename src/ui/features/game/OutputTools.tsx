@@ -8,6 +8,7 @@ interface Props {
   api: GameApi;
   onEdit: () => void;
   onViewContext: () => void;
+  onViewTrace: () => void;
   contextSummary?: string | undefined;
 }
 
@@ -43,7 +44,7 @@ function RetryStack({ action, api }: { action: Action; api: GameApi }) {
 }
 
 /** Under the last output: retry stack, edit, erase, context. */
-export function OutputTools({ action, api, onEdit, onViewContext, contextSummary }: Props) {
+export function OutputTools({ action, api, onEdit, onViewContext, onViewTrace, contextSummary }: Props) {
   return (
     <div className="mt-1.5 flex items-center gap-2 font-sans text-caption text-muted-foreground">
       {action.type === 'continue' && action.versions.length > 1 && <RetryStack action={action} api={api} />}
@@ -56,6 +57,11 @@ export function OutputTools({ action, api, onEdit, onViewContext, contextSummary
       <Button variant="system" className={`${tool} border-border`} onClick={onViewContext}>
         View context
       </Button>
+      {action.type === 'continue' && (
+        <Button variant="system" className={`${tool} border-border`} onClick={onViewTrace}>
+          Trace
+        </Button>
+      )}
       <span className="grow" />
       {contextSummary !== undefined && <span>{contextSummary}</span>}
     </div>

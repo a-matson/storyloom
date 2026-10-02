@@ -85,3 +85,15 @@ test('drawers are modal: focus stays inside and Escape closes them', async ({ pa
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
 });
+
+test('the trace viewer shows the latest generation and its prompt', async ({ page }) => {
+  await connectDemo(page);
+  await page.getByRole('button', { name: 'Fantasy' }).click();
+  await takeTurn(page, 'open the letter');
+  await expect(page.getByText('hand stops moving.')).toBeVisible();
+  await page.getByRole('button', { name: 'Trace' }).last().click();
+  const dialog = page.getByRole('dialog', { name: 'Turn trace' });
+  await expect(dialog.getByText('done', { exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Prompt' }).click();
+  await expect(dialog.getByText('open the letter')).toBeVisible();
+});
