@@ -23,14 +23,6 @@ export function missingAnswers(questions: { key: string }[], answers: Record<str
   return questions.filter((q) => !answers[q.key]?.trim()).map((q) => q.key);
 }
 
-/** Character Creator: selectable cards grouped by Type, in first-seen order; the player picks one per Type. */
-export function creatorChoices(s: Scenario): { type: string; options: StoryCard[] }[] {
-  if (s.type !== 'characterCreator') return [];
-  const groups = new Map<string, StoryCard[]>();
-  for (const c of s.storyCards) if (c.selectable) groups.set(c.type, [...(groups.get(c.type) ?? []), c]);
-  return [...groups].map(([type, options]) => ({ type, options }));
-}
-
 /**
  * `picked` are ids of selectable cards (Character Creator). Unpicked selectable
  * cards are not copied [provisional]; picked entries follow the prompt in the
