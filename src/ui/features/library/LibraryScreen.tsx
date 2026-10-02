@@ -10,6 +10,7 @@ import { LibraryHeader } from './LibraryHeader';
 import { ContinueHero } from './ContinueHero';
 import { QuickStart } from './QuickStart';
 import { AdventureGrid } from './AdventureGrid';
+import { ScenarioList } from './ScenarioList';
 
 interface Props {
   app: AppSettings;
@@ -18,6 +19,7 @@ interface Props {
   notice?: string | null;
   onDismissNotice?: () => void;
   onOpen: (id: string) => void;
+  onEditScenario: (id: string) => void;
   onSettings: () => void;
 }
 
@@ -29,7 +31,7 @@ async function remove(id: string): Promise<void> {
 }
 
 /** Home: continue the last adventure, quick starts, the adventure grid, import. */
-export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissNotice, onOpen, onSettings }: Props) {
+export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissNotice, onOpen, onEditScenario, onSettings }: Props) {
   // Live: re-runs when any tab writes the tables it read (storage is Dexie).
   const adventures = useLiveQuery(() => storage.listAdventures(), []) ?? [];
   const [error, setError] = useState<string | null>(null);
@@ -74,13 +76,7 @@ export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissN
           </div>
           <AdventureGrid adventures={adventures} onOpen={onOpen} onDelete={(id) => void remove(id).catch((e: unknown) => setError(message(e)))} />
         </section>
-        <section className="flex flex-col gap-3.5">
-          <div className="flex items-baseline gap-3">
-            <h2 className="m-0 font-display text-heading font-medium">My scenarios</h2>
-            <span className="text-caption text-muted-foreground">coming in milestone 5</span>
-          </div>
-          <p className="m-0 text-caption text-muted-foreground">Scenarios are reusable templates with placeholders, story cards and scripts.</p>
-        </section>
+        <ScenarioList onEdit={onEditScenario} onError={setError} />
       </div>
       {shown !== null && (
         <Toast
