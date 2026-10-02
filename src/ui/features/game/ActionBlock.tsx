@@ -14,13 +14,14 @@ interface Props {
   busy: boolean;
   api: GameApi;
   onViewContext: () => void;
+  onViewTrace: () => void;
   contextSummary?: string | undefined;
 }
 
 const quoted = (a: Action) => a.type === 'do' || a.type === 'say';
 
 /** One action; double-click edits it in place, blur commits, Escape reverts. */
-export function ActionBlock({ action, isLast, busy, api, onViewContext, contextSummary }: Props) {
+export function ActionBlock({ action, isLast, busy, api, onViewContext, onViewTrace, contextSummary }: Props) {
   const [editing, setEditing] = useState(false);
   const ref = useRef<HTMLParagraphElement>(null);
   const text = actionText(action);
@@ -77,7 +78,14 @@ export function ActionBlock({ action, isLast, busy, api, onViewContext, contextS
         paragraph
       )}
       {isLast && !busy && (
-        <OutputTools action={action} api={api} onEdit={() => setEditing(true)} onViewContext={onViewContext} contextSummary={contextSummary} />
+        <OutputTools
+          action={action}
+          api={api}
+          onEdit={() => setEditing(true)}
+          onViewContext={onViewContext}
+          onViewTrace={onViewTrace}
+          contextSummary={contextSummary}
+        />
       )}
     </div>
   );
