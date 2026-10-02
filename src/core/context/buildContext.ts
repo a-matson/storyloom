@@ -62,6 +62,7 @@ export function buildContext(input: ContextBuildInput): ContextBuildResult {
     triggeredCards: cards.triggeredCards,
     droppedCards: cards.droppedCards,
     usedMemories: memories.usedMemories,
+    rankedMemories: input.rankedMemories,
     historyRange: history.historyRange,
     lastActionIndex: req.lastActionIndex,
     historyFullyIncluded: history.historyFullyIncluded,
