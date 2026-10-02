@@ -2,7 +2,7 @@ import type { AppSettings } from '@core/model';
 import { DEFAULT_ADVENTURE_SETTINGS } from '@core/model';
 import { createApproxTokenizer } from '@core/text';
 import { createProvider, DEFAULT_PROVIDER_CONFIG } from '@adapters/providers';
-import { createStorage, MemoryStorage } from '@adapters/storage';
+import { DexieStorage } from '@adapters/storage';
 import type { Provider, Storage } from '@core/ports';
 import { HashEmbedder, ProviderEmbedder } from '@adapters/embeddings';
 import { type Embedder } from '@core/ports';
@@ -13,7 +13,7 @@ import { NoopScriptRunner } from '@core/ports';
  * share them. `services.provider(id)` caches one Provider per config.
  */
 export const tokenizer = createApproxTokenizer();
-export const storage: Storage = typeof indexedDB === 'undefined' ? new MemoryStorage() : createStorage();
+export const storage: Storage = new DexieStorage();
 export const scripts = new NoopScriptRunner();
 
 const providers = new Map<string, Provider>();

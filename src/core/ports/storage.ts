@@ -1,10 +1,6 @@
 import type { Adventure, AppSettings, Scenario } from '../model/types';
 
-/**
- * Persistence boundary. Milestone 1 ships IndexedDB (no dependency); the
- * interface is deliberately small so a SQLite (wa-sqlite/OPFS or Tauri)
- * implementation can replace it without touching the UI.
- */
+/** Persistence boundary; small so another backend (SQLite on OPFS, Tauri) can replace IndexedDB. */
 export interface AdventureSummary {
   id: string;
   title: string;
@@ -37,4 +33,9 @@ export interface Storage {
 
 export function summarise(a: Adventure): AdventureSummary {
   return { id: a.id, title: a.title, actionCount: a.actions.length, updatedAt: a.updatedAt, coverUrl: a.coverUrl, modelId: a.settings.modelId };
+}
+
+/** A stored record failed validation or the database refused an operation. */
+export class StorageError extends Error {
+  readonly kind = 'storage';
 }
