@@ -6,7 +6,8 @@ test.skip(process.env['MEASURE_RENDERS'] !== '1', 'measurement run only');
 
 test('render cost of one played turn', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: /^Demo \(no GPU\)/ }).click();
+  await page.getByRole('button', { name: /^llama-server/ }).click();
+  await page.getByRole('textbox', { name: /Server URL/ }).fill('http://localhost:8089');
   await page.getByRole('button', { name: 'Test connection' }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Fantasy' }).click();
