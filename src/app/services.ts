@@ -13,6 +13,7 @@ import { NoopScriptRunner } from '@core/ports';
  * App-wide singletons. Kept out of React so the engine, workers and tests can
  * share them. `services.provider(id)` caches one Provider per config.
  */
+export { DEFAULT_PROVIDER_CONFIG };
 export const tokenizer = createApproxTokenizer();
 export const storage: Storage = new DexieStorage();
 export const scripts = new NoopScriptRunner();

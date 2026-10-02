@@ -2,7 +2,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import type { ComponentProps } from 'react';
 import { cn } from '@ui/lib/utils';
 
-export const buttonVariants = cva(
+const buttonVariants = cva(
   'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-control font-medium disabled:cursor-not-allowed disabled:opacity-45',
   {
     variants: {
@@ -24,8 +24,13 @@ export const buttonVariants = cva(
   },
 );
 
+/** Button look for non-button elements; merged so size/variant overrides don't stack. */
+export function buttonClass(variants: VariantProps<typeof buttonVariants>, className?: string): string {
+  return cn(buttonVariants(variants), className);
+}
+
 export type ButtonProps = ComponentProps<'button'> & VariantProps<typeof buttonVariants>;
 
 export function Button({ className, variant, size, danger, type = 'button', ...props }: ButtonProps) {
-  return <button type={type} className={cn(buttonVariants({ variant, size, danger }), className)} {...props} />;
+  return <button type={type} className={buttonClass({ variant, size, danger }, className)} {...props} />;
 }

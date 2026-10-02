@@ -7,7 +7,7 @@ import { LibraryScreen } from './features/library/LibraryScreen';
 
 // Only the library is on the start-up path; the other screens load on first visit.
 const GameScreen = lazy(async () => ({ default: (await import('./components/GameScreen')).GameScreen }));
-const SetupScreen = lazy(async () => ({ default: (await import('./components/SetupScreen')).SetupScreen }));
+const SetupScreen = lazy(async () => ({ default: (await import('./features/setup/SetupScreen')).SetupScreen }));
 
 /** Status for the library header; never throws. */
 async function probeBackend(settings: AppSettings): Promise<{ ok: boolean; label: string }> {
