@@ -140,53 +140,6 @@
         "oxc/no-map-spread": "off",
         "import/no-unassigned-import": "off"
       }
-    },
-    {
-      "files": [
-        "src/ui/components/*.tsx",
-        "src/ui/App.tsx",
-        "src/ui/main.tsx",
-        "src/ui/router.ts",
-        "src/ui/theme.ts",
-        "src/ui/transferUi.ts",
-        "src/ui/hooks/**",
-        "src/core/ports/provider.ts",
-        "src/adapters/embeddings/embeddings.worker.ts"
-      ],
-      "rules": {
-        "typescript/strict-boolean-expressions": [
-          "warn",
-          {
-            "allowNullableString": true,
-            "allowNullableBoolean": true
-          }
-        ],
-        "typescript/no-non-null-assertion": "warn",
-        "typescript/no-unsafe-type-assertion": "warn",
-        "typescript/no-misused-promises": "warn",
-        "typescript/no-unnecessary-type-assertion": "warn",
-        "typescript/no-unnecessary-type-conversion": "warn",
-        "typescript/consistent-type-imports": "warn",
-        "max-lines": "warn",
-        "max-lines-per-function": "warn",
-        "jsx-a11y/label-has-associated-control": "warn",
-        "jsx-a11y/control-has-associated-label": "warn",
-        "jsx-a11y/click-events-have-key-events": "warn",
-        "jsx-a11y/no-static-element-interactions": "warn",
-        "jsx-a11y/no-noninteractive-element-interactions": "warn",
-        "jsx-a11y/prefer-tag-over-role": "warn",
-        "react/refs": "warn",
-        "react/exhaustive-effect-dependencies": "warn",
-        "react/memo-dependencies": "warn",
-        "react/set-state-in-effect": "warn",
-        "react/no-array-index-key": "warn",
-        "unicorn/prefer-add-event-listener": "warn",
-        "unicorn/require-post-message-target-origin": "warn",
-        "unicorn/no-array-sort": "warn",
-        "unicorn/consistent-function-scoping": "warn",
-        "promise/always-return": "warn",
-        "typescript/consistent-return": "warn"
-      }
     }
   ],
   "ignorePatterns": ["dist/**", "coverage/**", "playwright-report/**", "test-results/**", "bench/results/**"]
