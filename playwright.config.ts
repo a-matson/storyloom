@@ -10,7 +10,7 @@ export default defineConfig({
   reporter: process.env['CI'] ? [['github'], ['html', { open: 'never' }]] : 'list',
   // Baselines are rendered in Linux (CI and the Playwright Docker image); macOS fonts differ.
   snapshotPathTemplate: '{testDir}/__screenshots__/{testFilePath}/{arg}-{platform}{ext}',
-  expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.01, animations: 'disabled' } },
+  expect: { toHaveScreenshot: { maxDiffPixels: 0, animations: 'disabled' } },
   use: { baseURL: `http://localhost:${port}`, trace: 'retain-on-failure' },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } } }],
   // `vite` directly: a pnpm wrapper doesn't forward SIGTERM, which hangs teardown.
