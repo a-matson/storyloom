@@ -1,12 +1,4 @@
-import {
-  fetchJson,
-  readSse,
-  type CompletionChunk,
-  type CompletionRequest,
-  type Provider,
-  type ProviderCapabilities,
-  type ProviderHealth,
-} from './types';
+import { fetchJson, readSse, type CompletionChunk, type CompletionRequest, type Provider, type ProviderCapabilities, type ProviderHealth } from './types';
 
 /**
  * llama.cpp `llama-server` provider — the reference backend.
@@ -27,7 +19,11 @@ export class LlamaServerProvider implements Provider {
   private caps: ProviderCapabilities | null = null;
   private props: LlamaProps | null = null;
 
-  constructor(readonly id: string, readonly baseUrl: string) {}
+  constructor(
+    readonly id: string,
+    readonly baseUrl: string,
+    private readonly fetchFn: typeof fetch = (...a) => fetch(...a),
+  ) {}
 
   private url(path: string): string {
     return this.baseUrl.replace(/\/$/, '') + path;
@@ -35,7 +31,7 @@ export class LlamaServerProvider implements Provider {
 
   async health(signal?: AbortSignal): Promise<ProviderHealth> {
     try {
-      await fetchJson<{ status: string }>(this.url('/health'), {}, signal);
+      await fetchJson<{ status: string }>(this.url('/health'), {}, signal, this.fetchFn);
       const props = await this.getProps(signal);
       const modelId = props.model_path?.split(/[\\/]/).pop() ?? props.model_alias ?? undefined;
       return {
@@ -52,7 +48,7 @@ export class LlamaServerProvider implements Provider {
 
   private async getProps(signal?: AbortSignal): Promise<LlamaProps> {
     if (this.props) return this.props;
-    this.props = await fetchJson<LlamaProps>(this.url('/props'), {}, signal);
+    this.props = await fetchJson<LlamaProps>(this.url('/props'), {}, signal, this.fetchFn);
     return this.props;
   }
 
@@ -66,7 +62,7 @@ export class LlamaServerProvider implements Provider {
       // llama-server only serves /embedding when started with --embedding;
       // probe once so the memory bank can prefer server-side embeddings.
       try {
-        const res = await fetch(this.url('/embedding'), {
+        const res = await this.fetchFn(this.url('/embedding'), {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ content: 'probe' }),
@@ -116,7 +112,7 @@ export class LlamaServerProvider implements Provider {
     if (req.grammar) body.grammar = req.grammar;
     if (req.jsonSchema) body.json_schema = req.jsonSchema;
 
-    const res = await fetch(this.url('/completion'), {
+    const res = await this.fetchFn(this.url('/completion'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
@@ -145,8 +141,13 @@ export class LlamaServerProvider implements Provider {
   async tokenize(text: string, signal?: AbortSignal): Promise<number[]> {
     const json = await fetchJson<{ tokens: number[] }>(
       this.url('/tokenize'),
-      { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ content: text }) },
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ content: text }),
+      },
       signal,
+      this.fetchFn,
     );
     return json.tokens;
   }
@@ -156,8 +157,13 @@ export class LlamaServerProvider implements Provider {
     for (const t of texts) {
       const json = await fetchJson<{ embedding: number[] }[] | { embedding: number[] }>(
         this.url('/embedding'),
-        { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ content: t }) },
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ content: t }),
+        },
         signal,
+        this.fetchFn,
       );
       const first = Array.isArray(json) ? json[0] : json;
       out.push(first?.embedding ?? []);
@@ -183,7 +189,12 @@ interface LlamaCompletionEvent {
   tokens_predicted?: number;
   tokens_evaluated?: number;
   tokens_cached?: number;
-  timings?: { prompt_ms?: number; predicted_ms?: number; prompt_n?: number; predicted_n?: number };
+  timings?: {
+    prompt_ms?: number;
+    predicted_ms?: number;
+    prompt_n?: number;
+    predicted_n?: number;
+  };
 }
 
 function statsOf(e: LlamaCompletionEvent) {

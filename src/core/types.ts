@@ -215,7 +215,7 @@ export interface AppSettings {
 
 export interface ProviderConfig {
   id: string;
-  kind: 'llama-server' | 'openai-compat' | 'koboldcpp' | 'ollama';
+  kind: 'demo' | 'llama-server' | 'openai-compat' | 'koboldcpp' | 'ollama';
   name: string;
   baseUrl: string;
   /** Optional: a second, small model server for summaries/cards/image prompts. */
@@ -237,7 +237,14 @@ export const DEFAULT_ADVENTURE_SETTINGS: AdventureSettings = {
   template: 'chatml',
   model: DEFAULT_MODEL_SETTINGS,
   memory: { autoSummary: true, memoryBank: true, bankSize: 200 },
-  context: { cacheStableLayout: true, evictionChunk: 8, rawOutput: false, contextWarning: true, cacheWarming: true, retryPrefetch: false },
+  context: {
+    cacheStableLayout: true,
+    evictionChunk: 8,
+    rawOutput: false,
+    contextWarning: true,
+    cacheWarming: true,
+    retryPrefetch: false,
+  },
   textStyle: 'print',
 };
 

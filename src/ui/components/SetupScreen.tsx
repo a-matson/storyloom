@@ -13,11 +13,42 @@ interface Props {
   firstRun?: boolean;
 }
 
-const KINDS: { kind: ProviderConfig['kind']; name: string; blurb: string; url: string }[] = [
-  { kind: 'llama-server', name: 'llama-server', blurb: 'Recommended. All samplers, prefix cache, tokenize, grammar.', url: 'http://localhost:8080' },
-  { kind: 'koboldcpp', name: 'KoboldCpp', blurb: 'One binary; text plus built-in image generation.', url: 'http://localhost:5001' },
-  { kind: 'ollama', name: 'Ollama', blurb: 'Easiest install. Set OLLAMA_ORIGINS for the browser.', url: 'http://localhost:11434' },
-  { kind: 'openai-compat', name: 'OpenAI-compatible', blurb: 'LM Studio, vLLM, TabbyAPI: /v1/completions.', url: 'http://localhost:1234' },
+const KINDS: {
+  kind: ProviderConfig['kind'];
+  name: string;
+  blurb: string;
+  url: string;
+}[] = [
+  {
+    kind: 'demo',
+    name: 'Demo (no GPU)',
+    blurb: 'Canned prose to try the app. No model needed.',
+    url: 'demo',
+  },
+  {
+    kind: 'llama-server',
+    name: 'llama-server',
+    blurb: 'Recommended. All samplers, prefix cache, tokenize, grammar.',
+    url: 'http://localhost:8080',
+  },
+  {
+    kind: 'koboldcpp',
+    name: 'KoboldCpp',
+    blurb: 'One binary; text plus built-in image generation.',
+    url: 'http://localhost:5001',
+  },
+  {
+    kind: 'ollama',
+    name: 'Ollama',
+    blurb: 'Easiest install. Set OLLAMA_ORIGINS for the browser.',
+    url: 'http://localhost:11434',
+  },
+  {
+    kind: 'openai-compat',
+    name: 'OpenAI-compatible',
+    blurb: 'LM Studio, vLLM, TabbyAPI: /v1/completions.',
+    url: 'http://localhost:1234',
+  },
 ];
 
 /** Backend connection + app-level preferences. Doubles as the first-run screen. */
@@ -36,7 +67,12 @@ export function SetupScreen({ app, onSave, onBack, firstRun }: Props) {
   }, [kind, url]);
 
   const draft = (): AppSettings => {
-    const cfg: ProviderConfig = { ...current, kind, baseUrl: url.trim().replace(/\/$/, ''), name: `${KINDS.find((k) => k.kind === kind)?.name ?? kind} (${url})` };
+    const cfg: ProviderConfig = {
+      ...current,
+      kind,
+      baseUrl: url.trim().replace(/\/$/, ''),
+      name: `${KINDS.find((k) => k.kind === kind)?.name ?? kind} (${url})`,
+    };
     const others = app.providers.filter((p) => p.id !== cfg.id);
     const modelId = health?.modelId;
     return {
@@ -93,7 +129,11 @@ export function SetupScreen({ app, onSave, onBack, firstRun }: Props) {
       </header>
       <div className="page" style={{ maxWidth: 880, alignSelf: 'center', width: '100%' }}>
         <div className="col" style={{ gap: 6 }}>
-          {firstRun && <span className="label" style={{ color: 'var(--lantern)' }}>First run</span>}
+          {firstRun && (
+            <span className="label" style={{ color: 'var(--lantern)' }}>
+              First run
+            </span>
+          )}
           <h1 className="h">Connect an inference backend</h1>
           <p className="muted" style={{ margin: 0 }}>
             Storyloom runs entirely on your machine. Point it at a local server that hosts your story model; nothing leaves your computer.
@@ -108,7 +148,10 @@ export function SetupScreen({ app, onSave, onBack, firstRun }: Props) {
                 setKind(k.kind);
                 setUrl(k.url);
               }}
-              style={{ borderColor: kind === k.kind ? 'var(--lantern)' : undefined, background: kind === k.kind ? 'var(--bg-2)' : undefined }}
+              style={{
+                borderColor: kind === k.kind ? 'var(--lantern)' : undefined,
+                background: kind === k.kind ? 'var(--bg-2)' : undefined,
+              }}
             >
               <span style={{ fontWeight: 600 }}>{k.name}</span>
               <span className="small muted">{k.blurb}</span>
@@ -118,7 +161,7 @@ export function SetupScreen({ app, onSave, onBack, firstRun }: Props) {
         <label className="col">
           <span style={{ fontWeight: 600 }}>Server URL</span>
           <div className="row" style={{ gap: 10 }}>
-            <input className="field mono" style={{ height: 44 }} value={url} onChange={(e) => setUrl(e.target.value)} />
+            <input className="field mono" style={{ height: 44 }} value={url} readOnly={kind === 'demo'} onChange={(e) => setUrl(e.target.value)} />
             <button className="btn lg" onClick={test} disabled={testing}>
               {testing ? 'Testing…' : 'Test connection'}
             </button>
@@ -144,7 +187,15 @@ export function SetupScreen({ app, onSave, onBack, firstRun }: Props) {
             {caps && (
               <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
                 {capList.map((c) => (
-                  <span key={c.key} className={`pill ${caps[c.key] ? 'auto' : ''}`} style={{ textTransform: 'none', letterSpacing: 0, fontSize: 12 }}>
+                  <span
+                    key={c.key}
+                    className={`pill ${caps[c.key] ? 'auto' : ''}`}
+                    style={{
+                      textTransform: 'none',
+                      letterSpacing: 0,
+                      fontSize: 12,
+                    }}
+                  >
                     {caps[c.key] ? '✓' : '✗'} {c.label}
                   </span>
                 ))}
@@ -152,8 +203,8 @@ export function SetupScreen({ app, onSave, onBack, firstRun }: Props) {
             )}
             {!health.ok && (
               <p className="small muted" style={{ margin: 0 }}>
-                Start the server first, e.g. <span className="mono">llama-server -m model.gguf -c 16384 -ngl 99 --port 8080</span>. If the browser blocks the request, the server must allow
-                cross-origin calls (llama-server does; Ollama needs <span className="mono">OLLAMA_ORIGINS=*</span>).
+                Start the server first, e.g. <span className="mono">llama-server -m model.gguf -c 16384 -ngl 99 --port 8080</span>. If the browser blocks the
+                request, the server must allow cross-origin calls (llama-server does; Ollama needs <span className="mono">OLLAMA_ORIGINS=*</span>).
               </p>
             )}
           </div>
@@ -162,7 +213,13 @@ export function SetupScreen({ app, onSave, onBack, firstRun }: Props) {
           <span className="label">Appearance</span>
           <div className="setting">
             <label htmlFor="theme">Theme</label>
-            <select id="theme" className="field" style={{ width: 160, height: 32 }} value={theme} onChange={(e) => setTheme(e.target.value as AppSettings['theme'])}>
+            <select
+              id="theme"
+              className="field"
+              style={{ width: 160, height: 32 }}
+              value={theme}
+              onChange={(e) => setTheme(e.target.value as AppSettings['theme'])}
+            >
               <option value="dark">Dark (Lantern &amp; Ink)</option>
               <option value="sepia">Sepia</option>
               <option value="light">Light</option>
