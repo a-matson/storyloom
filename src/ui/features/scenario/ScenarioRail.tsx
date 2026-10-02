@@ -4,6 +4,7 @@ import { DEFAULT_GENERATOR_SETTINGS, MAX_STORY_CARDS } from '@core/cards';
 import { providerFor } from '@app/services';
 import { Button } from '@ui/components/ui/button';
 import { Pill } from '@ui/components/ui/pill';
+import { downloadStoryCards, importStoryCardsFromFile, pickFile } from '@ui/transferUi';
 import { cn } from '@ui/lib/utils';
 import { CardDialog } from '../game/cards/CardDialog';
 import { tone } from '../game/cards/tone';
@@ -13,9 +14,21 @@ import type { TabProps } from './fields';
 const BOX = 'flex flex-col gap-2.5 rounded-xl border border-border bg-background p-3.5';
 const HEADING = 'text-caption font-semibold uppercase tracking-[0.06em] text-muted-foreground';
 const FIRST = 4;
+const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+/** Appends AI Dungeon cards from a picked file, up to the card cap. */
+async function importCards(cards: StoryCard[], update: TabProps['update'], warn: (message: string) => void): Promise<void> {
+  const file = await pickFile('.json,application/json');
+  if (!file) return;
+  const { cards: added, warnings } = await importStoryCardsFromFile(file);
+  const kept = added.slice(0, MAX_STORY_CARDS - cards.length);
+  update({ storyCards: [...cards, ...kept] });
+  if (kept.length < added.length) warnings.push(`${added.length - kept.length} card(s) over the ${MAX_STORY_CARDS} limit were skipped.`);
+  if (warnings.length > 0) warn(warnings.join(' '));
+}
 
 /** Right rail of the editor: what the player will be asked, the cards, which scripts exist. */
-export function ScenarioRail({ draft, update, app }: TabProps & { app: AppSettings }) {
+export function ScenarioRail({ draft, update, app, onError }: TabProps & { app: AppSettings; onError: (message: string) => void }) {
   const cards = draft.storyCards;
   const creator = draft.type === 'characterCreator';
   const [all, setAll] = useState(false);
@@ -42,6 +55,23 @@ export function ScenarioRail({ draft, update, app }: TabProps & { app: AppSettin
           <h2 className="text-control font-semibold">Story cards</h2>
           <span className="text-caption text-muted-foreground">{cards.length}</span>
           <span className="grow" />
+          <Button
+            variant="ghost"
+            className="h-7 px-2 text-label"
+            aria-label="Import story cards"
+            title="AI Dungeon story card JSON"
+            onClick={() => void importCards(cards, update, onError).catch((e: unknown) => onError(message(e)))}
+          >
+            Import
+          </Button>
+          <Button
+            variant="ghost"
+            className="h-7 px-2 text-label"
+            aria-label="Export story cards"
+            onClick={() => void downloadStoryCards(draft).catch((e: unknown) => onError(message(e)))}
+          >
+            Export
+          </Button>
           <Button variant="primary" className="h-7" onClick={() => setEditing('new')} disabled={cards.length >= MAX_STORY_CARDS}>
             + New
           </Button>
