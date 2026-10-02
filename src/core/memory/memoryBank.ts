@@ -16,7 +16,8 @@ import { newId } from '../model/types';
  * Memories are only used once the whole history no longer fits the context.
  *
  * Eviction: when the bank is full, the least-used memory (then the oldest) is
- * forgotten. Frequently-used old memories can live forever.
+ * forgotten: flagged and kept, so its range is not summarised again. Frequently-used
+ * old memories can live forever. Edits mark memories stale; the idle job rewrites them.
  */
 
 export const MEMORY_SPAN = 6;
@@ -28,15 +29,25 @@ export interface MemoryRange {
   toAction: number;
 }
 
-/** Which six-action ranges are due for summarisation but not yet in the bank. */
-export function dueMemoryRanges(actionCount: number, existing: Pick<Memory, 'fromAction' | 'toAction'>[]): MemoryRange[] {
-  const have = new Set(existing.map((m) => `${m.fromAction}-${m.toAction}`));
+/**
+ * Six-action ranges due for summarisation: those after the newest memory. Ranges before it
+ * were summarised already, even if that memory has since been dropped from the forgotten pile.
+ */
+export function dueMemoryRanges(actionCount: number, existing: Pick<Memory, 'toAction'>[]): MemoryRange[] {
   const due: MemoryRange[] = [];
-  for (let from = 0; from + MEMORY_LAG <= actionCount; from += MEMORY_SPAN) {
-    const to = from + MEMORY_SPAN;
-    if (!have.has(`${from}-${to}`)) due.push({ fromAction: from, toAction: to });
-  }
+  const start = existing.reduce((n, m) => Math.max(n, m.toAction), 0);
+  for (let from = start; from + MEMORY_LAG <= actionCount; from += MEMORY_SPAN) due.push({ fromAction: from, toAction: from + MEMORY_SPAN });
   return due;
+}
+
+/** In the bank: neither forgotten nor waiting to be rewritten. */
+export const isActive = (m: Memory): boolean => !m.forgotten && !m.stale;
+
+/** Where a stale memory's actions sit now; null when any were erased (the memory is dropped). */
+export function currentRange(actions: Action[], m: Memory): MemoryRange | null {
+  const from = actions.findIndex((a) => a.id === m.actionIds[0]);
+  if (from < 0 || m.actionIds.some((id, i) => actions[from + i]?.id !== id)) return null;
+  return { fromAction: from, toAction: from + m.actionIds.length };
 }
 
 /** True when the running Story Summary should be refreshed at this count. */
@@ -83,7 +94,7 @@ export interface RankedMemory {
 export function rankMemories(memories: Memory[], query: number[] | undefined, limit = Infinity): RankedMemory[] {
   const ranked: RankedMemory[] = [];
   for (const m of memories) {
-    if (m.stale) continue;
+    if (!isActive(m)) continue;
     // Vectors from another embedder (other length) are not comparable; they rank by recency until re-embedded.
     const score = query && m.embedding?.length === query.length ? cosine(m.embedding, query) : 0;
     ranked.push({ memory: m, score });
@@ -92,13 +103,24 @@ export function rankMemories(memories: Memory[], query: number[] | undefined, li
   return ranked.slice(0, limit);
 }
 
-/** Return the memories to keep after adding `incoming`, forgetting least-used ones. */
-export function evictToSize(memories: Memory[], bankSize: number): { kept: Memory[]; forgotten: Memory[] } {
-  if (memories.length <= bankSize) return { kept: memories, forgotten: [] };
-  const sorted = memories.toSorted((a, b) => a.useCount - b.useCount || a.createdAt - b.createdAt);
-  const forgotten = sorted.slice(0, memories.length - bankSize);
-  const forgottenIds = new Set(forgotten.map((m) => m.id));
-  return { kept: memories.filter((m) => !forgottenIds.has(m.id)), forgotten };
+/**
+ * Flag the least-used active memories `forgotten` until the bank fits, then drop the oldest
+ * forgotten beyond `bankSize` of them ([provisional] cap, bounds storage on long adventures).
+ */
+export function evictToSize(memories: Memory[], bankSize: number): { memories: Memory[]; forgotten: number } {
+  const active = memories.filter(isActive);
+  const losers = active.toSorted((a, b) => a.useCount - b.useCount || a.createdAt - b.createdAt).slice(0, Math.max(0, active.length - bankSize));
+  const ids = new Set(losers.map((m) => m.id));
+  const flagged = memories.map((m) => (ids.has(m.id) ? { ...m, forgotten: true } : m));
+  const dropped = new Set(
+    flagged
+      .filter((m) => m.forgotten)
+      .toSorted((a, b) => b.createdAt - a.createdAt)
+      .slice(bankSize)
+      .map((m) => m.id),
+  );
+  if (!ids.size && !dropped.size) return { memories, forgotten: 0 };
+  return { memories: flagged.filter((m) => !dropped.has(m.id)), forgotten: ids.size };
 }
 
 /** Mark memories stale whose source actions were edited/erased. */

@@ -6,8 +6,9 @@ import { createBlankAdventure, type Adventure, type AppSettings, type TurnTrace 
 import { NoopScriptRunner, type Storage } from '@core/ports';
 import { AppSettings as AppSettingsSchema } from '@core/schema';
 import { createApproxTokenizer } from '@core/text';
+import { makeAdventure } from './fixtures/adventure';
 
-function setup(opts: { failSave?: boolean; prefetch?: boolean; warm?: boolean } = {}) {
+function setup(opts: { failSave?: boolean; prefetch?: boolean; warm?: boolean; adventure?: Adventure } = {}) {
   const handler = createFakeLlama({ wordDelayMs: 0 });
   const provider = new LlamaServerProvider('demo', 'http://demo.invalid', (i, init) => handler(new Request(i, init)));
   const saved: Adventure[] = [];
@@ -22,21 +23,25 @@ function setup(opts: { failSave?: boolean; prefetch?: boolean; warm?: boolean } 
     },
   } as unknown as Storage;
   const app: AppSettings = AppSettingsSchema.parse({ providers: [], defaultProviderId: 'demo' });
-  const adv = createBlankAdventure('Test', 'You stand at the gate.');
+  const adv = opts.adventure ?? createBlankAdventure('Test', 'You stand at the gate.');
+  const idle: (() => void)[] = [];
   adv.settings = { ...adv.settings, context: { ...adv.settings.context, cacheWarming: opts.warm ?? false, retryPrefetch: opts.prefetch ?? false } };
   const session = new GameSession(adv, app, {
     providerFor: () => provider,
-    embedderFor: () => Promise.reject(new Error('no embedder')),
+    embedderFor: () =>
+      opts.adventure
+        ? Promise.resolve({ id: 'e', dimensions: 2, embed: (t: string[]) => Promise.resolve(t.map(() => [1, 0])) })
+        : Promise.reject(new Error('no embedder')),
     tokenizer: createApproxTokenizer(),
     scripts: new NoopScriptRunner(),
     storage,
-    idle: () => undefined,
+    idle: (fn) => idle.push(fn),
     frame: (fn) => setTimeout(fn, 0),
     saveDelayMs: 0,
   });
   const snapshots: GameSnapshot[] = [];
   session.subscribe(() => snapshots.push(session.getSnapshot()));
-  return { session, saved, snapshots, traces };
+  return { session, saved, snapshots, traces, idle };
 }
 
 /** Resolves once the session is idle again. */
@@ -143,6 +148,27 @@ describe('GameSession', () => {
     expect(session.getSnapshot().actions).toHaveLength(2);
     session.eraseTo(session.getSnapshot().actions[1]?.id ?? '');
     expect(session.getSnapshot().actions).toHaveLength(1);
+  });
+
+  it('rewrites a memory after its action is edited, then emits and saves it', async () => {
+    const adventure = makeAdventure({ actions: 30, cards: 0 });
+    adventure.settings.memory = { ...adventure.settings.memory, memoryBank: true, autoSummary: false };
+    const { session, saved, idle } = setup({ adventure });
+    const turnThenIdle = async () => {
+      session.submit('continue', '');
+      await settled(session);
+      idle.splice(0).forEach((fn) => fn());
+    };
+    await turnThenIdle();
+    await vi.waitFor(() => expect(session.getSnapshot().adventure.memories.length).toBeGreaterThan(0));
+    const first = session.getSnapshot().adventure.memories[0];
+    session.edit(session.getSnapshot().actions[3]?.id ?? '', 'The gate was never locked.');
+    expect(session.getSnapshot().adventure.memories[0]?.stale).toBe(true);
+    await turnThenIdle();
+    await vi.waitFor(() => expect(session.getSnapshot().adventure.memories[0]?.stale).toBeUndefined());
+    await session.flush();
+    expect(saved.at(-1)?.memories[0]).toMatchObject({ id: first?.id, fromAction: 0, toAction: 6 });
+    expect(saved.at(-1)?.memories[0]?.stale).toBeUndefined();
   });
 
   it('previews the context before any turn', async () => {

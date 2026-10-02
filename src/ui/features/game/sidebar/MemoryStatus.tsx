@@ -10,14 +10,15 @@ export function MemoryStatus({ adventure }: { adventure: Adventure }) {
   const m = adventure.settings.memory;
   const count = adventure.actions.length;
   const nextMemoryIn = MEMORY_EVERY - ((count - FIRST_MEMORY_AT) % MEMORY_EVERY);
-  const fill = Math.min(100, (adventure.memories.length / Math.max(1, m.bankSize)) * 100);
+  const inBank = adventure.memories.filter((x) => !x.forgotten).length;
+  const fill = Math.min(100, (inBank / Math.max(1, m.bankSize)) * 100);
   return (
     <Card className="flex flex-col gap-2 bg-bar">
       <div className="flex items-center gap-2">
         <SectionLabel>Memory</SectionLabel>
         <span className="grow" />
         <span className="font-mono text-caption text-muted-foreground">
-          bank {adventure.memories.length} / {m.bankSize}
+          bank {inBank} / {m.bankSize}
         </span>
       </div>
       <div className="flex h-1.5 overflow-hidden rounded-[3px] bg-secondary">
