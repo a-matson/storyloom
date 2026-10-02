@@ -1,2 +1,4 @@
 export * from './memoryBank';
-export * from './memoryJobs';
+export type { MaintenanceDeps, MaintenanceReport } from './memoryJobs';
+/** Idle-only work, loaded on first use to keep it off the start-up bundle. */
+export const loadMemoryJobs = () => import('./memoryJobs');

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { runMemoryMaintenance, type MaintenanceDeps } from '@core/memory';
+import type { MaintenanceDeps } from '@core/memory';
+import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import { actionText, type Adventure } from '@core/model';
 import type { CompletionRequest, Embedder, Provider } from '@core/ports';
 import { makeAdventure } from './fixtures/adventure';

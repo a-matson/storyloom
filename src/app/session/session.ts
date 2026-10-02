@@ -1,5 +1,5 @@
 import { ActionLog } from '@core/log';
-import { markStale, runMemoryMaintenance } from '@core/memory';
+import { loadMemoryJobs, markStale } from '@core/memory';
 import { utilityProvider, type Adventure, type AdventureSettings, type AppSettings, type PlotComponents, type TemplateId, type TurnTrace } from '@core/model';
 import type { Embedder, Provider } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
@@ -192,6 +192,7 @@ export class GameSession {
   private async maintainMemory(): Promise<void> {
     try {
       // Memories are embedded on the story side so they compare with the query vectors in `prepareContext`.
+      const { runMemoryMaintenance } = await loadMemoryJobs();
       const report = await runMemoryMaintenance(this.adv, { ...(await this.memoryModel()), embedder: await this.resolveEmbedder() });
       if (report.memoriesWritten || report.memoriesRegenerated || report.memoriesDropped || report.summaryUpdated) {
         this.emit();
