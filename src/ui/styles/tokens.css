@@ -1,0 +1,117 @@
+/* "Lantern & Ink" design tokens; themes and text styles remap them at runtime (see ui/theme.ts). */
+
+:root {
+  /* colour */
+  --bg-0: #0c1017;
+  --bg-bar: #0f141c;
+  --bg-1: #131924;
+  --bg-2: #1a2231;
+  --border: #263042;
+  --neutral: #5e6b7e;
+  --text: #ede6d8;
+  --text-prose: #c9c2b4;
+  --text-muted: #8a94a2;
+  --lantern: #e9a84c;
+  --lantern-soft: #f3c57e;
+  --lantern-ink: #14100a;
+  --verdigris: #4fb8a6;
+  --violet: #b497e8;
+  --rose: #e88a9a;
+  --danger: #e5645f;
+  --success: #6cc27a;
+  --warning: #f3c57e;
+  --mode-do: var(--lantern);
+  --mode-do-bg: #3a2a10;
+  --mode-say: var(--verdigris);
+  --mode-say-bg: #143430;
+  --mode-story: var(--violet);
+  --mode-story-bg: #2a2038;
+  --mode-see: var(--rose);
+  --mode-see-bg: #3a1f26;
+  --focus: 0 0 0 2px var(--bg-0), 0 0 0 4px var(--lantern);
+
+  /* type */
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-ui: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  --font-prose: var(--font-display);
+  --prose-size: 18px;
+  --prose-leading: 1.65;
+
+  /* space & radius */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 40px;
+  --r-1: 6px;
+  --r-2: 8px;
+  --r-3: 12px;
+  --r-pill: 999px;
+  --story-col: 760px;
+  --sidebar: 360px;
+}
+
+:root[data-theme='sepia'],
+:root[data-theme='light'] {
+  --bg-0: #f4ede1;
+  --bg-bar: #fbf7ef;
+  --bg-1: #fbf7ef;
+  --bg-2: #efe6d6;
+  --border: #dcd2c0;
+  --neutral: #9a8e7b;
+  --text: #2a241b;
+  --text-prose: #3a3327;
+  --text-muted: #5a5245;
+  --lantern: #b8761e;
+  --lantern-soft: #d19a4a;
+  --lantern-ink: #fffaf0;
+  --verdigris: #1f8a78;
+  --violet: #6f4fb3;
+  --rose: #b8485e;
+  --danger: #b8322d;
+  --success: #2f8a45;
+  --mode-do-bg: #f3e2c4;
+  --mode-say-bg: #d5ede6;
+  --mode-story-bg: #e6dcf5;
+  --mode-see-bg: #f5d9df;
+}
+
+:root[data-contrast='high'] {
+  --text-prose: var(--text);
+  --text-muted: #b9c2cf;
+  --border: #3a4760;
+}
+
+:root[data-text-style='clean'] {
+  --font-prose: var(--font-ui);
+  --prose-size: 16px;
+  --prose-leading: 1.6;
+}
+:root[data-text-style='hacker'] {
+  --font-prose: var(--font-mono);
+  --prose-size: 14px;
+  --prose-leading: 1.6;
+  --text-prose: #7fe0c8;
+  --text: #a8f0dc;
+  --bg-0: #050807;
+  --bg-1: #0a100d;
+  --bg-2: #101915;
+  --border: #1c2a24;
+}
+
+:root[data-text-size='large'] {
+  --prose-size: 20px;
+}
+:root[data-text-size='larger'] {
+  --prose-size: 22px;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --prose-size: 17px;
+    --prose-leading: 1.6;
+  }
+}
