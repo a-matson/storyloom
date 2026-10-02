@@ -1,5 +1,6 @@
 import type { AdventureSummary } from '@core/ports';
 import { buttonVariants } from '@ui/components/ui/button';
+import { cn } from '@ui/lib/utils';
 import { SectionLabel } from '@ui/components/ui/section-label';
 import { timeAgo } from './timeAgo';
 
@@ -37,7 +38,7 @@ export function ContinueHero({ latest, backendOk, onOpen }: Props) {
           {latest.actionCount} actions · {latest.modelId ?? 'local model'} · {timeAgo(latest.updatedAt)}
         </span>
       </div>
-      <span className={buttonVariants({ variant: 'primary', size: 'lg', className: 'pointer-events-none' })}>Resume</span>
+      <span className={cn(buttonVariants({ variant: 'primary', size: 'lg' }), 'pointer-events-none')}>Resume</span>
     </button>
   );
 }
