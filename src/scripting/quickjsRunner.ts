@@ -2,7 +2,7 @@
  * QuickJS sandbox runner — MILESTONE 6, NOT YET IMPLEMENTED.
  *
  * Plan (docs/SPEC-scripting-api.md has the full API surface):
- *  1. `npm i quickjs-emscripten` and create `src/scripting/sandbox.worker.ts`.
+ *  1. `pnpm add quickjs-emscripten` and create `src/scripting/sandbox.worker.ts`.
  *  2. In the worker: `newQuickJSWASMModule()`, then per scenario create a
  *     runtime with `runtime.setMemoryLimit(16 * 1024 * 1024)` and an
  *     interrupt handler that stops execution after 2 000 ms.

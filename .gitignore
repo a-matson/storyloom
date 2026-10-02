@@ -6,3 +6,7 @@ coverage/
 .DS_Store
 .env
 .env.*
+
+# Personal tooling: code index, editor config
+.vexp/
+.vscode/

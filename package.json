@@ -11,7 +11,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "npm run typecheck && npm run test",
+    "check": "pnpm typecheck && pnpm test",
     "fake-backend": "node scripts/fake-llama-server.mjs"
   },
   "dependencies": {
@@ -29,5 +29,6 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "packageManager": "pnpm@12.6.0"
 }

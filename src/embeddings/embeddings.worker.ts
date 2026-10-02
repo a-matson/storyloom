@@ -1,7 +1,7 @@
 /**
  * Embeddings worker — MILESTONE 4 stub.
  *
- * Plan: `npm i @huggingface/transformers`, then in this worker:
+ * Plan: `pnpm add @huggingface/transformers`, then in this worker:
  *   const extractor = await pipeline('feature-extraction', 'nomic-ai/nomic-embed-text-v1.5', { dtype: 'q8' });
  *   const out = await extractor(texts, { pooling: 'mean', normalize: true });
  * The model (~30–60 MB) is cached by the browser after first load and runs on
