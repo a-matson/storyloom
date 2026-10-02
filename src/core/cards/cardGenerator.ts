@@ -1,6 +1,7 @@
 import type { Adventure, StoryCard, TemplateId } from '../model/types';
 import { newId } from '../model/types';
-import { CARD_JSON_SCHEMA, CARD_SYSTEM, cardPrompt } from '../text/prompts';
+import { LooseCardJson } from '../schema/card';
+import { CARD_SYSTEM, cardPrompt } from '../text/prompts';
 import { renderTemplate } from '../text/templates';
 import { collect, type Provider } from '../ports/provider';
 
@@ -54,6 +55,8 @@ export interface GenerateDeps {
 
 export async function generateStoryCard(req: GenerateCardRequest, deps: GenerateDeps): Promise<GeneratedCard> {
   const caps = await deps.provider.capabilities();
+  // Schema generation and JSON repair are only needed here; keep them out of the start-up bundle.
+  const [{ CARD_JSON_SCHEMA }, { jsonrepair }] = await Promise.all([import('./cardJsonSchema'), import('jsonrepair')]);
   const user = cardPrompt({
     type: req.type,
     name: req.name,
@@ -78,39 +81,40 @@ export async function generateStoryCard(req: GenerateCardRequest, deps: Generate
     ),
   );
   const raw = caps.jsonSchema ? text : `{${text}`;
-  const parsed = parseCardJson(raw);
+  // Output cut off at maxTokens is common.
+  const parsed = parseCardJson(raw, jsonrepair);
   if (!parsed) throw new Error('The model did not return a usable card. Try again or adjust the generator instructions.');
   const name = (req.name?.trim() || parsed.name || req.type).trim();
   const triggers = normaliseTriggers(parsed.triggers, name);
   return { name, entry: parsed.entry.trim(), triggers, raw };
 }
 
-/** Extract `{name, entry, triggers}` from model output, tolerating prose around the JSON. */
-export function parseCardJson(text: string): { name: string; entry: string; triggers: string[] } | null {
-  const candidates: string[] = [];
+/** Extract `{name, entry, triggers}` from model output, tolerating prose, fences and (with `repair`) broken JSON. */
+export function parseCardJson(text: string, repair: (json: string) => string = (j) => j): { name: string; entry: string; triggers: string[] } | null {
   const trimmed = text.trim();
-  candidates.push(trimmed);
-  const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fence?.[1]) candidates.push(fence[1]);
+  const fence = /```(?:json)?\s*([\s\S]*?)```/i.exec(trimmed)?.[1];
   const first = trimmed.indexOf('{');
   const last = trimmed.lastIndexOf('}');
-  if (first >= 0 && last > first) candidates.push(trimmed.slice(first, last + 1));
+  const candidates = [trimmed, fence, first >= 0 ? trimmed.slice(first, last > first ? last + 1 : undefined) : undefined];
   for (const c of candidates) {
+    if (!c) continue;
+    let data: unknown;
     try {
-      const obj = JSON.parse(c) as Record<string, unknown>;
-      const entry = typeof obj['entry'] === 'string' ? obj['entry'] : typeof obj['description'] === 'string' ? obj['description'] : '';
-      if (!entry.trim()) continue;
-      const name = typeof obj['name'] === 'string' ? obj['name'] : typeof obj['title'] === 'string' ? obj['title'] : '';
-      const triggersRaw = obj['triggers'] ?? obj['keys'] ?? [];
-      const triggers = Array.isArray(triggersRaw)
-        ? triggersRaw.filter((t): t is string => typeof t === 'string')
-        : typeof triggersRaw === 'string'
-          ? triggersRaw.split(',')
-          : [];
-      return { name, entry, triggers };
+      data = JSON.parse(repair(c));
     } catch {
-      // try next candidate
+      continue; // not JSON even after repair; try the next candidate
     }
+    const card = LooseCardJson.safeParse(data);
+    if (!card.success) continue;
+    const { name, title, entry, description, triggers, keys } = card.data;
+    const body = entry ?? description ?? '';
+    if (!body.trim()) continue;
+    const raw = triggers ?? keys ?? [];
+    return {
+      name: name ?? title ?? '',
+      entry: body,
+      triggers: typeof raw === 'string' ? raw.split(',') : raw.filter((t): t is string => typeof t === 'string'),
+    };
   }
   return null;
 }

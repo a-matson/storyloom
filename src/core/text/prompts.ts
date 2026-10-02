@@ -45,16 +45,6 @@ export function cardPrompt(opts: {
   );
 }
 
-export const CARD_JSON_SCHEMA = {
-  type: 'object',
-  properties: {
-    name: { type: 'string' },
-    entry: { type: 'string' },
-    triggers: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 8 },
-  },
-  required: ['name', 'entry', 'triggers'],
-};
-
 export function imagePromptPrompt(recent: string, cards: string[], essentials: string): string {
   return (
     'Write a single-line image generation prompt (under 300 characters) for the current scene: subject, setting, ' +

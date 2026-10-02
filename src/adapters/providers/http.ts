@@ -37,7 +37,8 @@ export async function* sseEvents<T>(res: Response, schema: Schema<T>, signal?: A
   if (!res.body) throw new ProviderError('Streaming response has no body');
   const reader = res.body.pipeThrough(new TextDecoderStream()).pipeThrough(new EventSourceParserStream()).getReader();
   try {
-    while (!signal?.aborted) {
+    for (;;) {
+      if (signal?.aborted) return;
       const { value, done } = await reader.read();
       if (done || value.data === '[DONE]') return;
       let json: unknown;

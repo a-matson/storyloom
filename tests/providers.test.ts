@@ -22,9 +22,9 @@ const fetchOnce =
     Promise.resolve(res);
 const req = { prompt: 'p', maxTokens: 8, temperature: 1 };
 
-async function all(it: AsyncIterable<CompletionChunk>): Promise<CompletionChunk[]> {
+async function all(stream: AsyncIterable<CompletionChunk>): Promise<CompletionChunk[]> {
   const out: CompletionChunk[] = [];
-  for await (const c of it) out.push(c);
+  for await (const c of stream) out.push(c);
   return out;
 }
 
@@ -60,10 +60,11 @@ describe('llama-server streaming', () => {
   });
 
   it('reports an unhealthy server when /props has the wrong shape', async () => {
-    const fake: typeof fetch = (input) => Promise.resolve(Response.json(String(input).endsWith('/health') ? { status: 'ok' } : { total_slots: 'two' }));
+    const fake: typeof fetch = (input) =>
+      Promise.resolve(Response.json(new Request(input).url.endsWith('/health') ? { status: 'ok' } : { total_slots: 'two' }));
     const h = await new LlamaServerProvider('l', 'http://x', fake).health();
     expect(h.ok).toBe(false);
-    expect(h.ok === false && h.message).toMatch(/total_slots/);
+    expect(!h.ok && h.message).toMatch(/total_slots/);
   });
 });
 

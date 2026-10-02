@@ -1,3 +1,4 @@
+import { jsonrepair } from 'jsonrepair';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_GENERATOR_SETTINGS, generateStoryCard, normaliseTriggers, parseCardJson } from '@core/cards/cardGenerator';
 import type { CompletionChunk, CompletionRequest, Provider, ProviderCapabilities, ProviderHealth } from '@core/ports/provider';
@@ -52,6 +53,11 @@ describe('parseCardJson', () => {
   it('accepts AID-style keys and comma-separated triggers', () => {
     expect(parseCardJson('{"title":"T","description":"T desc","keys":"a, b"}')).toEqual({ name: 'T', entry: 'T desc', triggers: ['a', ' b'] });
   });
+  it('repairs output cut off at the token limit', () => {
+    const truncated = 'Here you go: {"name":"Merav","entry":"Merav leads the caravan.","triggers":["merav","rid';
+    expect(parseCardJson(truncated)).toBeNull();
+    expect(parseCardJson(truncated, jsonrepair)).toEqual({ name: 'Merav', entry: 'Merav leads the caravan.', triggers: ['merav', 'rid'] });
+  });
   it('returns null when there is no entry', () => {
     expect(parseCardJson('{"name":"nothing"}')).toBeNull();
     expect(parseCardJson('not json at all')).toBeNull();
@@ -73,7 +79,12 @@ describe('generateStoryCard', () => {
   it('uses json_schema when the backend supports it', async () => {
     const p = fakeProvider('{"name":"Merav","entry":"Merav leads the caravan.","triggers":["merav","caravan"]}', true);
     const g = await generateStoryCard({ type: 'Character', settings: DEFAULT_GENERATOR_SETTINGS }, { provider: p, template: 'chatml' });
-    expect(p.last?.jsonSchema).toBeTruthy();
+    expect(p.last?.jsonSchema).toEqual({
+      type: 'object',
+      properties: { name: { type: 'string' }, entry: { type: 'string' }, triggers: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 8 } },
+      required: ['name', 'entry', 'triggers'],
+      additionalProperties: false,
+    });
     expect(g.name).toBe('Merav');
     expect(g.triggers).toEqual(['Merav', 'merav', 'caravan']);
   });

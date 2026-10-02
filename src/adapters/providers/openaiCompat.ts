@@ -84,7 +84,7 @@ export class OpenAICompatProvider implements Provider {
       stream: true,
     };
     if (req.seed !== undefined) body['seed'] = req.seed;
-    if (this.opts.supportsTopK && req.topK) body['top_k'] = req.topK;
+    if (this.opts.supportsTopK && (req.topK ?? 0) > 0) body['top_k'] = req.topK;
 
     const res = await this.fetchFn(this.url('/v1/completions'), {
       method: 'POST',
