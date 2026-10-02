@@ -1,3 +1,7 @@
+# Silent unless a job fails.
+output:
+  - failure
+
 pre-commit:
   jobs:
     - name: format
