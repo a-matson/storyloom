@@ -4,7 +4,7 @@ import { providerFor, tokenizer } from '@app/services';
 import { useGameSession } from '@ui/hooks/useGameSession';
 import { applyTheme } from '@ui/theme';
 import { Toast } from '@ui/components/ui/toast';
-import { Sidebar } from '@ui/components/Sidebar';
+import { Sidebar } from './sidebar/Sidebar';
 import { ContextViewer } from '@ui/components/ContextViewer';
 import { CommandRow } from './CommandRow';
 import { ContextMeter } from './ContextMeter';
