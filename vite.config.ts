@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 // Vite + Vitest share this config. The app is a static PWA: `vite build`
 // produces ./dist, which `llama-server --path ./dist` can serve directly so
@@ -8,6 +9,7 @@ export default defineConfig({
   plugins: [
     // React Compiler (Oxc's Rust port). CI fails on any component it can't optimise; locally a bailout must not break HMR.
     react({ compiler: { panicThreshold: process.env['CI'] ? 'all_errors' : 'none' } }),
+    tailwindcss(),
   ],
   resolve: {
     tsconfigPaths: true,
