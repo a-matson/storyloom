@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { LlamaServerProvider } from '@adapters/providers/llamaServer';
 import { createFakeLlama } from '@adapters/providers/demo/fakeLlama';
 import { GameSession, type GameSnapshot } from '@app/session';
-import { createBlankAdventure, type Adventure, type AppSettings } from '@core/model';
+import { createBlankAdventure, type Adventure, type AppSettings, type TurnTrace } from '@core/model';
 import { NoopScriptRunner, type Storage } from '@core/ports';
 import { AppSettings as AppSettingsSchema } from '@core/schema';
 import { createApproxTokenizer } from '@core/text';
@@ -11,10 +11,14 @@ function setup(opts: { failSave?: boolean; prefetch?: boolean; warm?: boolean } 
   const handler = createFakeLlama({ wordDelayMs: 0 });
   const provider = new LlamaServerProvider('demo', 'http://demo.invalid', (i, init) => handler(new Request(i, init)));
   const saved: Adventure[] = [];
+  const traces: TurnTrace[] = [];
   const storage = {
     async putAdventure(a: Adventure) {
       if (opts.failSave) throw new Error('disk full');
       saved.push(structuredClone(a));
+    },
+    async putTrace(t: TurnTrace) {
+      traces.push(t);
     },
   } as unknown as Storage;
   const app: AppSettings = AppSettingsSchema.parse({ providers: [], defaultProviderId: 'demo' });
@@ -32,7 +36,7 @@ function setup(opts: { failSave?: boolean; prefetch?: boolean; warm?: boolean } 
   });
   const snapshots: GameSnapshot[] = [];
   session.subscribe(() => snapshots.push(session.getSnapshot()));
-  return { session, saved, snapshots };
+  return { session, saved, snapshots, traces };
 }
 
 /** Resolves once the session is idle again. */
@@ -44,11 +48,15 @@ const settled = (s: GameSession) =>
 
 describe('GameSession', () => {
   it('plays a turn: busy, streams, appends, persists', async () => {
-    const { session, saved, snapshots } = setup();
+    const { session, saved, snapshots, traces } = setup();
     session.submit('do', 'open the gate');
     await settled(session);
     await session.flush();
     const snap = session.getSnapshot();
+    expect(traces).toHaveLength(1);
+    expect(traces[0]?.outcome).toBe('done');
+    expect(traces[0]?.turnId).toBe(snap.actions.at(-1)?.turnId);
+    expect(traces[0]?.actionId).toBe(snap.actions.at(-1)?.id);
     expect(snapshots.some((s) => s.busy)).toBe(true);
     expect(snapshots.some((s) => s.streaming.length > 0)).toBe(true);
     expect(snap.actions.map((a) => a.type)).toEqual(['start', 'do', 'continue']);
@@ -144,14 +152,20 @@ describe('GameSession', () => {
   });
 
   it('warms the cache and serves Retry from a prefetched alternative', async () => {
-    const { session } = setup({ prefetch: true, warm: true });
+    const { session, traces } = setup({ prefetch: true, warm: true });
     session.submit('do', 'wait');
     await settled(session);
     await vi.waitFor(() => expect(session.getSnapshot().prefetchReady).toBe(true));
     await vi.waitFor(() => expect(session.getSnapshot().warm).toBe('warm'));
+    // The prefetch's trace is only written once the alternative is used.
+    expect(traces).toHaveLength(1);
     session.retry();
     // Instant: no generation, the alternative becomes version 2 at once.
     expect(session.getSnapshot().busy).toBe(false);
     expect(session.getSnapshot().actions.at(-1)?.versions).toHaveLength(2);
+    await vi.waitFor(() => expect(traces).toHaveLength(2));
+    expect(traces[1]?.kind).toBe('retry');
+    expect(traces[1]?.actionId).toBe(session.getSnapshot().actions.at(-1)?.id);
+    expect(traces[1]?.turnId).not.toBe(traces[0]?.turnId);
   });
 });

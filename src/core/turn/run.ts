@@ -1,10 +1,10 @@
 import type { ActionLog } from '../log/actionLog';
-import type { Adventure } from '../model/types';
+import type { Adventure, TurnTrace } from '../model/types';
 import { formatPlayerInput, joinStory } from '../text/formatting';
 import { buildRequest, generate, randomSeed } from './generate';
 import { runHook } from './hooks';
 import { prepareContext } from './prepare';
-import { startRun, traced, type TurnRun } from './traced';
+import { startRun, traceOf, traced, type PromptedRun, type TurnRun } from './traced';
 import type { Generated, PlayerTurnType, PreparedContext, TurnDeps, TurnEvent } from './types';
 
 export { randomSeed };
@@ -78,7 +78,7 @@ export function retryLast(adventure: Adventure, log: ActionLog, deps: TurnDeps, 
     async function* () {
       const last = log.last;
       if (last?.type !== 'continue') {
-        yield { type: 'error', turnId, message: 'Nothing to retry: the last action is not an AI output.' };
+        yield { type: 'error', turnId, kind: 'unknown', message: 'Nothing to retry: the last action is not an AI output.' };
         return;
       }
       run.actionId = last.id;
@@ -102,19 +102,24 @@ export function retryLast(adventure: Adventure, log: ActionLog, deps: TurnDeps, 
  * Generate one more alternative for the prompt of the last turn without
  * touching the log (retry prefetch). Runs on `slotId` (default 1) so the
  * story slot's KV cache is left alone. The caller adds the result as a
- * version when the player actually presses Retry.
+ * version when the player actually presses Retry, and persists the trace
+ * only then: `actionId` is the action the alternative would re-roll.
  */
 export async function generateAlternative(
   adventure: Adventure,
-  prepared: Pick<PreparedContext, 'prompt' | 'stop'>,
+  prepared: PreparedContext,
   deps: TurnDeps,
+  actionId: string,
   signal?: AbortSignal,
   slotId = 1,
-): Promise<Generated> {
-  const gen = generate(adventure, buildRequest(adventure, prepared, { slotId, seed: randomSeed() }), deps, signal);
+): Promise<Generated & { trace: TurnTrace }> {
+  const request = buildRequest(adventure, prepared, { slotId, seed: randomSeed() });
+  const run: PromptedRun = { ...startRun('retry'), actionId, prepared, request };
+  const gen = generate(adventure, request, deps, signal);
   let next = await gen.next();
   while (!next.done) next = await gen.next();
-  return next.value;
+  run.generated = next.value;
+  return { ...next.value, trace: traceOf(adventure, deps, run, 'done') };
 }
 
 /** Full story text of the active path (for export and summarisation). */

@@ -1,5 +1,5 @@
 import { newId } from '../model/types';
-import type { Adventure, TurnErrorKind, TurnKind, TurnOutcome } from '../model/types';
+import type { Adventure, TurnErrorKind, TurnKind, TurnOutcome, TurnTrace } from '../model/types';
 import type { CompletionRequest } from '../ports/provider';
 import { TurnErrorKind as ErrorKinds } from '../schema';
 import { buildTrace } from '../trace';
@@ -21,9 +21,35 @@ export function startRun(kind: TurnKind): TurnRun {
 }
 
 /** Failures carry a `kind` (`ProviderError`, `StorageError`); anything else is unknown. */
-function errorKindOf(e: unknown): TurnErrorKind {
+export function errorKindOf(e: unknown): TurnErrorKind {
   const kind = typeof e === 'object' && e !== null && 'kind' in e ? e.kind : undefined;
   return ErrorKinds.options.find((k) => k === kind) ?? 'unknown';
+}
+
+/** A run that got as far as sending a prompt, so it has a trace. */
+export type PromptedRun = TurnRun & Required<Pick<TurnRun, 'prepared' | 'request'>>;
+
+/** Assembles the trace for a finished run; the one place that knows which fields go in. */
+export function traceOf(adventure: Adventure, deps: TurnDeps, run: PromptedRun, outcome: TurnOutcome, errorKind?: TurnErrorKind): TurnTrace {
+  const { prepared, request } = run;
+  return buildTrace({
+    turnId: run.turnId,
+    kind: run.kind,
+    adventureId: adventure.id,
+    createdAt: run.startedAt,
+    outcome,
+    errorKind,
+    actionId: run.actionId,
+    result: prepared.result,
+    prompt: prepared.prompt,
+    request,
+    template: adventure.settings.template,
+    providerId: deps.provider.id,
+    modelId: adventure.settings.modelId,
+    stats: run.generated?.stats,
+    ttftMs: run.generated?.ttftMs,
+    totalMs: Date.now() - run.startedAt,
+  });
 }
 
 /**
@@ -45,7 +71,7 @@ export async function* traced(
       if (e.type === 'stopped') outcome = 'stopped';
       if (e.type === 'error') {
         outcome = 'error';
-        errorKind = 'unknown';
+        errorKind = e.kind;
       }
       yield e;
     }
@@ -57,30 +83,9 @@ export async function* traced(
     } else {
       outcome = 'error';
       errorKind = errorKindOf(e);
-      yield { type: 'error', turnId, message: e instanceof Error ? e.message : String(e) };
+      yield { type: 'error', turnId, kind: errorKind, message: e instanceof Error ? e.message : String(e) };
     }
   }
   const { prepared, request } = run;
-  if (!prepared || !request) return;
-  yield {
-    type: 'trace',
-    trace: buildTrace({
-      turnId,
-      kind: run.kind,
-      adventureId: adventure.id,
-      createdAt: run.startedAt,
-      outcome,
-      errorKind,
-      actionId: run.actionId,
-      result: prepared.result,
-      prompt: prepared.prompt,
-      request,
-      template: adventure.settings.template,
-      providerId: deps.provider.id,
-      modelId: adventure.settings.modelId,
-      stats: run.generated?.stats,
-      ttftMs: run.generated?.ttftMs,
-      totalMs: Date.now() - run.startedAt,
-    }),
-  };
+  if (prepared && request) yield { type: 'trace', trace: traceOf(adventure, deps, { ...run, prepared, request }, outcome, errorKind) };
 }

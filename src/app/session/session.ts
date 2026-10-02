@@ -1,7 +1,7 @@
 import { ActionLog } from '@core/log';
 import { markStale, runMemoryMaintenance } from '@core/memory';
-import type { Adventure, AdventureSettings, AppSettings, PlotComponents } from '@core/model';
-import { prepareContext, retryLast, runTurn, type PlayerTurnType, type TurnDeps, type TurnEvent } from '@core/turn';
+import type { Adventure, AdventureSettings, AppSettings, PlotComponents, TurnTrace } from '@core/model';
+import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
 import { runIdleWork } from './idleWork';
 import type { GameSnapshot, Prefetched, SessionServices } from './types';
 
@@ -25,7 +25,7 @@ export class GameSession {
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private prefetched: Prefetched | null = null;
   private lastPrompt = '';
-  private lastPrepared: { prompt: string; stop: string[] } | null = null;
+  private lastPrepared: PreparedContext | null = null;
   /** Tokens not yet published; flushed once per frame. */
   private pending = '';
 
@@ -107,7 +107,7 @@ export class GameSession {
         break;
       case 'context':
         this.lastPrompt = evt.prompt;
-        this.lastPrepared = { prompt: evt.prompt, stop: evt.stop };
+        this.lastPrepared = { result: evt.result, prompt: evt.prompt, stop: evt.stop };
         this.emit({ context: { result: evt.result, prompt: evt.prompt } });
         break;
       case 'token':
@@ -129,7 +129,8 @@ export class GameSession {
         this.emit({ error: evt.message });
         break;
       case 'trace':
-        break; // not stored yet
+        void this.storeTrace(evt.trace);
+        break;
     }
     return evt.type === 'done';
   }
@@ -152,6 +153,15 @@ export class GameSession {
       },
       onWarm: (warm) => this.emit({ warm }),
     });
+  }
+
+  private async storeTrace(t: TurnTrace): Promise<void> {
+    try {
+      await this.svc.storage.putTrace(t);
+    } catch (e) {
+      // Diagnostics never block play; the next turn writes its own.
+      console.warn('could not store turn trace', e);
+    }
   }
 
   private async maintainMemory(): Promise<void> {
@@ -198,6 +208,7 @@ export class GameSession {
       // Instant retry: the alternative was generated in the background.
       this.log.addVersion(last.id, pre.text);
       if (pre.stats) this.log.patch(last.id, { stats: pre.stats });
+      void this.storeTrace(pre.trace);
       this.emit();
       this.save();
       this.afterTurn();

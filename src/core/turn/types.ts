@@ -1,5 +1,5 @@
 import type { ContextBuildResult } from '../context';
-import type { Action, TurnTrace } from '../model/types';
+import type { Action, TurnErrorKind, TurnTrace } from '../model/types';
 import type { Embedder } from '../ports/embedder';
 import type { CompletionStats, Provider } from '../ports/provider';
 import type { ScriptRunner } from '../ports/scripting';
@@ -22,7 +22,7 @@ export type TurnEvent =
   | { type: 'done'; turnId: string; action: Action; text: string; stats?: CompletionStats | undefined }
   | { type: 'stopped'; turnId: string; reason: string }
   | { type: 'message'; text: string }
-  | { type: 'error'; turnId: string; message: string }
+  | { type: 'error'; turnId: string; kind: TurnErrorKind; message: string }
   /** Last event of a turn that got as far as a prompt. */
   | { type: 'trace'; trace: TurnTrace };
 
