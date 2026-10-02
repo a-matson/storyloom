@@ -1,4 +1,7 @@
-import type { Adventure, AppSettings, Scenario } from '../model/types';
+import type { Adventure, AppSettings, Scenario, TurnTrace } from '../model/types';
+
+/** Traces kept per adventure; the oldest are pruned on insert. [provisional] revisit when P7 measures growth. */
+export const TRACE_CAP_PER_ADVENTURE = 200;
 
 /** Persistence boundary; small so another backend (SQLite on OPFS, Tauri) can replace IndexedDB. */
 export interface AdventureSummary {
@@ -22,6 +25,12 @@ export interface Storage {
   getScenario(id: string): Promise<Scenario | undefined>;
   putScenario(s: Scenario): Promise<void>;
   deleteScenario(id: string): Promise<void>;
+
+  /** Traces outlive the actions they point at; only deleting the adventure removes them. */
+  putTrace(t: TurnTrace): Promise<void>;
+  getTrace(turnId: string): Promise<TurnTrace | undefined>;
+  /** Newest first. */
+  listTraces(adventureId: string): Promise<TurnTrace[]>;
 
   getSettings(): Promise<AppSettings | undefined>;
   putSettings(s: AppSettings): Promise<void>;

@@ -2,8 +2,9 @@ import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import { DexieStorage } from '@adapters/storage';
 import { ActionLog } from '@core/log';
-import { StorageError } from '@core/ports';
+import { StorageError, TRACE_CAP_PER_ADVENTURE } from '@core/ports';
 import { makeAdventure } from './fixtures/adventure';
+import { makeTrace } from './fixtures/trace';
 
 let n = 0;
 const freshName = () => `test-${++n}`;
@@ -85,5 +86,47 @@ describe('DexieStorage', () => {
     const got = await (await reopen(name)).getSettings();
     expect(got?.theme).toBe('dark');
     expect(got?.defaults.context.evictionChunk).toBe(8);
+  });
+});
+
+describe('DexieStorage traces', () => {
+  it('round-trips a trace and reports a damaged one', async () => {
+    const name = freshName();
+    const trace = makeTrace({ turnId: 'turn-1', actionId: 'a7', stats: { promptTokens: 100, generatedTokens: 20 } });
+    await (await reopen(name)).putTrace(trace);
+    expect(await (await reopen(name)).getTrace('turn-1')).toEqual(trace);
+    expect(await (await reopen(name)).getTrace('nope')).toBeUndefined();
+
+    await (await reopen(name)).putTrace({ ...trace, turnId: 'bad', sections: 'wrong' as never });
+    await expect((await reopen(name)).getTrace('bad')).rejects.toThrow(StorageError);
+  });
+
+  it('prunes the oldest traces beyond the per-adventure cap', async () => {
+    const s = await reopen(freshName());
+    const extra = 5;
+    for (let i = 0; i < TRACE_CAP_PER_ADVENTURE + extra; i++) await s.putTrace(makeTrace({ turnId: `t${i}`, createdAt: i }));
+    const kept = await s.listTraces('adv1');
+    expect(kept.length).toBe(TRACE_CAP_PER_ADVENTURE);
+    expect(kept[0]?.turnId).toBe(`t${TRACE_CAP_PER_ADVENTURE + extra - 1}`); // newest first
+    expect(await s.getTrace('t0')).toBeUndefined();
+    expect(await s.getTrace(`t${extra}`)).toBeDefined();
+  });
+
+  it('deletes traces with their adventure only, and keeps orphans of erased actions', async () => {
+    const name = freshName();
+    const s = await reopen(name);
+    const adv = makeAdventure({ actions: 4 });
+    await s.putAdventure(adv);
+    await s.putTrace(makeTrace({ turnId: 'mine', adventureId: adv.id, actionId: 'a2' }));
+    await s.putTrace(makeTrace({ turnId: 'other', adventureId: 'elsewhere' }));
+
+    // Erasing the action the trace points at must not remove the trace.
+    await s.putAdventure({ ...adv, actions: adv.actions.slice(0, 2) });
+    expect(await s.getTrace('mine')).toBeDefined();
+
+    await s.deleteAdventure(adv.id);
+    expect(await s.getTrace('mine')).toBeUndefined();
+    expect(await s.listTraces(adv.id)).toEqual([]);
+    expect(await s.getTrace('other')).toBeDefined();
   });
 });
