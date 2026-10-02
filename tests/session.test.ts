@@ -171,6 +171,20 @@ describe('GameSession', () => {
     expect(saved.at(-1)?.memories[0]?.stale).toBeUndefined();
   });
 
+  it('defers memory work that has not started when the next turn begins', async () => {
+    const adventure = makeAdventure({ actions: 30, cards: 0 });
+    adventure.settings.memory = { ...adventure.settings.memory, memoryBank: true, autoSummary: false };
+    const { session, idle } = setup({ adventure });
+    session.submit('continue', '');
+    await settled(session);
+    session.submit('continue', '');
+    idle.splice(0).forEach((fn) => fn());
+    await settled(session);
+    expect(session.getSnapshot().adventure.memories).toHaveLength(0);
+    idle.splice(0).forEach((fn) => fn());
+    await vi.waitFor(() => expect(session.getSnapshot().adventure.memories.length).toBeGreaterThan(0));
+  });
+
   it('previews the context before any turn', async () => {
     const { session } = setup();
     await session.previewContext();

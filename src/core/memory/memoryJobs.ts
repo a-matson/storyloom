@@ -20,6 +20,7 @@ export interface MaintenanceDeps {
   embedder: Embedder;
   /** Template of the model on `provider`. */
   template: Adventure['settings']['template'];
+  /** Stops before the next model call; a call already streaming finishes so its tokens are not wasted. */
   signal?: AbortSignal;
 }
 
@@ -72,7 +73,7 @@ async function summarise(passage: string, deps: MaintenanceDeps): Promise<string
   // A memory is 1-3 sentences; the extra stops end a reply that drifts into the next turn.
   const stop = [...new Set([...prompt.stop, '\n>', '<|im_start|>'])];
   const { text } = await collect(
-    deps.provider.complete({ prompt: prompt.prompt, maxTokens: 90, temperature: 0.3, topP: 0.9, stop, cachePrompt: false, slotId: 1 }, deps.signal),
+    deps.provider.complete({ prompt: prompt.prompt, maxTokens: 90, temperature: 0.3, topP: 0.9, stop, cachePrompt: false, slotId: 1 }),
   );
   return text.trim();
 }
@@ -87,6 +88,7 @@ async function writeMemory(adventure: Adventure, range: MemoryRange, deps: Maint
   if (!passage.trim()) return null;
   let memoryText = await summarise(passage, deps);
   if (memoryText && !isMemoryLike(memoryText)) {
+    if (deps.signal?.aborted) return null;
     const lastAi = slice.findLastIndex((a) => !isPlayerAction(a));
     memoryText = await summarise(joinStory(slice.slice(0, lastAi + 1)) || passage, deps);
     if (memoryText && !isMemoryLike(memoryText)) {
@@ -152,7 +154,7 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
 
   if (settings.autoSummary) {
     const lastAt = adventure.scriptState.__summaryAt ?? 0;
-    if (summaryDue(count, lastAt)) {
+    if (summaryDue(count, lastAt) && !deps.signal?.aborted) {
       // Everything after the previous refresh's recent passage, so no action falls between two summaries.
       const since = adventure.memories.filter((m) => !m.stale && m.toAction > lastAt - RECENT_ACTIONS).map((m) => m.text);
       const recent = actions
@@ -161,10 +163,7 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
         .join('\n\n');
       const prompt = renderTemplate(deps.template, SUMMARY_SYSTEM, summaryPrompt(adventure.plot.storySummary ?? '', since, recent));
       const { text } = await collect(
-        deps.provider.complete(
-          { prompt: prompt.prompt, maxTokens: 400, temperature: 0.3, topP: 0.9, stop: prompt.stop, cachePrompt: false, slotId: 1 },
-          deps.signal,
-        ),
+        deps.provider.complete({ prompt: prompt.prompt, maxTokens: 400, temperature: 0.3, topP: 0.9, stop: prompt.stop, cachePrompt: false, slotId: 1 }),
       );
       if (text.trim()) {
         adventure.plot = { ...adventure.plot, storySummary: text.trim() };
