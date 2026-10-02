@@ -1,11 +1,13 @@
-import { useEffect, useEffectEvent, useState } from 'react';
+import { lazy, Suspense, useEffect, useEffectEvent, useState } from 'react';
 import type { Adventure, AppSettings } from '@core/model';
 import { DEFAULT_APP_SETTINGS, providerFor, storage } from '@app/services';
 import { applyTheme } from './theme';
 import { navigate, useRoute } from './router';
 import { LibraryScreen } from './components/LibraryScreen';
-import { GameScreen } from './components/GameScreen';
-import { SetupScreen } from './components/SetupScreen';
+
+// Only the library is on the start-up path; the other screens load on first visit.
+const GameScreen = lazy(async () => ({ default: (await import('./components/GameScreen')).GameScreen }));
+const SetupScreen = lazy(async () => ({ default: (await import('./components/SetupScreen')).SetupScreen }));
 
 /** Status for the library header; never throws. */
 async function probeBackend(settings: AppSettings): Promise<{ ok: boolean; label: string }> {
@@ -101,26 +103,29 @@ export function App() {
 
   if (!app) return <div className="app" />;
 
-  switch (route.name) {
-    case 'setup':
-      return <SetupScreen app={app} onSave={saveSettings} firstRun />;
-    case 'settings':
-      return <SetupScreen app={app} onSave={saveSettings} onBack={() => navigate({ name: 'library' })} />;
-    case 'adventure':
-      if (!adventure) return <div className="app" />;
-      return <GameScreen key={adventure.id} adventure={adventure} app={app} backendLabel={backendLabel} onExit={() => navigate({ name: 'library' })} />;
-    case 'library':
-    default:
-      return (
-        <LibraryScreen
-          app={app}
-          backendLabel={backendLabel}
-          backendOk={backendOk}
-          notice={loadError}
-          onDismissNotice={() => setLoadError(null)}
-          onOpen={(id) => navigate({ name: 'adventure', id })}
-          onSettings={() => navigate({ name: 'settings' })}
-        />
-      );
-  }
+  const screen = (() => {
+    switch (route.name) {
+      case 'setup':
+        return <SetupScreen app={app} onSave={saveSettings} firstRun />;
+      case 'settings':
+        return <SetupScreen app={app} onSave={saveSettings} onBack={() => navigate({ name: 'library' })} />;
+      case 'adventure':
+        if (!adventure) return <div className="app" />;
+        return <GameScreen key={adventure.id} adventure={adventure} app={app} backendLabel={backendLabel} onExit={() => navigate({ name: 'library' })} />;
+      case 'library':
+      default:
+        return (
+          <LibraryScreen
+            app={app}
+            backendLabel={backendLabel}
+            backendOk={backendOk}
+            notice={loadError}
+            onDismissNotice={() => setLoadError(null)}
+            onOpen={(id) => navigate({ name: 'adventure', id })}
+            onSettings={() => navigate({ name: 'settings' })}
+          />
+        );
+    }
+  })();
+  return <Suspense fallback={<div className="app" />}>{screen}</Suspense>;
 }
