@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { Adventure, AppSettings } from '@core/types';
-import { applyTheme, DEFAULT_APP_SETTINGS, providerFor, storage } from './services';
+import type { Adventure, AppSettings } from '@core/model';
+import { applyTheme, DEFAULT_APP_SETTINGS, providerFor, storage } from '@app/services';
 import { navigate, useRoute } from './router';
 import { LibraryScreen } from './components/LibraryScreen';
 import { GameScreen } from './components/GameScreen';

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Adventure, AdventureSettings, AppSettings, PlotComponents } from '@core/types';
-import { ActionLog } from '@core/actionLog';
-import type { ContextBuildResult } from '@core/contextBuilder';
-import { buildWarmupPrompt, generateAlternative, prepareContext, retryLast, runTurn, type PlayerTurnType } from '@core/engine';
-import type { CompletionStats } from '@providers/types';
-import { runMemoryMaintenance } from '@core/memoryJobs';
-import { markStale } from '@core/memoryBank';
-import { embedderFor, providerFor, scripts, storage, tokenizer } from '../services';
+import type { Adventure, AdventureSettings, AppSettings, PlotComponents } from '@core/model';
+import { ActionLog } from '@core/log';
+import type { ContextBuildResult } from '@core/context';
+import { buildWarmupPrompt, generateAlternative, prepareContext, retryLast, runTurn, type PlayerTurnType } from '@core/turn';
+import type { CompletionStats } from '@core/ports';
+import { runMemoryMaintenance } from '@core/memory';
+import { markStale } from '@core/memory';
+import { embedderFor, providerFor, scripts, storage, tokenizer } from '@app/services';
 
 export interface GameState {
   adventure: Adventure;
@@ -155,7 +155,7 @@ export function useGame(initial: Adventure, app: AppSettings) {
   }, [deps]);
 
   const drive = useCallback(
-    async (gen: AsyncGenerator<import('@core/engine').TurnEvent>) => {
+    async (gen: AsyncGenerator<import('@core/turn/engine').TurnEvent>) => {
       setBusy(true);
       setError(null);
       setStreaming('');

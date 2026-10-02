@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { findTriggeredCards, lookbackWindow, parseTriggers } from '@core/storyCards';
-import type { StoryCard } from '@core/types';
+import { findTriggeredCards, lookbackWindow, parseTriggers } from '@core/cards/storyCards';
+import type { StoryCard } from '@core/model/types';
 
 const card = (name: string, triggers: string[]): StoryCard => ({ id: name, type: 'Custom', name, entry: `${name} entry`, triggers });
 

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { renderPrefix, renderTemplate } from '@core/templates';
-import { buildWarmupPrompt, prepareContext } from '@core/engine';
-import { createBlankAdventure } from '@core/scenario';
-import { ActionLog } from '@core/actionLog';
-import type { CompletionChunk, Provider, ProviderCapabilities, ProviderHealth } from '@providers/types';
-import type { Tokenizer } from '@core/tokenizer';
-import type { TemplateId } from '@core/types';
+import { renderPrefix, renderTemplate } from '@core/text/templates';
+import { buildWarmupPrompt, prepareContext } from '@core/turn/engine';
+import { createBlankAdventure } from '@core/model/scenario';
+import { ActionLog } from '@core/log/actionLog';
+import type { CompletionChunk, Provider, ProviderCapabilities, ProviderHealth } from '@core/ports/provider';
+import type { Tokenizer } from '@core/text/tokenizer';
+import type { TemplateId } from '@core/model/types';
 
 const tok: Tokenizer = { count: (t) => (t ? Math.ceil(t.length / 4) : 0) };
 

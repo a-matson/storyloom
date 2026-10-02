@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ActionLog } from '@core/actionLog';
-import { actionText } from '@core/types';
+import { ActionLog } from '@core/log/actionLog';
+import { actionText } from '@core/model/types';
 
 describe('ActionLog', () => {
   it('appends, retries, switches versions and undoes', () => {

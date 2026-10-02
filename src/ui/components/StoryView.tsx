@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Action } from '@core/types';
-import { actionText } from '@core/types';
+import type { Action } from '@core/model';
+import { actionText } from '@core/model';
 import type { GameApi } from '../hooks/useGame';
 import { IconLeft, IconRight } from './Icons';
 

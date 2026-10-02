@@ -27,10 +27,8 @@
     "types": ["vite/client", "node"],
     "paths": {
       "@core/*": ["./src/core/*"],
-      "@providers/*": ["./src/providers/*"],
-      "@storage/*": ["./src/storage/*"],
-      "@scripting/*": ["./src/scripting/*"],
-      "@embeddings/*": ["./src/embeddings/*"],
+      "@adapters/*": ["./src/adapters/*"],
+      "@app/*": ["./src/app/*"],
       "@ui/*": ["./src/ui/*"]
     }
   },

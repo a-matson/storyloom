@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { deflateRawSync } from 'node:zlib';
-import { ZipReader } from '@storage/zip';
-import { exportAdventureJson, importAdventureJson, importAidZip, importStoryCardsJson, mapAidJson } from '@storage/transfer';
-import { createBlankAdventure } from '@core/scenario';
+import { ZipReader } from '@adapters/storage/zip';
+import { exportAdventureJson, importAdventureJson, importAidZip, importStoryCardsJson, mapAidJson } from '@adapters/storage/transfer';
+import { createBlankAdventure } from '@core/model/scenario';
 
 /** Build a zip in memory (stored or deflated entries) — enough to test the reader. */
 function makeZip(files: { name: string; data: string; deflate?: boolean }[]): ArrayBuffer {

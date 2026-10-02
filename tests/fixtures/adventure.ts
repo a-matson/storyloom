@@ -1,5 +1,5 @@
-import { createBlankAdventure } from '@core/scenario';
-import type { Action, Adventure, Memory, StoryCard } from '@core/types';
+import { createBlankAdventure } from '@core/model/scenario';
+import type { Action, Adventure, Memory, StoryCard } from '@core/model/types';
 
 /** mulberry32: tiny seeded PRNG so fixtures are identical on every run and machine. */
 function rng(seed: number): () => number {

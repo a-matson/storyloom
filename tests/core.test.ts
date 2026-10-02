@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { applyPlaceholders, findPlaceholders } from '@core/placeholders';
-import { formatPlayerInput, trimUnfinishedSentence } from '@core/formatting';
-import { guessTemplate, renderTemplate } from '@core/templates';
-import { createApproxTokenizer, trimToTokens } from '@core/tokenizer';
-import { createAdventureFromScenario, placeholderQuestions } from '@core/scenario';
-import type { Scenario } from '@core/types';
+import { applyPlaceholders, findPlaceholders } from '@core/text/placeholders';
+import { formatPlayerInput, trimUnfinishedSentence } from '@core/text/formatting';
+import { guessTemplate, renderTemplate } from '@core/text/templates';
+import { createApproxTokenizer, trimToTokens } from '@core/text/tokenizer';
+import { createAdventureFromScenario, placeholderQuestions } from '@core/model/scenario';
+import type { Scenario } from '@core/model/types';
 
 describe('placeholders', () => {
   it('finds unique placeholders in order and labels character.name', () => {

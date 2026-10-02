@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { LlamaServerProvider } from '../src/providers/llamaServer';
-import { collect } from '../src/providers/types';
-import { createFakeLlama } from '../src/providers/demo/fakeLlama';
+import { LlamaServerProvider } from '@adapters/providers/llamaServer';
+import { collect } from '@core/ports/provider';
+import { createFakeLlama } from '@adapters/providers/demo/fakeLlama';
 
 const handler = createFakeLlama({ wordDelayMs: 0 });
 const provider = new LlamaServerProvider('d', 'http://demo.invalid', (i, init) => handler(new Request(i, init)));

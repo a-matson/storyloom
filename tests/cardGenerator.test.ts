@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_GENERATOR_SETTINGS, generateStoryCard, normaliseTriggers, parseCardJson } from '@core/cardGenerator';
-import type { CompletionChunk, CompletionRequest, Provider, ProviderCapabilities, ProviderHealth } from '@providers/types';
+import { DEFAULT_GENERATOR_SETTINGS, generateStoryCard, normaliseTriggers, parseCardJson } from '@core/cards/cardGenerator';
+import type { CompletionChunk, CompletionRequest, Provider, ProviderCapabilities, ProviderHealth } from '@core/ports/provider';
 
 function fakeProvider(reply: string, jsonSchema: boolean): Provider & { last?: CompletionRequest } {
   const caps: ProviderCapabilities = {
