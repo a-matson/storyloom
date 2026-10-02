@@ -26,16 +26,8 @@ export function parseHash(hash: string): Route {
 }
 
 export function routeToHash(r: Route): string {
-  switch (r.name) {
-    case 'adventure':
-      return `#/adventure/${encodeURIComponent(r.id)}`;
-    case 'settings':
-      return '#/settings';
-    case 'setup':
-      return '#/setup';
-    case 'library':
-      return '#/';
-  }
+  if (r.name === 'adventure') return `#/adventure/${encodeURIComponent(r.id)}`;
+  return r.name === 'library' ? '#/' : `#/${r.name}`;
 }
 
 export function navigate(r: Route, replace = false): void {
