@@ -1,5 +1,8 @@
 import type { Adventure } from '@core/model';
-import { exportAdventureJson, exportAdventureText, importAdventureJson, importAidZip } from '@app/transfer';
+import type { ImportResult } from '@app/transfer';
+
+// Import/export is rare; load it (zip + AI Dungeon mapping) on demand.
+const transfer = () => import('@app/transfer');
 
 /** Browser helpers for download / file-picker based import-export. */
 
@@ -24,12 +27,12 @@ function safeName(s: string): string {
   );
 }
 
-export function downloadAdventureJson(a: Adventure): void {
-  downloadText(`${safeName(a.title)}.storyloom.json`, exportAdventureJson(a));
+export async function downloadAdventureJson(a: Adventure): Promise<void> {
+  downloadText(`${safeName(a.title)}.storyloom.json`, (await transfer()).exportAdventureJson(a));
 }
 
-export function downloadAdventureText(a: Adventure): void {
-  downloadText(`${safeName(a.title)}.txt`, exportAdventureText(a), 'text/plain');
+export async function downloadAdventureText(a: Adventure): Promise<void> {
+  downloadText(`${safeName(a.title)}.txt`, (await transfer()).exportAdventureText(a), 'text/plain');
 }
 
 export function pickFile(accept: string): Promise<File | null> {
@@ -44,9 +47,17 @@ export function pickFile(accept: string): Promise<File | null> {
 }
 
 /** Import from a picked file: our JSON, an AID JSON, or an AID zip. */
-export async function importAdventureFromFile(file: File, settings: Adventure['settings']): Promise<Adventure> {
+export async function importAdventureFromFile(file: File, settings: Adventure['settings']): Promise<ImportResult> {
   if (/\.zip$/i.test(file.name) || file.type === 'application/zip') {
-    return importAidZip(await file.arrayBuffer(), settings);
+    return (await transfer()).importAidZip(await file.arrayBuffer(), settings);
   }
-  return importAdventureJson(await file.text(), settings);
+  return (await transfer()).importAdventureJson(await file.text(), settings);
+}
+
+export async function downloadStoryCards(a: Adventure): Promise<void> {
+  downloadText(`${safeName(a.title) || 'cards'}.cards.json`, (await transfer()).exportStoryCardsJson(a.storyCards));
+}
+
+export async function importStoryCardsFromFile(file: File): Promise<{ cards: Adventure['storyCards']; warnings: string[] }> {
+  return (await transfer()).importStoryCardsJson(await file.text());
 }

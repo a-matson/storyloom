@@ -146,8 +146,6 @@
         "src/ui/**",
         "src/app/**",
         "src/core/ports/provider.ts",
-        "src/adapters/storage/transfer.ts",
-        "src/adapters/storage/zip.ts",
         "src/adapters/providers/http.ts",
         "src/adapters/providers/llamaServer.ts",
         "src/adapters/providers/openaiCompat.ts",

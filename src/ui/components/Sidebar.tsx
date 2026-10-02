@@ -4,9 +4,8 @@ import { MAX_STORY_CARDS } from '@core/cards';
 import type { Provider } from '@core/ports';
 import { CardDialog } from './CardDialog';
 import { MODEL_PRESETS } from '@core/text';
-import { exportStoryCardsJson, importStoryCardsJson } from '@app/transfer';
 import { tokenizer } from '@app/services';
-import { downloadAdventureJson, downloadAdventureText, downloadText, pickFile } from '../transferUi';
+import { downloadAdventureJson, downloadAdventureText, downloadStoryCards, importStoryCardsFromFile, pickFile } from '../transferUi';
 import type { GameApi } from '../hooks/useGame';
 import { IconChevron } from './Icons';
 
@@ -233,8 +232,9 @@ function DetailsTab({ adventure, api }: { adventure: Adventure; api: GameApi }) 
     const file = await pickFile('.json,application/json');
     if (!file) return;
     try {
-      const cards = importStoryCardsJson(await file.text());
+      const { cards, warnings } = await importStoryCardsFromFile(file);
       api.setStoryCards([...adventure.storyCards, ...cards]);
+      if (warnings.length) alert(warnings.join('\n'));
     } catch (e) {
       alert(e instanceof Error ? e.message : String(e));
     }
@@ -270,7 +270,7 @@ function DetailsTab({ adventure, api }: { adventure: Adventure; api: GameApi }) 
         </header>
         <div className="content">
           <div className="row">
-            <button className="btn" onClick={() => downloadText(`${adventure.title || 'cards'}.cards.json`, exportStoryCardsJson(adventure.storyCards))}>
+            <button className="btn" onClick={() => void downloadStoryCards(adventure)}>
               Export cards
             </button>
             <button className="btn" onClick={importCards}>
@@ -288,10 +288,10 @@ function DetailsTab({ adventure, api }: { adventure: Adventure; api: GameApi }) 
         </header>
         <div className="content">
           <div className="row">
-            <button className="btn" onClick={() => downloadAdventureJson(adventure)}>
+            <button className="btn" onClick={() => void downloadAdventureJson(adventure)}>
               JSON (full backup)
             </button>
-            <button className="btn" onClick={() => downloadAdventureText(adventure)}>
+            <button className="btn" onClick={() => void downloadAdventureText(adventure)}>
               Plain text
             </button>
           </div>
