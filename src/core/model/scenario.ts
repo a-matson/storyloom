@@ -18,12 +18,18 @@ export function placeholderQuestions(s: Scenario) {
   ]);
 }
 
+/** Question keys still unanswered (trimmed empty), in question order. All answers are required. [provisional] */
+export function missingAnswers(questions: { key: string }[], answers: Record<string, string>): string[] {
+  return questions.filter((q) => !answers[q.key]?.trim()).map((q) => q.key);
+}
+
 export function createAdventureFromScenario(
   s: Scenario,
-  answers: Record<string, string>,
+  rawAnswers: Record<string, string>,
   settings: AdventureSettings = DEFAULT_ADVENTURE_SETTINGS,
   selectedCards: StoryCard[] = [],
 ): Adventure {
+  const answers = Object.fromEntries(Object.entries(rawAnswers).map(([k, v]) => [k, v.trim()]));
   const sub = (t: string | undefined) => (t ? applyPlaceholders(t, answers) : t);
   const cards: StoryCard[] = s.storyCards.map((c) => ({
     ...c,

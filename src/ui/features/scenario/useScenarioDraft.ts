@@ -18,11 +18,18 @@ export function useScenarioDraft(saved: Scenario, onError: (message: string) => 
     setRev((r) => r + 1);
   };
 
-  const save = () => {
+  /** Resolves true once stored; failures go to `onError`. */
+  const save = (): Promise<boolean> => {
     const at = rev;
-    storage.putScenario({ ...draft, updatedAt: Date.now() }).then(
-      () => setSavedRev(at),
-      (e: unknown) => onError(e instanceof Error ? e.message : String(e)),
+    return storage.putScenario({ ...draft, updatedAt: Date.now() }).then(
+      () => {
+        setSavedRev(at);
+        return true;
+      },
+      (e: unknown) => {
+        onError(e instanceof Error ? e.message : String(e));
+        return false;
+      },
     );
   };
 
@@ -30,7 +37,7 @@ export function useScenarioDraft(saved: Scenario, onError: (message: string) => 
     const onKey = (e: globalThis.KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
-        save();
+        void save();
       }
     };
     const onUnload = (e: BeforeUnloadEvent) => {
