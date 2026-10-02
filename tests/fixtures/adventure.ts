@@ -33,7 +33,7 @@ export interface FixtureOptions {
  */
 export function makeAdventure({ actions, cards = 40, memories = 0, embeddingDim = 384, seed = 1 }: FixtureOptions): Adventure {
   const r = rng(seed);
-  const pick = <T>(xs: readonly T[]): T => xs[Math.floor(r() * xs.length)] as T;
+  const pick = <T>(xs: readonly T[]): T => xs[Math.floor(r() * xs.length)]!;
   const sentence = (min: number, max: number) => Array.from({ length: min + Math.floor(r() * (max - min)) }, () => pick(WORDS)).join(' ');
 
   const adv = createBlankAdventure('Fixture', sentence(40, 60));

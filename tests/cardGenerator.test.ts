@@ -91,7 +91,7 @@ describe('generateStoryCard', () => {
     try {
       await generateStoryCard({ type: 'Location', settings: DEFAULT_GENERATOR_SETTINGS }, { provider: p, template: 'chatml' });
     } catch (e) {
-      err = (e as Error).message;
+      err = e instanceof Error ? e.message : String(e);
     }
     expect(err).toContain('usable card');
   });

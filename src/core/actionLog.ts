@@ -71,9 +71,9 @@ export class ActionLog {
 
   /** Add a retry alternative to the action with `id` (usually the last AI output) and make it active. */
   addVersion(id: string, text: string): Action | undefined {
-    const idx = this.indexOf(id);
-    if (idx < 0) return undefined;
-    const a = this._actions[idx]!;
+    const found = this.locate(id);
+    if (!found) return undefined;
+    const { idx, action: a } = found;
     const updated: Action = { ...a, versions: [...a.versions, text], active: a.versions.length };
     this.commit(this.replaceAt(idx, updated));
     return updated;
@@ -81,9 +81,9 @@ export class ActionLog {
 
   /** Switch which retry alternative is shown. */
   setActiveVersion(id: string, index: number): Action | undefined {
-    const idx = this.indexOf(id);
-    if (idx < 0) return undefined;
-    const a = this._actions[idx]!;
+    const found = this.locate(id);
+    if (!found) return undefined;
+    const { idx, action: a } = found;
     if (index < 0 || index >= a.versions.length || index === a.active) return a;
     const updated: Action = { ...a, active: index };
     this.commit(this.replaceAt(idx, updated));
@@ -93,9 +93,8 @@ export class ActionLog {
   /** Edit an action's text in place (kept as a new version so it can be undone). */
   edit(id: string, text: string): Action | undefined {
     if (text === undefined) return undefined;
-    const idx = this.indexOf(id);
-    if (idx < 0) return undefined;
-    const a = this._actions[idx]!;
+    const a = this.locate(id)?.action;
+    if (!a) return undefined;
     if (actionText(a) === text) return a;
     return this.addVersion(id, text);
   }
@@ -119,9 +118,9 @@ export class ActionLog {
 
   /** Attach generation stats / image to an action without a new version. */
   patch(id: string, patch: Partial<Pick<Action, 'stats' | 'image'>>): void {
-    const idx = this.indexOf(id);
-    if (idx < 0) return;
-    this.commit(this.replaceAt(idx, { ...this._actions[idx]!, ...patch }));
+    const found = this.locate(id);
+    if (!found) return;
+    this.commit(this.replaceAt(found.idx, { ...found.action, ...patch }));
   }
 
   undo(): boolean {
@@ -142,6 +141,12 @@ export class ActionLog {
 
   indexOf(id: string): number {
     return this._actions.findIndex((a) => a.id === id);
+  }
+
+  private locate(id: string): { idx: number; action: Action } | undefined {
+    const idx = this.indexOf(id);
+    const action = this._actions[idx];
+    return action ? { idx, action } : undefined;
   }
 
   private replaceAt(idx: number, a: Action): Action[] {

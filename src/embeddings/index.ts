@@ -74,7 +74,8 @@ export class HashEmbedder implements Embedder {
   }
 
   one(text: string): number[] {
-    const v = new Array<number>(this.dimensions).fill(0);
+    const v = Array.from({ length: this.dimensions }, () => 0);
+    const bump = (i: number, by: number) => (v[i] = (v[i] ?? 0) + by);
     const words = text.toLowerCase().match(/[a-z0-9']+/g) ?? [];
     let prev = '';
     for (const w of words) {
@@ -83,9 +84,9 @@ export class HashEmbedder implements Embedder {
         continue;
       }
       const stem = w.length > 5 ? w.slice(0, 5) : w;
-      v[fnv1a(stem) % this.dimensions]! += 1;
+      bump(fnv1a(stem) % this.dimensions, 1);
       // Bigram feature for a bit of phrase sensitivity.
-      if (prev && !STOP.has(prev)) v[fnv1a(prev + ' ' + stem) % this.dimensions]! += 0.5;
+      if (prev && !STOP.has(prev)) bump(fnv1a(prev + ' ' + stem) % this.dimensions, 0.5);
       prev = w;
     }
     let norm = 0;

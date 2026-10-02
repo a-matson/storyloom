@@ -102,7 +102,7 @@ export async function collect(stream: AsyncIterable<CompletionChunk>): Promise<{
  * Parse a text/event-stream response body into JSON data events.
  * Handles `data: {...}` lines and ignores comments / other fields.
  */
-export async function* readSse(res: Response, signal?: AbortSignal): AsyncGenerator<unknown> {
+export async function* readSse(res: Response, signal?: AbortSignal): AsyncGenerator {
   if (!res.body) throw new Error('Streaming response has no body');
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
