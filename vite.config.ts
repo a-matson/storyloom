@@ -26,6 +26,12 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
-    coverage: { reporter: ['text'] },
+    // Thresholds = measured baseline (2026-10-02), rounded down; raise them, never lower.
+    coverage: {
+      provider: 'v8',
+      include: ['src/**'],
+      reporter: ['text-summary'],
+      thresholds: { statements: 37, branches: 31, functions: 26, lines: 38 },
+    },
   },
 });
