@@ -25,4 +25,6 @@ export const Action = z.object({
   /** Present for `see` actions (image generation). */
   image: z.optional(z.object({ url: z.string(), prompt: z.string(), model: z.optional(z.string()) })),
   stats: z.optional(GenerationStats),
+  /** The turn that produced this action; links it to its `TurnTrace`. */
+  turnId: z.optional(z.string()),
 });
