@@ -54,3 +54,13 @@ test('accessibility: setup, library and game', async ({ page }) => {
   await expect(page.getByText(/% cached/)).toBeVisible();
   await expectNoSeriousA11yIssues(page);
 });
+
+test('import an AI Dungeon adventure from the library', async ({ page }) => {
+  await connectDemo(page);
+  const aid = { title: 'Salt Road', actions: [{ text: 'You are on the Salt Road.' }, { text: '> You look around.', type: 'do' }] };
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Import…' }).click();
+  await (await chooser).setFiles({ name: 'salt.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(aid)) });
+  await expect(page.getByRole('button', { name: 'Salt Road', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Continue Salt Road 2 actions' })).toBeVisible();
+});

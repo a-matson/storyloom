@@ -29,9 +29,10 @@ export default defineConfig({
     // Thresholds = measured baseline (2026-10-02), rounded down; raise them, never lower.
     coverage: {
       provider: 'v8',
-      include: ['src/**'],
+      // Unit coverage of logic; the UI is covered by Playwright, not counted here.
+      include: ['src/core/**', 'src/adapters/**', 'src/app/**'],
       reporter: ['text-summary'],
-      thresholds: { statements: 44, branches: 34, functions: 36, lines: 46 },
+      thresholds: { statements: 72, branches: 61, functions: 72, lines: 75 },
     },
   },
 });

@@ -42,9 +42,10 @@ export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissN
     const file = await pickFile('.json,.zip,application/json,application/zip');
     if (!file) return;
     try {
-      const adv = await importAdventureFromFile(file, app.defaults);
-      await storage.putAdventure(adv);
+      const { adventure, warnings } = await importAdventureFromFile(file, app.defaults);
+      await storage.putAdventure(adventure);
       refresh();
+      if (warnings.length) setError(`Imported with ${warnings.length} skipped item(s): ${warnings.slice(0, 3).join(' ')}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
