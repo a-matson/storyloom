@@ -6,7 +6,7 @@ import { CardDialog } from './CardDialog';
 import { MODEL_PRESETS } from '@core/text';
 import { tokenizer } from '@app/services';
 import { downloadAdventureJson, downloadAdventureText, downloadStoryCards, importStoryCardsFromFile, pickFile } from '../transferUi';
-import type { GameApi } from '../hooks/useGame';
+import type { GameApi } from '../hooks/useGameSession';
 import { IconChevron } from './Icons';
 
 interface Props {

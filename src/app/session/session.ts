@@ -1,0 +1,241 @@
+import { ActionLog } from '@core/log';
+import { markStale, runMemoryMaintenance } from '@core/memory';
+import type { Adventure, AdventureSettings, AppSettings, PlotComponents } from '@core/model';
+import { prepareContext, retryLast, runTurn, type PlayerTurnType, type TurnDeps, type TurnEvent } from '@core/turn';
+import { runIdleWork } from './idleWork';
+import type { GameSnapshot, Prefetched, SessionServices } from './types';
+
+const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+/**
+ * One open adventure: action log, streaming, the last context sent, debounced persistence,
+ * background memory jobs and between-turn cache warming. Framework-free; React subscribes
+ * through `subscribe`/`getSnapshot`. `adv` is the working copy core turn functions mutate;
+ * every emit publishes a shallow copy so snapshot identities change only when data does.
+ */
+export class GameSession {
+  private adv: Adventure;
+  private readonly log: ActionLog;
+  private app: AppSettings;
+  private readonly svc: SessionServices;
+  private snapshot: GameSnapshot;
+  private readonly listeners = new Set<() => void>();
+  private abort: AbortController | null = null;
+  private idleAbort: AbortController | null = null;
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private prefetched: Prefetched | null = null;
+  private lastPrompt = '';
+  private lastPrepared: { prompt: string; stop: string[] } | null = null;
+
+  constructor(adventure: Adventure, app: AppSettings, services: SessionServices) {
+    this.adv = adventure;
+    this.log = new ActionLog(adventure.actions);
+    this.app = app;
+    this.svc = services;
+    this.snapshot = this.build({ busy: false, streaming: '', context: null, error: null, notice: null, prefetchReady: false, warm: 'idle' });
+  }
+
+  // ---- store ---------------------------------------------------------------
+  readonly subscribe = (fn: () => void): (() => void) => {
+    this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
+  };
+  readonly getSnapshot = (): GameSnapshot => this.snapshot;
+
+  private build(rest: Omit<GameSnapshot, 'adventure' | 'actions' | 'canUndo' | 'canRedo'>): GameSnapshot {
+    this.adv.actions = this.log.actions;
+    return { ...rest, adventure: { ...this.adv }, actions: this.log.actions, canUndo: this.log.canUndo, canRedo: this.log.canRedo };
+  }
+  private emit(patch: Partial<GameSnapshot> = {}): void {
+    this.snapshot = this.build({ ...this.snapshot, ...patch });
+    for (const fn of this.listeners) fn();
+  }
+
+  setApp(app: AppSettings): void {
+    this.app = app;
+  }
+
+  private deps(): TurnDeps {
+    return { provider: this.svc.providerFor(this.app, this.adv.settings.providerId), tokenizer: this.svc.tokenizer, scripts: this.svc.scripts };
+  }
+
+  // ---- persistence ------------------------------------------------------------
+  private save(): void {
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => void this.flush(), this.svc.saveDelayMs);
+  }
+  /** Write now; used by the debounce and on close. */
+  async flush(): Promise<void> {
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    this.adv.actions = this.log.actions;
+    this.adv.updatedAt = Date.now();
+    try {
+      await this.svc.storage.putAdventure(this.adv);
+    } catch (e) {
+      this.emit({ error: `Could not save: ${message(e)}` });
+    }
+  }
+  /** Stop background work and save; call when the adventure closes. */
+  async close(): Promise<void> {
+    this.abort?.abort();
+    this.idleAbort?.abort();
+    await this.flush();
+  }
+
+  // ---- turns ------------------------------------------------------------------
+  private async drive(gen: AsyncGenerator<TurnEvent>): Promise<void> {
+    this.emit({ busy: true, error: null, streaming: '' });
+    let ok = false;
+    try {
+      for await (const evt of gen) ok = this.onEvent(evt) || ok;
+    } finally {
+      this.emit({ busy: false, streaming: '' });
+      this.save();
+      if (ok) this.afterTurn();
+    }
+  }
+
+  /** Applies one turn event; true when the turn completed. */
+  private onEvent(evt: TurnEvent): boolean {
+    switch (evt.type) {
+      case 'player':
+        this.emit();
+        break;
+      case 'context':
+        this.lastPrompt = evt.prompt;
+        this.lastPrepared = { prompt: evt.prompt, stop: evt.stop };
+        this.emit({ context: { result: evt.result, prompt: evt.prompt } });
+        break;
+      case 'token':
+        this.emit({ streaming: this.snapshot.streaming + evt.text });
+        break;
+      case 'done':
+        // Calibrate the heuristic tokenizer against the backend's real count (needs a non-trivial prompt).
+        if ((evt.stats?.promptTokens ?? 0) > 200 && this.lastPrompt) this.svc.tokenizer.calibrate(this.lastPrompt, evt.stats?.promptTokens ?? 0);
+        break;
+      case 'message':
+        this.emit({ notice: evt.text });
+        break;
+      case 'stopped':
+        if (evt.reason !== 'cancelled') this.emit({ notice: evt.reason });
+        break;
+      case 'error':
+        this.emit({ error: evt.message });
+        break;
+    }
+    return evt.type === 'done';
+  }
+
+  private afterTurn(): void {
+    this.svc.idle(() => void this.maintainMemory());
+    const ac = new AbortController();
+    this.idleAbort = ac;
+    void runIdleWork(this.adv, this.log.actions, this.lastPrepared, this.deps(), ac.signal, {
+      onPrefetched: (p) => {
+        this.prefetched = p;
+        this.emit({ prefetchReady: true });
+      },
+      onWarm: (warm) => this.emit({ warm }),
+    });
+  }
+
+  private async maintainMemory(): Promise<void> {
+    const utility = this.app.providers.find((p) => p.role === 'utility');
+    const provider = this.svc.providerFor(this.app, utility?.id ?? this.adv.settings.providerId);
+    try {
+      const report = await runMemoryMaintenance(this.adv, { provider, embedder: await this.svc.embedderFor(provider), template: this.adv.settings.template });
+      if (report.memoriesWritten || report.summaryUpdated) {
+        this.emit();
+        this.save();
+      }
+    } catch (e) {
+      // Background work never blocks play; it retries after the next turn.
+      console.warn('memory maintenance failed', e);
+    }
+  }
+
+  /** Any player action cancels background work. */
+  private beginAction(): void {
+    this.idleAbort?.abort();
+    this.idleAbort = null;
+    this.emit({ warm: 'idle', error: null });
+  }
+  private dropPrefetch(): void {
+    this.prefetched = null;
+    if (this.snapshot.prefetchReady) this.emit({ prefetchReady: false });
+  }
+
+  readonly submit = (type: PlayerTurnType | 'continue', text: string): void => {
+    if (this.snapshot.busy) return;
+    this.beginAction();
+    this.dropPrefetch();
+    this.abort = new AbortController();
+    void this.drive(runTurn(this.adv, this.log, { type, text }, this.deps(), this.abort.signal));
+  };
+
+  readonly retry = (): void => {
+    if (this.snapshot.busy) return;
+    this.beginAction();
+    const last = this.log.last;
+    const pre = this.prefetched;
+    this.dropPrefetch();
+    if (pre && last && pre.actionId === last.id) {
+      // Instant retry: the alternative was generated in the background.
+      this.log.addVersion(last.id, pre.text);
+      if (pre.stats) this.log.patch(last.id, { stats: pre.stats });
+      this.emit();
+      this.save();
+      this.afterTurn();
+      return;
+    }
+    this.abort = new AbortController();
+    void this.drive(retryLast(this.adv, this.log, this.deps(), this.abort.signal));
+  };
+
+  readonly cancel = (): void => this.abort?.abort();
+
+  // ---- edits --------------------------------------------------------------------
+  private mutate(fn: (log: ActionLog, adv: Adventure) => void): void {
+    if (this.snapshot.busy) return;
+    this.idleAbort?.abort();
+    fn(this.log, this.adv);
+    // Editing the log makes a prefetched alternative stale unless it still targets the last action.
+    if (this.prefetched && this.prefetched.actionId !== this.log.last?.id) this.dropPrefetch();
+    this.emit({ warm: 'idle' });
+    this.save();
+  }
+
+  readonly erase = () =>
+    this.mutate((log, adv) => {
+      const a = log.erase();
+      if (a) adv.memories = markStale(adv.memories, new Set([a.id]));
+    });
+  readonly eraseTo = (id: string) =>
+    this.mutate((log, adv) => {
+      adv.memories = markStale(adv.memories, new Set(log.eraseTo(id).map((a) => a.id)));
+    });
+  readonly undo = () => this.mutate((log) => log.undo());
+  readonly redo = () => this.mutate((log) => log.redo());
+  readonly edit = (id: string, text: string) =>
+    this.mutate((log, adv) => {
+      log.edit(id, text);
+      adv.memories = markStale(adv.memories, new Set([id]));
+    });
+  readonly setVersion = (id: string, i: number) => this.mutate((log) => log.setActiveVersion(id, i));
+  readonly updatePlot = (patch: Partial<PlotComponents>) => this.mutate((_, adv) => (adv.plot = { ...adv.plot, ...patch }));
+  readonly updateSettings = (patch: Partial<AdventureSettings>) => this.mutate((_, adv) => (adv.settings = { ...adv.settings, ...patch }));
+  readonly updateMeta = (patch: Partial<Pick<Adventure, 'title' | 'description' | 'tags'>>) => this.mutate((_, adv) => Object.assign(adv, patch));
+  readonly setStoryCards = (cards: Adventure['storyCards']) => this.mutate((_, adv) => (adv.storyCards = cards));
+  readonly setCardGenerator = (s: NonNullable<Adventure['cardGenerator']>) => this.mutate((_, adv) => (adv.cardGenerator = s));
+  readonly clearError = () => this.emit({ error: null });
+  readonly clearNotice = () => this.emit({ notice: null });
+
+  /** Build (without sending) the context for the current log, so the viewer works before the first turn. */
+  readonly previewContext = async (): Promise<void> => {
+    const prepared = await prepareContext(this.adv, this.log.actions, this.deps());
+    if ('stopped' in prepared) return this.emit({ notice: prepared.stopped });
+    this.lastPrompt = prepared.prompt;
+    this.emit({ context: { result: prepared.result, prompt: prepared.prompt } });
+  };
+}

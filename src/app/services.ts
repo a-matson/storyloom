@@ -1,5 +1,6 @@
-import type { AppSettings } from '@core/model';
-import { DEFAULT_ADVENTURE_SETTINGS } from '@core/model';
+import type { Adventure, AppSettings } from '@core/model';
+import { GameSession } from './session';
+import { AppSettings as AppSettingsSchema } from '@core/schema';
 import { createApproxTokenizer } from '@core/text';
 import { createProvider, DEFAULT_PROVIDER_CONFIG } from '@adapters/providers';
 import { DexieStorage } from '@adapters/storage';
@@ -19,17 +20,10 @@ export const scripts = new NoopScriptRunner();
 const providers = new Map<string, Provider>();
 const embedders = new Map<string, Embedder>();
 
-export const DEFAULT_APP_SETTINGS: AppSettings = {
+export const DEFAULT_APP_SETTINGS: AppSettings = AppSettingsSchema.parse({
   providers: [DEFAULT_PROVIDER_CONFIG],
   defaultProviderId: DEFAULT_PROVIDER_CONFIG.id,
-  defaults: DEFAULT_ADVENTURE_SETTINGS,
-  theme: 'dark',
-  highContrast: false,
-  textAnimation: true,
-  textSize: 'default',
-  stickyInput: true,
-  compactButtons: false,
-};
+});
 
 export function providerFor(settings: AppSettings, id: string): Provider {
   const cfg = settings.providers.find((p) => p.id === id) ?? settings.providers[0] ?? DEFAULT_PROVIDER_CONFIG;
@@ -61,10 +55,15 @@ export async function embedderFor(provider: Provider): Promise<Embedder> {
   return e;
 }
 
-export function applyTheme(s: AppSettings, textStyle: 'print' | 'clean' | 'hacker' = 'print'): void {
-  const root = document.documentElement;
-  root.dataset['theme'] = s.theme;
-  root.dataset['contrast'] = s.highContrast ? 'high' : 'normal';
-  root.dataset['textSize'] = s.textSize;
-  root.dataset['textStyle'] = textStyle;
+/** Opens an adventure as a session wired to the app-wide services. */
+export function openSession(adventure: Adventure, app: AppSettings): GameSession {
+  return new GameSession(adventure, app, {
+    providerFor,
+    embedderFor,
+    tokenizer,
+    scripts,
+    storage,
+    idle: (fn) => (typeof requestIdleCallback === 'function' ? requestIdleCallback(fn) : setTimeout(fn, 800)),
+    saveDelayMs: 300,
+  });
 }

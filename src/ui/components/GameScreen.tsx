@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { Adventure, AppSettings } from '@core/model';
-import { useGame } from '../hooks/useGame';
-import { applyTheme, providerFor, tokenizer } from '@app/services';
+import { useGameSession } from '../hooks/useGameSession';
+import { providerFor, tokenizer } from '@app/services';
+import { applyTheme } from '../theme';
 import { StoryView } from './StoryView';
 import { CommandRow } from './CommandRow';
 import { Sidebar } from './Sidebar';
@@ -16,7 +17,7 @@ interface Props {
 }
 
 export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Props) {
-  const [state, api] = useGame(initial, app);
+  const [state, api] = useGameSession(initial, app);
   const [showSidebar, setShowSidebar] = useState(() => window.innerWidth > 1100);
   const [showContext, setShowContext] = useState(false);
   const adv = state.adventure;
@@ -49,7 +50,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
   const ctx = state.context?.result;
   const used = ctx?.budget.used ?? tokenizer.count(adv.actions.map((a) => a.versions[a.active] ?? '').join('\n\n'));
   const total = adv.settings.model.contextLength;
-  const last = state.log.last;
+  const last = state.actions.at(-1);
   const lastStats = last?.stats;
   const hit = lastStats?.promptTokens ? Math.round(((lastStats.cachedTokens ?? 0) / lastStats.promptTokens) * 100) : null;
   const status = state.busy
@@ -92,10 +93,10 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
         </div>
         <span className="grow" />
         <div className="row" style={{ gap: 6 }}>
-          <button className="btn icon" aria-label="Undo" onClick={api.undo} disabled={state.busy || !state.log.canUndo}>
+          <button className="btn icon" aria-label="Undo" onClick={api.undo} disabled={state.busy || !state.canUndo}>
             <IconUndo />
           </button>
-          <button className="btn icon" aria-label="Redo" onClick={api.redo} disabled={state.busy || !state.log.canRedo}>
+          <button className="btn icon" aria-label="Redo" onClick={api.redo} disabled={state.busy || !state.canRedo}>
             <IconRedo />
           </button>
         </div>
@@ -140,7 +141,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
       <div className="game">
         <main>
           <StoryView
-            actions={state.log.actions}
+            actions={state.actions}
             streaming={state.streaming}
             busy={state.busy}
             api={api}
@@ -150,7 +151,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
           <CommandRow
             busy={state.busy}
             canRetry={last?.type === 'continue'}
-            canErase={state.log.length > 1}
+            canErase={state.actions.length > 1}
             status={status}
             api={api}
             onSee={() => api.clearNotice()}
