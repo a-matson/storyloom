@@ -1,3 +1,4 @@
+import { actionsUntilSummary, SUMMARY_INTERVAL } from '@core/memory';
 import type { Adventure, PlotComponents } from '@core/model';
 import { tokenizer } from '@app/services';
 import type { GameApi } from '@ui/hooks/useGameSession';
@@ -12,7 +13,7 @@ type TextKey = 'aiInstructions' | 'storySummary' | 'plotEssentials' | 'authorsNo
 
 const FIELDS: { key: TextKey; title: string; placeholder: string; open?: boolean }[] = [
   { key: 'aiInstructions', title: 'AI Instructions', placeholder: 'System prompt: how the AI should write.', open: true },
-  { key: 'storySummary', title: 'Story Summary', placeholder: 'Maintained automatically every 15 actions; edit freely.' },
+  { key: 'storySummary', title: 'Story Summary', placeholder: `Maintained automatically every ${SUMMARY_INTERVAL} actions; edit freely.` },
   { key: 'plotEssentials', title: 'Plot Essentials', placeholder: 'Key facts the AI must always remember.' },
   { key: 'authorsNote', title: "Author's Note", placeholder: 'Short guidance on style, tone and pacing.' },
 ];
@@ -37,6 +38,15 @@ function ThirdPerson({ plot, api }: { plot: PlotComponents; api: GameApi }) {
   );
 }
 
+function SummaryCadence({ adventure }: { adventure: Adventure }) {
+  const n = actionsUntilSummary(adventure.actions.length, adventure.scriptState.__summaryAt ?? 0);
+  return (
+    <p className="text-caption text-muted-foreground">
+      {n ? `Next refresh in ${n} actions.` : 'Refresh due.'} Your edits are kept as the base for the next summary.
+    </p>
+  );
+}
+
 export function PlotTab({ adventure, api, utilityModel }: { adventure: Adventure; api: GameApi; utilityModel: boolean }) {
   const p = adventure.plot;
   return (
@@ -56,6 +66,7 @@ export function PlotTab({ adventure, api, utilityModel }: { adventure: Adventure
             placeholder={f.placeholder}
             onChange={(e) => api.updatePlot({ [f.key]: e.target.value })}
           />
+          {f.key === 'storySummary' && adventure.settings.memory.autoSummary && <SummaryCadence adventure={adventure} />}
         </Section>
       ))}
       <ThirdPerson plot={p} api={api} />
