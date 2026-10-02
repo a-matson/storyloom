@@ -1,5 +1,5 @@
-import type { Adventure, AppSettings, Scenario } from '@core/model/types';
-import { summarise, type AdventureSummary, type Storage } from '@core/ports/storage';
+import type { Adventure, AppSettings, Scenario } from '@core/model';
+import { summarise, type AdventureSummary, type Storage } from '@core/ports';
 
 /**
  * IndexedDB storage, dependency-free. One database, three object stores.

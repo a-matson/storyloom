@@ -1,7 +1,7 @@
-import type { ProviderConfig } from '@core/model/types';
+import type { ProviderConfig } from '@core/model';
 import { LlamaServerProvider } from './llamaServer';
 import { OpenAICompatProvider } from './openaiCompat';
-import type { Provider } from '@core/ports/provider';
+import type { Provider } from '@core/ports';
 
 let demoHandler: ((req: Request) => Promise<Response>) | undefined;
 /** Lazy so the demo code ships as its own chunk. */
@@ -46,7 +46,6 @@ export const DEFAULT_PROVIDER_CONFIG: ProviderConfig = {
   role: 'story',
 };
 
-export * from '@core/ports/provider';
 export * from './http';
 export { LlamaServerProvider } from './llamaServer';
 export { OpenAICompatProvider } from './openaiCompat';

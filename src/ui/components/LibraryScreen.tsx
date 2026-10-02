@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { AppSettings } from '@core/model/types';
-import { createBlankAdventure, QUICK_STARTS } from '@core/model/scenario';
-import type { AdventureSummary } from '@core/ports/storage';
+import type { AppSettings } from '@core/model';
+import { createBlankAdventure, QUICK_STARTS } from '@core/model';
+import type { AdventureSummary } from '@core/ports';
 import { storage } from '@app/services';
 import { importAdventureFromFile, pickFile } from '../transferUi';
 import { IconBook, IconSettings } from './Icons';

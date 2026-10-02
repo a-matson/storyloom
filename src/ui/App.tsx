@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { Adventure, AppSettings } from '@core/model/types';
+import type { Adventure, AppSettings } from '@core/model';
 import { applyTheme, DEFAULT_APP_SETTINGS, providerFor, storage } from '@app/services';
 import { navigate, useRoute } from './router';
 import { LibraryScreen } from './components/LibraryScreen';

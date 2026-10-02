@@ -17,7 +17,7 @@
  * The main-thread class below is the API the engine already calls; it just
  * needs the worker wired in.
  */
-import type { HookInput, HookResult, ScriptRunner } from '@core/ports/scripting';
+import type { HookInput, HookResult, ScriptRunner } from '@core/ports';
 
 export class QuickJsScriptRunner implements ScriptRunner {
   async load(): Promise<{ ok: boolean; error?: string }> {

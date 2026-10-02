@@ -1,5 +1,5 @@
-import type { Action, Adventure, AdventureSettings, StoryCard } from '@core/model/types';
-import { DEFAULT_ADVENTURE_SETTINGS, newId } from '@core/model/types';
+import type { Action, Adventure, AdventureSettings, StoryCard } from '@core/model';
+import { DEFAULT_ADVENTURE_SETTINGS, newId } from '@core/model';
 import { ZipReader } from './zip';
 
 /**

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Adventure, AdventureSettings, AppSettings, PlotComponents } from '@core/model/types';
-import { ActionLog } from '@core/log/actionLog';
-import type { ContextBuildResult } from '@core/context/contextBuilder';
-import { buildWarmupPrompt, generateAlternative, prepareContext, retryLast, runTurn, type PlayerTurnType } from '@core/turn/engine';
-import type { CompletionStats } from '@core/ports/provider';
-import { runMemoryMaintenance } from '@core/memory/memoryJobs';
-import { markStale } from '@core/memory/memoryBank';
+import type { Adventure, AdventureSettings, AppSettings, PlotComponents } from '@core/model';
+import { ActionLog } from '@core/log';
+import type { ContextBuildResult } from '@core/context';
+import { buildWarmupPrompt, generateAlternative, prepareContext, retryLast, runTurn, type PlayerTurnType } from '@core/turn';
+import type { CompletionStats } from '@core/ports';
+import { runMemoryMaintenance } from '@core/memory';
+import { markStale } from '@core/memory';
 import { embedderFor, providerFor, scripts, storage, tokenizer } from '@app/services';
 
 export interface GameState {

@@ -1,5 +1,5 @@
 import { fetchJson, readSse } from './http';
-import { type CompletionChunk, type CompletionRequest, type Provider, type ProviderCapabilities, type ProviderHealth } from '@core/ports/provider';
+import { type CompletionChunk, type CompletionRequest, type Provider, type ProviderCapabilities, type ProviderHealth } from '@core/ports';
 
 /**
  * llama.cpp `llama-server` provider — the reference backend.

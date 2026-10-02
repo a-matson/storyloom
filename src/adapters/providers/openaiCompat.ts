@@ -1,5 +1,5 @@
 import { fetchJson, readSse } from './http';
-import { type CompletionChunk, type CompletionRequest, type Provider, type ProviderCapabilities, type ProviderHealth } from '@core/ports/provider';
+import { type CompletionChunk, type CompletionRequest, type Provider, type ProviderCapabilities, type ProviderHealth } from '@core/ports';
 
 /**
  * Generic OpenAI-compatible provider (LM Studio, vLLM, TabbyAPI, KoboldCpp's

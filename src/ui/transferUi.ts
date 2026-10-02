@@ -1,5 +1,5 @@
-import type { Adventure } from '@core/model/types';
-import { exportAdventureJson, exportAdventureText, importAdventureJson, importAidZip } from '@adapters/storage/transfer';
+import type { Adventure } from '@core/model';
+import { exportAdventureJson, exportAdventureText, importAdventureJson, importAidZip } from '@app/transfer';
 
 /** Browser helpers for download / file-picker based import-export. */
 

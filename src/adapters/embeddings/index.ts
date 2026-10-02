@@ -1,4 +1,4 @@
-import type { Embedder } from '@core/ports/embedder';
+import type { Embedder } from '@core/ports';
 
 const STOP = new Set([
   'the',

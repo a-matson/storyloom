@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Adventure, AppSettings } from '@core/model/types';
+import type { Adventure, AppSettings } from '@core/model';
 import { useGame } from '../hooks/useGame';
 import { applyTheme, providerFor, tokenizer } from '@app/services';
 import { StoryView } from './StoryView';

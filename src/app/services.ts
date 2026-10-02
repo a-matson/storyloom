@@ -1,11 +1,12 @@
-import type { AppSettings } from '@core/model/types';
-import { DEFAULT_ADVENTURE_SETTINGS } from '@core/model/types';
-import { createApproxTokenizer } from '@core/text/tokenizer';
-import { createProvider, DEFAULT_PROVIDER_CONFIG, type Provider } from '@adapters/providers';
-import { createStorage, MemoryStorage, type Storage } from '@adapters/storage';
+import type { AppSettings } from '@core/model';
+import { DEFAULT_ADVENTURE_SETTINGS } from '@core/model';
+import { createApproxTokenizer } from '@core/text';
+import { createProvider, DEFAULT_PROVIDER_CONFIG } from '@adapters/providers';
+import { createStorage, MemoryStorage } from '@adapters/storage';
+import type { Provider, Storage } from '@core/ports';
 import { HashEmbedder, ProviderEmbedder } from '@adapters/embeddings';
-import { type Embedder } from '@core/ports/embedder';
-import { NoopScriptRunner } from '@core/ports/scripting';
+import { type Embedder } from '@core/ports';
+import { NoopScriptRunner } from '@core/ports';
 
 /**
  * App-wide singletons. Kept out of React so the engine, workers and tests can
