@@ -1,4 +1,6 @@
-import type { Action, StoryCard } from '../model/types';
+import type { Action, ScriptState, StoryCard } from '../model/types';
+
+export type { ScriptMemory, ScriptState } from '../model/types';
 import type { ContextSection } from '../context/types';
 
 /**
@@ -29,19 +31,6 @@ export interface ScriptStoryCard {
   keys: string;
   entry: string;
   type: string;
-}
-
-export interface ScriptMemory {
-  context?: string;
-  authorsNote?: string | undefined;
-  frontMemory?: string;
-}
-
-export interface ScriptState {
-  memory?: ScriptMemory;
-  message?: string;
-  placeholders?: { question: string; answer: string }[];
-  [key: string]: unknown;
 }
 
 export interface ScriptInfo {

@@ -155,7 +155,7 @@ export function useGame(initial: Adventure, app: AppSettings) {
   }, [deps]);
 
   const drive = useCallback(
-    async (gen: AsyncGenerator<import('@core/turn/engine').TurnEvent>) => {
+    async (gen: AsyncGenerator<import('@core/turn').TurnEvent>) => {
       setBusy(true);
       setError(null);
       setStreaming('');
