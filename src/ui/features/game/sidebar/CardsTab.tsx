@@ -7,7 +7,7 @@ import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
 import { Input } from '@ui/components/ui/field';
 import { Pill } from '@ui/components/ui/pill';
-import { CardDialog } from '@ui/components/CardDialog';
+import { CardDialog } from '../cards/CardDialog';
 import { SECTION, SECTION_HEADER } from './Section';
 
 const tone = (type: string) => (type.toLowerCase() === 'character' ? 'do' : type.toLowerCase() === 'location' ? 'say' : 'plain');

@@ -73,3 +73,15 @@ test('the library updates live when another tab starts an adventure', async ({ p
   await page.getByRole('button', { name: 'Fantasy' }).click();
   await expect(other.getByRole('button', { name: 'Open Fantasy' })).toBeVisible();
 });
+
+test('drawers are modal: focus stays inside and Escape closes them', async ({ page }) => {
+  await connectDemo(page);
+  await page.getByRole('button', { name: 'Fantasy' }).click();
+  await page.getByRole('button', { name: 'View context' }).last().click();
+  const dialog = page.getByRole('dialog', { name: 'Context sent to the model' });
+  await expect(dialog).toBeVisible();
+  for (let i = 0; i < 6; i++) await page.keyboard.press('Tab');
+  expect(await dialog.evaluate((d) => d.contains(document.activeElement))).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+});

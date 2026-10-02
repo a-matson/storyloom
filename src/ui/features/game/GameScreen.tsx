@@ -5,7 +5,7 @@ import { useGameSession } from '@ui/hooks/useGameSession';
 import { applyTheme } from '@ui/theme';
 import { Toast } from '@ui/components/ui/toast';
 import { Sidebar } from './sidebar/Sidebar';
-import { ContextViewer } from '@ui/components/ContextViewer';
+import { ContextViewer } from './context/ContextViewer';
 import { CommandRow } from './CommandRow';
 import { ContextMeter } from './ContextMeter';
 import { GameHeader } from './GameHeader';
