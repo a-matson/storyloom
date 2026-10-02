@@ -32,5 +32,5 @@
       "@ui/*": ["./src/ui/*"]
     }
   },
-  "include": ["src", "tests", "vite.config.ts", "scripts", "e2e", "playwright.config.ts", "bench"]
+  "include": ["src", "tests", "vite.config.ts", "scripts", "e2e", "playwright.config.ts", "playwright.measure.config.ts", "bench"]
 }

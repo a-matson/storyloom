@@ -96,14 +96,11 @@ export function SetupScreen({ app, onSave, onBack, firstRun }: Props) {
 
   const test = async () => {
     setTesting(true);
-    try {
-      const p = providerFor(draft(), current.id);
-      const h = await p.health();
-      setHealth(h);
-      if (h.ok) setCaps(await p.capabilities());
-    } finally {
-      setTesting(false);
-    }
+    const p = providerFor(draft(), current.id);
+    const h = await p.health(); // never throws: failures come back as { ok: false }
+    setHealth(h);
+    if (h.ok) setCaps(await p.capabilities().catch(() => null));
+    setTesting(false);
   };
 
   const capList: { key: keyof ProviderCapabilities; label: string }[] = [

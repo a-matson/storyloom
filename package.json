@@ -19,7 +19,8 @@
     "e2e:update-screenshots": "docker run --rm --ipc=host -v \"$PWD\":/work -v /work/node_modules -w /work mcr.microsoft.com/playwright:v1.63.0-noble sh -c \"corepack enable && pnpm install --frozen-lockfile && pnpm exec playwright test e2e/visual.spec.ts --update-snapshots\"",
     "bench": "vitest run --config bench/vitest.config.ts",
     "size": "node scripts/size.ts",
-    "lint": "oxlint --type-aware --max-warnings=89 src tests e2e bench scripts"
+    "lint": "oxlint --type-aware --max-warnings=89 src tests e2e bench scripts",
+    "measure:renders": "VITE_MEASURE_RENDERS=1 vite build --outDir dist-measure && MEASURE_RENDERS=1 playwright test e2e/renders.spec.ts --config playwright.measure.config.ts"
   },
   "dependencies": {
     "dexie": "^4.4.6",
@@ -40,6 +41,7 @@
     "@vitest/coverage-v8": "^5.0.3",
     "fake-indexeddb": "^6.2.5",
     "lefthook": "2.1.15",
+    "oxc-transform-react": "^0.152.0",
     "oxfmt": "0.71.0",
     "oxlint": "1.86.0",
     "oxlint-tsgolint": "7.0.2003",

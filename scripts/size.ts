@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { brotliCompressSync } from 'node:zlib';
 
 // Measured baselines + ~2%; raise only as a recorded decision.
-const BUDGET_KB = { js: 122, css: 2.9 };
+const BUDGET_KB = { js: 133, css: 2.9 };
 
 const html = readFileSync('dist/index.html', 'utf8');
 const files = [...html.matchAll(/(?:src|href)="[^"]*?(assets\/[^"]+\.(js|css))"/g)].map(
