@@ -38,7 +38,7 @@ describe('llama-server streaming', () => {
           'data: {"cont',
           'ent":"Hel"}\n',
           '\ndata: {"content":"lo"}\n\n',
-          'data: {"content":"","stop":true,"stopped_eos":true,"timings":{"cache_n":3,"prompt_n":0}}\n\n',
+          'data: {"content":"","stop":true,"stop_type":"eos","timings":{"cache_n":3,"prompt_n":0}}\n\n',
         ]),
       ),
     );
@@ -55,6 +55,18 @@ describe('llama-server streaming', () => {
     const end = { content: '', stop: true, tokens_evaluated: 1200, tokens_cached: 1264, timings: { ...t, prompt_ms: 9, predicted_n: 64, predicted_ms: 9 } };
     const p = new LlamaServerProvider('l', 'http://x', fetchOnce(chunked([`data: ${JSON.stringify(end)}\n\n`])));
     expect((await all(p.complete(req))).at(-1)).toMatchObject({ stats });
+  });
+
+  // Real end events carry only `stop_type`; `none` means aborted or still running.
+  it.each([
+    ['eos', 'eos'],
+    ['word', 'stop'],
+    ['limit', 'length'],
+    ['none', 'unknown'],
+  ])('maps stop_type %s to %s', async (stop_type, stopReason) => {
+    const end = { content: '', stop: true, stop_type, stopping_word: '' };
+    const p = new LlamaServerProvider('l', 'http://x', fetchOnce(chunked([`data: ${JSON.stringify(end)}\n\n`])));
+    expect((await all(p.complete(req))).at(-1)).toMatchObject({ stats: { stopReason } });
   });
 
   it('fails loudly on a malformed event instead of dropping it', async () => {

@@ -58,7 +58,7 @@ function stream(line: string, prompt: string, delay: number, signal: AbortSignal
         }
         const cached = Math.floor(pn * 0.8);
         const timings = { prompt_ms: 120, predicted_ms: 40 * words.length, prompt_n: pn - cached, cache_n: cached, predicted_n: words.length };
-        const stats = { content: '', stop: true, stopped_eos: true, tokens_evaluated: pn, tokens_cached: pn + words.length, tokens_predicted: words.length };
+        const stats = { content: '', stop: true, stop_type: 'eos', tokens_evaluated: pn, tokens_cached: pn + words.length, tokens_predicted: words.length };
         ctrl.enqueue(enc.encode(evt({ ...stats, timings })));
         ctrl.close();
       };
@@ -76,7 +76,7 @@ function card(prompt: string, fallbackName: string): Response {
   const lower = name.toLowerCase();
   const entry = `${name} matters to this story: a detail the caravan will not forget.`;
   const content = JSON.stringify({ name, entry, triggers: [lower, lower.split(' ')[0], 'caravan'] });
-  return oneShot({ content, stop: true, stopped_eos: true, tokens_evaluated: 120, tokens_predicted: 40 });
+  return oneShot({ content, stop: true, stop_type: 'eos', tokens_evaluated: 120, tokens_predicted: 40 });
 }
 
 export function createFakeLlama(opts: FakeLlamaOptions = {}): (req: Request) => Promise<Response> {
@@ -99,7 +99,7 @@ export function createFakeLlama(opts: FakeLlamaOptions = {}): (req: Request) => 
     if (body.n_predict === 0) return json({ content: '', stop: true, tokens_evaluated: Math.ceil(prompt.length / 4), tokens_cached: 0 });
     if (body.json_schema !== undefined) return card(prompt, rotate(NAMES, n++));
     if (/Memory:\s*$|Write the updated summary:\s*$/.test(prompt)) {
-      return oneShot({ content: MEMORY, stop: true, stopped_eos: true, tokens_evaluated: 200, tokens_predicted: 20 });
+      return oneShot({ content: MEMORY, stop: true, stop_type: 'eos', tokens_evaluated: 200, tokens_predicted: 20 });
     }
     return stream(rotate(LINES, n++), prompt, delay, req.signal);
   };
