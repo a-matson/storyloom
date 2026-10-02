@@ -8,7 +8,7 @@ import { newId } from '../model/types';
  *  - the first memory is written once the adventure is 12 actions deep and
  *    covers actions 0–5; the next covers 6–11 once there are 18 actions, and
  *    so on. The most recent six actions are never summarised, so they stay
- *    freely editable.
+ *    freely editable. A range that would end on a player action stops one short.
  *  - the Story Summary is refreshed every 15 actions.
  *
  * Retrieval: memories are embedded; the most recent action is embedded as the
@@ -20,8 +20,11 @@ import { newId } from '../model/types';
  * old memories can live forever. Edits mark memories stale; the idle job rewrites them.
  */
 
+/** [AID-doc] */
 export const MEMORY_SPAN = 6;
+/** [AID-doc] */
 export const MEMORY_LAG = 12;
+/** [AID-doc] */
 export const SUMMARY_INTERVAL = 15;
 
 export interface MemoryRange {
@@ -29,14 +32,23 @@ export interface MemoryRange {
   toAction: number;
 }
 
+/** Player turns render as `> You …`; a passage ending on one makes the model answer it. */
+export const isPlayerAction = (a?: Pick<Action, 'type'>): boolean => a?.type === 'do' || a?.type === 'say';
+
 /**
- * Six-action ranges due for summarisation: those after the newest memory. Ranges before it
+ * Ranges of up to six actions due for summarisation: those after the newest memory. Ranges before it
  * were summarised already, even if that memory has since been dropped from the forgotten pile.
+ * A range ends on an AI output; trailing player actions roll into the next range.
  */
-export function dueMemoryRanges(actionCount: number, existing: Pick<Memory, 'toAction'>[]): MemoryRange[] {
+export function dueMemoryRanges(actions: Pick<Action, 'type'>[], existing: Pick<Memory, 'toAction'>[]): MemoryRange[] {
   const due: MemoryRange[] = [];
-  const start = existing.reduce((n, m) => Math.max(n, m.toAction), 0);
-  for (let from = start; from + MEMORY_LAG <= actionCount; from += MEMORY_SPAN) due.push({ fromAction: from, toAction: from + MEMORY_SPAN });
+  let from = existing.reduce((n, m) => Math.max(n, m.toAction), 0);
+  while (from + MEMORY_LAG <= actions.length) {
+    let to = from + MEMORY_SPAN;
+    while (to > from + 1 && isPlayerAction(actions[to - 1])) to--;
+    due.push({ fromAction: from, toAction: to });
+    from = to;
+  }
   return due;
 }
 

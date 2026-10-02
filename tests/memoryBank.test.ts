@@ -1,8 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { actionsUntilMemory, actionsUntilSummary, cosine, dueMemoryRanges, evictToSize, markStale, rankMemories, summaryDue } from '@core/memory/memoryBank';
+import {
+  actionsUntilMemory,
+  actionsUntilSummary,
+  cosine,
+  dueMemoryRanges,
+  evictToSize,
+  markStale,
+  MEMORY_SPAN,
+  rankMemories,
+  summaryDue,
+} from '@core/memory/memoryBank';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import { createBlankAdventure } from '@core/model';
-import type { Memory } from '@core/model/types';
+import type { Action, Memory } from '@core/model/types';
 import type { Embedder, Provider } from '@core/ports';
 
 const mem = (id: string, from: number, useCount = 0, createdAt = 0, embedding?: number[]): Memory => ({
@@ -16,14 +26,29 @@ const mem = (id: string, from: number, useCount = 0, createdAt = 0, embedding?: 
   embedding,
 });
 
+/** Log types as in real play: one AI output, then a player action and the AI's reply per turn. */
+const playLog = (n: number): Pick<Action, 'type'>[] => Array.from({ length: n }, (_, i) => ({ type: i === 0 ? 'start' : i % 2 ? 'do' : 'continue' }));
+const prose = (n: number): Pick<Action, 'type'>[] => Array.from({ length: n }, () => ({ type: 'continue' }));
+
 describe('memory scheduling', () => {
   it('writes the first memory at 12 actions and one more every 6', () => {
-    expect(dueMemoryRanges(11, [])).toEqual([]);
-    expect(dueMemoryRanges(12, [])).toEqual([{ fromAction: 0, toAction: 6 }]);
-    expect(dueMemoryRanges(17, [mem('m0', 0)])).toEqual([]);
-    expect(dueMemoryRanges(18, [mem('m0', 0)])).toEqual([{ fromAction: 6, toAction: 12 }]);
+    expect(dueMemoryRanges(prose(11), [])).toEqual([]);
+    expect(dueMemoryRanges(prose(12), [])).toEqual([{ fromAction: 0, toAction: 6 }]);
+    expect(dueMemoryRanges(prose(17), [mem('m0', 0)])).toEqual([]);
+    expect(dueMemoryRanges(prose(18), [mem('m0', 0)])).toEqual([{ fromAction: 6, toAction: 12 }]);
     // catching up an adventure that had the feature off
-    expect(dueMemoryRanges(30, [])).toHaveLength(4);
+    expect(dueMemoryRanges(prose(30), [])).toHaveLength(4);
+  });
+
+  it('ends every range on an AI output; a trailing player action rolls into the next range', () => {
+    const log = playLog(30);
+    const ranges = dueMemoryRanges(log, []);
+    expect(ranges.slice(0, 2)).toEqual([
+      { fromAction: 0, toAction: 5 },
+      { fromAction: 5, toAction: 11 },
+    ]);
+    for (const r of ranges) expect(log[r.toAction - 1]?.type).not.toMatch(/do|say/);
+    expect(ranges.at(-1)!.toAction).toBeLessThanOrEqual(30 - MEMORY_SPAN);
   });
 
   it('refreshes the summary every 15 actions', () => {
@@ -70,9 +95,9 @@ describe('retrieval and eviction', () => {
 
   it('does not summarise a forgotten range again', () => {
     const { memories } = evictToSize([mem('a', 0, 0, 0), mem('b', 6, 1, 1)], 1);
-    expect(dueMemoryRanges(18, memories)).toEqual([]);
+    expect(dueMemoryRanges(prose(18), memories)).toEqual([]);
     // the cap may drop old forgotten memories; their ranges still precede the newest one
-    expect(dueMemoryRanges(18, [mem('b', 6)])).toEqual([]);
+    expect(dueMemoryRanges(prose(18), [mem('b', 6)])).toEqual([]);
   });
 
   it('leaves forgotten memories out of ranking and the bank count', () => {

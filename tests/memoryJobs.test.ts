@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { runMemoryMaintenance, type MaintenanceDeps } from '@core/memory';
+import { describe, expect, it, vi } from 'vitest';
+import type { MaintenanceDeps } from '@core/memory';
+import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import { actionText, type Adventure } from '@core/model';
 import type { CompletionRequest, Embedder, Provider } from '@core/ports';
 import { makeAdventure } from './fixtures/adventure';
@@ -78,6 +79,48 @@ describe('memory maintenance', () => {
     expect(adv.memories.filter((m) => m.forgotten)).toHaveLength(25);
     await runMemoryMaintenance(adv, deps);
     expect(calls).toHaveLength(65);
+  });
+
+  it('feeds the summary every memory since the previous recent passage', async () => {
+    const adv = adventure(30);
+    adv.settings.memory.autoSummary = true;
+    adv.scriptState = { ...adv.scriptState, __summaryAt: 15 };
+    adv.memories = [0, 6, 12, 18].map((from) => ({
+      id: `m${from}`,
+      text: `mem${from}`,
+      fromAction: from,
+      toAction: from + 6,
+      actionIds: [],
+      useCount: 0,
+      createdAt: from,
+    }));
+    const { deps, calls } = fakeDeps(adv);
+    await runMemoryMaintenance(adv, deps);
+    // the refresh at 15 saw actions 9-14 as its recent passage, so mem6 still counts
+    expect(calls.at(-1)).toContain('- mem6\n- mem12\n- mem18');
+    expect(calls.at(-1)).not.toContain('mem0');
+  });
+
+  it('rejects memories that continue the story, retries once, then skips the range', async () => {
+    const adv = adventure(12);
+    const answers = ['"Halt!" the rider cries.', 'The rider halts. > You draw.', 'Mira found the map.'];
+    const reqs: CompletionRequest[] = [];
+    const provider = {
+      id: 'fake',
+      async *complete(req: CompletionRequest) {
+        reqs.push(req);
+        yield { text: answers.shift() ?? '', done: true };
+      },
+    } as unknown as Provider;
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const deps = { ...fakeDeps(adv).deps, provider };
+    const report = await runMemoryMaintenance(adv, deps);
+    expect(report).toMatchObject({ memoriesWritten: 0, memoriesRejected: 1 });
+    expect(warn).toHaveBeenCalledOnce();
+    expect(reqs[0]).toMatchObject({ maxTokens: 90, stop: expect.arrayContaining(['\n>', '<|im_start|>']) });
+    expect(await runMemoryMaintenance(adv, deps)).toMatchObject({ memoriesWritten: 1, memoriesRejected: 0 });
+    expect(adv.memories[0]?.text).toBe('Mira found the map.');
+    warn.mockRestore();
   });
 
   it('builds the next summary on top of the player-edited one', async () => {
