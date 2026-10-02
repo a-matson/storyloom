@@ -11,8 +11,8 @@ describe('placeholders', () => {
   it('finds unique placeholders in order and labels character.name', () => {
     const q = findPlaceholders(['You are ${character.name}, ${What do you do?}.', 'Again ${character.name}']);
     expect(q).toEqual([
-      { key: 'character.name', label: "Enter your character's name…" },
-      { key: 'What do you do?', label: 'What do you do?' },
+      { key: 'character.name', label: "Enter your character's name…", uses: 2 },
+      { key: 'What do you do?', label: 'What do you do?', uses: 1 },
     ]);
   });
   it('substitutes every occurrence, case-sensitively', () => {

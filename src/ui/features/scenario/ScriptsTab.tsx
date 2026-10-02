@@ -3,7 +3,7 @@ import { TextField, type TabProps } from './fields';
 
 type Scripts = NonNullable<Scenario['scripts']>;
 const EMPTY: Scripts = { library: '', input: '', context: '', output: '' };
-const HOOKS: { key: keyof Scripts; label: string }[] = [
+export const HOOKS: { key: keyof Scripts; label: string }[] = [
   { key: 'library', label: 'Library' },
   { key: 'input', label: 'Input' },
   { key: 'context', label: 'Context' },

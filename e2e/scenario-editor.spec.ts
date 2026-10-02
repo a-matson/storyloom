@@ -14,6 +14,16 @@ test('create, edit, save and reopen a scenario', async ({ page }) => {
 
   await page.getByRole('textbox', { name: 'Prompt' }).fill('You are ${character.name}, alone on the night ferry.');
   await expect(page.getByText('unsaved changes')).toBeVisible();
+  const rail = page.getByRole('complementary', { name: 'Scenario overview' });
+  await expect(rail.getByText('${character.name}')).toBeVisible();
+  await expect(rail.getByText("Enter your character's name…")).toBeVisible();
+
+  await rail.getByRole('button', { name: '+ New' }).click();
+  await page.locator('#card-name').fill('Ferryman');
+  await page.locator('#card-entry').fill('The ferryman never looks up from his rope.');
+  await page.locator('#card-triggers').fill('ferryman, rope');
+  await page.getByRole('button', { name: 'Finish' }).click();
+  await expect(rail.getByRole('button', { name: 'Edit story card Ferryman' })).toBeVisible();
   await page.getByRole('button', { name: 'Basics' }).click();
   await page.getByRole('textbox', { name: 'Title' }).fill('Night Ferry');
   await page.getByRole('textbox', { name: 'Tags' }).fill('mystery, sea');
@@ -29,6 +39,7 @@ test('create, edit, save and reopen a scenario', async ({ page }) => {
   await expect(page.getByRole('textbox', { name: 'Tags' })).toHaveValue('mystery, sea');
   await page.getByRole('button', { name: 'Technical' }).click();
   await expect(page.getByRole('textbox', { name: 'Prompt' })).toHaveValue('You are ${character.name}, alone on the night ferry.');
+  await expect(page.getByRole('button', { name: 'Edit story card Ferryman' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Back to library' }).click();
   await page.getByRole('button', { name: 'Night Ferry' }).click();
