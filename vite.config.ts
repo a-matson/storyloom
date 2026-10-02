@@ -1,22 +1,12 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import { fileURLToPath, URL } from 'node:url';
 
 // Vite + Vitest share this config. The app is a static PWA: `vite build`
 // produces ./dist, which `llama-server --path ./dist` can serve directly so
 // the UI and the inference server share one origin (no CORS).
 export default defineConfig({
   plugins: [react()],
-  resolve: {
-    alias: {
-      '@core': fileURLToPath(new URL('./src/core', import.meta.url)),
-      '@providers': fileURLToPath(new URL('./src/providers', import.meta.url)),
-      '@storage': fileURLToPath(new URL('./src/storage', import.meta.url)),
-      '@scripting': fileURLToPath(new URL('./src/scripting', import.meta.url)),
-      '@embeddings': fileURLToPath(new URL('./src/embeddings', import.meta.url)),
-      '@ui': fileURLToPath(new URL('./src/ui', import.meta.url)),
-    },
-  },
+  resolve: { tsconfigPaths: true },
   server: {
     port: 5173,
     // Local inference servers are called directly from the browser at
