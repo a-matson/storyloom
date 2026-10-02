@@ -3,7 +3,7 @@ import type { Adventure, AppSettings } from '@core/model';
 import { DEFAULT_APP_SETTINGS, providerFor, storage } from '@app/services';
 import { applyTheme } from './theme';
 import { navigate, useRoute } from './router';
-import { LibraryScreen } from './components/LibraryScreen';
+import { LibraryScreen } from './features/library/LibraryScreen';
 
 // Only the library is on the start-up path; the other screens load on first visit.
 const GameScreen = lazy(async () => ({ default: (await import('./components/GameScreen')).GameScreen }));
