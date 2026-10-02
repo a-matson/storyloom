@@ -12,5 +12,4 @@ coverage/
 .vscode/
 test-results/
 playwright-report/
-bench/results/
 dist-measure/

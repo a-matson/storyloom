@@ -1,0 +1,23 @@
+/**
+ * `pnpm measure <scenario> [args]`: one entry point for every measurement; JSON lands in docs/measurements/.
+ *   core                  micro-benchmarks of src/core (same as `pnpm bench`)
+ *   renders [label]       React commits/render ms for 3 turns, prod build with the Profiler
+ *   latency <url> [turns] TTFT, cache hit %, tok/s against a live backend (cold vs cached prefix)
+ */
+import { spawnSync } from 'node:child_process';
+
+const [scenario, a, b] = process.argv.slice(2);
+const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | undefined> }> = {
+  core: { cmd: ['pnpm', 'bench'] },
+  renders: { cmd: ['pnpm', 'measure:renders'], env: { MEASURE_LABEL: a } },
+  latency: { cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/latency'], env: { MEASURE_URL: a, MEASURE_TURNS: b } },
+};
+
+const s = scenario === undefined ? undefined : SCENARIOS[scenario];
+if (!s || (scenario === 'latency' && !a)) {
+  console.error(`usage: pnpm measure <${Object.keys(SCENARIOS).join('|')}> [args]  (latency needs a backend url)`);
+  process.exit(2);
+}
+const [cmd = '', ...args] = s.cmd;
+const env = Object.fromEntries(Object.entries({ ...process.env, ...s.env }).filter(([, v]) => v !== undefined));
+process.exit(spawnSync(cmd, args, { stdio: 'inherit', env }).status ?? 1);
