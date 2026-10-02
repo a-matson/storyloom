@@ -10,3 +10,5 @@ coverage/
 # Personal tooling: code index, editor config
 .vexp/
 .vscode/
+test-results/
+playwright-report/
