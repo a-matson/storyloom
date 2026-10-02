@@ -1,5 +1,4 @@
-import type { Adventure, StoryCard, TemplateId } from '../model/types';
-import { newId } from '../model/types';
+import type { Adventure, TemplateId } from '../model/types';
 import { LooseCardJson } from '../schema/card';
 import { CARD_SYSTEM, cardPrompt } from '../text/prompts';
 import { renderTemplate } from '../text/templates';
@@ -135,8 +134,4 @@ export function normaliseTriggers(triggers: string[], name: string): string[] {
   }
   for (const t of triggers) add(t);
   return [...out].slice(0, 8);
-}
-
-export function toStoryCard(g: GeneratedCard, type: string, notes?: string): StoryCard {
-  return { id: newId('card_'), type, name: g.name, entry: g.entry, triggers: g.triggers, notes };
 }

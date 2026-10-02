@@ -47,5 +47,3 @@ export const DEFAULT_PROVIDER_CONFIG: ProviderConfig = {
 };
 
 export * from './http';
-export { LlamaServerProvider } from './llamaServer';
-export { OpenAICompatProvider } from './openaiCompat';

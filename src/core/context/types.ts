@@ -24,7 +24,7 @@ export interface ContextSection {
   trimmed?: boolean;
 }
 
-export interface ContextBudget {
+interface ContextBudget {
   total: number;
   requiredCap: number;
   requiredUsed: number;

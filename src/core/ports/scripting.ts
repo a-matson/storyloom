@@ -1,6 +1,6 @@
 import type { Action, ScriptState, StoryCard } from '../model/types';
 
-export type { ScriptMemory, ScriptState } from '../model/types';
+export type { ScriptState } from '../model/types';
 import type { ContextSection } from '../context/types';
 
 /**

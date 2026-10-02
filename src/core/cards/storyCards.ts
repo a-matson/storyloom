@@ -91,9 +91,5 @@ export function parseTriggers(field: string): string[] {
   return field.split(',').filter((t) => t.length > 0);
 }
 
-export function formatTriggers(triggers: string[]): string {
-  return triggers.join(',');
-}
-
 /** Hard cap from AI Dungeon; enforced in the editor, not the builder. */
 export const MAX_STORY_CARDS = 5000;
