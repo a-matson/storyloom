@@ -15,9 +15,7 @@ export const LlamaProps = z.object({
 export const LlamaCompletionEvent = z.object({
   content: str,
   stop: z.optional(z.boolean()),
-  stopped_eos: z.optional(z.boolean()),
-  stopped_word: z.optional(z.boolean()),
-  stopped_limit: z.optional(z.boolean()),
+  stop_type: str,
   tokens_predicted: num,
   tokens_evaluated: num,
   tokens_cached: num,

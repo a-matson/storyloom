@@ -182,6 +182,8 @@ function statsOf(e: z.output<typeof LlamaCompletionEvent>) {
     generatedTokens: e.timings?.predicted_n ?? e.tokens_predicted,
     promptMs: e.timings?.prompt_ms,
     generationMs: e.timings?.predicted_ms,
-    stopReason: e.stopped_eos ? ('eos' as const) : e.stopped_word ? ('stop' as const) : e.stopped_limit ? ('length' as const) : ('unknown' as const),
+    stopReason: STOP_TYPES[e.stop_type ?? ''] ?? ('unknown' as const),
   };
 }
+
+const STOP_TYPES: Record<string, 'eos' | 'stop' | 'length' | undefined> = { eos: 'eos', word: 'stop', limit: 'length' };
