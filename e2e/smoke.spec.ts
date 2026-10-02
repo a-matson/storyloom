@@ -64,3 +64,12 @@ test('import an AI Dungeon adventure from the library', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Salt Road', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Continue Salt Road 2 actions' })).toBeVisible();
 });
+
+test('the library updates live when another tab starts an adventure', async ({ page, context }) => {
+  await connectDemo(page);
+  const other = await context.newPage();
+  await other.goto('/');
+  await expect(other.getByRole('heading', { name: 'Start your first adventure' })).toBeVisible();
+  await page.getByRole('button', { name: 'Fantasy' }).click();
+  await expect(other.getByRole('button', { name: 'Open Fantasy' })).toBeVisible();
+});
