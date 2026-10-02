@@ -1,9 +1,45 @@
-/* Tailwind with the "Lantern & Ink" tokens. Values live in theme.css (themes remap them at runtime);
-   the legacy layer sits below utilities so a utility always wins while classes migrate. */
-@layer theme, legacy, base, components, utilities;
+/* Tailwind with the "Lantern & Ink" tokens (values in tokens.css). No preflight: base styles are the few rules below. */
+@layer theme, base, components, utilities;
 @import 'tailwindcss/theme.css' layer(theme);
-@import '../theme.css' layer(legacy);
+@import './tokens.css' layer(base);
 @import 'tailwindcss/utilities.css' layer(utilities);
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--bg-0);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+  button {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--focus);
+  }
+  a {
+    color: var(--lantern);
+  }
+}
 
 @theme inline {
   /* Only design tokens: no stock palette. */
