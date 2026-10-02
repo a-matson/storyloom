@@ -1,5 +1,5 @@
-import type { Action, Adventure, AppSettings, Memory, Scenario, StoryCard } from '@core/model';
-import { StorageError, summarise, type AdventureSummary, type Storage } from '@core/ports';
+import type { Action, Adventure, AppSettings, Memory, Scenario, StoryCard, TurnTrace } from '@core/model';
+import { StorageError, summarise, TRACE_CAP_PER_ADVENTURE, type AdventureSummary, type Storage } from '@core/ports';
 import * as S from '@core/schema';
 import { StoryloomDb } from './db';
 import { joinAdventure, splitAdventure, toActionRow, toCardRow, toMemoryRow } from './rows';
@@ -91,11 +91,31 @@ export class DexieStorage implements Storage {
 
   async deleteAdventure(id: string): Promise<void> {
     const db = this.db;
-    await db.transaction('rw', [db.adventures, db.actions, db.storyCards, db.memories], async () => {
+    await db.transaction('rw', [db.adventures, db.actions, db.storyCards, db.memories, db.traces], async () => {
       await db.adventures.delete(id);
-      await Promise.all([db.actions, db.storyCards, db.memories].map((t) => t.where('adventureId').equals(id).delete()));
+      await Promise.all([db.actions, db.storyCards, db.memories, db.traces].map((t) => t.where('adventureId').equals(id).delete()));
     });
     this.saved.delete(id);
+  }
+
+  async putTrace(t: TurnTrace): Promise<void> {
+    const db = this.db;
+    await db.transaction('rw', db.traces, async () => {
+      await db.traces.put(t);
+      const byAge = db.traces.where('[adventureId+createdAt]').between([t.adventureId, -Infinity], [t.adventureId, Infinity]);
+      const overflow = (await byAge.count()) - TRACE_CAP_PER_ADVENTURE;
+      if (overflow > 0) await db.traces.bulkDelete(await byAge.limit(overflow).primaryKeys());
+    });
+  }
+
+  async getTrace(turnId: string): Promise<TurnTrace | undefined> {
+    const r = await this.db.traces.get(turnId);
+    return r && parseOrThrow(S.TurnTrace, r, `Trace "${turnId}"`);
+  }
+
+  async listTraces(adventureId: string): Promise<TurnTrace[]> {
+    const rows = await this.db.traces.where('[adventureId+createdAt]').between([adventureId, -Infinity], [adventureId, Infinity]).toArray();
+    return rows.toReversed().map((r) => parseOrThrow(S.TurnTrace, r, `Trace "${r.turnId}"`));
   }
 
   async listScenarios(): Promise<Scenario[]> {
