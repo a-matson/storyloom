@@ -94,7 +94,7 @@ export function rankMemories(memories: Memory[], query: number[] | undefined, li
 /** Return the memories to keep after adding `incoming`, forgetting least-used ones. */
 export function evictToSize(memories: Memory[], bankSize: number): { kept: Memory[]; forgotten: Memory[] } {
   if (memories.length <= bankSize) return { kept: memories, forgotten: [] };
-  const sorted = [...memories].sort((a, b) => a.useCount - b.useCount || a.createdAt - b.createdAt);
+  const sorted = memories.toSorted((a, b) => a.useCount - b.useCount || a.createdAt - b.createdAt);
   const forgotten = sorted.slice(0, memories.length - bankSize);
   const forgottenIds = new Set(forgotten.map((m) => m.id));
   return { kept: memories.filter((m) => !forgottenIds.has(m.id)), forgotten };

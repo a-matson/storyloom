@@ -101,7 +101,7 @@ describe('ZipReader', () => {
     expect(JSON.parse(await zip.readText(zip.entries[1]!))).toEqual({ x: 1 });
   });
   it('rejects non-zip data', () => {
-    expect(() => new ZipReader(new Uint8Array(40).buffer)).toThrow();
+    expect(() => new ZipReader(new Uint8Array(40).buffer)).toThrow(/zip/i);
   });
 });
 

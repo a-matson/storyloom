@@ -13,7 +13,7 @@ export type Route = { name: 'library' } | { name: 'adventure'; id: string } | { 
 export function parseHash(hash: string): Route {
   const path = hash.replace(/^#/, '').replace(/^\/+/, '');
   const [head, ...rest] = path.split('/');
-  switch (head) {
+  switch (head ?? '') {
     case 'adventure':
       return rest[0] ? { name: 'adventure', id: decodeURIComponent(rest[0]) } : { name: 'library' };
     case 'settings':
@@ -33,7 +33,7 @@ export function routeToHash(r: Route): string {
       return '#/settings';
     case 'setup':
       return '#/setup';
-    default:
+    case 'library':
       return '#/';
   }
 }

@@ -11,18 +11,20 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
-    "check": "pnpm typecheck && pnpm format:check && pnpm test",
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test",
     "fake-backend": "node scripts/fake-backend.ts",
-    "format": "oxfmt src tests e2e playwright.config.ts scripts bench .github index.html vite.config.ts README.md package.json tsconfig.json lefthook.yml .oxfmtrc.json",
-    "format:check": "oxfmt --check src tests e2e playwright.config.ts scripts bench .github index.html vite.config.ts README.md package.json tsconfig.json lefthook.yml .oxfmtrc.json",
+    "format": "oxfmt src tests e2e playwright.config.ts scripts bench .github index.html vite.config.ts README.md package.json tsconfig.json lefthook.yml .oxfmtrc.json .oxlintrc.json",
+    "format:check": "oxfmt --check src tests e2e playwright.config.ts scripts bench .github index.html vite.config.ts README.md package.json tsconfig.json lefthook.yml .oxfmtrc.json .oxlintrc.json",
     "e2e": "playwright test",
     "e2e:update-screenshots": "docker run --rm --ipc=host -v \"$PWD\":/work -v /work/node_modules -w /work mcr.microsoft.com/playwright:v1.63.0-noble sh -c \"corepack enable && pnpm install --frozen-lockfile && pnpm exec playwright test e2e/visual.spec.ts --update-snapshots\"",
     "bench": "vitest run --config bench/vitest.config.ts",
-    "size": "size-limit"
+    "size": "size-limit",
+    "lint": "oxlint --type-aware --max-warnings=165 src tests e2e bench scripts"
   },
   "dependencies": {
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
@@ -35,6 +37,8 @@
     "@vitest/coverage-v8": "^5.0.3",
     "lefthook": "2.1.15",
     "oxfmt": "0.71.0",
+    "oxlint": "1.86.0",
+    "oxlint-tsgolint": "7.0.2003",
     "size-limit": "^14.1.0",
     "srvx": "^1.0.5",
     "tinybench": "^6.2.0",

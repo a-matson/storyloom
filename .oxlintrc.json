@@ -1,0 +1,80 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "import", "react", "jsx-a11y", "promise", "vitest"],
+  "categories": { "correctness": "error", "suspicious": "error", "perf": "error" },
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "eslint/no-underscore-dangle": "off",
+    "eslint/no-await-in-loop": "off",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/switch-exhaustiveness-check": "error",
+    "typescript/only-throw-error": "error",
+    "typescript/no-unnecessary-type-assertion": "error",
+    "typescript/no-unsafe-type-assertion": "error",
+    "typescript/strict-boolean-expressions": ["error", { "allowNullableString": true, "allowNullableBoolean": true }],
+    "typescript/no-non-null-assertion": "error",
+    "typescript/consistent-type-imports": "error",
+    "typescript/no-explicit-any": "error",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "error",
+    "import/no-cycle": "error",
+    "import/no-unassigned-import": ["error", { "allow": ["**/*.css"] }],
+    "max-lines": ["error", { "max": 250, "skipBlankLines": true, "skipComments": true }],
+    "max-lines-per-function": ["error", { "max": 80, "skipBlankLines": true, "skipComments": true }]
+  },
+  "overrides": [
+    {
+      "files": ["tests/**", "e2e/**", "bench/**"],
+      "rules": {
+        "typescript/no-non-null-assertion": "off",
+        "max-lines-per-function": "off",
+        "unicorn/consistent-function-scoping": "off",
+        "vitest/expect-expect": "off"
+      }
+    },
+    {
+      "files": [
+        "src/ui/**",
+        "src/storage/**",
+        "src/providers/types.ts",
+        "src/providers/llamaServer.ts",
+        "src/providers/openaiCompat.ts",
+        "src/core/cardGenerator.ts",
+        "src/core/contextBuilder.ts",
+        "src/core/engine.ts",
+        "src/core/memoryJobs.ts",
+        "src/embeddings/embeddings.worker.ts"
+      ],
+      "rules": {
+        "typescript/strict-boolean-expressions": ["warn", { "allowNullableString": true, "allowNullableBoolean": true }],
+        "typescript/no-non-null-assertion": "warn",
+        "typescript/no-unsafe-type-assertion": "warn",
+        "typescript/no-misused-promises": "warn",
+        "typescript/no-unnecessary-type-assertion": "warn",
+        "typescript/no-unnecessary-type-conversion": "warn",
+        "typescript/consistent-type-imports": "warn",
+        "max-lines": "warn",
+        "max-lines-per-function": "warn",
+        "jsx-a11y/label-has-associated-control": "warn",
+        "jsx-a11y/control-has-associated-label": "warn",
+        "jsx-a11y/click-events-have-key-events": "warn",
+        "jsx-a11y/no-static-element-interactions": "warn",
+        "jsx-a11y/no-noninteractive-element-interactions": "warn",
+        "jsx-a11y/prefer-tag-over-role": "warn",
+        "react/refs": "warn",
+        "react/exhaustive-effect-dependencies": "warn",
+        "react/memo-dependencies": "warn",
+        "react/set-state-in-effect": "warn",
+        "react/no-array-index-key": "warn",
+        "unicorn/prefer-add-event-listener": "warn",
+        "unicorn/require-post-message-target-origin": "warn",
+        "unicorn/no-array-sort": "warn",
+        "unicorn/consistent-function-scoping": "warn",
+        "promise/always-return": "warn",
+        "typescript/consistent-return": "warn"
+      }
+    }
+  ],
+  "ignorePatterns": ["dist/**", "coverage/**", "playwright-report/**", "test-results/**", "bench/results/**"]
+}
