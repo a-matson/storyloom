@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import type { AppSettings } from '@core/model';
 import { createBlankAdventure, QUICK_STARTS } from '@core/model';
-import type { AdventureSummary } from '@core/ports';
 import { storage } from '@app/services';
 import { importAdventureFromFile, pickFile } from '../transferUi';
 import { IconBook, IconSettings } from './Icons';
@@ -16,26 +16,23 @@ interface Props {
   onSettings: () => void;
 }
 
+async function remove(id: string) {
+  if (!confirm('Delete this adventure? This cannot be undone.')) return;
+  await storage.deleteAdventure(id);
+}
+
 /** Home: continue the last adventure, quick starts, the adventure grid, import. Scenarios arrive in milestone 5. */
 export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissNotice, onOpen, onSettings }: Props) {
-  const [adventures, setAdventures] = useState<AdventureSummary[]>([]);
+  // Live: re-runs when any tab writes the tables it read (storage is Dexie).
+  const adventures = useLiveQuery(() => storage.listAdventures(), []) ?? [];
   const [custom, setCustom] = useState('');
   const [showCustom, setShowCustom] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const refresh = () => void storage.listAdventures().then(setAdventures);
-  useEffect(refresh, []);
 
   const start = async (title: string, opening: string) => {
     const adv = createBlankAdventure(title, opening, app.defaults);
     await storage.putAdventure(adv);
     onOpen(adv.id);
-  };
-
-  const remove = async (id: string) => {
-    if (!confirm('Delete this adventure? This cannot be undone.')) return;
-    await storage.deleteAdventure(id);
-    refresh();
   };
 
   const importFile = async () => {
@@ -44,7 +41,6 @@ export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissN
     try {
       const { adventure, warnings } = await importAdventureFromFile(file, app.defaults);
       await storage.putAdventure(adventure);
-      refresh();
       if (warnings.length) setError(`Imported with ${warnings.length} skipped item(s): ${warnings.slice(0, 3).join(' ')}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
