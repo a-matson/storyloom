@@ -3,6 +3,13 @@ import { LlamaServerProvider } from './llamaServer';
 import { OpenAICompatProvider } from './openaiCompat';
 import type { Provider } from './types';
 
+let demoHandler: ((req: Request) => Promise<Response>) | undefined;
+/** Lazy so the demo code ships as its own chunk. */
+const demoFetch: typeof fetch = async (input, init) => {
+  demoHandler ??= (await import('./demo/fakeLlama')).createFakeLlama();
+  return demoHandler(new Request(input, init));
+};
+
 /**
  * Build a Provider from its stored config. New backends register here.
  *
@@ -13,12 +20,18 @@ import type { Provider } from './types';
  */
 export function createProvider(cfg: ProviderConfig): Provider {
   switch (cfg.kind) {
+    case 'demo':
+      return new LlamaServerProvider(cfg.id, 'http://demo.invalid', demoFetch);
     case 'llama-server':
       return new LlamaServerProvider(cfg.id, cfg.baseUrl);
     case 'koboldcpp':
-      return new OpenAICompatProvider(cfg.id, cfg.baseUrl, { supportsTopK: true });
+      return new OpenAICompatProvider(cfg.id, cfg.baseUrl, {
+        supportsTopK: true,
+      });
     case 'ollama':
-      return new OpenAICompatProvider(cfg.id, cfg.baseUrl, { supportsTopK: false });
+      return new OpenAICompatProvider(cfg.id, cfg.baseUrl, {
+        supportsTopK: false,
+      });
     case 'openai-compat':
     default:
       return new OpenAICompatProvider(cfg.id, cfg.baseUrl);

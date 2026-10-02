@@ -136,14 +136,17 @@ export async function* readSse(res: Response, signal?: AbortSignal): AsyncGenera
 }
 
 export class ProviderError extends Error {
-  constructor(message: string, public readonly status?: number) {
+  constructor(
+    message: string,
+    public readonly status?: number,
+  ) {
     super(message);
     this.name = 'ProviderError';
   }
 }
 
-export async function fetchJson<T>(url: string, init: RequestInit = {}, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(url, { ...init, signal });
+export async function fetchJson<T>(url: string, init: RequestInit = {}, signal?: AbortSignal, fetchFn: typeof fetch = fetch): Promise<T> {
+  const res = await fetchFn(url, { ...init, signal });
   if (!res.ok) throw new ProviderError(`${init.method ?? 'GET'} ${url} → ${res.status} ${res.statusText}`, res.status);
   return (await res.json()) as T;
 }
