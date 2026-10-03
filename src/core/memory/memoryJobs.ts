@@ -1,7 +1,7 @@
 import type { Adventure, Memory } from '../model/types';
 import { actionText } from '../model/types';
 import { createMemory, currentRange, dueMemoryRanges, evictToSize, isPlayerAction, MEMORY_SPAN, summaryDue, type MemoryRange } from './memoryBank';
-import { MEMORY_SYSTEM, SUMMARY_SYSTEM, memoryPrompt, summaryPrompt } from '../text/prompts';
+import { MEMORY_SYSTEM, SUMMARY_SYSTEM, memoryPrompt, sentenceGrammar, summaryPrompt } from '../text/prompts';
 import { renderTemplate } from '../text/templates';
 import { collect, type Provider } from '../ports/provider';
 import type { Embedder } from '../ports/embedder';
@@ -68,12 +68,18 @@ export function isMemoryLike(text: string): boolean {
   return quoted <= text.length * MAX_QUOTED;
 }
 
+/** Grammar for at most `max` sentences when the backend supports one; the trim and validator cover the rest. */
+async function sentencesOnly(deps: MaintenanceDeps, max: number): Promise<string | undefined> {
+  return (await deps.provider.capabilities()).grammar ? sentenceGrammar(max) : undefined;
+}
+
 async function summarise(passage: string, deps: MaintenanceDeps): Promise<string> {
   const prompt = renderTemplate(deps.template, MEMORY_SYSTEM, memoryPrompt(passage));
   // A memory is 1-3 sentences; the extra stops end a reply that drifts into the next turn.
   const stop = [...new Set([...prompt.stop, '\n>', '<|im_start|>'])];
+  const grammar = await sentencesOnly(deps, 3);
   const { text, stats } = await collect(
-    deps.provider.complete({ prompt: prompt.prompt, maxTokens: 90, temperature: 0.3, topP: 0.9, stop, cachePrompt: false, slotId: 1 }),
+    deps.provider.complete({ prompt: prompt.prompt, maxTokens: 90, temperature: 0.3, topP: 0.9, stop, cachePrompt: false, slotId: 1, grammar }),
   );
   return trimUnfinishedSentence(text, stats?.stopReason).trim();
 }
@@ -162,8 +168,18 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
         .map(actionText)
         .join('\n\n');
       const prompt = renderTemplate(deps.template, SUMMARY_SYSTEM, summaryPrompt(adventure.plot.storySummary ?? '', since, recent));
+      const grammar = await sentencesOnly(deps, 8);
       const { text: raw, stats } = await collect(
-        deps.provider.complete({ prompt: prompt.prompt, maxTokens: 400, temperature: 0.3, topP: 0.9, stop: prompt.stop, cachePrompt: false, slotId: 1 }),
+        deps.provider.complete({
+          prompt: prompt.prompt,
+          maxTokens: 400,
+          temperature: 0.3,
+          topP: 0.9,
+          stop: prompt.stop,
+          cachePrompt: false,
+          slotId: 1,
+          grammar,
+        }),
       );
       const text = trimUnfinishedSentence(raw, stats?.stopReason).trim();
       if (text) {

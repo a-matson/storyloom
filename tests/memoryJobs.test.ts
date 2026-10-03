@@ -5,12 +5,17 @@ import { actionText, type Adventure } from '@core/model';
 import type { CompletionRequest, Embedder, Provider } from '@core/ports';
 import { makeAdventure } from './fixtures/adventure';
 
+function fakeProvider(complete: Provider['complete'], grammar = false): Provider {
+  return { id: 'fake', complete, capabilities: () => Promise.resolve({ grammar }) } as unknown as Provider;
+}
+
 /** Answers every memory prompt with "sum:<first word of the passage>" and counts calls. */
 function fakeDeps(adv: Adventure, opts: { abortAfter?: number } = {}) {
   const calls: string[] = [];
   const ac = new AbortController();
   const provider = {
     id: 'fake',
+    capabilities: () => Promise.resolve({ grammar: false }),
     async *complete(req: CompletionRequest, signal?: AbortSignal) {
       calls.push(req.prompt);
       if (calls.length === opts.abortAfter) ac.abort();
@@ -116,13 +121,10 @@ describe('memory maintenance', () => {
     const adv = adventure(12);
     const answers = ['"Halt!" the rider cries.', 'The rider halts. > You draw.', 'Mira found the map.'];
     const reqs: CompletionRequest[] = [];
-    const provider = {
-      id: 'fake',
-      async *complete(req: CompletionRequest) {
-        reqs.push(req);
-        yield { text: answers.shift() ?? '', done: true };
-      },
-    } as unknown as Provider;
+    const provider = fakeProvider(async function* (req) {
+      reqs.push(req);
+      yield { text: answers.shift() ?? '', done: true };
+    });
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const deps = { ...fakeDeps(adv).deps, provider };
     const report = await runMemoryMaintenance(adv, deps);
@@ -137,16 +139,34 @@ describe('memory maintenance', () => {
   it('trims a length-cut memory and summary to their last sentence end', async () => {
     const adv = adventure(15);
     adv.settings.memory.autoSummary = true;
-    const provider = {
-      id: 'fake',
-      async *complete(req: CompletionRequest) {
-        const text = req.prompt.includes('Write the updated summary') ? 'Mira owes the ferryman. She hid the' : 'Mira found the map. The rider ha';
-        yield { text, done: true, stats: { stopReason: 'length' } };
-      },
-    } as unknown as Provider;
+    const provider = fakeProvider(async function* (req) {
+      const text = req.prompt.includes('Write the updated summary') ? 'Mira owes the ferryman. She hid the' : 'Mira found the map. The rider ha';
+      yield { text, done: true, stats: { stopReason: 'length' } };
+    });
     await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
     expect(adv.memories[0]?.text).toBe('Mira found the map.');
     expect(adv.plot.storySummary).toBe('Mira owes the ferryman.');
+  });
+
+  it('constrains memories to 3 and the summary to 8 sentences when the backend has grammar', async () => {
+    const adv = adventure(15);
+    adv.settings.memory.autoSummary = true;
+    const reqs: CompletionRequest[] = [];
+    const answer: Provider['complete'] = async function* (req) {
+      reqs.push(req);
+      yield { text: 'Mira found the map.', done: true };
+    };
+    await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider: fakeProvider(answer, true) });
+    expect(reqs[0]?.prompt).toContain('Memory: You paid the ferryman');
+    expect(reqs[0]?.grammar).toMatchInlineSnapshot(`
+      "root ::= sentence{1,3}
+      sentence ::= [^.!?"“”\\n> ] [^.!?"“”\\n>]* [.!?] " "?
+      "
+    `);
+    expect(reqs.at(-1)?.grammar).toContain('root ::= sentence{1,8}');
+    reqs.length = 0;
+    await runMemoryMaintenance(adventure(15), { ...fakeDeps(adv).deps, provider: fakeProvider(answer, false) });
+    expect(reqs[0]?.grammar).toBeUndefined();
   });
 
   it('builds the next summary on top of the player-edited one', async () => {

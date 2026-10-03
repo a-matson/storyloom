@@ -9,8 +9,22 @@ export const MEMORY_SYSTEM =
   'You compress story passages into dense factual memories. Output only the memory: 1–3 sentences, past tense, ' +
   'proper names kept, no prose flourishes, no commentary, no headings.';
 
+/** One original passage -> memory pair, so the model sees a summary rather than a continuation. [provisional] */
+const MEMORY_EXAMPLE =
+  'Example (from a different story):\n---\nThe ferryman names his price: a silver ring. "Or you swim," he says.\n> You give him the ring.\n' +
+  'He pockets it and poles you across to Saltmarsh, where Captain Odo is waiting on the jetty.\n---\n' +
+  'Memory: You paid the ferryman a silver ring to cross to Saltmarsh. Captain Odo was waiting there.\n\n';
+
 export function memoryPrompt(passage: string): string {
-  return `Summarise the key facts, decisions, discoveries and relationship changes in this passage.\n\n---\n${passage}\n---\n\nMemory:`;
+  return `${MEMORY_EXAMPLE}Summarise the key facts, decisions, discoveries and relationship changes in this passage.\n\n---\n${passage}\n---\n\nMemory:`;
+}
+
+/**
+ * GBNF (llama.cpp) for 1..max plain sentences: no dialogue, no `> You` lines, no newlines, and the
+ * model can only end after a full stop. Mr./3.5 cannot be written; acceptable for summaries.
+ */
+export function sentenceGrammar(max: number): string {
+  return `root ::= sentence{1,${max}}\nsentence ::= [^.!?"“”\\n> ] [^.!?"“”\\n>]* [.!?] " "?\n`;
 }
 
 export const SUMMARY_SYSTEM =
