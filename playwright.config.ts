@@ -12,7 +12,12 @@ export default defineConfig({
   snapshotPathTemplate: '{testDir}/__screenshots__/{testFilePath}/{arg}-{platform}{ext}',
   expect: { toHaveScreenshot: { maxDiffPixels: 0, animations: 'disabled' } },
   use: { baseURL: `http://localhost:${port}`, trace: 'retain-on-failure' },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } } }],
+  projects: [
+    { name: 'chromium', testIgnore: 'live/**', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } } },
+    // Real-model runs (`pnpm measure live <url>`); skipped without MEASURE_URL.
+    // Actions get a timeout: without one a hung click waits for the hour-long test timeout.
+    { name: 'live', testMatch: 'live/**', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 }, actionTimeout: 60_000 } },
+  ],
   // `vite` directly: a pnpm wrapper doesn't forward SIGTERM, which hangs teardown.
   webServer: { command: `vite --port ${port} --strictPort`, port, reuseExistingServer: !process.env['CI'] },
 });
