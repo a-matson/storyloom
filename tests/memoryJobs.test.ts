@@ -134,6 +134,21 @@ describe('memory maintenance', () => {
     warn.mockRestore();
   });
 
+  it('trims a length-cut memory and summary to their last sentence end', async () => {
+    const adv = adventure(15);
+    adv.settings.memory.autoSummary = true;
+    const provider = {
+      id: 'fake',
+      async *complete(req: CompletionRequest) {
+        const text = req.prompt.includes('Write the updated summary') ? 'Mira owes the ferryman. She hid the' : 'Mira found the map. The rider ha';
+        yield { text, done: true, stats: { stopReason: 'length' } };
+      },
+    } as unknown as Provider;
+    await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
+    expect(adv.memories[0]?.text).toBe('Mira found the map.');
+    expect(adv.plot.storySummary).toBe('Mira owes the ferryman.');
+  });
+
   it('builds the next summary on top of the player-edited one', async () => {
     const adv = adventure(15);
     adv.settings.memory.autoSummary = true;
