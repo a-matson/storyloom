@@ -1,7 +1,7 @@
 import type { ContextBuildResult } from '@core/context';
 import type { Action, Adventure, AppSettings, TurnTrace } from '@core/model';
 import type { CompletionStats, Embedder, Provider, ScriptRunner, Storage } from '@core/ports';
-import type { CalibratedTokenizer } from '@core/text';
+import type { CalibratedTokenizer, Tokenizer } from '@core/text';
 
 /** Immutable view of an open adventure; a new object on every change. */
 export interface GameSnapshot {
@@ -23,7 +23,9 @@ export interface GameSnapshot {
 export interface SessionServices {
   providerFor: (app: AppSettings, id: string) => Provider;
   embedderFor: (provider: Provider) => Promise<Embedder>;
+  /** Calibrated after each turn; the fallback behind `tokenizerFor`. */
   tokenizer: CalibratedTokenizer;
+  tokenizerFor: (provider: Provider) => Tokenizer;
   scripts: ScriptRunner;
   storage: Storage;
   /** Run background work when the browser is idle. */

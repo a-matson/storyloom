@@ -1,4 +1,4 @@
-import { buildContext, renderBody, type ContextBuildInput } from '../context';
+import { buildContext, renderBody, type ContextBuildInput, type ContextBuildResult } from '../context';
 import { rankMemories, touchUsed, type RankedMemory } from '../memory/memoryBank';
 import type { Action, Adventure } from '../model/types';
 import { actionText } from '../model/types';
@@ -34,6 +34,16 @@ function contextInput(adventure: Adventure, actions: Action[], rankedMemories: R
   };
 }
 
+/** Rebuilds after exact counts arrive; capped because trims and a grown window add new texts. [provisional] */
+const EXACT_ROUNDS = 3;
+
+/** Build, then rebuild while the tokenizer swaps estimates for exact counts. */
+async function buildExact(input: ContextBuildInput): Promise<ContextBuildResult> {
+  let result = buildContext(input);
+  for (let i = 0; i < EXACT_ROUNDS && (await input.tokenizer.resolve?.()); i++) result = buildContext(input);
+  return result;
+}
+
 async function rankForQuery(adventure: Adventure, query: string, embedder?: Embedder): Promise<RankedMemory[]> {
   if (!adventure.settings.memory.memoryBank || adventure.memories.length === 0) return [];
   let queryVec: number[] | undefined;
@@ -51,7 +61,7 @@ async function rankForQuery(adventure: Adventure, query: string, embedder?: Embe
 export async function prepareContext(adventure: Adventure, actions: Action[], deps: TurnDeps): Promise<PreparedContext | { stopped: string }> {
   const last = actions.at(-1);
   const rankedMemories = await rankForQuery(adventure, last ? actionText(last) : '', deps.embedder);
-  const result = buildContext(contextInput(adventure, actions, rankedMemories, deps, adventure.settings.context.cacheStableLayout));
+  const result = await buildExact(contextInput(adventure, actions, rankedMemories, deps, adventure.settings.context.cacheStableLayout));
 
   const fullText = `${result.system ? `${result.system}\n\n` : ''}${result.body}`;
   const hook = await runHook(adventure, deps, 'onModelContext', fullText, actions, {
@@ -87,7 +97,8 @@ export async function buildWarmupPrompt(adventure: Adventure, actions: Action[],
   if (!adventure.settings.context.cacheStableLayout) return null;
   const placeholder: Action = { id: 'warmup', type: 'do', versions: ['> You wait.'], active: 0, createdAt: Date.now() };
   // Memories are not part of the cached prefix.
-  const result = buildContext(contextInput(adventure, [...actions, placeholder], [], deps, true));
+  // Same counts as the real build, so the history window (and so the prefix bytes) match.
+  const result = await buildExact(contextInput(adventure, [...actions, placeholder], [], deps, true));
   const prefix = result.sections
     .filter((sec) => sec.cacheable && sec.kind !== 'instructions')
     .map((sec) => sec.text)

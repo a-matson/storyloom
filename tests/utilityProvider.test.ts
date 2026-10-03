@@ -49,6 +49,7 @@ function setup(utilityReachable: boolean) {
       return Promise.resolve(embedder);
     },
     tokenizer: createApproxTokenizer(),
+    tokenizerFor: () => createApproxTokenizer(),
     scripts: new NoopScriptRunner(),
     storage: { putAdventure: () => Promise.resolve(), putTrace: () => Promise.resolve() } as unknown as Storage,
     idle: (fn) => idle.push(fn),

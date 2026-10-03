@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { applyPlaceholders, findPlaceholders } from '@core/text/placeholders';
 import { formatPlayerInput, trimUnfinishedSentence } from '@core/text/formatting';
 import { guessTemplate, renderTemplate } from '@core/text/templates';
-import { createApproxTokenizer, trimToTokens } from '@core/text/tokenizer';
+import { createApproxTokenizer, createExactTokenizer, trimToTokens } from '@core/text/tokenizer';
 import { createAdventureFromScenario, missingAnswers, newScenario, placeholderQuestions, scenarioSummary } from '@core/model/scenario';
 import { childAt, newOption, withChild } from '@core/model/scenarioTypes';
 import * as S from '@core/schema';
@@ -155,6 +155,22 @@ describe('tokenizer', () => {
     expect(before).toBeLessThan(20);
     t.calibrate(text, 30); // pretend the real tokenizer is much denser
     expect(t.count(text)).toBeGreaterThan(before);
+  });
+  it('swaps estimates for exact counts on resolve and caches them', async () => {
+    const calls: string[] = [];
+    const t = createExactTokenizer({ count: () => 100 }, async (text) => (calls.push(text), text.length));
+    expect(t.count('abc')).toBe(100);
+    expect(t.count('abc')).toBe(100);
+    expect(await t.resolve?.()).toBe(true);
+    expect(t.count('abc')).toBe(3);
+    expect(await t.resolve?.()).toBe(false);
+    expect(calls).toEqual(['abc']);
+  });
+  it('keeps estimating when /tokenize fails', async () => {
+    const t = createExactTokenizer({ count: () => 7 }, () => Promise.reject(new Error('down')));
+    t.count('x');
+    expect(await t.resolve?.()).toBe(false);
+    expect(t.count('x')).toBe(7);
   });
   it('trims to a token budget at a word boundary', () => {
     const t = createApproxTokenizer();

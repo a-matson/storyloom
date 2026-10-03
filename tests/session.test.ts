@@ -33,6 +33,7 @@ function setup(opts: { failSave?: boolean; prefetch?: boolean; warm?: boolean; a
         ? Promise.resolve({ id: 'e', dimensions: 2, embed: (t: string[]) => Promise.resolve(t.map(() => [1, 0])) })
         : Promise.reject(new Error('no embedder')),
     tokenizer: createApproxTokenizer(),
+    tokenizerFor: () => createApproxTokenizer(),
     scripts: new NoopScriptRunner(),
     storage,
     idle: (fn) => idle.push(fn),

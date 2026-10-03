@@ -1,7 +1,7 @@
 import type { Adventure, AppSettings } from '@core/model';
 import { GameSession } from './session';
 import { AppSettings as AppSettingsSchema } from '@core/schema';
-import { createApproxTokenizer } from '@core/text';
+import { createApproxTokenizer, createExactTokenizer, type Tokenizer } from '@core/text';
 import { createProvider, DEFAULT_PROVIDER_CONFIG } from '@adapters/providers';
 import { DexieStorage } from '@adapters/storage';
 import type { Provider, Storage } from '@core/ports';
@@ -37,6 +37,19 @@ export function providerFor(settings: AppSettings, id: string): Provider {
   return p;
 }
 
+const exactTokenizers = new Map<string, Tokenizer>();
+
+/** Exact cached counts when the backend has `/tokenize`, else the calibrated estimate. */
+export function tokenizerFor(provider: Provider): Tokenizer {
+  if (!provider.tokenize) return tokenizer;
+  let t = exactTokenizers.get(provider.id);
+  if (!t) {
+    t = createExactTokenizer(tokenizer, async (text) => (await provider.tokenize?.(text))?.length ?? tokenizer.count(text));
+    exactTokenizers.set(provider.id, t);
+  }
+  return t;
+}
+
 // One worker for the whole app; a failed load is cached too, so it is tried once per page load.
 let inBrowser: Promise<Embedder | null> | undefined;
 function inBrowserEmbedder(): Promise<Embedder | null> {
@@ -70,6 +83,7 @@ export function openSession(adventure: Adventure, app: AppSettings): GameSession
     providerFor,
     embedderFor,
     tokenizer,
+    tokenizerFor,
     scripts,
     storage,
     idle: (fn) => (typeof requestIdleCallback === 'function' ? requestIdleCallback(fn) : setTimeout(fn, 800)),
