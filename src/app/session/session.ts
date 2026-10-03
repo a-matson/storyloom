@@ -31,6 +31,7 @@ export class GameSession {
   private pending = '';
   /** The story provider's embedder; queries and memories must share it so vectors compare. */
   private embedder: Embedder | undefined;
+  private contextSize: number | undefined;
   /** Warn once per session when the utility server is down. */
   private utilityDown = false;
 
@@ -40,8 +41,11 @@ export class GameSession {
     this.app = app;
     this.svc = services;
     this.snapshot = this.build({ busy: false, streaming: '', context: null, error: null, notice: null, prefetchReady: false, warm: 'idle' });
-    // Until it resolves, turns rank memories by recency only.
+    // Until these resolve, turns rank memories by recency only and the context length is not clamped to n_ctx.
     this.resolveEmbedder().catch((e: unknown) => console.warn('no embedder; memories rank by recency', e));
+    void this.deps()
+      .provider.health()
+      .then((h) => (this.contextSize = h.contextSize));
   }
 
   // ---- store ---------------------------------------------------------------
@@ -66,7 +70,7 @@ export class GameSession {
 
   private deps(): TurnDeps {
     const provider = this.svc.providerFor(this.app, this.adv.settings.providerId);
-    return { provider, tokenizer: this.svc.tokenizer, scripts: this.svc.scripts, ...(this.embedder && { embedder: this.embedder }) };
+    return { provider, tokenizer: this.svc.tokenizer, scripts: this.svc.scripts, embedder: this.embedder, contextSize: this.contextSize };
   }
 
   private async resolveEmbedder(): Promise<Embedder> {

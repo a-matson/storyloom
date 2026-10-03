@@ -11,7 +11,9 @@ export interface TurnDeps {
   provider: Provider;
   tokenizer: Tokenizer;
   scripts?: ScriptRunner;
-  embedder?: Embedder;
+  embedder?: Embedder | undefined;
+  /** Per-slot `n_ctx` the provider reports; the prompt budget is clamped to fit it. */
+  contextSize?: number | undefined;
 }
 
 /** Events that belong to one turn carry its `turnId`; tokens and messages are tied to it by order. */
