@@ -55,6 +55,7 @@ function setup(utilityReachable: boolean) {
     idle: (fn) => idle.push(fn),
     frame: (fn) => setTimeout(fn, 0),
     saveDelayMs: 0,
+    rewarmDelayMs: 0,
   });
   return { session, story, utility, embeddedFor, idle };
 }

@@ -57,3 +57,48 @@ export async function runIdleWork(
   }
   await Promise.all(jobs);
 }
+
+interface IdleHost extends IdleCallbacks {
+  adventure: () => Adventure;
+  actions: () => Action[];
+  deps: () => TurnDeps;
+  busy: () => boolean;
+  /** Quiet time after the last edit before re-warming. */
+  delayMs: () => number;
+}
+
+/** Owns the running idle work and the pending re-warm after edits. */
+export class IdleWork {
+  private abort: AbortController | null = null;
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  private readonly host: IdleHost;
+  constructor(host: IdleHost) {
+    this.host = host;
+  }
+
+  /** Starts idle work; the returned signal is shared with memory jobs so a new action stops both. */
+  start(prepared: PreparedContext | null): AbortSignal {
+    this.stop();
+    const ac = new AbortController();
+    this.abort = ac;
+    const h = this.host;
+    void runIdleWork(h.adventure(), h.actions(), prepared, h.deps(), ac.signal, h);
+    return ac.signal;
+  }
+
+  /** An edit changed the prompt: stop, then re-warm once edits stop so the next turn does not prefill cold. */
+  afterEdit(): void {
+    this.stop();
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      if (!this.host.busy()) this.start(null);
+    }, this.host.delayMs());
+  }
+
+  stop(): void {
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = null;
+    this.abort?.abort();
+    this.abort = null;
+  }
+}

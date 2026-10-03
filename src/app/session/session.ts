@@ -3,7 +3,7 @@ import { markStale } from '@core/memory';
 import { utilityProvider, type Adventure, type AdventureSettings, type AppSettings, type PlotComponents, type TemplateId, type TurnTrace } from '@core/model';
 import type { Embedder, Provider } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
-import { runIdleWork } from './idleWork';
+import { IdleWork } from './idleWork';
 import { MemoryScheduler } from './memoryScheduler';
 import type { GameSnapshot, Prefetched, SessionServices } from './types';
 
@@ -23,7 +23,6 @@ export class GameSession {
   private snapshot: GameSnapshot;
   private readonly listeners = new Set<() => void>();
   private abort: AbortController | null = null;
-  private idleAbort: AbortController | null = null;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private prefetched: Prefetched | null = null;
   private lastPrompt = '';
@@ -43,6 +42,18 @@ export class GameSession {
       this.emit();
       this.save();
     },
+  });
+  private readonly idleWork = new IdleWork({
+    adventure: () => this.adv,
+    actions: () => this.log.actions,
+    deps: () => this.deps(),
+    busy: () => this.snapshot.busy,
+    delayMs: () => this.svc.rewarmDelayMs,
+    onPrefetched: (p) => {
+      this.prefetched = p;
+      this.emit({ prefetchReady: true });
+    },
+    onWarm: (warm) => this.emit({ warm }),
   });
 
   constructor(adventure: Adventure, app: AppSettings, services: SessionServices) {
@@ -108,7 +119,7 @@ export class GameSession {
   /** Stop background work and save; call when the adventure closes. */
   async close(): Promise<void> {
     this.abort?.abort();
-    this.idleAbort?.abort();
+    this.idleWork.stop();
     await this.flush();
   }
 
@@ -170,16 +181,8 @@ export class GameSession {
   }
 
   private afterTurn(): void {
-    const ac = new AbortController();
-    this.idleAbort = ac;
-    this.svc.idle(() => this.memory.start(ac.signal));
-    void runIdleWork(this.adv, this.log.actions, this.lastPrepared, this.deps(), ac.signal, {
-      onPrefetched: (p) => {
-        this.prefetched = p;
-        this.emit({ prefetchReady: true });
-      },
-      onWarm: (warm) => this.emit({ warm }),
-    });
+    const signal = this.idleWork.start(this.lastPrepared);
+    this.svc.idle(() => this.memory.start(signal));
   }
 
   private async storeTrace(t: TurnTrace): Promise<void> {
@@ -205,8 +208,7 @@ export class GameSession {
 
   /** Any player action cancels background work. */
   private beginAction(): void {
-    this.idleAbort?.abort();
-    this.idleAbort = null;
+    this.idleWork.stop();
     this.emit({ warm: 'idle', error: null });
   }
   private dropPrefetch(): void {
@@ -249,10 +251,10 @@ export class GameSession {
   // ---- edits --------------------------------------------------------------------
   private mutate(fn: (log: ActionLog, adv: Adventure) => void): void {
     if (this.snapshot.busy) return;
-    this.idleAbort?.abort();
     fn(this.log, this.adv);
     // Editing the log makes a prefetched alternative stale unless it still targets the last action.
     if (this.prefetched && this.prefetched.actionId !== this.log.last?.id) this.dropPrefetch();
+    this.idleWork.afterEdit();
     this.emit({ warm: 'idle' });
     this.save();
   }

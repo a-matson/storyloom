@@ -89,5 +89,6 @@ export function openSession(adventure: Adventure, app: AppSettings): GameSession
     idle: (fn) => (typeof requestIdleCallback === 'function' ? requestIdleCallback(fn) : setTimeout(fn, 800)),
     frame: (fn) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(fn) : setTimeout(fn, 16)),
     saveDelayMs: 300,
+    rewarmDelayMs: 1000, // [provisional]
   });
 }
