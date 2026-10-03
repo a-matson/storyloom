@@ -47,6 +47,16 @@ describe('llama-server streaming', () => {
     expect(chunks.at(-1)).toMatchObject({ done: true, stats: { cachedTokens: 3, stopReason: 'eos' } });
   });
 
+  it('passes running timings on token chunks, so a cancelled stream keeps its stats', async () => {
+    const p = new LlamaServerProvider(
+      'l',
+      'http://x',
+      fetchOnce(chunked(['data: {"content":"Hi","stop":false,"timings":{"cache_n":30,"prompt_n":10,"prompt_ms":75,"predicted_n":1}}\n\n'])),
+    );
+    const [first] = await all(p.complete(req));
+    expect(first).toMatchObject({ text: 'Hi', done: false, stats: { promptTokens: 40, cachedTokens: 30, promptMs: 75, generatedTokens: 1 } });
+  });
+
   // Real llama-server payloads: `tokens_cached` covers the whole prompt even on a cold request.
   it.each([
     ['cold', { cache_n: 0, prompt_n: 1200 }, { promptTokens: 1200, cachedTokens: 0 }],

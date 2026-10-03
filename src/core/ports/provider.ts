@@ -66,12 +66,14 @@ export interface CompletionStats {
   generatedTokens?: number | undefined;
   promptMs?: number | undefined;
   generationMs?: number | undefined;
-  stopReason?: 'stop' | 'length' | 'eos' | 'abort' | 'unknown';
+  /** `soft`: the engine stopped the stream itself at a sentence end. */
+  stopReason?: 'stop' | 'length' | 'eos' | 'soft' | 'abort' | 'unknown';
 }
 
 export interface CompletionChunk {
   text: string;
   done: boolean;
+  /** On a `done` chunk the final stats; on others, running stats if the backend sends them. */
   stats?: CompletionStats | undefined;
 }
 

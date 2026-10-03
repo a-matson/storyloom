@@ -78,6 +78,15 @@ export function trimUnfinishedSentence(output: string, stopReason?: CompletionSt
 }
 
 /**
+ * Where a stream may stop: just past a sentence that ends after `from` and is
+ * already followed by whitespace (so the "3." of "3.5" does not count), else 0.
+ */
+export function sentenceEndAfter(s: string, from: number): number {
+  const end = lastSentenceEnd(s);
+  return end > from && /\s/.test(s.charAt(end)) ? end : 0;
+}
+
+/**
  * Index just past the last complete sentence, 0 if none. Terminal punctuation
  * inside open dialogue does not count (cutting there leaves an unmatched
  * quote); a quote closed after terminal punctuation or a dash does.

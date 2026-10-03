@@ -113,6 +113,8 @@ export class LlamaServerProvider implements Provider {
       stop: req.stop ?? [],
       cache_prompt: req.cachePrompt ?? true,
       stream: !req.prefillOnly,
+      // A soft stop cancels the stream before the final event, so stats must ride on every chunk.
+      timings_per_token: true,
     };
     if (req.seed !== undefined) body['seed'] = req.seed;
     if (req.slotId !== undefined) body['id_slot'] = req.slotId;
@@ -139,7 +141,7 @@ export class LlamaServerProvider implements Provider {
         yield { text, done: true, stats: statsOf(e) };
         return;
       }
-      if (text) yield { text, done: false };
+      if (text) yield { text, done: false, stats: e.timings && statsOf(e) };
     }
     yield { text: '', done: true, stats: { stopReason: 'unknown' } };
   }
