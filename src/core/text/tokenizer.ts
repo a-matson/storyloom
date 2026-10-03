@@ -2,15 +2,59 @@
  * Token counting abstraction.
  *
  * The context builder is synchronous and calls `count` many times per turn,
- * so tokenizers must be cheap. The default is a calibrated heuristic; when a
- * backend exposes /tokenize (llama-server) the app measures the real
- * chars-per-token ratio on the adventure's own text and feeds it back via
- * `calibrate()`, which keeps the budget maths within a few percent without a
- * network round-trip per section.
+ * so tokenizers must be cheap. The default is a calibrated heuristic: the app
+ * measures the real chars-per-token ratio from the backend's prompt token count
+ * and feeds it back via `calibrate()`. When the backend exposes /tokenize
+ * (llama-server), `createExactTokenizer` wraps it with cached exact counts.
  */
 
 export interface Tokenizer {
   count(text: string): number;
+  /** Replace the estimates made since the last call with exact counts; true when any arrived, so the caller rebuilds. */
+  resolve?(): Promise<boolean>;
+}
+
+/** Exact counts kept; a turn re-tokenises only the new action and the re-rendered sections. [provisional] */
+const EXACT_CACHE_SIZE = 4000;
+
+/**
+ * Exact counts from the backend (llama-server `/tokenize`), cached by text. `count` stays
+ * synchronous: a text not yet in the cache is estimated by `fallback` and fetched on `resolve`.
+ */
+export function createExactTokenizer(fallback: Tokenizer, tokenize: (text: string) => Promise<number>): Tokenizer {
+  const cache = new Map<string, number>();
+  let misses = new Set<string>();
+  return {
+    count(text) {
+      if (!text) return 0;
+      const n = cache.get(text);
+      if (n === undefined) {
+        misses.add(text);
+        return fallback.count(text);
+      }
+      // Re-insert so the Map's order is least-recently-used first.
+      cache.delete(text);
+      cache.set(text, n);
+      return n;
+    },
+    async resolve() {
+      const texts = [...misses];
+      misses = new Set();
+      if (!texts.length) return false;
+      try {
+        const counts = await Promise.all(texts.map(tokenize));
+        texts.forEach((t, i) => cache.set(t, counts[i] ?? 0));
+      } catch (e) {
+        console.warn('/tokenize failed; token counts stay estimates', e);
+        return false;
+      }
+      for (const key of cache.keys()) {
+        if (cache.size <= EXACT_CACHE_SIZE) break;
+        cache.delete(key);
+      }
+      return true;
+    },
+  };
 }
 
 export interface CalibratedTokenizer extends Tokenizer {

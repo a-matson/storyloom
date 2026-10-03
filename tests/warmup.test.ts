@@ -4,7 +4,7 @@ import { buildWarmupPrompt, prepareContext } from '@core/turn';
 import { createBlankAdventure } from '@core/model/scenario';
 import { ActionLog } from '@core/log/actionLog';
 import type { CompletionChunk, Provider, ProviderCapabilities, ProviderHealth } from '@core/ports/provider';
-import type { Tokenizer } from '@core/text/tokenizer';
+import { createExactTokenizer, type Tokenizer } from '@core/text/tokenizer';
 import type { TemplateId } from '@core/model/types';
 
 const tok: Tokenizer = { count: (t) => (t ? Math.ceil(t.length / 4) : 0) };
@@ -88,6 +88,27 @@ describe('buildWarmupPrompt', () => {
     expect(await run()).toBe(8192);
     expect(await run(4096)).toBe(3896);
     expect(await run(16384)).toBe(8192);
+  });
+
+  it('rebuilds with exact counts so an over-estimating fallback no longer under-fills', async () => {
+    const adv = createBlankAdventure('T', 'Opening.');
+    adv.settings.model.contextLength = 600;
+    const log = new ActionLog(adv.actions);
+    for (let i = 0; i < 40; i++) log.append('continue', `Reply ${i}. `.repeat(6));
+    adv.actions = log.actions;
+    const over: Tokenizer = { count: (t) => (t ? Math.ceil(t.length / 2) : 0) };
+    const used = async (tokenizer: Tokenizer) => {
+      const p = await prepareContext(adv, adv.actions, { provider, tokenizer });
+      if ('stopped' in p) throw new Error('unexpected stop');
+      return p.result;
+    };
+    const estimated = await used(over);
+    const exact = await used(createExactTokenizer(over, async (t) => tok.count(t)));
+    const realUsed = (r: typeof exact) => r.sections.reduce((n, s) => n + tok.count(s.text), 0);
+    expect(realUsed(exact)).toBeGreaterThan(realUsed(estimated) * 1.5);
+    expect(exact.budget.used).toBeLessThanOrEqual(600);
+    // Reported section sizes are the exact counts, not the estimate.
+    for (const s of exact.sections) expect(s.tokens).toBe(tok.count(s.text));
   });
 
   it('returns null when the cache-stable layout is off', async () => {

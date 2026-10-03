@@ -34,7 +34,7 @@ export function ContextViewer({ result, prompt, memories, stats, onClose }: Prop
         <span className="font-mono text-caption">
           {result.budget.used.toLocaleString()} / {result.budget.total.toLocaleString()} tokens
         </span>{' '}
-        · estimates calibrated against the backend
+        · counted by the backend when it can tokenize
       </div>
     </div>
   );

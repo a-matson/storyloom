@@ -80,7 +80,7 @@ export class GameSession {
 
   private deps(): TurnDeps {
     const provider = this.svc.providerFor(this.app, this.adv.settings.providerId);
-    return { provider, tokenizer: this.svc.tokenizer, scripts: this.svc.scripts, embedder: this.embedder, contextSize: this.contextSize };
+    return { provider, tokenizer: this.svc.tokenizerFor(provider), scripts: this.svc.scripts, embedder: this.embedder, contextSize: this.contextSize };
   }
 
   private async resolveEmbedder(): Promise<Embedder> {
