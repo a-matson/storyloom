@@ -10,23 +10,28 @@ function fakeProvider(complete: Provider['complete'], grammar = false): Provider
 }
 
 /** Answers every memory prompt with "sum:<first word of the passage>" and counts calls. */
-function fakeDeps(adv: Adventure, opts: { abortAfter?: number } = {}) {
+function fakeDeps(adv: Adventure, opts: { abortAfter?: number; cancelAfter?: number } = {}) {
   const calls: string[] = [];
   const ac = new AbortController();
+  const cc = new AbortController();
   const provider = {
     id: 'fake',
     capabilities: () => Promise.resolve({ grammar: false }),
     async *complete(req: CompletionRequest, signal?: AbortSignal) {
       calls.push(req.prompt);
       if (calls.length === opts.abortAfter) ac.abort();
-      // A real backend drops the stream when its signal fires.
-      if (signal?.aborted) throw new DOMException('aborted', 'AbortError');
+      if (calls.length === opts.cancelAfter) cc.abort();
+      // The SSE reader ends quietly mid-reply when its signal fires.
+      if (signal?.aborted) {
+        yield { text: 'The ferryman' };
+        return;
+      }
       const passage = req.prompt.match(/EDITED|\w+/g)?.find((w) => w === 'EDITED') ?? 'text';
       yield { text: `sum:${passage}`, done: true };
     },
   } as unknown as Provider;
   const embedder: Embedder = { id: 'e', dimensions: 2, embed: (texts) => Promise.resolve(texts.map(() => [1, 0])) };
-  const deps: MaintenanceDeps = { provider, embedder, template: adv.settings.template, signal: ac.signal };
+  const deps: MaintenanceDeps = { provider, embedder, template: adv.settings.template, signal: AbortSignal.any([ac.signal, cc.signal]), cancel: cc.signal };
   return { deps, calls };
 }
 
@@ -84,6 +89,16 @@ describe('memory maintenance', () => {
     const report = await runMemoryMaintenance(adv, deps);
     expect(calls).toHaveLength(1);
     expect(report).toMatchObject({ memoriesWritten: 1, summaryUpdated: false });
+  });
+
+  it('cuts a streaming memory call when cancelled and keeps nothing from it', async () => {
+    const adv = adventure(30);
+    adv.settings.memory.autoSummary = true;
+    const { deps, calls } = fakeDeps(adv, { cancelAfter: 1 });
+    const report = await runMemoryMaintenance(adv, deps);
+    expect(calls).toHaveLength(1);
+    expect(report).toMatchObject({ memoriesWritten: 0, summaryUpdated: false });
+    expect(adv.memories).toHaveLength(0);
   });
 
   it('never summarises an evicted range twice on a long adventure', async () => {

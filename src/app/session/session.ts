@@ -1,9 +1,10 @@
 import { ActionLog } from '@core/log';
-import { loadMemoryJobs, markStale } from '@core/memory';
+import { markStale } from '@core/memory';
 import { utilityProvider, type Adventure, type AdventureSettings, type AppSettings, type PlotComponents, type TemplateId, type TurnTrace } from '@core/model';
 import type { Embedder, Provider } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
 import { runIdleWork } from './idleWork';
+import { MemoryScheduler } from './memoryScheduler';
 import type { GameSnapshot, Prefetched, SessionServices } from './types';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -34,6 +35,15 @@ export class GameSession {
   private contextSize: number | undefined;
   /** Warn once per session when the utility server is down. */
   private utilityDown = false;
+  private readonly memory = new MemoryScheduler({
+    adventure: () => this.adv,
+    helperModel: () => this.helperModel(),
+    embedder: () => this.resolveEmbedder(),
+    changed: () => {
+      this.emit();
+      this.save();
+    },
+  });
 
   constructor(adventure: Adventure, app: AppSettings, services: SessionServices) {
     this.adv = adventure;
@@ -162,10 +172,7 @@ export class GameSession {
   private afterTurn(): void {
     const ac = new AbortController();
     this.idleAbort = ac;
-    // Slots share one GPU: memory work waits for the next idle period once a turn starts.
-    this.svc.idle(() => {
-      if (!ac.signal.aborted) void this.maintainMemory(ac.signal);
-    });
+    this.svc.idle(() => this.memory.start(ac.signal));
     void runIdleWork(this.adv, this.log.actions, this.lastPrepared, this.deps(), ac.signal, {
       onPrefetched: (p) => {
         this.prefetched = p;
@@ -195,21 +202,6 @@ export class GameSession {
     }
     return { provider: this.svc.providerFor(this.app, this.adv.settings.providerId), template: this.adv.settings.template };
   };
-
-  private async maintainMemory(signal: AbortSignal): Promise<void> {
-    try {
-      // Memories are embedded on the story side so they compare with the query vectors in `prepareContext`.
-      const { runMemoryMaintenance } = await loadMemoryJobs();
-      const report = await runMemoryMaintenance(this.adv, { ...(await this.helperModel()), embedder: await this.resolveEmbedder(), signal });
-      if (report.memoriesWritten || report.memoriesRegenerated || report.memoriesDropped || report.summaryUpdated) {
-        this.emit();
-        this.save();
-      }
-    } catch (e) {
-      // Background work never blocks play; it retries after the next turn.
-      console.warn('memory maintenance failed', e);
-    }
-  }
 
   /** Any player action cancels background work. */
   private beginAction(): void {
@@ -251,6 +243,8 @@ export class GameSession {
   };
 
   readonly cancel = (): void => this.abort?.abort();
+  /** The turn input is focused and holds text; memory jobs wait so they do not slow the coming turn. */
+  readonly setTyping = (typing: boolean): void => this.memory.setTyping(typing);
 
   // ---- edits --------------------------------------------------------------------
   private mutate(fn: (log: ActionLog, adv: Adventure) => void): void {

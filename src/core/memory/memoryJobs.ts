@@ -22,6 +22,8 @@ export interface MaintenanceDeps {
   template: Adventure['settings']['template'];
   /** Stops before the next model call; a call already streaming finishes so its tokens are not wasted. */
   signal?: AbortSignal;
+  /** Cuts a streaming call too (the player started typing); its partial reply is dropped. Pass it inside `signal` as well. */
+  cancel?: AbortSignal;
 }
 
 export interface MaintenanceReport {
@@ -79,8 +81,9 @@ async function summarise(passage: string, deps: MaintenanceDeps): Promise<string
   const stop = [...new Set([...prompt.stop, '\n>', '<|im_start|>'])];
   const grammar = await sentencesOnly(deps, 3);
   const { text, stats } = await collect(
-    deps.provider.complete({ prompt: prompt.prompt, maxTokens: 90, temperature: 0.3, topP: 0.9, stop, cachePrompt: false, slotId: 1, grammar }),
+    deps.provider.complete({ prompt: prompt.prompt, maxTokens: 90, temperature: 0.3, topP: 0.9, stop, cachePrompt: false, slotId: 1, grammar }, deps.cancel),
   );
+  if (deps.cancel?.aborted) return '';
   return trimUnfinishedSentence(text, stats?.stopReason).trim();
 }
 
@@ -170,19 +173,22 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
       const prompt = renderTemplate(deps.template, SUMMARY_SYSTEM, summaryPrompt(adventure.plot.storySummary ?? '', since, recent));
       const grammar = await sentencesOnly(deps, 8);
       const { text: raw, stats } = await collect(
-        deps.provider.complete({
-          prompt: prompt.prompt,
-          maxTokens: 400,
-          temperature: 0.3,
-          topP: 0.9,
-          stop: prompt.stop,
-          cachePrompt: false,
-          slotId: 1,
-          grammar,
-        }),
+        deps.provider.complete(
+          {
+            prompt: prompt.prompt,
+            maxTokens: 400,
+            temperature: 0.3,
+            topP: 0.9,
+            stop: prompt.stop,
+            cachePrompt: false,
+            slotId: 1,
+            grammar,
+          },
+          deps.cancel,
+        ),
       );
       const text = trimUnfinishedSentence(raw, stats?.stopReason).trim();
-      if (text) {
+      if (text && !deps.cancel?.aborted) {
         adventure.plot = { ...adventure.plot, storySummary: text };
         adventure.scriptState = { ...adventure.scriptState, __summaryAt: count };
         report.summaryUpdated = true;

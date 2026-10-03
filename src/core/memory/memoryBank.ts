@@ -77,6 +77,15 @@ export function actionsUntilMemory(actionCount: number, existing: Pick<Memory, '
   return Math.max(0, start + MEMORY_LAG - actionCount);
 }
 
+/** Actions a memory may wait past due (about three turns) before it runs even while the player types. [provisional] */
+export const MEMORY_OVERDUE = 6;
+
+/** True when the next memory has waited `MEMORY_OVERDUE` actions, so typing no longer defers it. */
+export function memoryOverdue(actionCount: number, existing: Pick<Memory, 'toAction'>[]): boolean {
+  const start = existing.reduce((n, m) => Math.max(n, m.toAction), 0);
+  return actionCount - start - MEMORY_LAG >= MEMORY_OVERDUE;
+}
+
 export function createMemory(text: string, actions: Action[], range: MemoryRange, embedding?: number[]): Memory {
   return {
     id: newId('mem_'),

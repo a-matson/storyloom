@@ -7,6 +7,7 @@ import {
   evictToSize,
   markStale,
   MEMORY_SPAN,
+  memoryOverdue,
   rankMemories,
   summaryDue,
 } from '@core/memory/memoryBank';
@@ -69,6 +70,13 @@ describe('memory scheduling', () => {
     expect(actionsUntilMemory(17, [mem('m0', 0)])).toBe(1);
     expect(actionsUntilMemory(18, [mem('m0', 0)])).toBe(0);
     expect(actionsUntilMemory(30, [mem('m0', 0)])).toBe(0);
+  });
+
+  it('calls a memory overdue once it has waited about three turns', () => {
+    expect(memoryOverdue(17, [])).toBe(false);
+    expect(memoryOverdue(18, [])).toBe(true);
+    expect(memoryOverdue(23, [mem('m0', 0)])).toBe(false);
+    expect(memoryOverdue(24, [mem('m0', 0)])).toBe(true);
   });
 });
 
