@@ -11,9 +11,9 @@ export const MEMORY_SYSTEM =
 
 /** One original passage -> memory pair, so the model sees a summary rather than a continuation. [provisional] */
 const MEMORY_EXAMPLE =
-  'Example (from a different story):\n---\nThe ferryman names his price: a silver ring. "Or you swim," he says.\n> You give him the ring.\n' +
+  'Example (from a different story):\n---\nThe ferryman names his price: a silver coin. "Or you swim," he says.\n> You give him the coin.\n' +
   'He pockets it and poles you across to Saltmarsh, where Captain Odo is waiting on the jetty.\n---\n' +
-  'Memory: You paid the ferryman a silver ring to cross to Saltmarsh. Captain Odo was waiting there.\n\n';
+  'Memory: You paid the ferryman a silver coin to cross to Saltmarsh. Captain Odo was waiting there.\n\n';
 
 export function memoryPrompt(passage: string): string {
   return `${MEMORY_EXAMPLE}Summarise the key facts, decisions, discoveries and relationship changes in this passage.\n\n---\n${passage}\n---\n\nMemory:`;
