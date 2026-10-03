@@ -5,7 +5,7 @@ import { MEMORY_SYSTEM, SUMMARY_SYSTEM, memoryPrompt, summaryPrompt } from '../t
 import { renderTemplate } from '../text/templates';
 import { collect, type Provider } from '../ports/provider';
 import type { Embedder } from '../ports/embedder';
-import { joinStory } from '../text/formatting';
+import { joinStory, trimUnfinishedSentence } from '../text/formatting';
 
 /**
  * Background memory maintenance. Call after each committed turn; it is safe
@@ -72,10 +72,10 @@ async function summarise(passage: string, deps: MaintenanceDeps): Promise<string
   const prompt = renderTemplate(deps.template, MEMORY_SYSTEM, memoryPrompt(passage));
   // A memory is 1-3 sentences; the extra stops end a reply that drifts into the next turn.
   const stop = [...new Set([...prompt.stop, '\n>', '<|im_start|>'])];
-  const { text } = await collect(
+  const { text, stats } = await collect(
     deps.provider.complete({ prompt: prompt.prompt, maxTokens: 90, temperature: 0.3, topP: 0.9, stop, cachePrompt: false, slotId: 1 }),
   );
-  return text.trim();
+  return trimUnfinishedSentence(text, stats?.stopReason).trim();
 }
 
 /**
@@ -162,11 +162,12 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
         .map(actionText)
         .join('\n\n');
       const prompt = renderTemplate(deps.template, SUMMARY_SYSTEM, summaryPrompt(adventure.plot.storySummary ?? '', since, recent));
-      const { text } = await collect(
+      const { text: raw, stats } = await collect(
         deps.provider.complete({ prompt: prompt.prompt, maxTokens: 400, temperature: 0.3, topP: 0.9, stop: prompt.stop, cachePrompt: false, slotId: 1 }),
       );
-      if (text.trim()) {
-        adventure.plot = { ...adventure.plot, storySummary: text.trim() };
+      const text = trimUnfinishedSentence(raw, stats?.stopReason).trim();
+      if (text) {
+        adventure.plot = { ...adventure.plot, storySummary: text };
         adventure.scriptState = { ...adventure.scriptState, __summaryAt: count };
         report.summaryUpdated = true;
       }
