@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from 'react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
 import { StatusDot } from '@ui/components/ui/status-dot';
@@ -27,6 +27,9 @@ const chip =
 export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retryReady = false }: Props) {
   const [mode, setMode] = useState<Mode>('do');
   const [text, setText] = useState('');
+  const [focused, setFocused] = useState(false);
+  const typing = focused && text.trim() !== '';
+  useEffect(() => api.setTyping(typing), [api, typing]);
 
   const send = () => {
     if (busy) return;
@@ -76,7 +79,7 @@ export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retry
           </span>
         </div>
         <div className="flex items-center gap-2.5">
-          <TurnInput mode={mode} text={text} busy={busy} onText={setText} onKeyDown={onKey} onSend={send} onStop={api.cancel} />
+          <TurnInput mode={mode} text={text} busy={busy} onText={setText} onKeyDown={onKey} onSend={send} onStop={api.cancel} onFocusChange={setFocused} />
           <Button size="lg" onClick={() => api.submit('continue', '')} disabled={busy}>
             Continue
           </Button>

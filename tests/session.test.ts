@@ -185,6 +185,45 @@ describe('GameSession', () => {
     await vi.waitFor(() => expect(session.getSnapshot().adventure.memories.length).toBeGreaterThan(0));
   });
 
+  it('holds memory work while the player types and runs it once the input clears', async () => {
+    const adventure = makeAdventure({ actions: 12, cards: 0 });
+    adventure.settings.memory = { ...adventure.settings.memory, memoryBank: true, autoSummary: false };
+    const { session, idle } = setup({ adventure });
+    session.submit('continue', '');
+    await settled(session);
+    session.setTyping(true);
+    idle.splice(0).forEach((fn) => fn());
+    await new Promise((r) => setTimeout(r, 20));
+    expect(session.getSnapshot().adventure.memories).toHaveLength(0);
+    session.setTyping(false);
+    await vi.waitFor(() => expect(session.getSnapshot().adventure.memories).toHaveLength(1));
+  });
+
+  it('cuts a running memory job on the first keystroke and re-runs it later', async () => {
+    const adventure = makeAdventure({ actions: 12, cards: 0 });
+    adventure.settings.memory = { ...adventure.settings.memory, memoryBank: true, autoSummary: false };
+    const { session, idle } = setup({ adventure });
+    session.submit('continue', '');
+    await settled(session);
+    idle.splice(0).forEach((fn) => fn());
+    session.setTyping(true);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(session.getSnapshot().adventure.memories).toHaveLength(0);
+    session.setTyping(false);
+    await vi.waitFor(() => expect(session.getSnapshot().adventure.memories).toHaveLength(1));
+  });
+
+  it('runs an overdue memory even while the player types', async () => {
+    const adventure = makeAdventure({ actions: 30, cards: 0 });
+    adventure.settings.memory = { ...adventure.settings.memory, memoryBank: true, autoSummary: false };
+    const { session, idle } = setup({ adventure });
+    session.submit('continue', '');
+    await settled(session);
+    session.setTyping(true);
+    idle.splice(0).forEach((fn) => fn());
+    await vi.waitFor(() => expect(session.getSnapshot().adventure.memories.length).toBeGreaterThan(0));
+  });
+
   it('previews the context before any turn', async () => {
     const { session } = setup();
     await session.previewContext();

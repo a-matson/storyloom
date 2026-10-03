@@ -9,6 +9,8 @@ test.skip(!URL, 'needs MEASURE_URL (a running llama-server)');
 
 // A player reads the output before typing; idle memory jobs run in this gap. [provisional]
 const READ_MS = 6000;
+// Then types key by key, so typing-aware deferral of memory jobs is exercised. [provisional]
+const TYPE_MS = 4000;
 const TURN_MS = 180_000;
 
 const TURNS: [mode: 'Do' | 'Say', text: string][] = [
@@ -128,7 +130,7 @@ test('scripted live play', async ({ page }) => {
 
   for (const [i, [mode, text]] of TURNS.entries()) {
     await page.getByRole('button', { name: mode, exact: true }).click();
-    await page.getByRole('textbox', { name: 'Take a turn' }).fill(text);
+    await page.getByRole('textbox', { name: 'Take a turn' }).pressSequentially(text, { delay: TYPE_MS / text.length });
     await generated(page, () => send(page).click());
     if (i === 2) await addCards(page);
     if (i === 5) for (let r = 0; r < 2; r++) await generated(page, () => page.getByRole('button', { name: /^Retry/ }).click());

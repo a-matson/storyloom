@@ -11,11 +11,12 @@ interface Props {
   onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
   onSend: () => void;
   onStop: () => void;
+  onFocusChange: (focused: boolean) => void;
 }
 
 const send = 'inline-flex size-9 items-center justify-center rounded-[9px] border-none text-lantern-ink';
 
-export function TurnInput({ mode, text, busy, onText, onKeyDown, onSend, onStop }: Props) {
+export function TurnInput({ mode, text, busy, onText, onKeyDown, onSend, onStop, onFocusChange }: Props) {
   const m = MODES[mode];
   const inputRef = useRef<HTMLInputElement>(null);
   // Back to typing as soon as a turn ends.
@@ -39,6 +40,8 @@ export function TurnInput({ mode, text, busy, onText, onKeyDown, onSend, onStop 
           value={text}
           onChange={(e) => onText(e.target.value)}
           onKeyDown={onKeyDown}
+          onFocus={() => onFocusChange(true)}
+          onBlur={() => onFocusChange(false)}
           placeholder={m.hint}
           disabled={busy}
           autoComplete="off"
