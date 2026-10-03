@@ -17,6 +17,9 @@ import { type CompletionChunk, type CompletionRequest, type Provider, type Provi
  *   llama-server -m Harbinger-24B-Q4_K_M.gguf -c 16384 -ngl 99 -fa on -ctk q8_0 -ctv q8_0 \
  *     --port 8080 -np 2 --path ./dist
  */
+/** Min matching chunk (tokens) llama-server may shift into place. Evicted turn: 46 -> 2225 of 2398 cached. [measured: 2026-10-02-gate-v.md] */
+const CACHE_REUSE_CHUNK = 64;
+
 export class LlamaServerProvider implements Provider {
   readonly kind = 'llama-server';
   private caps: ProviderCapabilities | null = null;
@@ -112,6 +115,8 @@ export class LlamaServerProvider implements Provider {
       repeat_penalty: req.repetitionPenalty ?? 1,
       stop: req.stop ?? [],
       cache_prompt: req.cachePrompt ?? true,
+      // History eviction drops the prompt's head; KV shifting reuses the rest instead of a full re-prefill.
+      n_cache_reuse: CACHE_REUSE_CHUNK,
       stream: !req.prefillOnly,
       // A soft stop cancels the stream before the final event, so stats must ride on every chunk.
       timings_per_token: true,
