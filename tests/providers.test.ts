@@ -79,6 +79,17 @@ describe('llama-server streaming', () => {
     expect((await all(p.complete(req))).at(-1)).toMatchObject({ stats: { stopReason } });
   });
 
+  // History eviction drops the prompt's head; KV shifting keeps the rest of the cache.
+  it('asks the server to reuse shifted cache chunks', async () => {
+    let sent: unknown;
+    const p = new LlamaServerProvider('l', 'http://x', (_url, init) => {
+      sent = typeof init?.body === 'string' ? JSON.parse(init.body) : null;
+      return Promise.resolve(chunked(['data: {"content":"","stop":true,"stop_type":"eos"}\n\n']));
+    });
+    await all(p.complete(req));
+    expect(sent).toMatchObject({ cache_prompt: true, n_cache_reuse: 64 });
+  });
+
   it('fails loudly on a malformed event instead of dropping it', async () => {
     const p = new LlamaServerProvider('l', 'http://x', fetchOnce(chunked(['data: {not json}\n\n'])));
     await expect(all(p.complete(req))).rejects.toThrow(ProviderError);

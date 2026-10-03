@@ -168,7 +168,9 @@ test('scripted live play', async ({ page }) => {
   });
   const stopReasons: Record<string, number> = {};
   for (const t of turns) stopReasons[t.stopReason ?? 'none'] = (stopReasons[t.stopReason ?? 'none'] ?? 0) + 1;
-  const path = writeMeasurement('live-play', {
+  // A label keeps same-day re-runs from overwriting each other.
+  const label = process.env['MEASURE_LABEL'];
+  const path = writeMeasurement(label ? `live-play-${label}` : 'live-play', {
     url: URL,
     model: traces.at(-1)?.modelId,
     turns,
