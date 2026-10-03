@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { Adventure } from '@core/model';
-import type { Provider } from '@core/ports';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
 import { cn } from '@ui/lib/utils';
@@ -12,7 +11,6 @@ import { PlotTab } from './PlotTab';
 interface Props {
   adventure: Adventure;
   api: GameApi;
-  provider: Provider;
   /** Memory jobs run on a separate utility model. */
   utilityModel: boolean;
   hidden: boolean;
@@ -34,7 +32,7 @@ const chip =
 const body = 'flex grow flex-col gap-2 overflow-y-auto px-4 pb-4';
 
 /** Adventure / Gameplay settings panel; an overlay sheet below 1100 px. Mirrors AI Dungeon's in-game settings. */
-export function Sidebar({ adventure, api, provider, utilityModel, hidden, onClose }: Props) {
+export function Sidebar({ adventure, api, utilityModel, hidden, onClose }: Props) {
   const [current, setTab] = useState<Tab>('adventure');
   const [sub, setSub] = useState<SubTab>('plot');
   const subTabs: { id: SubTab; label: string }[] = [
@@ -76,7 +74,7 @@ export function Sidebar({ adventure, api, provider, utilityModel, hidden, onClos
           </div>
           <div className={body}>
             {sub === 'plot' && <PlotTab adventure={adventure} api={api} utilityModel={utilityModel} />}
-            {sub === 'cards' && <CardsTab adventure={adventure} api={api} provider={provider} />}
+            {sub === 'cards' && <CardsTab adventure={adventure} api={api} />}
             {sub === 'details' && <DetailsTab adventure={adventure} api={api} />}
           </div>
         </>

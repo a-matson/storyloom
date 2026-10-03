@@ -180,23 +180,23 @@ export class GameSession {
     }
   }
 
-  /** Utility server when configured and reachable, else the story provider; each prompted with its own template. */
-  private async memoryModel(): Promise<{ provider: Provider; template: TemplateId }> {
+  /** Memories, summaries and story cards run on the utility server when configured and reachable, else the story provider; each with its own template. */
+  readonly helperModel = async (): Promise<{ provider: Provider; template: TemplateId }> => {
     const utility = utilityProvider(this.app);
     if (utility) {
       const provider = this.svc.providerFor(this.app, utility.id);
       if ((await provider.health()).ok) return { provider, template: utility.template ?? this.adv.settings.template };
-      if (!this.utilityDown) console.warn(`utility model at ${utility.baseUrl} is unreachable; memory jobs use the story model`);
+      if (!this.utilityDown) console.warn(`utility model at ${utility.baseUrl} is unreachable; helper jobs use the story model`);
       this.utilityDown = true;
     }
     return { provider: this.svc.providerFor(this.app, this.adv.settings.providerId), template: this.adv.settings.template };
-  }
+  };
 
   private async maintainMemory(signal: AbortSignal): Promise<void> {
     try {
       // Memories are embedded on the story side so they compare with the query vectors in `prepareContext`.
       const { runMemoryMaintenance } = await loadMemoryJobs();
-      const report = await runMemoryMaintenance(this.adv, { ...(await this.memoryModel()), embedder: await this.resolveEmbedder(), signal });
+      const report = await runMemoryMaintenance(this.adv, { ...(await this.helperModel()), embedder: await this.resolveEmbedder(), signal });
       if (report.memoriesWritten || report.memoriesRegenerated || report.memoriesDropped || report.summaryUpdated) {
         this.emit();
         this.save();

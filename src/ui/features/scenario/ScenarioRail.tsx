@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { placeholderQuestions, type AppSettings, type Scenario, type StoryCard } from '@core/model';
-import { DEFAULT_GENERATOR_SETTINGS, MAX_STORY_CARDS } from '@core/cards';
+import { DEFAULT_GENERATOR_SETTINGS, MAX_STORY_CARDS, type CardGeneratorSettings } from '@core/cards';
 import { providerFor } from '@app/services';
 import { Button } from '@ui/components/ui/button';
 import { Pill } from '@ui/components/ui/pill';
 import { downloadStoryCards, importStoryCardsFromFile, pickFile } from '@ui/transferUi';
 import { cn } from '@ui/lib/utils';
 import { CardDialog } from '../game/cards/CardDialog';
+import type { CardContext } from '../game/cards/useCardDraft';
 import { tone } from '../game/cards/tone';
 import { HOOKS } from './ScriptsTab';
 import type { TabProps } from './fields';
@@ -25,6 +26,12 @@ async function importCards(cards: StoryCard[], update: TabProps['update'], warn:
   update({ storyCards: [...cards, ...kept] });
   if (kept.length < added.length) warnings.push(`${added.length - kept.length} card(s) over the ${MAX_STORY_CARDS} limit were skipped.`);
   if (warnings.length > 0) warn(warnings.join(' '));
+}
+
+/** No story yet, so cards are generated from the scenario's plot on the default story model. */
+function cardContext(app: AppSettings, scenario: Scenario, generator: CardGeneratorSettings, creator: boolean): CardContext {
+  const model = async () => ({ provider: providerFor(app, app.defaultProviderId), template: app.defaults.template });
+  return { generator, storySummary: scenario.plot.storySummary, plotEssentials: scenario.plot.plotEssentials, model, creator };
 }
 
 /** Right rail of the editor: what the player will be asked, the cards, which scripts exist. */
@@ -103,8 +110,7 @@ export function ScenarioRail({ draft, update, app, onError }: TabProps & { app: 
       {editing !== null && (
         <CardDialog
           key={dialogKey}
-          context={{ generator, storySummary: draft.plot.storySummary, template: app.defaults.template, creator }}
-          provider={providerFor(app, app.defaultProviderId)}
+          context={cardContext(app, draft, generator, creator)}
           card={editing === 'new' ? undefined : editing}
           onSave={save}
           onSettings={setGenerator}
