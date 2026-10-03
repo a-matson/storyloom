@@ -39,6 +39,7 @@ function setup(opts: { failSave?: boolean; prefetch?: boolean; warm?: boolean; a
     idle: (fn) => idle.push(fn),
     frame: (fn) => setTimeout(fn, 0),
     saveDelayMs: 0,
+    rewarmDelayMs: 0,
   });
   const snapshots: GameSnapshot[] = [];
   session.subscribe(() => snapshots.push(session.getSnapshot()));
@@ -247,5 +248,16 @@ describe('GameSession', () => {
     expect(traces[1]?.kind).toBe('retry');
     expect(traces[1]?.actionId).toBe(session.getSnapshot().actions.at(-1)?.id);
     expect(traces[1]?.turnId).not.toBe(traces[0]?.turnId);
+  });
+
+  it('re-warms once edits settle', async () => {
+    const { session } = setup({ warm: true });
+    session.submit('do', 'wait');
+    await settled(session);
+    await vi.waitFor(() => expect(session.getSnapshot().warm).toBe('warm'));
+    session.erase();
+    session.undo();
+    expect(session.getSnapshot().warm).toBe('idle');
+    await vi.waitFor(() => expect(session.getSnapshot().warm).toBe('warm'));
   });
 });

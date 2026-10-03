@@ -33,6 +33,8 @@ export interface SessionServices {
   /** Run before the next paint. */
   frame: (fn: () => void) => void;
   saveDelayMs: number;
+  /** Quiet time after the last edit before the cache is re-warmed. */
+  rewarmDelayMs: number;
 }
 
 export interface Prefetched {
