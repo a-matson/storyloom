@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { utilityProvider, type Adventure, type AppSettings } from '@core/model';
-import { providerFor, tokenizer } from '@app/services';
+import { tokenizer } from '@app/services';
 import { useGameSession } from '@ui/hooks/useGameSession';
 import { applyTheme } from '@ui/theme';
 import { Toast } from '@ui/components/ui/toast';
@@ -89,14 +89,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
             retryReady={state.prefetchReady}
           />
         </main>
-        <Sidebar
-          adventure={adv}
-          api={api}
-          provider={providerFor(app, adv.settings.providerId)}
-          utilityModel={!!utilityProvider(app)}
-          hidden={!showSidebar}
-          onClose={() => setShowSidebar(false)}
-        />
+        <Sidebar adventure={adv} api={api} utilityModel={!!utilityProvider(app)} hidden={!showSidebar} onClose={() => setShowSidebar(false)} />
       </div>
       {showContext && state.context && <ContextViewer {...state.context} memories={adv.memories} stats={last?.stats} onClose={() => setShowContext(false)} />}
       {traceAction !== null && <TraceViewer adventureId={adv.id} actionId={traceAction} onClose={() => setTraceAction(null)} />}

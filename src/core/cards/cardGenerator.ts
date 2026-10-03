@@ -1,6 +1,8 @@
-import type { Adventure, TemplateId } from '../model/types';
+import type { Action, Adventure, TemplateId } from '../model/types';
 import { LooseCardJson } from '../schema/card';
+import { actionStoryText } from '../text/formatting';
 import { CARD_SYSTEM, cardPrompt } from '../text/prompts';
+import { normaliseTriggers } from './storyCards';
 import { renderTemplate } from '../text/templates';
 import { collect, type Provider } from '../ports/provider';
 
@@ -37,6 +39,9 @@ export interface GenerateCardRequest {
   entry?: string;
   settings: CardGeneratorSettings;
   storySummary?: string | undefined;
+  plotEssentials?: string | undefined;
+  /** See `recentStory`; the card's subject and triggers are taken from it. */
+  recentStory?: string | undefined;
 }
 
 export interface GeneratedCard {
@@ -62,6 +67,8 @@ export async function generateStoryCard(req: GenerateCardRequest, deps: Generate
     instructions: req.settings.aiInstructions || undefined,
     storyInfo: req.settings.storyInformation || undefined,
     summary: req.settings.includeSummary ? req.storySummary : undefined,
+    plotEssentials: req.plotEssentials,
+    recentStory: req.recentStory,
   });
   const rendered = renderTemplate(deps.template, CARD_SYSTEM, user, caps.jsonSchema ? '' : '{');
   const { text } = await collect(
@@ -84,8 +91,9 @@ export async function generateStoryCard(req: GenerateCardRequest, deps: Generate
   const parsed = parseCardJson(raw, jsonrepair);
   if (!parsed) throw new Error('The model did not return a usable card. Try again or adjust the generator instructions.');
   const name = (req.name?.trim() || parsed.name || req.type).trim();
-  const triggers = normaliseTriggers(parsed.triggers, name);
-  return { name, entry: parsed.entry.trim(), triggers, raw };
+  const entry = parsed.entry.trim();
+  const triggers = normaliseTriggers(parsed.triggers, name, { story: req.recentStory ?? '', entry });
+  return { name, entry, triggers, raw };
 }
 
 /** Extract `{name, entry, triggers}` from model output, tolerating prose, fences and (with `repair`) broken JSON. */
@@ -118,20 +126,20 @@ export function parseCardJson(text: string, repair: (json: string) => string = (
   return null;
 }
 
-/** Lower-case, trim, dedupe, drop empties/very short triggers, and always include the name. */
-export function normaliseTriggers(triggers: string[], name: string): string[] {
-  const out = new Set<string>();
-  const add = (t: string) => {
-    const s = t.trim().toLowerCase();
-    if (s.length >= 3) out.add(s);
-  };
-  if (name) {
-    const n = name.trim();
-    if (n) out.add(n);
-    // Also the first word of multi-word names ("Merav" from "Merav the rider"), unless it is very common.
-    const firstWord = n.split(/\s+/)[0] ?? '';
-    if (firstWord.length >= 3 && !/^(the|a|an|of)$/i.test(firstWord)) out.add(firstWord);
+/** Story the generator reads, about 600 tokens. [provisional] */
+const RECENT_STORY_CHARS = 2400;
+
+/** The tail of the story, newest last, starting on a word. */
+export function recentStory(actions: Action[], maxChars = RECENT_STORY_CHARS): string {
+  const parts: string[] = [];
+  let length = 0;
+  for (const a of actions.toReversed()) {
+    if (length >= maxChars) break;
+    const t = actionStoryText(a);
+    if (!t) continue;
+    parts.unshift(t);
+    length += t.length + 2;
   }
-  for (const t of triggers) add(t);
-  return [...out].slice(0, 8);
+  const text = parts.join('\n\n');
+  return text.length <= maxChars ? text : text.slice(text.length - maxChars).replace(/^\S*\s+/, '');
 }

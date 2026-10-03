@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { Adventure, StoryCard } from '@core/model';
-import { DEFAULT_GENERATOR_SETTINGS, MAX_STORY_CARDS } from '@core/cards';
-import type { Provider } from '@core/ports';
+import { DEFAULT_GENERATOR_SETTINGS, MAX_STORY_CARDS, recentStory } from '@core/cards';
 import { tokenizer } from '@app/services';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
@@ -24,7 +23,7 @@ function CardRow({ card, onOpen }: { card: StoryCard; onOpen: () => void }) {
   );
 }
 
-export function CardsTab({ adventure, api, provider }: { adventure: Adventure; api: GameApi; provider: Provider }) {
+export function CardsTab({ adventure, api }: { adventure: Adventure; api: GameApi }) {
   const cards = adventure.storyCards;
   const [editing, setEditing] = useState<StoryCard | 'new' | null>(null);
   // Bumped on every open so the dialog remounts with fresh state (speed-create "Next").
@@ -68,9 +67,10 @@ export function CardsTab({ adventure, api, provider }: { adventure: Adventure; a
           context={{
             generator: adventure.cardGenerator ?? DEFAULT_GENERATOR_SETTINGS,
             storySummary: adventure.plot.storySummary,
-            template: adventure.settings.template,
+            plotEssentials: adventure.plot.plotEssentials,
+            recentStory: recentStory(adventure.actions),
+            model: api.helperModel,
           }}
-          provider={provider}
           card={editing === 'new' ? undefined : editing}
           onSave={save}
           onSettings={api.setCardGenerator}

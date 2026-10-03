@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import type { AdventureSettings, StoryCard } from '@core/model';
+import type { StoryCard, TemplateId } from '@core/model';
 import { newId } from '@core/model';
-import { generateStoryCard, normaliseTriggers, parseTriggers, type CardGeneratorSettings } from '@core/cards';
+import { generateStoryCard, parseTriggers, type CardGeneratorSettings } from '@core/cards';
 import type { Provider } from '@core/ports';
 
 export const CARD_TYPES = ['Character', 'Class', 'Race', 'Location', 'Faction', 'Custom'];
@@ -13,13 +13,17 @@ const orUndefined = (s: string) => (s === '' ? undefined : s);
 export interface CardContext {
   generator: CardGeneratorSettings;
   storySummary: string | undefined;
-  template: AdventureSettings['template'];
+  plotEssentials?: string | undefined;
+  /** Story tail (`recentStory`); the card's subject and triggers come from it. */
+  recentStory?: string | undefined;
+  /** The model generation runs on, resolved when the player asks for a card. */
+  model: () => Promise<{ provider: Provider; template: TemplateId }>;
   /** Opened from a Character Creator scenario: cards can be made selectable. */
   creator?: boolean;
 }
 
 /** Form state for one story card, plus AI generation of name/entry/triggers. */
-export function useCardDraft(context: CardContext, provider: Provider, card: StoryCard | undefined) {
+export function useCardDraft(context: CardContext, card: StoryCard | undefined) {
   const settings = context.generator;
   const custom = card !== undefined && (!CARD_TYPES.includes(card.type) || card.type === 'Custom');
   const [type, setType] = useState(card?.type ?? 'Character');
@@ -37,20 +41,26 @@ export function useCardDraft(context: CardContext, provider: Provider, card: Sto
   const generate = async (what: 'name' | 'entry') => {
     setBusy(what);
     setError(null);
-    const request = { type: effectiveType, name: what === 'entry' ? orUndefined(name.trim()) : undefined, settings, storySummary: context.storySummary };
-    const result = await generateStoryCard(request, { provider, template: context.template }).then(
-      (g) => ({ ok: true as const, g }),
-      (e: unknown) => ({ ok: false as const, error: message(e) }),
-    );
+    const request = {
+      type: effectiveType,
+      name: what === 'entry' ? orUndefined(name.trim()) : undefined,
+      settings,
+      storySummary: context.storySummary,
+      plotEssentials: context.plotEssentials,
+      recentStory: context.recentStory,
+    };
+    const result = await context
+      .model()
+      .then((model) => generateStoryCard(request, model))
+      .then(
+        (g) => ({ ok: true as const, g }),
+        (e: unknown) => ({ ok: false as const, error: message(e) }),
+      );
     setBusy(null);
     if (!result.ok) return setError(result.error);
     const { g } = result;
-    if (what === 'name') {
-      setName(g.name);
-      setTriggers(g.triggers.join(','));
-    } else if (triggers.trim() === '') {
-      setTriggers(normaliseTriggers(g.triggers, orUndefined(name.trim()) ?? g.name).join(','));
-    }
+    if (what === 'name') setName(g.name);
+    if (what === 'name' || triggers.trim() === '') setTriggers(g.triggers.join(','));
     setEntry(g.entry);
     if (settings.logToNotes) setNotes((n) => `${n === '' ? '' : `${n}\n\n`}— generated ${new Date().toLocaleTimeString()} —\n${g.entry}`);
   };

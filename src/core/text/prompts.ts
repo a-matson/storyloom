@@ -51,19 +51,43 @@ export function surprisePrompt(genre: string): string {
 
 export const CARD_SYSTEM = 'You write world-building notes for an interactive story. Reply with JSON only.';
 
+/** One original card per type, so the model sees a description rather than a scene. [provisional] */
+const CARD_EXAMPLES: Record<string, string> = {
+  Character:
+    '{"name": "Ilse Varn", "entry": "Ilse Varn is the harbourmaster of Coldwater. She is stern, counts every crate twice and hides a debt to the smugglers from the town council.", "triggers": ["ilse", "harbourmaster"]}',
+  Class:
+    '{"name": "Hedge Warden", "entry": "A Hedge Warden is a ranger sworn to keep one road safe. Wardens track by sign, set snares and carry a horn to call the nearest village.", "triggers": ["hedge warden", "warden"]}',
+  Race: '{"name": "Marshfolk", "entry": "Marshfolk are a small, web-fingered people who live in stilt villages across the fens. They trade eels and reed paper and distrust stone buildings.", "triggers": ["marshfolk", "fens"]}',
+  Location:
+    '{"name": "The Sunken Market", "entry": "The Sunken Market is a bazaar in the flooded cellars beneath the old city. Stalls stand on planks above black water, and stolen goods sell without questions.", "triggers": ["sunken market", "bazaar"]}',
+  Faction:
+    '{"name": "The Grey Lanterns", "entry": "The Grey Lanterns are night watchmen who sell protection street by street. They answer to an elected captain and fine anyone out after curfew without their mark.", "triggers": ["grey lanterns", "watchmen"]}',
+};
+const CUSTOM_EXAMPLE =
+  '{"name": "The Tithe Bell", "entry": "The Tithe Bell is a cracked bronze bell in the temple tower of Coldwater. It rings once each harvest to call farmers to pay the temple.", "triggers": ["tithe bell"]}';
+
 export function cardPrompt(opts: {
   type: string;
   name?: string | undefined;
   instructions?: string | undefined;
   storyInfo?: string | undefined;
   summary?: string | undefined;
+  plotEssentials?: string | undefined;
+  recentStory?: string | undefined;
 }): string {
+  const grounded = !opts.name && `${opts.plotEssentials ?? ''}${opts.recentStory ?? ''}` !== '';
   return (
-    `Create a ${opts.type} story card.` +
+    (opts.plotEssentials ? `Story essentials:\n${opts.plotEssentials}\n\n` : '') +
+    (opts.summary ? `Story so far:\n${opts.summary}\n\n` : '') +
+    (opts.recentStory ? `Recent story:\n---\n${opts.recentStory}\n---\n\n` : '') +
+    `Create a ${opts.type} story card for this story.` +
     (opts.name ? ` Its name is "${opts.name}".` : '') +
+    (grounded ? ` Pick a ${opts.type.toLowerCase()} that appears in the text above and has a name there.` : '') +
     (opts.instructions ? `\nInstructions: ${opts.instructions}` : '') +
     (opts.storyInfo ? `\nStory information: ${opts.storyInfo}` : '') +
-    (opts.summary ? `\nStory so far: ${opts.summary}` : '') +
-    '\n\nReturn {"name": string, "entry": string (2–4 plain sentences that mention the name), "triggers": string[] (3–6 lower-case keywords)}.'
+    '\n\nThe entry describes what it is, like an encyclopedia note: 2–4 plain present-tense sentences that mention the name, no events, no dialogue, nothing the player does. ' +
+    'Triggers are 2–4 lower-case names or words from the story that refer to it.\n\n' +
+    `Example ${opts.type} card (from a different story):\n${CARD_EXAMPLES[opts.type] ?? CUSTOM_EXAMPLE}\n\n` +
+    'Return {"name": string, "entry": string, "triggers": string[]}.'
   );
 }
