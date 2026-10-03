@@ -76,6 +76,20 @@ describe('buildWarmupPrompt', () => {
     expect(warm).toContain('Recent Story:');
   });
 
+  it('clamps the budget to the slot n_ctx minus the response', async () => {
+    const adv = createBlankAdventure('T', 'Opening.');
+    adv.settings.model.contextLength = 8192;
+    adv.settings.model.responseLength = 200;
+    const run = async (contextSize?: number) => {
+      const p = await prepareContext(adv, adv.actions, { provider, tokenizer: tok, contextSize });
+      if ('stopped' in p) throw new Error('unexpected stop');
+      return p.result.budget.total;
+    };
+    expect(await run()).toBe(8192);
+    expect(await run(4096)).toBe(3896);
+    expect(await run(16384)).toBe(8192);
+  });
+
   it('returns null when the cache-stable layout is off', async () => {
     const adv = createBlankAdventure('T', 'Opening.');
     adv.settings.context.cacheStableLayout = false;

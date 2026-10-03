@@ -9,6 +9,12 @@ import type { PreparedContext, TurnDeps } from './types';
 
 const STUMPED = 'Sorry, the AI is stumped. Edit/retry your previous action, or write something to help it along.';
 
+/** The prompt budget: the setting, clamped so prompt + response fit the provider's slot when it reports one. */
+function promptBudget(adventure: Adventure, { contextSize }: TurnDeps): number {
+  const { contextLength, responseLength } = adventure.settings.model;
+  return contextSize === undefined ? contextLength : Math.max(0, Math.min(contextLength, contextSize - responseLength));
+}
+
 function contextInput(adventure: Adventure, actions: Action[], rankedMemories: RankedMemory[], deps: TurnDeps, cacheStableLayout: boolean): ContextBuildInput {
   const memory = adventure.scriptState.memory ?? {};
   return {
@@ -19,7 +25,7 @@ function contextInput(adventure: Adventure, actions: Action[], rankedMemories: R
     frontMemory: memory.frontMemory,
     overrides: { plotEssentials: memory.context, authorsNote: memory.authorsNote },
     settings: {
-      contextLength: adventure.settings.model.contextLength,
+      contextLength: promptBudget(adventure, deps),
       memoryBankEnabled: adventure.settings.memory.memoryBank,
       cacheStableLayout,
       evictionChunk: adventure.settings.context.evictionChunk,
@@ -52,7 +58,7 @@ export async function prepareContext(adventure: Adventure, actions: Action[], de
     info: {
       characterNames: adventure.plot.thirdPerson?.enabled ? [adventure.plot.thirdPerson.name] : [],
       actionCount: actions.length,
-      maxChars: Math.floor(adventure.settings.model.contextLength * 3.9),
+      maxChars: Math.floor(result.budget.total * 3.9),
       memoryLength: (adventure.plot.plotEssentials ?? '').length,
     },
     sections: result.sections,

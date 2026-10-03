@@ -58,7 +58,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
           <ContextMeter
             ctx={ctx}
             used={used}
-            total={adv.settings.model.contextLength}
+            total={ctx?.budget.total ?? adv.settings.model.contextLength}
             warning={ctx && (adv.settings.context.contextWarning ?? true) ? overflowWarning(ctx) : ''}
             onOpen={openContext}
           />
