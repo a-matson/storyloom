@@ -21,7 +21,8 @@ test('an Output script rewrites the model output and its logs reach the trace', 
   await page.getByRole('button', { name: 'Basics' }).click();
   await page.getByRole('textbox', { name: 'Title' }).fill('Shouting Market');
   await page.getByRole('button', { name: 'Scripts' }).click();
-  await page.getByRole('textbox', { name: 'Output' }).fill(OUTPUT_SCRIPT);
+  await page.getByRole('button', { name: 'Output', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Output', exact: true }).fill(OUTPUT_SCRIPT);
   await page.keyboard.press('ControlOrMeta+s');
   await expect(page.getByText('Scenario · Story · saved')).toBeVisible();
   await page.getByRole('button', { name: 'Back to library' }).click();
