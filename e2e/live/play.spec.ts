@@ -155,12 +155,14 @@ test('scripted live play', async ({ page }) => {
     .array(S.TurnTrace)
     .parse(db.traces)
     .toSorted((a, b) => a.createdAt - b.createdAt);
-  const turns = traces.map(({ kind, outcome, stopReason, actionId, timings, overlap, stats: s = {} }) => {
+  const turns = traces.map(({ kind, outcome, errorKind, stopReason, actionId, timings, overlap, stats: s = {} }) => {
     const out = actionId === undefined ? '' : (text.get(actionId) ?? '');
     const { promptTokens = 0, cachedTokens = 0, generatedTokens = 0, generationMs = 0 } = s;
     return {
       kind,
       outcome,
+      // A failed turn is otherwise unexplained in the JSON (one `error` turn in the 2026-10-04 overlap run).
+      errorKind,
       stopReason,
       promptTokens: s.promptTokens,
       cacheHit: promptTokens > 0 ? +(cachedTokens / promptTokens).toFixed(3) : undefined,
