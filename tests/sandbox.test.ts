@@ -1,0 +1,106 @@
+import { beforeAll, describe, expect, it } from 'vitest';
+import variant from '@jitl/quickjs-wasmfile-release-sync';
+import { newQuickJSWASMModuleFromVariant, type QuickJSWASMModule } from 'quickjs-emscripten-core';
+import { compileScripts, runInSandbox, type SandboxInput, type Scripts } from '@adapters/scripting';
+
+let wasm: QuickJSWASMModule;
+beforeAll(async () => {
+  wasm = await newQuickJSWASMModuleFromVariant(variant);
+});
+
+const scripts = (over: Partial<Scripts> = {}): Scripts => ({ library: '', input: '', context: '', output: '', ...over });
+
+const input = (over: Partial<SandboxInput> = {}): SandboxInput => ({
+  hook: 'onOutput',
+  text: 'the door creaks',
+  history: [{ text: 'You open it', rawText: 'You open it', type: 'do' }],
+  storyCards: [{ id: 'c1', keys: 'door,gate', entry: 'An oak door.', type: 'class' }],
+  state: {},
+  info: { characterNames: ['Ash'], actionCount: 3 },
+  ...over,
+});
+
+const run = (output: string, over: Partial<SandboxInput> = {}, lib = '') => runInSandbox(wasm, scripts({ output, library: lib }), input(over));
+
+describe('runInSandbox', () => {
+  it('passes through when the hook has no script', () => {
+    const out = run('');
+    expect(out).toMatchObject({ text: 'the door creaks', error: undefined, logs: [] });
+  });
+
+  it('returns the text the modifier produced', () => {
+    expect(run('const modifier = (t) => ({ text: t.toUpperCase() }); modifier(text)').text).toBe('THE DOOR CREAKS');
+  });
+
+  it("stops on 'stop' and on { stop: true }", () => {
+    expect(run("'stop'")).toMatchObject({ stop: true, text: 'the door creaks' });
+    expect(run('({ stop: true })')).toMatchObject({ stop: true });
+  });
+
+  it('round-trips state and keeps unknown keys', () => {
+    const out = run('state.count = (state.count || 0) + 1; state.message = "hi"; null', { state: { mood: 'tense' } });
+    expect(out.state).toMatchObject({ mood: 'tense', count: 1, message: 'hi' });
+  });
+
+  it('edits story cards', () => {
+    const out = run(`
+      log(addStoryCard('lantern', 'A brass lantern.', 'item'));
+      log(addStoryCard('door,gate', 'duplicate', 'class'));
+      updateStoryCard(0, 'door', 'An iron door.', 'class');
+      removeStoryCard(1);
+      null
+    `);
+    expect(out.error).toBeUndefined();
+    expect(out.logs).toEqual(['1', 'false']);
+    expect(out.storyCards).toEqual([{ id: 'c1', keys: 'door', entry: 'An iron door.', type: 'class' }]);
+  });
+
+  it('reports a missing index to removeStoryCard as an error', () => {
+    const out = run('removeStoryCard(9); null');
+    expect(out.error).toContain('no card at index 9');
+    expect(out.storyCards).toHaveLength(1);
+  });
+
+  it('captures log, console.log and sandboxConsole.log in order', () => {
+    const out = run('log("a", 1); console.log({ b: 2 }); sandboxConsole.log("c"); null');
+    expect(out.logs).toEqual(['a 1', '{"b":2}', 'c']);
+  });
+
+  it('calls a library function from the hook and keeps worldInfo as an alias', () => {
+    const out = run('({ text: shout(worldInfo[0].entry) })', {}, 'function shout(s) { return s.toUpperCase(); }');
+    expect(out.text).toBe('AN OAK DOOR.');
+  });
+
+  it('does not leak library top-level bindings between runs', () => {
+    const lib = 'let seen = 0; seen += 1;';
+    const hook = '({ text: String(seen) })';
+    expect(run(hook, {}, lib).text).toBe('1');
+    expect(run(hook, {}, lib).text).toBe('1');
+  });
+
+  it('interrupts an endless loop', () => {
+    const started = Date.now();
+    const out = run('while (true) {} null');
+    expect(out.error).toBeTruthy();
+    expect(Date.now() - started).toBeLessThan(2500);
+  });
+
+  it('errors when the script exhausts the memory limit', () => {
+    const out = run('let s = "x"; while (s.length < 32 * 1024 * 1024) s += s; ({ text: s })');
+    expect(out.error).toBeTruthy();
+    expect(out.text).toBe('the door creaks');
+  });
+
+  it('refuses a function in state', () => {
+    expect(run('state.fn = () => 1; null').error).toBe('Error: state is not JSON: state.fn');
+  });
+});
+
+describe('compileScripts', () => {
+  it('accepts valid scripts and rejects a syntax error', () => {
+    expect(compileScripts(wasm, scripts({ output: 'modifier(text)' }))).toEqual({ ok: true });
+    const bad = compileScripts(wasm, scripts({ input: 'const modifier = (t) => {' }));
+    expect(bad.ok).toBe(false);
+    expect(bad.error).toContain('input:');
+  });
+});
