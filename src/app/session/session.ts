@@ -5,6 +5,7 @@ import type { Embedder, Provider, ScriptRunner } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
 import { IdleWork } from './idleWork';
 import { MemoryScheduler } from './memoryScheduler';
+import { SaveQueue } from './saveQueue';
 import { sessionScripts } from './scripts';
 import type { GameSnapshot, Prefetched, SessionServices } from './types';
 
@@ -24,7 +25,12 @@ export class GameSession {
   private snapshot: GameSnapshot;
   private readonly listeners = new Set<() => void>();
   private abort: AbortController | null = null;
-  private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly saves = new SaveQueue({
+    adventure: () => ((this.adv.actions = this.log.actions), this.adv),
+    delayMs: () => this.svc.saveDelayMs,
+    write: (a) => this.svc.storage.putAdventure(a),
+    onError: (m) => this.emit({ error: `Could not save: ${m}` }),
+  });
   private prefetched: Prefetched | null = null;
   private lastPrompt = '';
   private lastPrepared: PreparedContext | null = null;
@@ -104,21 +110,14 @@ export class GameSession {
 
   // ---- persistence ------------------------------------------------------------
   private save(): void {
-    if (this.saveTimer) clearTimeout(this.saveTimer);
-    this.saveTimer = setTimeout(() => void this.flush(), this.svc.saveDelayMs);
+    this.saves.schedule();
   }
-  /** Write now; used by the debounce and on close. */
-  async flush(): Promise<void> {
-    if (this.saveTimer) clearTimeout(this.saveTimer);
-    this.saveTimer = null;
-    this.adv.actions = this.log.actions;
-    this.adv.updatedAt = Date.now();
-    try {
-      await this.svc.storage.putAdventure(this.adv);
-    } catch (e) {
-      this.emit({ error: `Could not save: ${message(e)}` });
-    }
+  /** Write now; used on close and by the tests. */
+  flush(): Promise<void> {
+    return this.saves.flush();
   }
+  /** The page is hiding: see `SaveQueue.persistNow`. */
+  readonly persistNow = (): void => this.saves.persistNow();
   /** Stop background work and save; call when the adventure closes. */
   async close(): Promise<void> {
     this.abort?.abort();

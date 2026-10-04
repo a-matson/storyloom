@@ -8,6 +8,18 @@ export function useGameSession(initial: Adventure, app: AppSettings): [GameSnaps
   const [session] = useState(() => openSession(initial, app));
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot);
   useEffect(() => session.setApp(app), [session, app]);
+  useEffect(() => {
+    // Hiding the tab is the last reliable moment to save; `pagehide` also covers a desktop close.
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') session.persistNow();
+    };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', session.persistNow);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', session.persistNow);
+    };
+  }, [session]);
   useEffect(
     () => () => {
       // Unmounted: no UI left to show a save error in.
