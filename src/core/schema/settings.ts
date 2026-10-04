@@ -78,7 +78,7 @@ export const AppSettings = z.object({
   providers: z.array(ProviderConfig),
   defaultProviderId: z.string(),
   defaults: z.prefault(AdventureSettings, {}),
-  theme: z._default(z.enum(['dark', 'light', 'sepia']), 'dark'),
+  theme: z._default(z.enum(['dark', 'light', 'sepia', 'slate', 'dynamic']), 'dark'),
   highContrast: z._default(z.boolean(), false),
   textAnimation: z._default(z.boolean(), true),
   textSize: z._default(z.enum(['default', 'large', 'larger']), 'default'),
