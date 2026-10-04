@@ -2,6 +2,29 @@ import { expect, test } from '@playwright/test';
 
 const UTILITY = 'http://localhost:9999';
 
+test('Test connection warns when the server template differs from ours', async ({ page }) => {
+  const STORY = 'http://localhost:9998';
+  let rendered = '';
+  await page.route(`${STORY}/**`, async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/health') return route.fulfill({ json: { status: 'ok' } });
+    if (path === '/props') return route.fulfill({ json: { model_path: '/models/gemma.gguf', total_slots: 1 } });
+    if (path === '/apply-template') return route.fulfill({ json: { prompt: rendered } });
+    return route.fulfill({ status: 404, json: {} });
+  });
+
+  await page.goto('/');
+  await page.getByRole('textbox', { name: 'Server URL' }).fill(STORY);
+  rendered = '<|im_start|>system\nYou are the narrator.<|im_end|>\n<|im_start|>user\n> You look around.<|im_end|>\n<|im_start|>assistant\n';
+  await page.getByRole('button', { name: 'Test connection' }).click();
+  await expect(page.getByText('gemma.gguf')).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+
+  rendered = '<start_of_turn>user\nYou are the narrator.';
+  await page.getByRole('button', { name: 'Test connection' }).click();
+  await expect(page.getByRole('alert')).toContainText('renders differently from ChatML');
+});
+
 test('a utility model gets the memory jobs and survives a reload', async ({ page }) => {
   const prompts: string[] = [];
   await page.route(`${UTILITY}/**`, async (route) => {

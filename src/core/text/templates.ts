@@ -65,6 +65,24 @@ export function renderPrefix(id: TemplateId, system: string, userPrefix: string)
 }
 
 /**
+ * Does our hand template render a sample turn byte-for-byte like the server's own template?
+ * Hand templates stay primary (they also serve backends without one); this only flags a wrong pick.
+ */
+export async function templateMatches(
+  id: TemplateId,
+  serverRender: (messages: { role: 'system' | 'user'; content: string }[]) => Promise<string>,
+): Promise<boolean> {
+  const system = 'You are the narrator.';
+  const user = '> You look around.';
+  return (
+    (await serverRender([
+      { role: 'system', content: system },
+      { role: 'user', content: user },
+    ])) === renderTemplate(id, system, user).prompt
+  );
+}
+
+/**
  * Guess a template from a model id / GGUF name. Latitude's fine-tunes are
  * generally trained with ChatML regardless of base model; the Llama 3.3
  * based ones (Nova, Wayfarer Large) use the Llama 3 format and Equinox uses

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { applyPlaceholders, findPlaceholders } from '@core/text/placeholders';
 import { formatPlayerInput, trimUnfinishedSentence } from '@core/text/formatting';
-import { guessTemplate, renderTemplate } from '@core/text/templates';
+import { guessTemplate, renderTemplate, templateMatches } from '@core/text/templates';
 import { createApproxTokenizer, createExactTokenizer, trimToTokens } from '@core/text/tokenizer';
 import { createAdventureFromScenario, missingAnswers, newScenario, placeholderQuestions, scenarioSummary } from '@core/model/scenario';
 import { childAt, newOption, withChild } from '@core/model/scenarioTypes';
@@ -143,6 +143,12 @@ describe('templates', () => {
     expect(guessTemplate('Harbinger-24B-Q4_K_M.gguf')).toBe('chatml');
     expect(guessTemplate('Nova-70B-Llama-3.3.Q4_K_M.gguf')).toBe('llama3');
     expect(guessTemplate('Equinox-31B-Q4.gguf')).toBe('gemma');
+  });
+  it('matches a server template only when it renders the same bytes', async () => {
+    const chatml = (ms: { role: string; content: string }[]) =>
+      Promise.resolve(ms.map((m) => `<|im_start|>${m.role}\n${m.content}<|im_end|>\n`).join('') + '<|im_start|>assistant\n');
+    expect(await templateMatches('chatml', chatml)).toBe(true);
+    expect(await templateMatches('llama3', chatml)).toBe(false);
   });
 });
 
