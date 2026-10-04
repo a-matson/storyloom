@@ -31,7 +31,14 @@ async function importCards(cards: StoryCard[], update: TabProps['update'], warn:
 /** No story yet, so cards are generated from the scenario's plot on the default story model. */
 function cardContext(app: AppSettings, scenario: Scenario, generator: CardGeneratorSettings, creator: boolean): CardContext {
   const model = async () => ({ provider: providerFor(app, app.defaultProviderId), template: app.defaults.template });
-  return { generator, storySummary: scenario.plot.storySummary, plotEssentials: scenario.plot.plotEssentials, model, creator };
+  return {
+    generator,
+    storySummary: scenario.plot.storySummary,
+    plotEssentials: scenario.plot.plotEssentials,
+    existingNames: scenario.storyCards.map((c) => c.name),
+    model,
+    creator,
+  };
 }
 
 /** Right rail of the editor: what the player will be asked, the cards, which scripts exist. */

@@ -88,8 +88,11 @@ export function cardPrompt(opts: {
   summary?: string | undefined;
   plotEssentials?: string | undefined;
   recentStory?: string | undefined;
+  /** Names that already have a card; the model is told to pick another subject. */
+  existing?: string[] | undefined;
 }): string {
   const grounded = !opts.name && `${opts.plotEssentials ?? ''}${opts.recentStory ?? ''}` !== '';
+  const existing = opts.name ? [] : (opts.existing ?? []).filter((n) => n.trim() !== '');
   return (
     (opts.plotEssentials ? `Story essentials:\n${opts.plotEssentials}\n\n` : '') +
     (opts.summary ? `Story so far:\n${opts.summary}\n\n` : '') +
@@ -97,6 +100,7 @@ export function cardPrompt(opts: {
     `Create a ${opts.type} story card for this story.` +
     (opts.name ? ` Its name is "${opts.name}".` : '') +
     (grounded ? ` Pick a ${opts.type.toLowerCase()} that appears in the text above and has a name there.` : '') +
+    (existing.length > 0 ? ` These already have a card, so pick a different subject: ${existing.join(', ')}.` : '') +
     (opts.instructions ? `\nInstructions: ${opts.instructions}` : '') +
     (opts.storyInfo ? `\nStory information: ${opts.storyInfo}` : '') +
     '\n\nThe entry describes what it is, like an encyclopedia note: 2–4 plain present-tense sentences that mention the name, no events, no dialogue, nothing the player does. ' +

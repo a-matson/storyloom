@@ -149,6 +149,35 @@ describe('generateStoryCard', () => {
     expect(g.entry).toBe('Dov carries the map.');
     expect(g.name).toBe('Dov');
   });
+  // V-3 finding 15: with a Tamsin card already saved, the generator made a second one 4/4 runs.
+  it('names the existing cards and retries once when the model repeats one', async () => {
+    const replies = [
+      '{"name":"Tamsin","entry":"Tamsin rows the ferry.","triggers":["tamsin","ferry"]}',
+      '{"name":"Owen","entry":"Owen mends kettles on the dock.","triggers":["owen","tinker"]}',
+    ];
+    const p = fakeProvider('', true);
+    p.complete = async function* (req) {
+      p.last = req;
+      yield { text: replies.shift() ?? '', done: false };
+      yield { text: '', done: true, stats: { stopReason: 'stop' } };
+    };
+    const g = await generateStoryCard(
+      { type: 'Character', settings: DEFAULT_GENERATOR_SETTINGS, recentStory: 'Tamsin pushes off. Owen waves from the dock.', existingNames: ['Tamsin'] },
+      { provider: p, template: 'chatml' },
+    );
+    expect(p.last?.prompt).toContain('These already have a card, so pick a different subject: Tamsin.');
+    expect(g.name).toBe('Owen');
+    expect(replies).toHaveLength(0);
+  });
+  it('keeps the name when the player asked for an entry, duplicate or not', async () => {
+    const p = fakeProvider('{"name":"Tamsin","entry":"Tamsin rows the ferry.","triggers":["tamsin","ferry"]}', true);
+    const g = await generateStoryCard(
+      { type: 'Character', name: 'Tamsin', settings: DEFAULT_GENERATOR_SETTINGS, existingNames: ['Tamsin'] },
+      { provider: p, template: 'chatml' },
+    );
+    expect(p.last?.prompt).not.toContain('already have a card');
+    expect(g.name).toBe('Tamsin');
+  });
   it('throws a clear error on unusable output', async () => {
     const p = fakeProvider('I cannot do that.', true);
     let err = '';

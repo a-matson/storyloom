@@ -16,6 +16,8 @@ export interface CardContext {
   plotEssentials?: string | undefined;
   /** Story tail (`recentStory`); the card's subject and triggers come from it. */
   recentStory?: string | undefined;
+  /** Names of every existing card, so generation does not repeat a subject. */
+  existingNames?: string[] | undefined;
   /** The model generation runs on, resolved when the player asks for a card. */
   model: () => Promise<{ provider: Provider; template: TemplateId }>;
   /** Opened from a Character Creator scenario: cards can be made selectable. */
@@ -48,6 +50,8 @@ export function useCardDraft(context: CardContext, card: StoryCard | undefined) 
       storySummary: context.storySummary,
       plotEssentials: context.plotEssentials,
       recentStory: context.recentStory,
+      // The card being edited is not its own duplicate.
+      existingNames: context.existingNames?.filter((n) => n !== card?.name),
     };
     const result = await context
       .model()
