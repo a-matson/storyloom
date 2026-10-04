@@ -4,6 +4,7 @@ import type { Action, Adventure, Memory, StoryCard } from '@core/model';
 export type AdventureRow = Omit<Adventure, 'actions' | 'memories' | 'storyCards'>;
 export type ActionRow = Action & { adventureId: string; seq: number };
 export type CardRow = StoryCard & { adventureId: string };
+export type ImageRow = { adventureId: string; id: string; blob: Blob; createdAt: number };
 // Float32Array: ~1.5 KB per 384-d vector instead of ~7.7 KB as JSON numbers.
 export type MemoryRow = Omit<Memory, 'embedding'> & { adventureId: string; embedding?: Float32Array | undefined };
 

@@ -32,6 +32,11 @@ export interface Storage {
   /** Newest first. */
   listTraces(adventureId: string): Promise<TurnTrace[]>;
 
+  /** Generated images, keyed per adventure; deleting the adventure deletes them. Kept out of `exportAll` (own-format export is JSON). */
+  putImage(adventureId: string, id: string, blob: Blob): Promise<void>;
+  getImage(adventureId: string, id: string): Promise<Blob | undefined>;
+  deleteImage(adventureId: string, id: string): Promise<void>;
+
   getSettings(): Promise<AppSettings | undefined>;
   putSettings(s: AppSettings): Promise<void>;
 
