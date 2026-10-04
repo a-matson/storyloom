@@ -4,7 +4,7 @@ import { utilityProvider, type Adventure, type AdventureSettings, type AppSettin
 import type { Embedder, Provider, ScriptRunner } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
 import { IdleWork } from './idleWork';
-import { seeImage } from './images';
+import { dropOrphanImages, regenerateImage, seeImage } from './images';
 import { MemoryScheduler } from './memoryScheduler';
 import { SaveQueue } from './saveQueue';
 import { sessionScripts } from './scripts';
@@ -19,10 +19,11 @@ const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
  * every emit publishes a shallow copy so snapshot identities change only when data does.
  */
 export class GameSession {
-  private adv: Adventure;
-  private readonly log: ActionLog;
-  private app: AppSettings;
-  private readonly svc: SessionServices;
+  // Readable from outside only because the session passes itself to the `see` helpers as their host.
+  readonly adv: Adventure;
+  readonly log: ActionLog;
+  app: AppSettings;
+  readonly svc: SessionServices;
   private snapshot: GameSnapshot;
   private readonly listeners = new Set<() => void>();
   private abort: AbortController | null = null;
@@ -106,7 +107,7 @@ export class GameSession {
   // ---- persistence ------------------------------------------------------------
   private readonly save = (): void => this.saves.schedule();
   /** The log or the adventure changed outside a turn: publish and persist. */
-  private readonly changed = (): void => {
+  readonly changed = (): void => {
     this.emit();
     this.save();
   };
@@ -239,17 +240,12 @@ export class GameSession {
     void this.drive(retryLast(this.adv, this.log, this.deps(), this.abort.signal));
   };
 
+  readonly onError = (error: string): void => this.emit({ error });
+
   /** See mode: one image from the player's prompt (blank = written by the helper model), generated in the background. */
-  readonly see = (prompt: string): void =>
-    seeImage(prompt, {
-      adv: this.adv,
-      log: this.log,
-      app: this.app,
-      svc: this.svc,
-      helperModel: this.helperModel,
-      changed: () => this.changed(),
-      onError: (error) => this.emit({ error }),
-    });
+  readonly see = (prompt: string): void => seeImage(prompt, this);
+  /** Retry (no `prompt`) or edit the prompt of a `see` action; the old blob is replaced. */
+  readonly regenerateSee = (id: string, prompt?: string): void => regenerateImage(this, id, prompt);
 
   readonly cancel = (): void => this.abort?.abort();
   /** The turn input is focused and holds text; memory jobs wait so they do not slow the coming turn. */
@@ -258,7 +254,9 @@ export class GameSession {
   // ---- edits --------------------------------------------------------------------
   private mutate(fn: (log: ActionLog, adv: Adventure) => void): void {
     if (this.snapshot.busy) return;
+    const before = this.log.actions;
     fn(this.log, this.adv);
+    dropOrphanImages(this, before);
     // Editing the log makes a prefetched alternative stale unless it still targets the last action.
     if (this.prefetched && this.prefetched.actionId !== this.log.last?.id) this.dropPrefetch();
     this.idleWork.afterEdit();

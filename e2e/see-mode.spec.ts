@@ -39,4 +39,20 @@ test('See mode generates an image, keeps the caption and survives a reload', asy
   await page.reload();
   await expect(page.getByRole('img', { name: 'a harbour at dusk' })).toBeVisible();
   expect(prompts).toHaveLength(1);
+
+  const download = page.waitForEvent('download');
+  await page.getByRole('link', { name: 'Download' }).click();
+  expect((await download).suggestedFilename()).toBe('a-harbour-at-dusk.png');
+
+  // Editing the caption regenerates: a second txt2img call with the new prompt.
+  const caption = page.getByRole('figure').locator('figcaption');
+  await caption.dblclick();
+  await caption.fill('a harbour at dawn');
+  await page.getByRole('figure').click({ position: { x: 1, y: 1 } });
+  // The caption changes on the spot; the picture follows when the server answers.
+  await expect.poll(() => prompts).toEqual(['a harbour at dusk', 'a harbour at dawn']);
+  await expect(page.getByRole('img', { name: 'a harbour at dawn' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Delete' }).click();
+  await expect(page.getByRole('figure')).toBeHidden();
 });
