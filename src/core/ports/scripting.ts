@@ -57,20 +57,20 @@ export interface HookInput {
 }
 
 export interface HookResult {
-  text?: string;
-  stop?: boolean;
+  text?: string | undefined;
+  stop?: boolean | undefined;
   state: ScriptState;
   storyCards: ScriptStoryCard[];
   sections?: ContextSection[] | undefined;
   logs: string[];
-  error?: string;
+  error?: string | undefined;
   /** Wall time in ms. */
   elapsedMs: number;
 }
 
 export interface ScriptRunner {
   /** Compile scripts once per scenario; returns false with an error on syntax problems. */
-  load(scripts: { library: string; input: string; context: string; output: string }): Promise<{ ok: boolean; error?: string }>;
+  load(scripts: { library: string; input: string; context: string; output: string }): Promise<{ ok: boolean; error?: string | undefined }>;
   run(input: HookInput): Promise<HookResult>;
   dispose(): void;
 }
