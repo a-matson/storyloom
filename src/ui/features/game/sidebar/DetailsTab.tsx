@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { Adventure } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { downloadAdventureJson, downloadAdventureText, downloadStoryCards, downloadTraces, importStoryCardsFromFile, pickFile } from '@ui/transferUi';
+import { CoverPicker } from '@ui/components/CoverPicker';
 import { Button } from '@ui/components/ui/button';
 import { Input } from '@ui/components/ui/field';
 import { SectionLabel } from '@ui/components/ui/section-label';
@@ -54,6 +55,14 @@ export function DetailsTab({ adventure, api }: { adventure: Adventure; api: Game
       <Field label="Description">
         <Textarea value={adventure.description} onChange={(e) => api.updateMeta({ description: e.target.value })} />
       </Field>
+      <CoverPicker
+        ownerId={adventure.id}
+        coverId={adventure.coverId}
+        coverUrl={adventure.coverUrl}
+        app={api.app}
+        image={adventure.settings.image}
+        onChange={(coverId) => api.updateMeta({ coverId })}
+      />
       <Field label="Tags">
         <Input
           value={adventure.tags.join(', ')}

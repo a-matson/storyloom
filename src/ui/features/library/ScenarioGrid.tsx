@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { newScenario, scenarioSummary, type AppSettings, type Scenario } from '@core/model';
 import { storage } from '@app/services';
 import { startScenario } from '@app/scenarios';
+import { CoverThumb } from '@ui/components/CoverThumb';
 import { Button } from '@ui/components/ui/button';
 import { Pill } from '@ui/components/ui/pill';
 import { importScenarioFromFile, pickFile } from '@ui/transferUi';
@@ -39,7 +40,7 @@ function ScenarioCard({ scenario: s, onEdit, onPlay, onDelete }: { scenario: Sce
   const title = s.title === '' ? 'Untitled scenario' : s.title;
   return (
     <div className="flex gap-3 rounded-lg border border-border bg-card p-3 text-foreground hover:border-neutral">
-      <div className="w-16 shrink-0 rounded-md bg-secondary" />
+      <CoverThumb ownerId={s.id} coverId={s.coverId} coverUrl={s.coverUrl} className="w-16 shrink-0" />
       <div className="flex min-w-0 grow flex-col gap-1">
         <button type="button" className="truncate border-none bg-transparent p-0 text-left font-display text-card-title font-medium" onClick={onEdit}>
           {title}

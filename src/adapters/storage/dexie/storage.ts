@@ -148,7 +148,12 @@ export class DexieStorage implements Storage {
     await this.db.scenarios.put(s);
   }
   async deleteScenario(id: string): Promise<void> {
-    await this.db.scenarios.delete(id);
+    const db = this.db;
+    // A scenario cover is an image row owned by the scenario id, so it goes with the scenario.
+    await db.transaction('rw', [db.scenarios, db.images], async () => {
+      await db.scenarios.delete(id);
+      await db.images.where('adventureId').equals(id).delete();
+    });
   }
 
   async getSettings(): Promise<AppSettings | undefined> {

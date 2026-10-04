@@ -283,7 +283,7 @@ export class GameSession {
   readonly setVersion = (id: string, i: number) => this.mutate((log) => log.setActiveVersion(id, i));
   readonly updatePlot = (patch: Partial<PlotComponents>) => this.mutate((_, adv) => (adv.plot = { ...adv.plot, ...patch }));
   readonly updateSettings = (patch: Partial<AdventureSettings>) => this.mutate((_, adv) => (adv.settings = { ...adv.settings, ...patch }));
-  readonly updateMeta = (patch: Partial<Pick<Adventure, 'title' | 'description' | 'tags'>>) => this.mutate((_, adv) => Object.assign(adv, patch));
+  readonly updateMeta = (patch: Partial<Pick<Adventure, 'title' | 'description' | 'tags' | 'coverId'>>) => this.mutate((_, adv) => Object.assign(adv, patch));
   readonly setStoryCards = (cards: Adventure['storyCards']) => this.mutate((_, adv) => (adv.storyCards = cards));
   readonly setCardGenerator = (s: NonNullable<Adventure['cardGenerator']>) => this.mutate((_, adv) => (adv.cardGenerator = s));
   readonly clearError = () => this.emit({ error: null });

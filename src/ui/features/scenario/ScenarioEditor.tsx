@@ -125,7 +125,7 @@ function Editor({ saved, path, app, onExit, onPath, onPlay }: Omit<Props, 'id'> 
       <div className="flex min-h-0 grow max-lg:flex-col max-lg:overflow-y-auto">
         <main className="flex grow flex-col gap-4.5 overflow-y-auto px-7 py-6 max-lg:overflow-visible max-sm:p-4">
           {/* Keyed by node: these tabs keep local text state. */}
-          {tab === 'basics' && <BasicsTab key={node.id} draft={node} update={updateNode} />}
+          {tab === 'basics' && <BasicsTab key={node.id} draft={node} update={updateNode} app={app} />}
           {tab === 'basics' && node.type === 'multipleChoice' && <OptionsList draft={node} update={updateNode} onOpen={(id) => onPath([...at, id])} />}
           {tab === 'technical' && <TechnicalTab key={node.id} draft={node} update={updateNode} />}
           {tab === 'scripts' && <ScriptsTab key={node.id} draft={node} update={updateNode} />}
