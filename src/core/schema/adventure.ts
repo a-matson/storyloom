@@ -25,6 +25,9 @@ export const ScriptMemory = z.object({
   frontMemory: z.optional(z.string()),
 });
 
+/** The four script hooks. Defined here, not in `./scenario`, so `Adventure` can hold a copy without an import cycle. */
+export const ScenarioScripts = z.object({ library: z.string(), input: z.string(), context: z.string(), output: z.string() });
+
 const Placeholder = z.object({ question: z.string(), answer: z.string() });
 
 /** Persistent object scripts read/write (`state`); scripts may add any keys, so unknown keys are kept. */
@@ -57,6 +60,8 @@ export const Adventure = z.object({
   storyCards: z.array(StoryCard),
   memories: z.array(Memory),
   scriptState: ScriptState,
+  /** Copied from the scenario at creation, so later scenario edits never change a running story. */
+  scripts: z.optional(ScenarioScripts),
   /** Answers given to ${placeholders} when the adventure was created. */
   placeholders: z.array(Placeholder),
   settings: z.prefault(AdventureSettings, {}),

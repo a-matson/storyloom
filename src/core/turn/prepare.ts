@@ -58,21 +58,34 @@ async function rankForQuery(adventure: Adventure, query: string, embedder?: Embe
 }
 
 /** Build the context for `actions` (the log as it stands) and render the prompt. */
-export async function prepareContext(adventure: Adventure, actions: Action[], deps: TurnDeps): Promise<PreparedContext | { stopped: string }> {
+export async function prepareContext(
+  adventure: Adventure,
+  actions: Action[],
+  deps: TurnDeps,
+  scriptLogs?: string[],
+): Promise<PreparedContext | { stopped: string }> {
   const last = actions.at(-1);
   const rankedMemories = await rankForQuery(adventure, last ? actionText(last) : '', deps.embedder);
   const result = await buildExact(contextInput(adventure, actions, rankedMemories, deps, adventure.settings.context.cacheStableLayout));
 
   const fullText = `${result.system ? `${result.system}\n\n` : ''}${result.body}`;
-  const hook = await runHook(adventure, deps, 'onModelContext', fullText, actions, {
-    info: {
-      characterNames: adventure.plot.thirdPerson?.enabled ? [adventure.plot.thirdPerson.name] : [],
-      actionCount: actions.length,
-      maxChars: Math.floor(result.budget.total * 3.9),
-      memoryLength: (adventure.plot.plotEssentials ?? '').length,
+  const hook = await runHook(
+    adventure,
+    deps,
+    'onModelContext',
+    fullText,
+    actions,
+    {
+      info: {
+        characterNames: adventure.plot.thirdPerson?.enabled ? [adventure.plot.thirdPerson.name] : [],
+        actionCount: actions.length,
+        maxChars: Math.floor(result.budget.total * 3.9),
+        memoryLength: (adventure.plot.plotEssentials ?? '').length,
+      },
+      sections: result.sections,
     },
-    sections: result.sections,
-  });
+    scriptLogs,
+  );
   let body = result.body;
   if (hook.error) {
     // Scripts that fail must not break play; surface the error and continue.

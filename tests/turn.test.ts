@@ -16,6 +16,15 @@ function setup(scripts?: TurnDeps['scripts']) {
   return { adventure, log, deps };
 }
 
+/** A runner whose every hook passes through, patched by `reply`. */
+function scripted(reply: (input: HookInput) => Partial<HookResult>): NoopScriptRunner {
+  return new (class extends NoopScriptRunner {
+    override async run(input: HookInput): Promise<HookResult> {
+      return { ...(await super.run(input)), ...reply(input) };
+    }
+  })();
+}
+
 async function collect(gen: AsyncGenerator<TurnEvent>): Promise<TurnEvent[]> {
   const out: TurnEvent[] = [];
   for await (const e of gen) out.push(e);
@@ -35,15 +44,45 @@ describe('runTurn', () => {
   });
 
   it('stops before generating when onInput asks to', async () => {
-    class Stopper extends NoopScriptRunner {
-      override async run(input: HookInput): Promise<HookResult> {
-        return { ...(await super.run(input)), stop: true };
-      }
-    }
-    const { adventure, log, deps } = setup(new Stopper());
+    const { adventure, log, deps } = setup(scripted(() => ({ stop: true })));
     const events = await collect(runTurn(adventure, log, { type: 'do', text: 'x' }, deps));
     expect(events).toEqual([{ type: 'stopped', reason: 'Unable to run scenario scripts', turnId: expect.any(String) }]);
     expect(log.length).toBe(1);
+  });
+
+  it('stops before generating when onInput empties the text', async () => {
+    const { adventure, log, deps } = setup(scripted((i) => (i.hook === 'onInput' ? { text: '' } : {})));
+    const events = await collect(runTurn(adventure, log, { type: 'do', text: 'x' }, deps));
+    expect(events).toEqual([{ type: 'stopped', reason: 'Unable to run scenario scripts', turnId: expect.any(String) }]);
+    expect(log.length).toBe(1);
+  });
+
+  it('fails the turn when onOutput empties the model output', async () => {
+    const { adventure, log, deps } = setup(scripted((i) => (i.hook === 'onOutput' ? { text: '' } : {})));
+    const events = await collect(runTurn(adventure, log, { type: 'do', text: 'x' }, deps));
+    const error = events.at(-2);
+    expect(error?.type === 'error' && error.message).toMatch(/^A custom script running on this scenario failed/);
+    // The player action stays; only the AI output is missing.
+    expect(log.last?.type).toBe('do');
+  });
+
+  it('plays on when the runner itself fails, recording why', async () => {
+    const runner = new NoopScriptRunner();
+    runner.run = () => Promise.reject(new Error('script worker restarted'));
+    const { adventure, log, deps } = setup(runner);
+    const [trace] = traces(await collect(runTurn(adventure, log, { type: 'do', text: 'x' }, deps)));
+    expect(trace?.outcome).toBe('done');
+    expect(trace?.scriptLogs).toEqual([
+      'error: onInput: script worker restarted',
+      'error: onModelContext: script worker restarted',
+      'error: onOutput: script worker restarted',
+    ]);
+  });
+
+  it('puts every hook log and error in the trace', async () => {
+    const { adventure, log, deps } = setup(scripted((i) => (i.hook === 'onModelContext' ? { error: 'boom' } : { logs: [`ran ${i.hook}`] })));
+    const [trace] = traces(await collect(runTurn(adventure, log, { type: 'do', text: 'x' }, deps)));
+    expect(trace?.scriptLogs).toEqual(['onInput: ran onInput', 'error: onModelContext: boom', 'onOutput: ran onOutput']);
   });
 
   it('turns provider failures into an error event', async () => {

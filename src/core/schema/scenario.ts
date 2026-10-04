@@ -1,10 +1,8 @@
 import { z } from 'zod/mini';
-import { PlotComponents } from './adventure';
+import { PlotComponents, ScenarioScripts } from './adventure';
 import { StoryCard } from './card';
 
 export const ScenarioType = z.enum(['story', 'characterCreator', 'multipleChoice']);
-
-export const ScenarioScripts = z.object({ library: z.string(), input: z.string(), context: z.string(), output: z.string() });
 
 export const Scenario = z.object({
   id: z.string(),

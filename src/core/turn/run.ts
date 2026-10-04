@@ -13,7 +13,7 @@ export { randomSeed };
 async function* generateFor(adventure: Adventure, run: TurnRun, prepared: PreparedContext, deps: TurnDeps, signal?: AbortSignal, seed?: number) {
   run.prepared = prepared;
   run.request = buildRequest(adventure, prepared, seed === undefined ? {} : { seed });
-  const generated = yield* generate(adventure, run.request, deps, signal);
+  const generated = yield* generate(adventure, run.request, deps, signal, run.scriptLogs);
   run.generated = generated;
   return generated;
 }
@@ -38,8 +38,17 @@ export function runTurn(
     run,
     async function* () {
       if (input.type !== 'continue') {
-        const hook = await runHook(adventure, deps, 'onInput', input.text, log.actions, { info: { characterNames: [], actionCount: log.length } });
-        if (!hook.error && hook.stop) {
+        const hook = await runHook(
+          adventure,
+          deps,
+          'onInput',
+          input.text,
+          log.actions,
+          { info: { characterNames: [], actionCount: log.length } },
+          run.scriptLogs,
+        );
+        // A script that stops the turn or empties the input gets the same message (spec).
+        if (!hook.error && (hook.stop || (hook.text === '' && input.text !== ''))) {
           yield { type: 'stopped', turnId, reason: 'Unable to run scenario scripts' };
           return;
         }
@@ -48,7 +57,7 @@ export function runTurn(
         adventure.actions = log.actions;
         yield { type: 'player', turnId, action };
       }
-      const prepared = await prepareContext(adventure, log.actions, deps);
+      const prepared = await prepareContext(adventure, log.actions, deps, run.scriptLogs);
       if ('stopped' in prepared) {
         yield { type: 'stopped', turnId, reason: prepared.stopped };
         return;
@@ -82,7 +91,7 @@ export function retryLast(adventure: Adventure, log: ActionLog, deps: TurnDeps, 
         return;
       }
       run.actionId = last.id;
-      const prepared = await prepareContext(adventure, log.actions.slice(0, -1), deps);
+      const prepared = await prepareContext(adventure, log.actions.slice(0, -1), deps, run.scriptLogs);
       if ('stopped' in prepared) {
         yield { type: 'stopped', turnId, reason: prepared.stopped };
         return;
@@ -115,7 +124,7 @@ export async function generateAlternative(
 ): Promise<Generated & { trace: TurnTrace }> {
   const request = buildRequest(adventure, prepared, { slotId, seed: randomSeed() });
   const run: PromptedRun = { ...startRun('retry'), actionId, prepared, request };
-  const gen = generate(adventure, request, deps, signal);
+  const gen = generate(adventure, request, deps, signal, run.scriptLogs);
   let next = await gen.next();
   while (!next.done) next = await gen.next();
   run.generated = next.value;

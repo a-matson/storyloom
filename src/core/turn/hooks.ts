@@ -22,6 +22,7 @@ function scriptCardsToCore(cards: ScriptStoryCard[], existing: StoryCard[]): Sto
 /**
  * Run one script hook over the adventure. On success the hook's state and story cards
  * are written back to `adventure`; on error nothing changes (scripts must never break play).
+ * `collect` gathers the hook's `log()` lines and its error for the turn's trace.
  */
 export async function runHook(
   adventure: Adventure,
@@ -30,16 +31,28 @@ export async function runHook(
   text: string,
   history: Action[],
   extra: Pick<HookInput, 'info'> & Partial<Pick<HookInput, 'sections'>>,
+  collect?: string[],
 ): Promise<HookResult> {
   const scripts = deps.scripts ?? new NoopScriptRunner();
-  const result = await scripts.run({
+  const input: HookInput = {
     hook,
     text,
     history: history.slice(-40).map((a) => ({ text: actionText(a), rawText: actionText(a), type: a.type })),
     storyCards: toScriptCards(adventure.storyCards),
     state: adventure.scriptState,
     ...extra,
-  });
+  };
+  // A runner that rejects (a crashed or restarted worker) must not fail the turn either; the trace keeps the reason.
+  const result = await scripts.run(input).catch((e: unknown): HookResult => ({
+    text: input.text,
+    state: input.state,
+    storyCards: input.storyCards,
+    sections: input.sections,
+    logs: [],
+    error: e instanceof Error ? e.message : String(e),
+    elapsedMs: 0,
+  }));
+  collect?.push(...result.logs.map((l) => `${hook}: ${l}`), ...(result.error ? [`error: ${hook}: ${result.error}`] : []));
   if (!result.error) {
     adventure.scriptState = result.state;
     adventure.storyCards = scriptCardsToCore(result.storyCards, adventure.storyCards);

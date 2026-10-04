@@ -41,5 +41,15 @@ export function newId(prefix = ''): string {
   return `${prefix}${Date.now().toString(36)}-${counter.toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/** How many of the four script hooks have code. */
+export function scriptCount(scripts: Adventure['scripts']): number {
+  return Object.values(scripts ?? {}).filter((code) => code.trim() !== '').length;
+}
+
+/** Any script to run? Lives here, not in `scenario.ts`, so the start-up chunk can ask without pulling the editor model in. */
+export function hasScripts(scripts: Adventure['scripts']): scripts is NonNullable<Adventure['scripts']> {
+  return scriptCount(scripts) > 0;
+}
+
 /** The second, small model server for memory jobs, if one is configured. */
 export const utilityProvider = (app: AppSettings): ProviderConfig | undefined => app.providers.find((p) => p.role === 'utility');

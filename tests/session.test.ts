@@ -34,7 +34,7 @@ function setup(opts: { failSave?: boolean; prefetch?: boolean; warm?: boolean; a
         : Promise.reject(new Error('no embedder')),
     tokenizer: createApproxTokenizer(),
     tokenizerFor: () => createApproxTokenizer(),
-    scripts: new NoopScriptRunner(),
+    scriptsFor: () => Promise.resolve(new NoopScriptRunner()),
     storage,
     idle: (fn) => idle.push(fn),
     frame: (fn) => setTimeout(fn, 0),

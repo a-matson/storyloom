@@ -1,4 +1,4 @@
-import type { Adventure, AppSettings } from '@core/model';
+import { hasScripts, type Adventure, type AppSettings } from '@core/model';
 import { GameSession } from './session';
 import { AppSettings as AppSettingsSchema } from '@core/schema';
 import { createApproxTokenizer, createExactTokenizer, type Tokenizer } from '@core/text';
@@ -7,7 +7,7 @@ import { DexieStorage } from '@adapters/storage';
 import type { Provider, Storage } from '@core/ports';
 import { HashEmbedder, loadInBrowserEmbedder, ProviderEmbedder } from '@adapters/embeddings';
 import { type Embedder } from '@core/ports';
-import { NoopScriptRunner } from '@core/ports';
+import { NoopScriptRunner, type ScriptRunner } from '@core/ports';
 
 /**
  * App-wide singletons. Kept out of React so the engine, workers and tests can
@@ -16,7 +16,6 @@ import { NoopScriptRunner } from '@core/ports';
 export { DEFAULT_PROVIDER_CONFIG };
 export const tokenizer = createApproxTokenizer();
 export const storage: Storage = new DexieStorage();
-export const scripts = new NoopScriptRunner();
 
 const providers = new Map<string, Provider>();
 const embedders = new Map<string, Embedder>();
@@ -77,6 +76,23 @@ export async function embedderFor(provider: Provider): Promise<Embedder> {
   return e;
 }
 
+/**
+ * The runner for one adventure. QuickJS and its wasm stay off the start-up path:
+ * a story without scripts never loads the adapter. A failed compile throws, and
+ * the session falls back to the no-op runner.
+ */
+export async function scriptsFor(adv: Adventure): Promise<ScriptRunner> {
+  if (!hasScripts(adv.scripts)) return new NoopScriptRunner();
+  const { createQuickJsRunner } = await import('@adapters/scripting');
+  const runner = createQuickJsRunner();
+  const { ok, error } = await runner.load(adv.scripts);
+  if (!ok) {
+    runner.dispose();
+    throw new Error(error ?? 'the scenario scripts could not be compiled');
+  }
+  return runner;
+}
+
 /** Opens an adventure as a session wired to the app-wide services. */
 export function openSession(adventure: Adventure, app: AppSettings): GameSession {
   return new GameSession(adventure, app, {
@@ -84,7 +100,7 @@ export function openSession(adventure: Adventure, app: AppSettings): GameSession
     embedderFor,
     tokenizer,
     tokenizerFor,
-    scripts,
+    scriptsFor,
     storage,
     idle: (fn) => (typeof requestIdleCallback === 'function' ? requestIdleCallback(fn) : setTimeout(fn, 800)),
     frame: (fn) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(fn) : setTimeout(fn, 16)),

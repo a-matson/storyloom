@@ -1,10 +1,11 @@
 import { ActionLog } from '@core/log';
 import { markStale } from '@core/memory';
 import { utilityProvider, type Adventure, type AdventureSettings, type AppSettings, type PlotComponents, type TemplateId, type TurnTrace } from '@core/model';
-import type { Embedder, Provider } from '@core/ports';
+import type { Embedder, Provider, ScriptRunner } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
 import { IdleWork } from './idleWork';
 import { MemoryScheduler } from './memoryScheduler';
+import { sessionScripts } from './scripts';
 import type { GameSnapshot, Prefetched, SessionServices } from './types';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -32,6 +33,7 @@ export class GameSession {
   /** The story provider's embedder; queries and memories must share it so vectors compare. */
   private embedder: Embedder | undefined;
   private contextSize: number | undefined;
+  private readonly scripts: ScriptRunner;
   /** Warn once per session when the utility server is down. */
   private utilityDown = false;
   private readonly memory = new MemoryScheduler({
@@ -62,6 +64,7 @@ export class GameSession {
     this.app = app;
     this.svc = services;
     this.snapshot = this.build({ busy: false, streaming: '', context: null, error: null, notice: null, prefetchReady: false, warm: 'idle' });
+    this.scripts = sessionScripts(services, adventure, (e) => this.emit({ notice: `Scenario scripts are off: ${message(e)}` }));
     // Until these resolve, turns rank memories by recency only and the context length is not clamped to n_ctx.
     this.resolveEmbedder().catch((e: unknown) => console.warn('no embedder; memories rank by recency', e));
     void this.deps()
@@ -91,7 +94,7 @@ export class GameSession {
 
   private deps(): TurnDeps {
     const provider = this.svc.providerFor(this.app, this.adv.settings.providerId);
-    return { provider, tokenizer: this.svc.tokenizerFor(provider), scripts: this.svc.scripts, embedder: this.embedder, contextSize: this.contextSize };
+    return { provider, tokenizer: this.svc.tokenizerFor(provider), scripts: this.scripts, embedder: this.embedder, contextSize: this.contextSize };
   }
 
   private async resolveEmbedder(): Promise<Embedder> {
@@ -120,6 +123,7 @@ export class GameSession {
   async close(): Promise<void> {
     this.abort?.abort();
     this.idleWork.stop();
+    this.scripts.dispose();
     await this.flush();
   }
 

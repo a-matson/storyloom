@@ -50,7 +50,7 @@ function setup(utilityReachable: boolean) {
     },
     tokenizer: createApproxTokenizer(),
     tokenizerFor: () => createApproxTokenizer(),
-    scripts: new NoopScriptRunner(),
+    scriptsFor: () => Promise.resolve(new NoopScriptRunner()),
     storage: { putAdventure: () => Promise.resolve(), putTrace: () => Promise.resolve() } as unknown as Storage,
     idle: (fn) => idle.push(fn),
     frame: (fn) => setTimeout(fn, 0),

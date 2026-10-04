@@ -7,6 +7,9 @@ import type { Generated, PreparedContext, TurnDeps, TurnEvent } from './types';
 /** Tokens allowed past `responseLength` to reach a sentence end; 44 live turns never ran out of margin. [measured: 2026-10-02-gate-v.md] */
 export const SOFT_STOP_MARGIN = 50;
 
+/** [provisional] wording from SPEC-scripting-api. */
+const SCRIPT_EMPTIED_OUTPUT = 'A custom script running on this scenario failed. Please try again or fix the script.';
+
 export function randomSeed(): number {
   return Math.floor(Math.random() * 2 ** 31);
 }
@@ -40,7 +43,13 @@ export function buildRequest(
  * Past `responseLength` tokens the stream is cut at the first sentence end
  * (soft stop); if none comes before the margin runs out, the trim cleans up.
  */
-export async function* generate(adventure: Adventure, request: CompletionRequest, deps: TurnDeps, signal?: AbortSignal): AsyncGenerator<TurnEvent, Generated> {
+export async function* generate(
+  adventure: Adventure,
+  request: CompletionRequest,
+  deps: TurnDeps,
+  signal?: AbortSignal,
+  scriptLogs?: string[],
+): AsyncGenerator<TurnEvent, Generated> {
   const startedAt = Date.now();
   const { responseLength } = adventure.settings.model;
   let ttftMs: number | undefined;
@@ -65,8 +74,18 @@ export async function* generate(adventure: Adventure, request: CompletionRequest
     }
   }
   const raw = adventure.settings.context.rawOutput ? text : trimUnfinishedSentence(text, stats?.stopReason);
-  const hook = await runHook(adventure, deps, 'onOutput', raw, adventure.actions, { info: { characterNames: [], actionCount: adventure.actions.length } });
+  const hook = await runHook(
+    adventure,
+    deps,
+    'onOutput',
+    raw,
+    adventure.actions,
+    { info: { characterNames: [], actionCount: adventure.actions.length } },
+    scriptLogs,
+  );
   if (hook.error) return { text: raw, stats, ttftMs };
+  // A script that empties the output leaves nothing to show; the turn fails rather than logging a blank action.
+  if (hook.text === '' && raw !== '') throw new Error(SCRIPT_EMPTIED_OUTPUT);
   if (hook.state.message) yield { type: 'message', text: hook.state.message };
   return { text: hook.text ?? raw, stats, ttftMs };
 }

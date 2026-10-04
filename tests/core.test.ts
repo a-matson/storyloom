@@ -72,6 +72,18 @@ describe('multiple choice tree', () => {
   });
 });
 
+describe('scripts into the adventure', () => {
+  it('copies the played leaf scripts, not the root ones, and nothing when all four are empty', () => {
+    const root: Scenario = { ...newScenario('Root'), type: 'multipleChoice', scripts: { library: 'var root = 1;', input: '', context: '', output: '' } };
+    const leaf: Scenario = { ...newOption(root), scripts: { library: '', input: '', context: '', output: 'modifier(text)' } };
+    root.options = [leaf];
+    // startScenario hands `createAdventureFromScenario` the leaf the player reached.
+    expect(createAdventureFromScenario(leaf, {}).scripts).toEqual({ library: '', input: '', context: '', output: 'modifier(text)' });
+    expect(createAdventureFromScenario({ ...leaf, scripts: { library: '', input: '', context: ' ', output: '' } }, {}).scripts).toBeUndefined();
+    expect(createAdventureFromScenario(newScenario('Plain'), {}).scripts).toBeUndefined();
+  });
+});
+
 describe('newScenario', () => {
   it('is a valid blank story scenario without placeholders', () => {
     const s = newScenario();
