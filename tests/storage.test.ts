@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { DexieStorage } from '@adapters/storage';
 import { ActionLog } from '@core/log';
 import { StorageError, TRACE_CAP_PER_ADVENTURE } from '@core/ports';
+import { markPending } from '@adapters/storage';
 import { makeAdventure } from './fixtures/adventure';
+import { fakeLocalStorage } from './fixtures/localStorage';
 import { makeTrace } from './fixtures/trace';
 
 let n = 0;
@@ -77,6 +79,40 @@ describe('DexieStorage', () => {
     await (await reopen(name)).putAdventure({ ...adv, storyCards: [{ id: 'c', type: 'x', name: 'n', entry: 'e', triggers: 42 as unknown as string[] }] });
     await expect((await reopen(name)).getAdventure(adv.id)).rejects.toThrow(StorageError);
     await expect((await reopen(name)).getAdventure(adv.id)).rejects.toThrow(/storyCards\.0\.triggers/);
+  });
+
+  it('replays a save the hiding tab could not finish', async () => {
+    const items = fakeLocalStorage();
+    const name = freshName();
+    const adv = makeAdventure({ actions: 6, memories: 2, embeddingDim: 4 });
+    const s = await reopen(name);
+    await s.putAdventure(adv);
+    const stored = await s.getAdventure(adv.id);
+    if (!stored) throw new Error('missing');
+    // What persistNow writes when the tab hides inside the debounce.
+    markPending({ ...stored, plot: { ...stored.plot, storySummary: 'Edited in the debounce.' }, updatedAt: stored.updatedAt + 1 });
+
+    const back = await (await reopen(name)).getAdventure(adv.id);
+    expect(back?.plot.storySummary).toBe('Edited in the debounce.');
+    // Embeddings stay out of the marker and come back from the stored bank.
+    expect(back?.memories.map((m) => m.embedding)).toEqual(stored.memories.map((m) => m.embedding));
+    expect(items.size).toBe(0);
+    expect((await (await reopen(name)).getAdventure(adv.id))?.plot.storySummary).toBe('Edited in the debounce.');
+  });
+
+  it('ignores a pending save that is not newer or belongs elsewhere', async () => {
+    const items = fakeLocalStorage();
+    const name = freshName();
+    const adv = makeAdventure({ actions: 4 });
+    const s = await reopen(name);
+    await s.putAdventure(adv);
+    const stored = await s.getAdventure(adv.id);
+    if (!stored) throw new Error('missing');
+    markPending({ ...stored, plot: { ...stored.plot, storySummary: 'Stale.' } });
+    expect((await (await reopen(name)).getAdventure(adv.id))?.plot.storySummary).toBe(stored.plot.storySummary);
+    items.set('storyloom.pending', 'not json');
+    expect((await (await reopen(name)).getAdventure(adv.id))?.plot.storySummary).toBe(stored.plot.storySummary);
+    expect(items.size).toBe(0);
   });
 
   it('fills settings fields added after they were saved', async () => {

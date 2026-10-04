@@ -1,6 +1,7 @@
 import type { Action, Adventure, AppSettings, Memory, Scenario, StoryCard, TurnTrace } from '@core/model';
 import { StorageError, summarise, TRACE_CAP_PER_ADVENTURE, type AdventureSummary, type Storage } from '@core/ports';
 import * as S from '@core/schema';
+import { clearPending, takePending } from '../pending';
 import { StoryloomDb } from './db';
 import { joinAdventure, splitAdventure, toActionRow, toCardRow, toMemoryRow } from './rows';
 
@@ -60,7 +61,12 @@ export class DexieStorage implements Storage {
     if (rows === undefined) return undefined;
     const adventure = parseOrThrow(S.Adventure, rows, `Adventure "${id}"`);
     this.saved.set(id, { actions: adventure.actions, cards: adventure.storyCards, memories: adventure.memories });
-    return adventure;
+    // Edits made inside the save debounce before the tab hid: replay them before anyone sees the adventure.
+    const pending = takePending(adventure);
+    if (!pending) return adventure;
+    await this.putAdventure(pending);
+    clearPending();
+    return pending;
   }
 
   async putAdventure(a: Adventure): Promise<void> {

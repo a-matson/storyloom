@@ -14,23 +14,7 @@ test('an edited Story Summary persists and shows when it refreshes', async ({ pa
   await summary.fill('Mira owes the ferryman a silver coin.');
   await expect(page.getByText(/Next refresh in \d+ actions\. Your edits are kept as the base for the next summary\./)).toBeVisible();
 
-  // Saves are debounced; wait for the write before reloading.
-  const stored = () =>
-    page.evaluate(async () => {
-      const req = indexedDB.open('storyloom');
-      const db = await new Promise<IDBDatabase>((ok, fail) => {
-        req.addEventListener('success', () => ok(req.result));
-        req.addEventListener('error', () => fail(req.error));
-      });
-      const rows = await new Promise<{ plot?: { storySummary?: string } }[]>((ok, fail) => {
-        const r = db.transaction('adventures').objectStore('adventures').getAll();
-        r.addEventListener('success', () => ok(r.result as { plot?: { storySummary?: string } }[]));
-        r.addEventListener('error', () => fail(r.error));
-      });
-      db.close();
-      return rows[0]?.plot?.storySummary;
-    });
-  await expect.poll(stored).toBe('Mira owes the ferryman a silver coin.');
+  // Reloading straight away is the regression: the edit is still inside the save debounce.
   await page.reload();
   await page.getByText('Story Summary', { exact: true }).click();
   await expect(summary).toHaveValue('Mira owes the ferryman a silver coin.');
