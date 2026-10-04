@@ -53,6 +53,8 @@ export const Adventure = z.object({
   description: z.string(),
   tags: z.array(z.string()),
   coverUrl: z.optional(z.string()),
+  /** Image id of the cover blob, stored under this adventure's id. `coverUrl` is read-only legacy for imported data. */
+  coverId: z.optional(z.string()),
   scenarioId: z.optional(z.string()),
   /** Active path of the story, in order. */
   actions: z.array(Action),

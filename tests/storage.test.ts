@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { splitAdventure } from '@adapters/storage/dexie/rows';
 import { DexieStorage } from '@adapters/storage';
 import { ActionLog } from '@core/log';
+import { newScenario } from '@core/model';
 import { StorageError, TRACE_CAP_PER_ADVENTURE } from '@core/ports';
 import { markPending } from '@adapters/storage';
 import { makeAdventure } from './fixtures/adventure';
@@ -148,6 +149,17 @@ describe('DexieStorage images', () => {
     await s.deleteAdventure(adv.id);
     expect(await s.getImage(adv.id, 'img1')).toBeUndefined();
     expect(await s.getImage('elsewhere', 'img1')).toBeDefined();
+  });
+
+  it('round-trips a scenario cover and deletes it with the scenario', async () => {
+    const s = await reopen(freshName());
+    const scenario = { ...newScenario('Cover me'), coverId: 'img1' };
+    await s.putScenario(scenario);
+    await s.putImage(scenario.id, 'img1', blob('cover'));
+    expect((await s.getScenario(scenario.id))?.coverId).toBe('img1');
+    expect(await (await s.getImage(scenario.id, 'img1'))?.text()).toBe('cover');
+    await s.deleteScenario(scenario.id);
+    expect(await s.getImage(scenario.id, 'img1')).toBeUndefined();
   });
 
   it('upgrades a version-2 database to 3 without data loss', async () => {

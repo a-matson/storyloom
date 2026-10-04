@@ -1,4 +1,5 @@
 import type { AdventureSummary } from '@core/ports';
+import { CoverThumb } from '@ui/components/CoverThumb';
 import { buttonClass } from '@ui/components/ui/button';
 import { SectionLabel } from '@ui/components/ui/section-label';
 import { timeAgo } from './timeAgo';
@@ -29,7 +30,7 @@ export function ContinueHero({ latest, backendOk, onOpen }: Props) {
       className="flex grow flex-row items-center gap-5 rounded-lg border border-border bg-card p-5 text-left text-foreground hover:border-neutral"
       onClick={() => onOpen(latest.id)}
     >
-      <div className="h-30 w-45 shrink-0 rounded-md bg-secondary" />
+      <CoverThumb ownerId={latest.id} coverId={latest.coverId} coverUrl={latest.coverUrl} className="h-30 w-45 shrink-0" />
       <div className="flex grow flex-col gap-1.5">
         <SectionLabel className="text-lantern">Continue</SectionLabel>
         <span className="font-display text-title font-medium">{latest.title}</span>

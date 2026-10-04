@@ -10,6 +10,7 @@ export interface AdventureSummary {
   actionCount: number;
   updatedAt: number;
   coverUrl?: string | undefined;
+  coverId?: string | undefined;
   modelId?: string | undefined;
 }
 
@@ -32,10 +33,13 @@ export interface Storage {
   /** Newest first. */
   listTraces(adventureId: string): Promise<TurnTrace[]>;
 
-  /** Generated images, keyed per adventure; deleting the adventure deletes them. Kept out of `exportAll` (own-format export is JSON). */
-  putImage(adventureId: string, id: string, blob: Blob): Promise<void>;
-  getImage(adventureId: string, id: string): Promise<Blob | undefined>;
-  deleteImage(adventureId: string, id: string): Promise<void>;
+  /**
+   * Generated images, keyed per owner — an adventure (See images, cover) or a scenario (cover).
+   * Deleting the owner deletes them. Kept out of `exportAll` (own-format export is JSON).
+   */
+  putImage(ownerId: string, id: string, blob: Blob): Promise<void>;
+  getImage(ownerId: string, id: string): Promise<Blob | undefined>;
+  deleteImage(ownerId: string, id: string): Promise<void>;
 
   getSettings(): Promise<AppSettings | undefined>;
   putSettings(s: AppSettings): Promise<void>;
@@ -46,7 +50,15 @@ export interface Storage {
 }
 
 export function summarise(a: Adventure): AdventureSummary {
-  return { id: a.id, title: a.title, actionCount: a.actions.length, updatedAt: a.updatedAt, coverUrl: a.coverUrl, modelId: a.settings.modelId };
+  return {
+    id: a.id,
+    title: a.title,
+    actionCount: a.actions.length,
+    updatedAt: a.updatedAt,
+    coverUrl: a.coverUrl,
+    coverId: a.coverId,
+    modelId: a.settings.modelId,
+  };
 }
 
 /** A stored record failed validation or the database refused an operation. */

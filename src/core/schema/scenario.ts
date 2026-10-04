@@ -10,6 +10,8 @@ export const Scenario = z.object({
   description: z.string(),
   tags: z.array(z.string()),
   coverUrl: z.optional(z.string()),
+  /** Image id of the cover blob, stored under this scenario's id. */
+  coverId: z.optional(z.string()),
   type: ScenarioType,
   /** The first action of a new adventure. May contain ${placeholders}. */
   prompt: z.string(),

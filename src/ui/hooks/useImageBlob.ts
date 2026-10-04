@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { storage } from '@app/services';
 
-/** Object URL for a stored image blob; revoked when the id changes or the block unmounts. */
-export function useImageBlob(adventureId: string, imageId: string | undefined): string | undefined {
+/** Object URL for a stored image blob; revoked when the id changes or the block unmounts. `ownerId` is an adventure or a scenario. */
+export function useImageBlob(ownerId: string, imageId: string | undefined): string | undefined {
   const [url, setUrl] = useState<string>();
   useEffect(() => {
     if (imageId === undefined) return undefined;
@@ -10,7 +10,7 @@ export function useImageBlob(adventureId: string, imageId: string | undefined): 
     let cancelled = false;
     const load = async () => {
       try {
-        const blob = await storage.getImage(adventureId, imageId);
+        const blob = await storage.getImage(ownerId, imageId);
         if (cancelled || !blob) return;
         objectUrl = URL.createObjectURL(blob);
         setUrl(objectUrl);
@@ -24,6 +24,6 @@ export function useImageBlob(adventureId: string, imageId: string | undefined): 
       if (objectUrl !== undefined) URL.revokeObjectURL(objectUrl);
       setUrl(undefined);
     };
-  }, [adventureId, imageId]);
+  }, [ownerId, imageId]);
   return url;
 }
