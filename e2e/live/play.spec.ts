@@ -5,6 +5,8 @@ import { writeMeasurement } from '../../bench/env';
 
 // `pnpm measure live <url>`: plays the real app against a real llama-server; never runs in CI.
 const URL = process.env['MEASURE_URL'];
+// Optional second server for memories/summaries/cards (`MEASURE_UTILITY=http://localhost:8081`).
+const UTILITY = process.env['MEASURE_UTILITY'];
 test.skip(!URL, 'needs MEASURE_URL (a running llama-server)');
 
 // A player reads the output before typing; idle memory jobs run in this gap. [provisional]
@@ -124,6 +126,10 @@ test('scripted live play', async ({ page }) => {
   await page.getByRole('textbox', { name: /Server URL/ }).fill(URL ?? '');
   await page.getByRole('button', { name: 'Test connection' }).click();
   await expect(page.getByText('Connected')).toBeVisible();
+  if (UTILITY) {
+    await page.getByRole('switch', { name: 'Use a utility model' }).click();
+    await page.getByRole('textbox', { name: 'Utility server URL' }).fill(UTILITY);
+  }
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Fantasy' }).click();
   await expect(page).toHaveURL(/#\/adventure\//);
@@ -172,6 +178,7 @@ test('scripted live play', async ({ page }) => {
   const label = process.env['MEASURE_LABEL'];
   const path = writeMeasurement(label ? `live-play-${label}` : 'live-play', {
     url: URL,
+    utility: UTILITY,
     model: traces.at(-1)?.modelId,
     turns,
     stopReasons,
