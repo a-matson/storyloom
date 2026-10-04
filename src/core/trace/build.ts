@@ -2,6 +2,7 @@ import type { ContextBuildResult, ScriptCache } from '../context';
 import type { TurnErrorKind, TurnKind, TurnOutcome, TurnTrace } from '../model/types';
 import type { CompletionRequest, CompletionStats } from '../ports/provider';
 import { hashPrompt } from './hash';
+import { overlappingJobs } from './jobLog';
 
 /** Characters of prompt kept per trace. [provisional] */
 export const TRACE_PROMPT_CAP = 64_000;
@@ -78,5 +79,6 @@ export function buildTrace(i: TraceInput): TurnTrace {
     scriptLogs: i.scriptLogs ?? [],
     ...(i.scriptCache ? { scriptCache: i.scriptCache } : {}),
     timings: { totalMs: i.totalMs, ttftMs: i.ttftMs },
+    overlap: overlappingJobs(i.createdAt, i.createdAt + i.totalMs),
   };
 }

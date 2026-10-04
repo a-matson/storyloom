@@ -14,6 +14,7 @@ export type TurnTrace = z.output<typeof S.TurnTrace>;
 export type TurnKind = z.output<typeof S.TurnKind>;
 export type TurnOutcome = z.output<typeof S.TurnOutcome>;
 export type TurnErrorKind = z.output<typeof S.TurnErrorKind>;
+export type JobKind = z.output<typeof S.JobKind>;
 export type PlotComponents = z.output<typeof S.PlotComponents>;
 export type StoryCard = z.output<typeof S.StoryCard>;
 export type Memory = z.output<typeof S.Memory>;

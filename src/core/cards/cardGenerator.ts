@@ -5,6 +5,7 @@ import { CARD_SYSTEM, cardPrompt } from '../text/prompts';
 import { normaliseTriggers } from './storyCards';
 import { renderTemplate } from '../text/templates';
 import { collect, type Provider } from '../ports/provider';
+import { trackJob } from '../trace';
 
 /**
  * AI story card generation (AI Dungeon's "Generate New" buttons).
@@ -75,19 +76,21 @@ export async function generateStoryCard(req: GenerateCardRequest, deps: Generate
   });
   const rendered = renderTemplate(deps.template, CARD_SYSTEM, user, caps.jsonSchema ? '' : '{');
   const attempt = async () => {
-    const { text } = await collect(
-      deps.provider.complete(
-        {
-          prompt: rendered.prompt,
-          maxTokens: 320,
-          temperature: 0.9,
-          topP: 0.95,
-          stop: rendered.stop,
-          cachePrompt: false,
-          slotId: 1,
-          jsonSchema: caps.jsonSchema ? CARD_JSON_SCHEMA : undefined,
-        },
-        deps.signal,
+    const { text } = await trackJob('card', () =>
+      collect(
+        deps.provider.complete(
+          {
+            prompt: rendered.prompt,
+            maxTokens: 320,
+            temperature: 0.9,
+            topP: 0.95,
+            stop: rendered.stop,
+            cachePrompt: false,
+            slotId: 1,
+            jsonSchema: caps.jsonSchema ? CARD_JSON_SCHEMA : undefined,
+          },
+          deps.signal,
+        ),
       ),
     );
     const raw = caps.jsonSchema ? text : `{${text}`;

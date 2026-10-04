@@ -6,6 +6,7 @@ import { renderTemplate } from '../text/templates';
 import { collect, type Provider } from '../ports/provider';
 import type { Embedder } from '../ports/embedder';
 import { joinStory, trimUnfinishedSentence } from '../text/formatting';
+import { trackJob } from '../trace';
 
 /**
  * Background memory maintenance. Call after each committed turn; it is safe
@@ -80,8 +81,10 @@ async function summarise(passage: string, deps: MaintenanceDeps): Promise<string
   // A memory is 1-3 sentences; the extra stops end a reply that drifts into the next turn.
   const stop = [...new Set([...prompt.stop, '\n>', '<|im_start|>'])];
   const grammar = await sentencesOnly(deps, 3);
-  const { text, stats } = await collect(
-    deps.provider.complete({ prompt: prompt.prompt, maxTokens: 90, temperature: 0.3, topP: 0.9, stop, cachePrompt: false, slotId: 1, grammar }, deps.cancel),
+  const { text, stats } = await trackJob('memory', () =>
+    collect(
+      deps.provider.complete({ prompt: prompt.prompt, maxTokens: 90, temperature: 0.3, topP: 0.9, stop, cachePrompt: false, slotId: 1, grammar }, deps.cancel),
+    ),
   );
   if (deps.cancel?.aborted) return '';
   return trimUnfinishedSentence(text, stats?.stopReason).trim();
@@ -172,19 +175,21 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
         .join('\n\n');
       const prompt = renderTemplate(deps.template, SUMMARY_SYSTEM, summaryPrompt(adventure.plot.storySummary ?? '', since, recent));
       const grammar = await sentencesOnly(deps, 8);
-      const { text: raw, stats } = await collect(
-        deps.provider.complete(
-          {
-            prompt: prompt.prompt,
-            maxTokens: 400,
-            temperature: 0.3,
-            topP: 0.9,
-            stop: prompt.stop,
-            cachePrompt: false,
-            slotId: 1,
-            grammar,
-          },
-          deps.cancel,
+      const { text: raw, stats } = await trackJob('summary', () =>
+        collect(
+          deps.provider.complete(
+            {
+              prompt: prompt.prompt,
+              maxTokens: 400,
+              temperature: 0.3,
+              topP: 0.9,
+              stop: prompt.stop,
+              cachePrompt: false,
+              slotId: 1,
+              grammar,
+            },
+            deps.cancel,
+          ),
         ),
       );
       const text = trimUnfinishedSentence(raw, stats?.stopReason).trim();
