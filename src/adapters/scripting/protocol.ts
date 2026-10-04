@@ -6,9 +6,11 @@ export const ScriptCard = z.object({ id: z.string(), keys: z.string(), entry: z.
 const HookName = z.enum(['onInput', 'onModelContext', 'onOutput']);
 
 /**
- * A hook run, without `sections`: cache-safe mode is a later milestone item,
- * and keeping ContextSection out of the worker keeps this protocol flat.
+ * Cache-safe mode: `kind`/`text` only (plus read-only `cacheable`), so `ContextSection`'s
+ * host-side counts never cross into the VM. `kind` is validated by `applyScriptSections`.
  */
+const ScriptSection = z.object({ kind: z.string(), text: z.string(), cacheable: z.optional(z.boolean()) });
+
 export const SandboxInput = z.object({
   hook: HookName,
   text: z.string(),
@@ -21,6 +23,8 @@ export const SandboxInput = z.object({
     maxChars: z.optional(z.number()),
     memoryLength: z.optional(z.number()),
   }),
+  /** onModelContext only. */
+  sections: z.optional(z.array(ScriptSection)),
 });
 export type SandboxInput = z.infer<typeof SandboxInput>;
 
@@ -29,6 +33,7 @@ export const SandboxOutput = z.object({
   stop: z.optional(z.boolean()),
   state: ScriptState,
   storyCards: z.array(ScriptCard),
+  sections: z.optional(z.array(ScriptSection)),
   logs: z.array(z.string()),
   error: z.optional(z.string()),
   elapsedMs: z.number(),
@@ -43,6 +48,7 @@ export const HookOutput = z.object({
   result: z.unknown(),
   state: ScriptState,
   storyCards: z.array(ScriptCard),
+  sections: z.nullable(z.array(ScriptSection)),
   logs: z.array(z.string()),
 });
 

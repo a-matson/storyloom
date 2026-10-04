@@ -12,7 +12,9 @@ export type SectionKind =
   | 'memories'
   | 'authorsNote'
   | 'lastAction'
-  | 'frontMemory';
+  | 'frontMemory'
+  /** Inserted by a script through `sections`; never part of the cacheable prefix. */
+  | 'script';
 
 export interface ContextSection {
   kind: SectionKind;

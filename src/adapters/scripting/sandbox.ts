@@ -59,10 +59,10 @@ function logsOf(ctx: QuickJSContext, scope: Scope): string[] {
 function normalise(
   result: unknown,
   input: SandboxInput,
-  out: { state: SandboxOutput['state']; storyCards: SandboxOutput['storyCards']; logs: string[] },
+  out: { state: SandboxOutput['state']; storyCards: SandboxOutput['storyCards']; sections: SandboxOutput['sections']; logs: string[] },
   elapsedMs: number,
 ): SandboxOutput {
-  const base = { state: out.state, storyCards: out.storyCards, logs: out.logs, elapsedMs };
+  const base = { state: out.state, storyCards: out.storyCards, ...(out.sections ? { sections: out.sections } : {}), logs: out.logs, elapsedMs };
   if (result === 'stop') return { ...base, text: input.text, stop: true };
   const r = HookReturn.safeParse(result);
   if (!r.success) return { ...base, text: input.text };
@@ -114,7 +114,12 @@ export function runInSandbox(module: QuickJSWASMModule, scripts: Scripts, input:
           throw new Error(message);
         }
         const out = HookOutput.parse(JSON.parse(ctx.getString(scope.manage(call.value))));
-        return normalise(out.result, input, { state: out.state, storyCards: out.storyCards, logs: out.logs }, Date.now() - started);
+        return normalise(
+          out.result,
+          input,
+          { state: out.state, storyCards: out.storyCards, sections: out.sections ?? undefined, logs: out.logs },
+          Date.now() - started,
+        );
       } catch (e) {
         logs = logs.length ? logs : logsOf(ctx, scope);
         throw e;

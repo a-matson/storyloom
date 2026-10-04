@@ -1,4 +1,4 @@
-import type { ContextBuildResult } from '../context';
+import type { ContextBuildResult, ScriptCache } from '../context';
 import type { Action, TurnErrorKind, TurnTrace } from '../model/types';
 import type { Embedder } from '../ports/embedder';
 import type { CompletionStats, Provider } from '../ports/provider';
@@ -19,7 +19,7 @@ export interface TurnDeps {
 /** Events that belong to one turn carry its `turnId`; tokens and messages are tied to it by order. */
 export type TurnEvent =
   | { type: 'player'; turnId: string; action: Action }
-  | { type: 'context'; turnId: string; result: ContextBuildResult; prompt: string; stop: string[] }
+  | { type: 'context'; turnId: string; result: ContextBuildResult; prompt: string; stop: string[]; scriptCache?: ScriptCache | undefined }
   | { type: 'token'; text: string }
   | { type: 'done'; turnId: string; action: Action; text: string; stats?: CompletionStats | undefined }
   | { type: 'stopped'; turnId: string; reason: string }
@@ -32,6 +32,8 @@ export interface PreparedContext {
   result: ContextBuildResult;
   prompt: string;
   stop: string[];
+  /** What onModelContext did to the cached prefix; absent when no script ran. */
+  scriptCache?: ScriptCache | undefined;
 }
 
 export interface Generated {

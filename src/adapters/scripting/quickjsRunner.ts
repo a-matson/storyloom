@@ -1,4 +1,4 @@
-import type { HookInput, HookResult, ScriptRunner } from '@core/ports';
+import { plainSections, type HookInput, type HookResult, type ScriptRunner } from '@core/ports';
 import { ScriptReply, type ScriptRequest } from './protocol';
 import type { Scripts } from './sandbox';
 
@@ -23,7 +23,7 @@ const failed = (input: HookInput, error: string, elapsedMs = 0): HookResult => (
   text: input.text,
   state: input.state,
   storyCards: input.storyCards,
-  sections: input.sections,
+  sections: plainSections(input.sections),
   logs: [],
   error,
   elapsedMs,
@@ -52,7 +52,8 @@ export class QuickJsScriptRunner implements ScriptRunner {
   }
 
   run(input: HookInput): Promise<HookResult> {
-    const { sections: _sections, ...payload } = input;
+    const sections = plainSections(input.sections);
+    const payload = { ...input, ...(sections ? { sections } : {}) };
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => this.onTimeout(id), HARD_TIMEOUT_MS);
@@ -85,7 +86,7 @@ export class QuickJsScriptRunner implements ScriptRunner {
     const waiter = this.take(reply.id);
     // An error the worker could not tie to a request (a rejected request, say): nothing pending can still be answered.
     if (!waiter) return reply.type === 'error' ? this.failAll(new Error(reply.message)) : undefined;
-    waiter.resolve(reply.type === 'result' ? { ...reply.result, sections: waiter.input.sections } : failed(waiter.input, reply.message));
+    waiter.resolve(reply.type === 'result' ? reply.result : failed(waiter.input, reply.message));
   }
 
   /** The VM ignored its interrupt: terminate, start fresh, and reload the scripts for the next run. */

@@ -41,6 +41,17 @@ export interface ScriptInfo {
   memoryLength?: number;
 }
 
+/**
+ * A section as a script sees and returns it. `kind` is whatever the script put there:
+ * `applyScriptSections` validates it, recounts the tokens and decides cacheability.
+ */
+export interface ScriptSection {
+  kind: string;
+  text: string;
+  /** Read-only: whether the section is part of the cached prefix. Ignored on the way back. */
+  cacheable?: boolean | undefined;
+}
+
 export interface HookInput {
   hook: HookName;
   text: string;
@@ -61,7 +72,8 @@ export interface HookResult {
   stop?: boolean | undefined;
   state: ScriptState;
   storyCards: ScriptStoryCard[];
-  sections?: ContextSection[] | undefined;
+  /** Only set when the hook was given `sections`; absent means "unchanged". */
+  sections?: ScriptSection[] | undefined;
   logs: string[];
   error?: string | undefined;
   /** Wall time in ms. */
@@ -80,13 +92,18 @@ export function toScriptCards(cards: StoryCard[]): ScriptStoryCard[] {
   return cards.map((c) => ({ id: c.id, keys: c.triggers.join(','), entry: c.entry, type: c.type }));
 }
 
+/** The script-facing shape of the built sections; `tokens`/`trimmed` stay host-side. */
+export function plainSections(sections: ContextSection[] | undefined): ScriptSection[] | undefined {
+  return sections?.map((s) => ({ kind: s.kind, text: s.text, cacheable: s.cacheable }));
+}
+
 /** Pass-through runner used until the QuickJS sandbox lands. */
 export class NoopScriptRunner implements ScriptRunner {
   async load(): Promise<{ ok: boolean }> {
     return { ok: true };
   }
   async run(input: HookInput): Promise<HookResult> {
-    return { text: input.text, state: input.state, storyCards: input.storyCards, sections: input.sections, logs: [], elapsedMs: 0 };
+    return { text: input.text, state: input.state, storyCards: input.storyCards, sections: plainSections(input.sections), logs: [], elapsedMs: 0 };
   }
   dispose(): void {}
 }

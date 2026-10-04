@@ -10,6 +10,7 @@ export function turnStatus(state: GameSnapshot, backendLabel: string): string {
     stats?.promptMs === undefined ? backendLabel : `${((stats.promptMs + (stats.generationMs ?? 0)) / 1000).toFixed(1)} s`,
     prompt > 0 ? `${Math.round(((stats?.cachedTokens ?? 0) / prompt) * 100)}% cached` : '',
     state.warm === 'warm' ? 'next turn warm' : state.warm === 'warming' ? 'warming…' : '',
+    state.context?.scriptCache && state.context.scriptCache !== 'kept' ? 'uncached: script' : '',
   ];
   return parts.filter((p) => p !== '').join(' · ');
 }

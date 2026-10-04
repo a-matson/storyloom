@@ -91,6 +91,23 @@ describe('runInSandbox', () => {
     expect(out.text).toBe('the door creaks');
   });
 
+  it('shows sections to onModelContext only and reads the edits back', () => {
+    const context = 'sections[0].text += " and wait"; sections.push({ kind: "script", text: "iron" }); null';
+    const out = runInSandbox(
+      wasm,
+      scripts({ context }),
+      input({ hook: 'onModelContext', sections: [{ kind: 'history', text: 'You open it', cacheable: true }] }),
+    );
+    expect(out.error).toBeUndefined();
+    expect(out.sections).toEqual([
+      { kind: 'history', text: 'You open it and wait', cacheable: true },
+      { kind: 'script', text: 'iron' },
+    ]);
+    // Other hooks are not given sections, and a run without them reports none.
+    expect(run('({ text: typeof sections })').text).toBe('undefined');
+    expect(runInSandbox(wasm, scripts({ context: 'null' }), input({ hook: 'onModelContext' })).sections).toBeUndefined();
+  });
+
   it('refuses a function in state', () => {
     expect(run('state.fn = () => 1; null').error).toBe('Error: state is not JSON: state.fn');
   });

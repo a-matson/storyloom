@@ -38,7 +38,9 @@ export async function runIdleWork(
     );
   }
 
-  if (ctx.cacheWarming && caps.prefixCache) {
+  // A script that rewrites the prompt or edits a cached section makes the warmed prefix useless.
+  const scriptBreaksCache = lastPrepared?.scriptCache !== undefined && lastPrepared.scriptCache !== 'kept';
+  if (ctx.cacheWarming && caps.prefixCache && !scriptBreaksCache) {
     cb.onWarm('warming');
     jobs.push(
       (async () => {

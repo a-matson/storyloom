@@ -1,9 +1,11 @@
-import { buildContext, renderBody, type ContextBuildInput, type ContextBuildResult } from '../context';
+import { applyScriptSections, buildContext, renderBody, type ContextBuildInput, type ContextBuildResult, type ScriptCache } from '../context';
 import { rankMemories, touchUsed, type RankedMemory } from '../memory/memoryBank';
 import type { Action, Adventure } from '../model/types';
 import { actionText } from '../model/types';
 import type { Embedder } from '../ports/embedder';
+import type { HookResult } from '../ports/scripting';
 import { renderPrefix, renderTemplate } from '../text/templates';
+import type { Tokenizer } from '../text/tokenizer';
 import { runHook } from './hooks';
 import type { PreparedContext, TurnDeps } from './types';
 
@@ -57,6 +59,31 @@ async function rankForQuery(adventure: Adventure, query: string, embedder?: Embe
   return rankMemories(adventure.memories, queryVec);
 }
 
+const withoutSystem = (text: string, system: string): string => (system && text.startsWith(`${system}\n\n`) ? text.slice(system.length + 2) : text);
+
+/**
+ * What onModelContext did to the prompt. A returned `text` replaces the whole body (and so the
+ * cached prefix); edits to `sections` are merged back, and only a change inside the prefix breaks
+ * the cache. Edited sections are not re-budgeted — the trace warns instead. [provisional]
+ */
+function applyHook(result: ContextBuildResult, hook: HookResult, fullText: string, tokenizer: Tokenizer): { body: string; cache: ScriptCache } {
+  // The hook is given system + body as one text, so a script that returns it whole (edited at
+  // either end) would otherwise repeat the instructions inside the user turn.
+  if (hook.text && hook.text !== fullText) return { body: withoutSystem(hook.text, result.system), cache: 'rewritten' };
+  if (!hook.sections) return { body: result.body, cache: 'kept' };
+  const applied = applyScriptSections(hook.sections, result.sections, tokenizer);
+  if ('error' in applied) {
+    console.warn('onModelContext script error:', applied.error);
+    return { body: result.body, cache: 'kept' };
+  }
+  result.sections = applied.sections;
+  const used = applied.sections.reduce((n, s) => n + s.tokens, 0);
+  result.budget.used = used;
+  result.budget.free = Math.max(0, result.budget.total - used);
+  if (used > result.budget.total) result.warnings.push(`a script put the prompt over budget by ${used - result.budget.total} tokens`);
+  return { body: renderBody(applied.sections), cache: applied.cache };
+}
+
 /** Build the context for `actions` (the log as it stands) and render the prompt. */
 export async function prepareContext(
   adventure: Adventure,
@@ -86,19 +113,15 @@ export async function prepareContext(
     },
     scriptLogs,
   );
-  let body = result.body;
   if (hook.error) {
     // Scripts that fail must not break play; surface the error and continue.
     console.warn('onModelContext script error:', hook.error);
-  } else {
-    if (hook.stop) return { stopped: STUMPED };
-    if (hook.sections && hook.sections !== result.sections) body = renderBody(hook.sections);
-    else if (hook.text && hook.text !== fullText) body = hook.text;
-  }
+  } else if (hook.stop) return { stopped: STUMPED };
+  const { body, cache } = hook.error ? { body: result.body, cache: 'kept' as const } : applyHook(result, hook, fullText, deps.tokenizer);
 
   if (result.usedMemories.length) adventure.memories = touchUsed(adventure.memories, new Set(result.usedMemories.map((m) => m.id)));
   const rendered = renderTemplate(adventure.settings.template, result.system, body);
-  return { result, prompt: rendered.prompt, stop: rendered.stop };
+  return { result, prompt: rendered.prompt, stop: rendered.stop, scriptCache: cache };
 }
 
 /**

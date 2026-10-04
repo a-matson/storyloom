@@ -149,8 +149,8 @@ export class GameSession {
         break;
       case 'context':
         this.lastPrompt = evt.prompt;
-        this.lastPrepared = { result: evt.result, prompt: evt.prompt, stop: evt.stop };
-        this.emit({ context: { result: evt.result, prompt: evt.prompt } });
+        this.lastPrepared = { result: evt.result, prompt: evt.prompt, stop: evt.stop, scriptCache: evt.scriptCache };
+        this.emit({ context: { result: evt.result, prompt: evt.prompt, scriptCache: evt.scriptCache } });
         break;
       case 'token':
         // Fast backends stream faster than the screen refreshes; one render per frame is enough.
@@ -293,6 +293,6 @@ export class GameSession {
     const prepared = await prepareContext(this.adv, this.log.actions, this.deps());
     if ('stopped' in prepared) return this.emit({ notice: prepared.stopped });
     this.lastPrompt = prepared.prompt;
-    this.emit({ context: { result: prepared.result, prompt: prepared.prompt } });
+    this.emit({ context: { result: prepared.result, prompt: prepared.prompt, scriptCache: prepared.scriptCache } });
   };
 }
