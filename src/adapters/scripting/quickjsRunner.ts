@@ -29,7 +29,7 @@ const failed = (input: HookInput, error: string, elapsedMs = 0): HookResult => (
   elapsedMs,
 });
 
-/** Runs scenario scripts in QuickJS inside a Web Worker. */
+/** Runs scenario scripts in QuickJS inside a Web Worker. `spawn` builds `./scripts.worker.ts`; tests pass a fake. */
 export class QuickJsScriptRunner implements ScriptRunner {
   private readonly spawn: () => ScriptWorker;
   private worker: ScriptWorker;
@@ -117,6 +117,3 @@ export class QuickJsScriptRunner implements ScriptRunner {
     this.loading = undefined;
   }
 }
-
-export const createQuickJsRunner = (): QuickJsScriptRunner =>
-  new QuickJsScriptRunner(() => new Worker(new URL('./scripts.worker.ts', import.meta.url), { type: 'module' }));
