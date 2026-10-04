@@ -87,6 +87,8 @@ export interface Provider {
   complete(req: CompletionRequest, signal?: AbortSignal): AsyncIterable<CompletionChunk>;
   tokenize?(text: string, signal?: AbortSignal): Promise<number[]>;
   embed?(texts: string[], signal?: AbortSignal): Promise<number[][]>;
+  /** The server's own chat-template rendering, for checking ours against it. */
+  applyTemplate?(messages: { role: 'system' | 'user'; content: string }[], signal?: AbortSignal): Promise<string>;
 }
 
 /** Collect a stream into a string (used for utility calls: summaries, cards). */

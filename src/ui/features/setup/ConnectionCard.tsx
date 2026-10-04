@@ -1,8 +1,9 @@
+import type { TemplateId } from '@core/model';
 import type { ProviderCapabilities, ProviderHealth } from '@core/ports';
 import { Card } from '@ui/components/ui/card';
 import { Pill } from '@ui/components/ui/pill';
 import { StatusDot } from '@ui/components/ui/status-dot';
-import { CAPABILITIES } from './backends';
+import { CAPABILITIES, TEMPLATES } from './backends';
 
 const mono = 'font-mono text-caption';
 
@@ -17,7 +18,15 @@ function Details({ health }: { health: ProviderHealth }) {
   );
 }
 
-export function ConnectionCard({ health, caps }: { health: ProviderHealth; caps: ProviderCapabilities | null }) {
+interface Props {
+  health: ProviderHealth;
+  caps: ProviderCapabilities | null;
+  /** null/absent: not checked (no server template, or the check failed). */
+  templateOk?: boolean | null;
+  template?: TemplateId;
+}
+
+export function ConnectionCard({ health, caps, templateOk = null, template = 'chatml' }: Props) {
   return (
     <Card className="flex flex-col gap-2 bg-bar">
       <div className="flex items-center gap-2">
@@ -35,6 +44,12 @@ export function ConnectionCard({ health, caps }: { health: ProviderHealth; caps:
             </Pill>
           ))}
         </div>
+      )}
+      {templateOk === false && (
+        <p role="alert" className="m-0 text-caption text-lantern">
+          The server's chat template renders differently from {TEMPLATES.find((t) => t.value === template)?.label ?? template}. Pick the model's template in the
+          adventure settings, or prompts may be malformed.
+        </p>
       )}
       {!health.ok && (
         <p className="m-0 text-caption text-muted-foreground">

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { utilityProvider, type AppSettings, type ProviderConfig } from '@core/model';
-import type { ProviderCapabilities, ProviderHealth } from '@core/ports';
+import { utilityProvider, type AppSettings, type ProviderConfig, type TemplateId } from '@core/model';
+import { templateMatches } from '@core/text';
+import type { Provider, ProviderCapabilities, ProviderHealth } from '@core/ports';
 import { DEFAULT_PROVIDER_CONFIG, providerFor } from '@app/services';
 import { Button } from '@ui/components/ui/button';
 import { Input } from '@ui/components/ui/field';
@@ -20,6 +21,9 @@ interface Props {
   firstRun?: boolean;
 }
 
+/** Our template vs the server's own; null when the server has none to compare (or the call fails). */
+const checkTemplate = async (p: Provider, id: TemplateId) => (p.applyTemplate ? templateMatches(id, p.applyTemplate.bind(p)).catch(() => null) : null);
+
 /** Backend connection + app-level preferences. Doubles as the first-run screen. */
 export function SetupScreen({ app, onSave, onBack, firstRun = false }: Props) {
   const current = app.providers.find((p) => p.id === app.defaultProviderId) ?? app.providers[0] ?? DEFAULT_PROVIDER_CONFIG;
@@ -27,6 +31,7 @@ export function SetupScreen({ app, onSave, onBack, firstRun = false }: Props) {
   const [url, setUrl] = useState(current.baseUrl);
   const [health, setHealth] = useState<ProviderHealth | null>(null);
   const [caps, setCaps] = useState<ProviderCapabilities | null>(null);
+  const [templateOk, setTemplateOk] = useState<boolean | null>(null);
   const [testing, setTesting] = useState(false);
   const [theme, setTheme] = useState(app.theme);
   const [utility, setUtility] = useState(utilityProvider(app));
@@ -38,6 +43,7 @@ export function SetupScreen({ app, onSave, onBack, firstRun = false }: Props) {
     setUrl(nextUrl);
     setHealth(null);
     setCaps(null);
+    setTemplateOk(null);
   };
   const test = async () => {
     setTesting(true);
@@ -45,6 +51,7 @@ export function SetupScreen({ app, onSave, onBack, firstRun = false }: Props) {
     const h = await p.health(); // never throws: failures come back as { ok: false }
     setHealth(h);
     if (h.ok) setCaps(await p.capabilities().catch(() => null));
+    setTemplateOk(h.ok ? await checkTemplate(p, app.defaults.template) : null);
     setTesting(false);
   };
 
@@ -82,7 +89,7 @@ export function SetupScreen({ app, onSave, onBack, firstRun = false }: Props) {
             </Button>
           </div>
         </label>
-        {health && <ConnectionCard health={health} caps={caps} />}
+        {health && <ConnectionCard health={health} caps={caps} templateOk={templateOk} template={app.defaults.template} />}
         <UtilityCard value={utility} onChange={setUtility} />
         <AppearanceCard theme={theme} onTheme={setTheme} />
         <div className="flex items-center gap-2">

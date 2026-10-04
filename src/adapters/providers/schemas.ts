@@ -24,6 +24,7 @@ export const LlamaCompletionEvent = z.object({
 });
 export type LlamaCompletionEvent = z.output<typeof LlamaCompletionEvent>;
 
+export const LlamaApplied = z.object({ prompt: z.string() });
 export const LlamaTokenize = z.object({ tokens: z.array(z.number()) });
 const Embedding = z.object({ embedding: z.array(z.number()) });
 /** Older builds return an object, newer ones an array. */

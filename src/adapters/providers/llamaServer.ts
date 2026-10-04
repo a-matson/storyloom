@@ -1,5 +1,5 @@
 import { ensureOk, fetchJson, sseEvents } from './http';
-import { LlamaCompletionEvent, LlamaEmbedding, LlamaHealth, LlamaProps, LlamaTokenize } from './schemas';
+import { LlamaApplied, LlamaCompletionEvent, LlamaEmbedding, LlamaHealth, LlamaProps, LlamaTokenize } from './schemas';
 import type { z } from 'zod/mini';
 import { type CompletionChunk, type CompletionRequest, type Provider, type ProviderCapabilities, type ProviderHealth } from '@core/ports';
 
@@ -12,6 +12,7 @@ import { type CompletionChunk, type CompletionRequest, type Provider, type Provi
  *   POST /completion   → SSE stream of { content, stop, ... , timings }
  *   POST /tokenize     → { tokens: number[] }
  *   POST /embedding    → [{ embedding: number[] }] (needs --embedding)
+ *   POST /apply-template → { prompt } (Setup's template check only)
  *
  * Start it with something like:
  *   llama-server -m Harbinger-24B-Q4_K_M.gguf -c 16384 -ngl 99 -fa on -ctk q8_0 -ctv q8_0 \
@@ -160,6 +161,17 @@ export class LlamaServerProvider implements Provider {
       signal,
     );
     return json.tokens;
+  }
+
+  async applyTemplate(messages: { role: 'system' | 'user'; content: string }[], signal?: AbortSignal): Promise<string> {
+    const json = await fetchJson(
+      this.fetchFn,
+      this.url('/apply-template'),
+      LlamaApplied,
+      { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ messages }) },
+      signal,
+    );
+    return json.prompt;
   }
 
   async embed(texts: string[], signal?: AbortSignal): Promise<number[][]> {
