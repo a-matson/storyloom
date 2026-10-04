@@ -77,7 +77,12 @@ export function actionsUntilMemory(actionCount: number, existing: Pick<Memory, '
   return Math.max(0, start + MEMORY_LAG - actionCount);
 }
 
-/** Actions a memory may wait past due (about three turns) before it runs even while the player types. [provisional] */
+/**
+ * Actions a memory may wait past due (about three turns) before it runs even while the player types.
+ * A memory call takes ~10 s and a reading gap is shorter, so a deferred memory is cut by typing and
+ * only ever completes once overdue: raising this just makes the bank staler before the same one
+ * contended turn. [measured: docs/measurements/2026-10-04-live-play-overlap.json]
+ */
 export const MEMORY_OVERDUE = 6;
 
 /** True when the next memory has waited `MEMORY_OVERDUE` actions, so typing no longer defers it. */
