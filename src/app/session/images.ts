@@ -8,7 +8,7 @@ import type { SessionServices } from './types';
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 type Image = NonNullable<Action['image']>;
 
-interface SeeHost {
+export interface SeeHost {
   adv: Adventure;
   log: ActionLog;
   app: AppSettings;
@@ -41,6 +41,32 @@ async function auto(host: SeeHost): Promise<void> {
     host.onError(`Could not write an image prompt: ${message(e)}`);
   }
 }
+
+/**
+ * Retry (no `prompt`) or edit the prompt of a `see` action: the old blob is dropped and a new
+ * image generated into the same action. No seed is sent, so the same prompt still yields a new
+ * picture. No new version either — the caption is the action's text and the image is a patch.
+ */
+export function regenerateImage(host: SeeHost, actionId: string, prompt?: string): void {
+  const old = host.log.actions.find((a) => a.id === actionId)?.image;
+  if (!old) return;
+  const { imageId, ...rest } = old;
+  const image: Image = { ...rest, ...(prompt !== undefined && { prompt: prompt.trim() }) };
+  if (image.prompt === '') return;
+  if (imageId !== undefined) drop(host, imageId);
+  host.log.patch(actionId, { image });
+  host.changed();
+  void generate(host, actionId, image);
+}
+
+/** Blobs of `see` actions the log no longer holds. An erase frees them at once; the prompt stays, so Retry can regenerate. */
+export function dropOrphanImages(host: SeeHost, before: Action[]): void {
+  const kept = new Set(host.log.actions.map((a) => a.id));
+  for (const a of before) if (a.image?.imageId !== undefined && !kept.has(a.id)) drop(host, a.image.imageId);
+}
+
+const drop = (host: SeeHost, imageId: string): void =>
+  void host.svc.storage.deleteImage(host.adv.id, imageId).catch((e: unknown) => console.warn('could not delete the stored image', e));
 
 function start(host: SeeHost, prompt: string): void {
   const model = host.adv.settings.image.model;

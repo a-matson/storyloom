@@ -24,6 +24,9 @@ export function setup(opts: { failSave?: boolean; prefetch?: boolean; warm?: boo
     async putImage(adventureId: string, id: string, blob: Blob) {
       images.set(`${adventureId}|${id}`, blob);
     },
+    async deleteImage(adventureId: string, id: string) {
+      images.delete(`${adventureId}|${id}`);
+    },
   } as unknown as Storage;
   const app: AppSettings = AppSettingsSchema.parse({ providers: [], defaultProviderId: 'demo' });
   const adv = opts.adventure ?? createBlankAdventure('Test', 'You stand at the gate.');
