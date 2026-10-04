@@ -10,10 +10,10 @@ function scriptCardsToCore(cards: ScriptStoryCard[], existing: StoryCard[]): Sto
     return {
       id: c.id,
       type: c.type,
-      name: prev?.name ?? c.type,
+      name: c.title === '' ? (prev?.name ?? c.type) : c.title,
       entry: c.entry,
       triggers: c.keys.split(',').filter((t) => t.length > 0),
-      notes: prev?.notes,
+      notes: c.description === '' ? prev?.notes : c.description,
       selectable: prev?.selectable,
     };
   });

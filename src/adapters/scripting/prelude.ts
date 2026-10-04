@@ -30,11 +30,20 @@ var sandboxConsole = console;
 function __cardId() {
   return 'script-' + Math.random().toString(36).slice(2, 10);
 }
-function addStoryCard(keys, entry, type) {
+// AID signature: (keys, entry, type, title, description); title defaults to the
+// keys string and the return is the new LENGTH, not the index. [measured: tests/communityScripts.test.ts]
+function addStoryCard(keys, entry, type, title, description) {
   var k = String(keys == null ? '' : keys);
   for (var i = 0; i < storyCards.length; i++) if (storyCards[i].keys === k) return false;
-  storyCards.push({ id: __cardId(), keys: k, entry: String(entry == null ? '' : entry), type: String(type == null ? 'class' : type) });
-  return storyCards.length - 1;
+  storyCards.push({
+    id: __cardId(),
+    keys: k,
+    entry: String(entry == null ? '' : entry),
+    type: String(type == null ? 'class' : type),
+    title: String(title == null ? k : title),
+    description: String(description == null ? '' : description)
+  });
+  return storyCards.length;
 }
 function updateStoryCard(index, keys, entry, type) {
   var card = storyCards[index];

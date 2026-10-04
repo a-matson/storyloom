@@ -14,7 +14,7 @@ const input = (over: Partial<SandboxInput> = {}): SandboxInput => ({
   hook: 'onOutput',
   text: 'the door creaks',
   history: [{ text: 'You open it', rawText: 'You open it', type: 'do' }],
-  storyCards: [{ id: 'c1', keys: 'door,gate', entry: 'An oak door.', type: 'class' }],
+  storyCards: [{ id: 'c1', keys: 'door,gate', entry: 'An oak door.', type: 'class', title: 'Oak door', description: '' }],
   state: {},
   info: { characterNames: ['Ash'], actionCount: 3 },
   ...over,
@@ -43,6 +43,7 @@ describe('runInSandbox', () => {
   });
 
   it('edits story cards', () => {
+    // addStoryCard returns the new length, not the index, and takes AID's optional title/description.
     const out = run(`
       log(addStoryCard('lantern', 'A brass lantern.', 'item'));
       log(addStoryCard('door,gate', 'duplicate', 'class'));
@@ -51,8 +52,20 @@ describe('runInSandbox', () => {
       null
     `);
     expect(out.error).toBeUndefined();
-    expect(out.logs).toEqual(['1', 'false']);
-    expect(out.storyCards).toEqual([{ id: 'c1', keys: 'door', entry: 'An iron door.', type: 'class' }]);
+    expect(out.logs).toEqual(['2', 'false']);
+    expect(out.storyCards).toEqual([{ id: 'c1', keys: 'door', entry: 'An iron door.', type: 'class', title: 'Oak door', description: '' }]);
+  });
+
+  it('defaults a new card title to its keys and keeps the title it is given', () => {
+    const out = run(`
+      addStoryCard('lantern', 'A brass lantern.', 'item');
+      addStoryCard('well', 'A dry well.', 'Location', 'The Old Well', 'player notes');
+      null
+    `);
+    expect(out.storyCards.slice(1)).toEqual([
+      { id: expect.any(String), keys: 'lantern', entry: 'A brass lantern.', type: 'item', title: 'lantern', description: '' },
+      { id: expect.any(String), keys: 'well', entry: 'A dry well.', type: 'Location', title: 'The Old Well', description: 'player notes' },
+    ]);
   });
 
   it('reports a missing index to removeStoryCard as an error', () => {

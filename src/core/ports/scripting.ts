@@ -31,6 +31,10 @@ export interface ScriptStoryCard {
   keys: string;
   entry: string;
   type: string;
+  /** AID's player-facing card name; core calls it `name`. */
+  title: string;
+  /** AID's player-only notes field; core calls it `notes`. */
+  description: string;
 }
 
 export interface ScriptInfo {
@@ -89,7 +93,7 @@ export interface ScriptRunner {
 
 /** Converts core StoryCards to the script-facing shape (`keys` is the raw comma-separated string). */
 export function toScriptCards(cards: StoryCard[]): ScriptStoryCard[] {
-  return cards.map((c) => ({ id: c.id, keys: c.triggers.join(','), entry: c.entry, type: c.type }));
+  return cards.map((c) => ({ id: c.id, keys: c.triggers.join(','), entry: c.entry, type: c.type, title: c.name, description: c.notes ?? '' }));
 }
 
 /** The script-facing shape of the built sections; `tokens`/`trimmed` stay host-side. */
