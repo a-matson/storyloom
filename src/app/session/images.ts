@@ -1,5 +1,7 @@
+import { loadImagePrompt } from '@core/image';
 import type { ActionLog } from '@core/log';
-import { newId, type Action, type Adventure, type AppSettings } from '@core/model';
+import { newId, type Action, type Adventure, type AppSettings, type TemplateId } from '@core/model';
+import type { Provider } from '@core/ports';
 import { trackJob } from '@core/trace';
 import type { SessionServices } from './types';
 
@@ -11,6 +13,8 @@ interface SeeHost {
   log: ActionLog;
   app: AppSettings;
   svc: SessionServices;
+  /** Utility model when one is configured and healthy, else the story model. */
+  helperModel: () => Promise<{ provider: Provider; template: TemplateId }>;
   /** The log changed: publish a snapshot and save. */
   changed: () => void;
   onError: (message: string) => void;
@@ -23,10 +27,24 @@ interface SeeHost {
  */
 export function seeImage(prompt: string, host: SeeHost): void {
   const text = prompt.trim();
-  // M7-2 turns a blank prompt into one generated from the story so far.
-  if (text === '') return host.onError('Describe what you want to see.');
+  if (text === '') return void auto(host);
+  start(host, text);
+}
+
+/** A blank prompt: the helper model writes one from the story so far, then that image is generated. */
+async function auto(host: SeeHost): Promise<void> {
+  try {
+    const { autoImagePrompt } = await loadImagePrompt();
+    const req = { actions: host.log.actions, plotEssentials: host.adv.plot.plotEssentials };
+    start(host, await autoImagePrompt(req, await host.helperModel()));
+  } catch (e) {
+    host.onError(`Could not write an image prompt: ${message(e)}`);
+  }
+}
+
+function start(host: SeeHost, prompt: string): void {
   const model = host.adv.settings.image.model;
-  const image: Image = { prompt: text, ...(model !== undefined && { model }) };
+  const image: Image = { prompt, ...(model !== undefined && { model }) };
   const action = host.log.append('see', '', { image });
   host.changed();
   void generate(host, action.id, image);

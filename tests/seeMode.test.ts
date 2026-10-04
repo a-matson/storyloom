@@ -41,10 +41,14 @@ describe('See mode', () => {
     expect(session.getSnapshot().actions.some((a) => a.type === 'see')).toBe(true);
   });
 
-  it('asks for a prompt instead of appending an empty action', () => {
-    const { session } = setup({ images: fakeImages(() => Promise.reject(new Error('never called'))) });
+  it('writes the prompt with the helper model when the input is blank', async () => {
+    const blob = new Blob(['png'], { type: 'image/png' });
+    const { session } = setup({ images: fakeImages(() => Promise.resolve(blob)) });
     session.see('   ');
-    expect(session.getSnapshot().actions.some((a) => a.type === 'see')).toBe(false);
-    expect(session.getSnapshot().error).toContain('Describe what you want to see');
+    await vi.waitFor(() => expect(session.getSnapshot().actions.some((a) => a.type === 'see')).toBe(true));
+    const prompt = session.getSnapshot().actions.at(-1)?.image?.prompt ?? '';
+    expect(prompt).not.toBe('');
+    expect(prompt).not.toContain('\n');
+    expect(session.getSnapshot().error).toBeNull();
   });
 });
