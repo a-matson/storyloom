@@ -4,7 +4,7 @@ import { sentenceEndAfter, trimUnfinishedSentence } from '../text/formatting';
 import { runHook } from './hooks';
 import type { Generated, PreparedContext, TurnDeps, TurnEvent } from './types';
 
-/** Tokens allowed past `responseLength` to reach a sentence end. [provisional] */
+/** Tokens allowed past `responseLength` to reach a sentence end; 44 live turns never ran out of margin. [measured: 2026-10-02-gate-v.md] */
 export const SOFT_STOP_MARGIN = 50;
 
 export function randomSeed(): number {
