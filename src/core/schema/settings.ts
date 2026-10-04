@@ -6,7 +6,7 @@ export const TemplateId = z.enum(['chatml', 'llama3', 'mistral', 'gemma', 'raw']
 export const ModelSettings = z.object({
   /** Input budget in tokens (what the context builder may fill). */
   contextLength: z._default(z.int().check(z.gt(0)), 8192),
-  /** Max tokens to generate per turn; ~10 s at 20 tok/s on a 12B. [provisional] */
+  /** Max tokens to generate per turn; ~11 s at 19 tok/s on a 12B. [measured: 2026-10-02-gate-v.md] */
   responseLength: z._default(z.int().check(z.gt(0)), 200),
   temperature: z._default(z.number(), 1.0),
   topK: z._default(z.number(), 250),
