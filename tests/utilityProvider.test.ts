@@ -44,6 +44,7 @@ function setup(utilityReachable: boolean) {
   const idle: (() => void)[] = [];
   const session = new GameSession(adventure, app, {
     providerFor: (_, id) => (id === 'utility' ? utility.provider : story.provider),
+    imageProviderFor: () => undefined,
     embedderFor: (p) => {
       embeddedFor.push(p);
       return Promise.resolve(embedder);

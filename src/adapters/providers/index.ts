@@ -2,7 +2,7 @@ import type { ProviderConfig } from '@core/model';
 import { ProviderError } from './http';
 import { LlamaServerProvider } from './llamaServer';
 import { OpenAICompatProvider } from './openaiCompat';
-import type { Provider } from '@core/ports';
+import type { ImageProvider, Provider } from '@core/ports';
 
 let demoHandler: ((req: Request) => Promise<Response>) | undefined;
 /** Lazy so the demo code ships as its own chunk. */
@@ -41,6 +41,9 @@ export function createProvider(cfg: ProviderConfig): Provider {
       return new OpenAICompatProvider(cfg.id, cfg.baseUrl);
   }
 }
+
+/** The image adapter is its own chunk: a story without See mode never loads it. */
+export const loadImageProvider = async (cfg: ProviderConfig): Promise<ImageProvider> => new (await import('./a1111')).A1111Provider(cfg.id, cfg.baseUrl);
 
 export const DEFAULT_PROVIDER_CONFIG: ProviderConfig = {
   id: 'local',

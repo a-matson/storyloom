@@ -1,6 +1,6 @@
 import type { ContextBuildResult, ScriptCache } from '@core/context';
 import type { Action, Adventure, AppSettings, TurnTrace } from '@core/model';
-import type { CompletionStats, Embedder, Provider, ScriptRunner, Storage } from '@core/ports';
+import type { CompletionStats, Embedder, ImageProvider, Provider, ScriptRunner, Storage } from '@core/ports';
 import type { CalibratedTokenizer, Tokenizer } from '@core/text';
 
 /** Immutable view of an open adventure; a new object on every change. */
@@ -22,6 +22,8 @@ export interface GameSnapshot {
 
 export interface SessionServices {
   providerFor: (app: AppSettings, id: string) => Provider;
+  /** Undefined when no image server is configured; the adapter loads on first use. */
+  imageProviderFor: (app: AppSettings) => Promise<ImageProvider> | undefined;
   embedderFor: (provider: Provider) => Promise<Embedder>;
   /** Calibrated after each turn; the fallback behind `tokenizerFor`. */
   tokenizer: CalibratedTokenizer;

@@ -54,3 +54,6 @@ export function hasScripts(scripts: Adventure['scripts']): scripts is NonNullabl
 
 /** The second, small model server for memory jobs, if one is configured. */
 export const utilityProvider = (app: AppSettings): ProviderConfig | undefined => app.providers.find((p) => p.role === 'utility');
+
+/** The image server for See mode, if one is configured. */
+export const imageProvider = (app: AppSettings): ProviderConfig | undefined => app.providers.find((p) => p.role === 'image');

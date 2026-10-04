@@ -116,6 +116,50 @@ function MemorySystem({ s, update }: { s: Settings; update: Update }) {
   );
 }
 
+const IMAGE_NUMBERS: { label: string; key: 'width' | 'height' | 'steps' | 'cfgScale'; step: number; min: number }[] = [
+  { label: 'Width', key: 'width', step: 64, min: 256 },
+  { label: 'Height', key: 'height', step: 64, min: 256 },
+  { label: 'Steps', key: 'steps', step: 1, min: 1 },
+  { label: 'CFG scale', key: 'cfgScale', step: 0.5, min: 1 },
+];
+
+/** Blank means "whatever the image server already has". */
+const text = (value: string) => (value.trim() === '' ? undefined : value);
+
+const IMAGE_TEXT_INPUT = 'h-8 w-45 rounded-sm border border-border bg-bar px-2 text-caption';
+
+function Images({ s, update }: { s: Settings; update: Update }) {
+  const image = (patch: Partial<Settings['image']>) => update({ image: { ...s.image, ...patch } });
+  return (
+    <Section title="Images">
+      <Setting label="Checkpoint" htmlFor="img-model" title="Blank uses whatever the image server has loaded; names are listed by Test in Settings">
+        <input id="img-model" className={IMAGE_TEXT_INPUT} value={s.image.model ?? ''} onChange={(e) => image({ model: text(e.target.value) })} />
+      </Setting>
+      {IMAGE_NUMBERS.map((n) => (
+        <Setting key={n.key} label={n.label} htmlFor={`img-${n.key}`}>
+          <input
+            id={`img-${n.key}`}
+            className={NUMBER_INPUT}
+            type="number"
+            step={n.step}
+            min={n.min}
+            value={s.image[n.key]}
+            onChange={(e) => image({ [n.key]: Number(e.target.value) })}
+          />
+        </Setting>
+      ))}
+      <Setting label="Negative prompt" htmlFor="img-neg">
+        <input
+          id="img-neg"
+          className={IMAGE_TEXT_INPUT}
+          value={s.image.negativePrompt ?? ''}
+          onChange={(e) => image({ negativePrompt: text(e.target.value) })}
+        />
+      </Setting>
+    </Section>
+  );
+}
+
 function Feedback({ s, update }: { s: Settings; update: Update }) {
   const context = (patch: Partial<Settings['context']>) => update({ context: { ...s.context, ...patch } });
   return (
@@ -163,6 +207,7 @@ export function GameplayTab({ adventure, api }: { adventure: Adventure; api: Gam
       <StoryGenerator s={s} update={api.updateSettings} />
       <MemorySystem s={s} update={api.updateSettings} />
       <ModelSettings model={s.model} onChange={(patch) => api.updateSettings({ model: { ...s.model, ...patch } })} />
+      <Images s={s} update={api.updateSettings} />
       <Feedback s={s} update={api.updateSettings} />
       <Appearance s={s} update={api.updateSettings} />
     </>

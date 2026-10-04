@@ -1,10 +1,10 @@
-import { hasScripts, type Adventure, type AppSettings } from '@core/model';
+import { hasScripts, imageProvider, type Adventure, type AppSettings } from '@core/model';
 import { GameSession } from './session';
 import { AppSettings as AppSettingsSchema } from '@core/schema';
 import { createApproxTokenizer, createExactTokenizer, type Tokenizer } from '@core/text';
-import { createProvider, DEFAULT_PROVIDER_CONFIG } from '@adapters/providers';
+import { createProvider, DEFAULT_PROVIDER_CONFIG, loadImageProvider } from '@adapters/providers';
 import { DexieStorage } from '@adapters/storage';
-import type { Provider, Storage } from '@core/ports';
+import type { ImageProvider, Provider, Storage } from '@core/ports';
 import { HashEmbedder, loadInBrowserEmbedder, ProviderEmbedder } from '@adapters/embeddings';
 import { type Embedder } from '@core/ports';
 import { NoopScriptRunner, type ScriptRunner } from '@core/ports';
@@ -32,6 +32,21 @@ export function providerFor(settings: AppSettings, id: string): Provider {
   if (!p) {
     p = createProvider(cfg);
     providers.set(key, p);
+  }
+  return p;
+}
+
+const imageProviders = new Map<string, Promise<ImageProvider>>();
+
+/** The configured image server, or undefined when See mode has nowhere to go. */
+export function imageProviderFor(settings: AppSettings): Promise<ImageProvider> | undefined {
+  const cfg = imageProvider(settings);
+  if (!cfg) return undefined;
+  const key = `${cfg.id}|${cfg.kind}|${cfg.baseUrl}`;
+  let p = imageProviders.get(key);
+  if (!p) {
+    p = loadImageProvider(cfg);
+    imageProviders.set(key, p);
   }
   return p;
 }
@@ -97,6 +112,7 @@ export async function scriptsFor(adv: Adventure): Promise<ScriptRunner> {
 export function openSession(adventure: Adventure, app: AppSettings): GameSession {
   return new GameSession(adventure, app, {
     providerFor,
+    imageProviderFor,
     embedderFor,
     tokenizer,
     tokenizerFor,

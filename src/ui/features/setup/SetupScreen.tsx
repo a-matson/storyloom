@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { utilityProvider, type AppSettings, type ProviderConfig, type TemplateId } from '@core/model';
+import { imageProvider, utilityProvider, type AppSettings, type ProviderConfig, type TemplateId } from '@core/model';
 import { templateMatches } from '@core/text';
 import type { Provider, ProviderCapabilities, ProviderHealth } from '@core/ports';
 import { DEFAULT_PROVIDER_CONFIG, providerFor } from '@app/services';
@@ -12,6 +12,7 @@ import { AppearanceCard } from './AppearanceCard';
 import { BackendTiles } from './BackendTiles';
 import { ConnectionCard } from './ConnectionCard';
 import { draftSettings } from './draft';
+import { ImageCard } from './ImageCard';
 import { UtilityCard } from './UtilityCard';
 
 interface Props {
@@ -24,6 +25,23 @@ interface Props {
 /** Our template vs the server's own; null when the server has none to compare (or the call fails). */
 const checkTemplate = async (p: Provider, id: TemplateId) => (p.applyTemplate ? templateMatches(id, p.applyTemplate.bind(p)).catch(() => null) : null);
 
+function SaveRow({ firstRun, onSave }: { firstRun: boolean; onSave: () => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-caption text-muted-foreground">You can change all of this later.</span>
+      <span className="grow" />
+      {firstRun && (
+        <Button size="lg" variant="ghost" onClick={onSave}>
+          Skip for now
+        </Button>
+      )}
+      <Button size="lg" variant="primary" onClick={onSave}>
+        {firstRun ? 'Continue' : 'Save'}
+      </Button>
+    </div>
+  );
+}
+
 /** Backend connection + app-level preferences. Doubles as the first-run screen. */
 export function SetupScreen({ app, onSave, onBack, firstRun = false }: Props) {
   const current = app.providers.find((p) => p.id === app.defaultProviderId) ?? app.providers[0] ?? DEFAULT_PROVIDER_CONFIG;
@@ -35,8 +53,9 @@ export function SetupScreen({ app, onSave, onBack, firstRun = false }: Props) {
   const [testing, setTesting] = useState(false);
   const [theme, setTheme] = useState(app.theme);
   const [utility, setUtility] = useState(utilityProvider(app));
+  const [image, setImage] = useState(imageProvider(app));
 
-  const draft = () => draftSettings(app, { current, kind, url, theme, health, utility });
+  const draft = () => draftSettings(app, { current, kind, url, theme, health, utility, image });
   // A new backend or URL invalidates the last test.
   const choose = (nextKind: ProviderConfig['kind'], nextUrl: string) => {
     setKind(nextKind);
@@ -91,19 +110,9 @@ export function SetupScreen({ app, onSave, onBack, firstRun = false }: Props) {
         </label>
         {health && <ConnectionCard health={health} caps={caps} templateOk={templateOk} template={app.defaults.template} />}
         <UtilityCard value={utility} onChange={setUtility} />
+        <ImageCard value={image} onChange={setImage} />
         <AppearanceCard theme={theme} onTheme={setTheme} />
-        <div className="flex items-center gap-2">
-          <span className="text-caption text-muted-foreground">You can change all of this later.</span>
-          <span className="grow" />
-          {firstRun && (
-            <Button size="lg" variant="ghost" onClick={() => onSave(draft())}>
-              Skip for now
-            </Button>
-          )}
-          <Button size="lg" variant="primary" onClick={() => onSave(draft())}>
-            {firstRun ? 'Continue' : 'Save'}
-          </Button>
-        </div>
+        <SaveRow firstRun={firstRun} onSave={() => onSave(draft())} />
       </div>
     </div>
   );

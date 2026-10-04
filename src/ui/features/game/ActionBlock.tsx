@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import type { Action } from '@core/model';
 import { actionText } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
+import { useImageBlob } from '@ui/hooks/useImageBlob';
 import { Pill } from '@ui/components/ui/pill';
 import { cn } from '@ui/lib/utils';
 import { OutputTools } from './OutputTools';
@@ -10,6 +11,7 @@ export const PROSE = 'm-0 whitespace-pre-wrap text-prose';
 
 interface Props {
   action: Action;
+  adventureId: string;
   isLast: boolean;
   busy: boolean;
   api: GameApi;
@@ -20,8 +22,21 @@ interface Props {
 
 const quoted = (a: Action) => a.type === 'do' || a.type === 'say';
 
+/** A See-mode action: the caption shows while the image is still generating. */
+function SeeBlock({ adventureId, image }: { adventureId: string; image: NonNullable<Action['image']> }) {
+  const blobUrl = useImageBlob(adventureId, image.imageId);
+  // `url` only comes from imported AI Dungeon data; ours are blobs.
+  const src = image.url ?? blobUrl;
+  return (
+    <figure className="m-0">
+      {src !== undefined && <img src={src} alt={image.prompt} className="max-w-full rounded-lg" />}
+      <figcaption className="font-sans text-caption text-muted-foreground">{image.prompt}</figcaption>
+    </figure>
+  );
+}
+
 /** One action; double-click edits it in place, blur commits, Escape reverts. */
-export function ActionBlock({ action, isLast, busy, api, onViewContext, onViewTrace, contextSummary }: Props) {
+export function ActionBlock({ action, adventureId, isLast, busy, api, onViewContext, onViewTrace, contextSummary }: Props) {
   const [editing, setEditing] = useState(false);
   const ref = useRef<HTMLParagraphElement>(null);
   const text = actionText(action);
@@ -36,14 +51,7 @@ export function ActionBlock({ action, isLast, busy, api, onViewContext, onViewTr
     if (restored !== text) api.edit(action.id, restored);
   };
 
-  if (action.type === 'see' && action.image) {
-    return (
-      <figure className="m-0">
-        {action.image.url ? <img src={action.image.url} alt={action.image.prompt} className="max-w-full rounded-lg" /> : null}
-        <figcaption className="font-sans text-caption text-muted-foreground">{action.image.prompt}</figcaption>
-      </figure>
-    );
-  }
+  if (action.type === 'see' && action.image) return <SeeBlock adventureId={adventureId} image={action.image} />;
 
   const paragraph = (
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- pointer shortcut; keyboard users have the Edit button
