@@ -42,6 +42,8 @@ export interface GenerateCardRequest {
   plotEssentials?: string | undefined;
   /** See `recentStory`; the card's subject and triggers are taken from it. */
   recentStory?: string | undefined;
+  /** Names of the cards that already exist, so a generated name does not repeat one. */
+  existingNames?: string[] | undefined;
 }
 
 export interface GeneratedCard {
@@ -69,26 +71,34 @@ export async function generateStoryCard(req: GenerateCardRequest, deps: Generate
     summary: req.settings.includeSummary ? req.storySummary : undefined,
     plotEssentials: req.plotEssentials,
     recentStory: req.recentStory,
+    existing: req.existingNames,
   });
   const rendered = renderTemplate(deps.template, CARD_SYSTEM, user, caps.jsonSchema ? '' : '{');
-  const { text } = await collect(
-    deps.provider.complete(
-      {
-        prompt: rendered.prompt,
-        maxTokens: 320,
-        temperature: 0.9,
-        topP: 0.95,
-        stop: rendered.stop,
-        cachePrompt: false,
-        slotId: 1,
-        jsonSchema: caps.jsonSchema ? CARD_JSON_SCHEMA : undefined,
-      },
-      deps.signal,
-    ),
-  );
-  const raw = caps.jsonSchema ? text : `{${text}`;
-  // Output cut off at maxTokens is common.
-  const parsed = parseCardJson(raw, jsonrepair);
+  const attempt = async () => {
+    const { text } = await collect(
+      deps.provider.complete(
+        {
+          prompt: rendered.prompt,
+          maxTokens: 320,
+          temperature: 0.9,
+          topP: 0.95,
+          stop: rendered.stop,
+          cachePrompt: false,
+          slotId: 1,
+          jsonSchema: caps.jsonSchema ? CARD_JSON_SCHEMA : undefined,
+        },
+        deps.signal,
+      ),
+    );
+    const raw = caps.jsonSchema ? text : `{${text}`;
+    // Output cut off at maxTokens is common.
+    return { raw, parsed: parseCardJson(raw, jsonrepair) };
+  };
+  const taken = new Set((req.name ? [] : (req.existingNames ?? [])).map((n) => n.trim().toLowerCase()).filter((n) => n !== ''));
+  let out = await attempt();
+  // The model keeps picking a subject that already has a card (Gate V finding 15); one retry.
+  if (out.parsed && taken.has(out.parsed.name.trim().toLowerCase())) out = await attempt();
+  const { raw, parsed } = out;
   if (!parsed) throw new Error('The model did not return a usable card. Try again or adjust the generator instructions.');
   const name = (req.name?.trim() || parsed.name || req.type).trim();
   const entry = parsed.entry.trim();

@@ -69,6 +69,7 @@ export function CardsTab({ adventure, api }: { adventure: Adventure; api: GameAp
             storySummary: adventure.plot.storySummary,
             plotEssentials: adventure.plot.plotEssentials,
             recentStory: recentStory(adventure.actions),
+            existingNames: cards.map((c) => c.name),
             model: api.helperModel,
           }}
           card={editing === 'new' ? undefined : editing}
