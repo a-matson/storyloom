@@ -4,6 +4,7 @@ import { utilityProvider, type Adventure, type AdventureSettings, type AppSettin
 import type { Embedder, Provider, ScriptRunner } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
 import { IdleWork } from './idleWork';
+import { seeImage } from './images';
 import { MemoryScheduler } from './memoryScheduler';
 import { SaveQueue } from './saveQueue';
 import { sessionScripts } from './scripts';
@@ -46,10 +47,7 @@ export class GameSession {
     adventure: () => this.adv,
     helperModel: () => this.helperModel(),
     embedder: () => this.resolveEmbedder(),
-    changed: () => {
-      this.emit();
-      this.save();
-    },
+    changed: () => this.changed(),
   });
   private readonly idleWork = new IdleWork({
     adventure: () => this.adv,
@@ -109,9 +107,12 @@ export class GameSession {
   }
 
   // ---- persistence ------------------------------------------------------------
-  private save(): void {
-    this.saves.schedule();
-  }
+  private readonly save = (): void => this.saves.schedule();
+  /** The log or the adventure changed outside a turn: publish and persist. */
+  private readonly changed = (): void => {
+    this.emit();
+    this.save();
+  };
   /** Write now; used on close and by the tests. */
   flush(): Promise<void> {
     return this.saves.flush();
@@ -246,6 +247,10 @@ export class GameSession {
     this.abort = new AbortController();
     void this.drive(retryLast(this.adv, this.log, this.deps(), this.abort.signal));
   };
+
+  /** See mode: one image from the player's prompt, generated in the background. */
+  readonly see = (prompt: string): void =>
+    seeImage(prompt, { adv: this.adv, log: this.log, app: this.app, svc: this.svc, changed: () => this.changed(), onError: (error) => this.emit({ error }) });
 
   readonly cancel = (): void => this.abort?.abort();
   /** The turn input is focused and holds text; memory jobs wait so they do not slow the coming turn. */

@@ -6,6 +6,7 @@ import { Caret } from './Caret';
 
 interface Props {
   actions: Action[];
+  adventureId: string;
   streaming: string;
   busy: boolean;
   api: GameApi;
@@ -15,7 +16,7 @@ interface Props {
 }
 
 /** The story column: player actions carry a mode pill, AI outputs are plain prose, the last output gets the tools. */
-export function StoryView({ actions, streaming, busy, api, onViewContext, onViewTrace, contextSummary }: Props) {
+export function StoryView({ actions, adventureId, streaming, busy, api, onViewContext, onViewTrace, contextSummary }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
   // Follow the newest text: the compiler re-renders this view only when the story, stream or turn state changes.
   useEffect(() => {
@@ -30,6 +31,7 @@ export function StoryView({ actions, streaming, busy, api, onViewContext, onView
           <ActionBlock
             key={a.id}
             action={a}
+            adventureId={adventureId}
             isLast={i === lastIdx}
             busy={busy}
             api={api}

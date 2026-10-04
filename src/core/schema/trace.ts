@@ -4,8 +4,8 @@ import { GenerationStats } from './action';
 export const TurnKind = z.enum(['turn', 'retry']);
 export const TurnOutcome = z.enum(['done', 'stopped', 'error']);
 export const TurnErrorKind = z.enum(['provider', 'storage', 'script', 'cancelled', 'unknown']);
-/** Background model calls that compete with a turn for a generation slot. */
-export const JobKind = z.enum(['memory', 'summary', 'warmup', 'prefetch', 'card']);
+/** Background model calls that compete with a turn for a generation slot. `image` runs on another server, but it takes the GPU. */
+export const JobKind = z.enum(['memory', 'summary', 'warmup', 'prefetch', 'card', 'image']);
 
 const count = z.int().check(z.gte(0));
 

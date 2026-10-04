@@ -72,6 +72,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
         <main className="flex min-w-0 grow flex-col">
           <StoryView
             actions={state.actions}
+            adventureId={adv.id}
             streaming={state.streaming}
             busy={state.busy}
             api={api}
@@ -85,7 +86,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
             canErase={state.actions.length > 1}
             status={turnStatus(state, backendLabel)}
             api={api}
-            onSee={() => api.clearNotice()}
+            onSee={api.see}
             retryReady={state.prefetchReady}
           />
         </main>
