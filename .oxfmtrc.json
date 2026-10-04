@@ -4,5 +4,5 @@
   "trailingComma": "all",
   "printWidth": 160,
   "sortPackageJson": false,
-  "ignorePatterns": []
+  "ignorePatterns": ["tests/fixtures/scripts/*/*.js"]
 }

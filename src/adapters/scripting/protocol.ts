@@ -1,7 +1,7 @@
 import { z } from 'zod/mini';
 import { ActionType, ScenarioScripts, ScriptState } from '@core/schema';
 
-export const ScriptCard = z.object({ id: z.string(), keys: z.string(), entry: z.string(), type: z.string() });
+export const ScriptCard = z.object({ id: z.string(), keys: z.string(), entry: z.string(), type: z.string(), title: z.string(), description: z.string() });
 
 const HookName = z.enum(['onInput', 'onModelContext', 'onOutput']);
 

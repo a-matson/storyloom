@@ -142,5 +142,5 @@
       }
     }
   ],
-  "ignorePatterns": ["dist/**", "coverage/**", "playwright-report/**", "test-results/**"]
+  "ignorePatterns": ["dist/**", "coverage/**", "playwright-report/**", "test-results/**", "tests/fixtures/scripts/*/*.js"]
 }
