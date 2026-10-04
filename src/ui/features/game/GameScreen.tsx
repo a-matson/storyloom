@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { utilityProvider, type Adventure, type AppSettings } from '@core/model';
 import { tokenizer } from '@app/services';
+import { useCoverAccent } from '@ui/hooks/useCoverAccent';
 import { useGameSession } from '@ui/hooks/useGameSession';
+import { useImageBlob } from '@ui/hooks/useImageBlob';
 import { applyTheme } from '@ui/theme';
 import { Toast } from '@ui/components/ui/toast';
 import { Sidebar } from './sidebar/Sidebar';
@@ -29,7 +31,9 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
   const adv = state.adventure;
   useGameKeys(showContext, showSidebar, setShowContext, setShowSidebar);
 
-  useEffect(() => applyTheme(app, adv.settings.textStyle), [app, adv.settings.textStyle]);
+  const coverUrl = useImageBlob(adv.id, adv.coverId) ?? adv.coverUrl;
+  const accent = useCoverAccent(app.theme === 'dynamic' ? coverUrl : undefined);
+  useEffect(() => applyTheme(app, adv.settings.textStyle, accent), [app, adv.settings.textStyle, accent]);
   useEffect(() => {
     const t = state.notice === null ? undefined : window.setTimeout(api.clearNotice, 4000);
     return () => window.clearTimeout(t);

@@ -79,6 +79,21 @@
   --mode-see-bg: #f5d9df;
 }
 
+/* Cold dark counterpart to Lantern & Ink: only the tokens that differ from :root. */
+:root[data-theme='slate'] {
+  --bg-0: #0b0f15;
+  --bg-bar: #0e141d;
+  --bg-1: #121a25;
+  --bg-2: #1a2433;
+  --border: #273445;
+  --text: #dfe7f1;
+  --text-prose: #b7c3d3;
+  --lantern: #74aee6;
+  --lantern-soft: #a5cdf4;
+  --lantern-ink: #091016;
+  --mode-do-bg: #142a3d;
+}
+
 :root[data-contrast='high'] {
   --text-prose: var(--text);
   --text-muted: #b9c2cf;

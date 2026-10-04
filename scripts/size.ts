@@ -9,7 +9,8 @@ import { brotliCompressSync } from 'node:zlib';
 // Measured baselines + ~2%; raise only as a recorded decision.
 // js: 128.98 measured 2026-10-04 (M6-2 PR 2 wired scripts into the session), user raised the budget.
 // js: 131.26 measured 2026-10-04 (M7-4 put the cover thumb, and so useImageBlob, on the library screen); user raised 131.0 -> 131.5.
-const BUDGET_KB = { js: 131.5, css: 5.8 };
+// css: M7-5 added the Slate theme block; user raised 5.8 -> 6.2 to leave room for one more theme.
+const BUDGET_KB = { js: 131.5, css: 6.2 };
 
 const html = readFileSync('dist/index.html', 'utf8');
 const files = [...html.matchAll(/(?:src|href)="[^"]*?(assets\/[^"]+\.(js|css))"/g)].map(
