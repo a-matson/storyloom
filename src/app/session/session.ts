@@ -77,10 +77,7 @@ export class GameSession {
   }
 
   // ---- store ---------------------------------------------------------------
-  readonly subscribe = (fn: () => void): (() => void) => {
-    this.listeners.add(fn);
-    return () => this.listeners.delete(fn);
-  };
+  readonly subscribe = (fn: () => void): (() => void) => (this.listeners.add(fn), () => this.listeners.delete(fn));
   readonly getSnapshot = (): GameSnapshot => this.snapshot;
 
   private build(rest: Omit<GameSnapshot, 'adventure' | 'actions' | 'canUndo' | 'canRedo'>): GameSnapshot {
@@ -114,9 +111,7 @@ export class GameSession {
     this.save();
   };
   /** Write now; used on close and by the tests. */
-  flush(): Promise<void> {
-    return this.saves.flush();
-  }
+  readonly flush = (): Promise<void> => this.saves.flush();
   /** The page is hiding: see `SaveQueue.persistNow`. */
   readonly persistNow = (): void => this.saves.persistNow();
   /** Stop background work and save; call when the adventure closes. */
@@ -171,7 +166,7 @@ export class GameSession {
         this.emit({ error: evt.message });
         break;
       case 'trace':
-        void this.storeTrace(evt.trace);
+        this.storeTrace(evt.trace);
         break;
     }
     return evt.type === 'done';
@@ -189,14 +184,10 @@ export class GameSession {
     this.svc.idle(() => this.memory.start(signal));
   }
 
-  private async storeTrace(t: TurnTrace): Promise<void> {
-    try {
-      await this.svc.storage.putTrace(t);
-    } catch (e) {
-      // Diagnostics never block play; the next turn writes its own.
-      console.warn('could not store turn trace', e);
-    }
-  }
+  /** Diagnostics never block play; the next turn writes its own. */
+  private readonly storeTrace = (t: TurnTrace): void => {
+    void this.svc.storage.putTrace(t).catch((e: unknown) => console.warn('could not store turn trace', e));
+  };
 
   /** Memories, summaries and story cards run on the utility server when configured and reachable, else the story provider; each with its own template. */
   readonly helperModel = async (): Promise<{ provider: Provider; template: TemplateId }> => {
@@ -238,7 +229,7 @@ export class GameSession {
       // Instant retry: the alternative was generated in the background.
       this.log.addVersion(last.id, pre.text);
       if (pre.stats) this.log.patch(last.id, { stats: pre.stats });
-      void this.storeTrace(pre.trace);
+      this.storeTrace(pre.trace);
       this.emit();
       this.save();
       this.afterTurn();
@@ -248,9 +239,17 @@ export class GameSession {
     void this.drive(retryLast(this.adv, this.log, this.deps(), this.abort.signal));
   };
 
-  /** See mode: one image from the player's prompt, generated in the background. */
+  /** See mode: one image from the player's prompt (blank = written by the helper model), generated in the background. */
   readonly see = (prompt: string): void =>
-    seeImage(prompt, { adv: this.adv, log: this.log, app: this.app, svc: this.svc, changed: () => this.changed(), onError: (error) => this.emit({ error }) });
+    seeImage(prompt, {
+      adv: this.adv,
+      log: this.log,
+      app: this.app,
+      svc: this.svc,
+      helperModel: this.helperModel,
+      changed: () => this.changed(),
+      onError: (error) => this.emit({ error }),
+    });
 
   readonly cancel = (): void => this.abort?.abort();
   /** The turn input is focused and holds text; memory jobs wait so they do not slow the coming turn. */
