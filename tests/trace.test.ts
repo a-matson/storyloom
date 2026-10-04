@@ -5,7 +5,7 @@ import { ActionLog } from '@core/log';
 import { createBlankAdventure } from '@core/model';
 import * as S from '@core/schema';
 import { createApproxTokenizer } from '@core/text';
-import { buildTrace, hashPrompt, TRACE_PROMPT_CAP } from '@core/trace';
+import { buildTrace, clearJobLog, hashPrompt, overlappingJobs, TRACE_PROMPT_CAP, trackJob } from '@core/trace';
 import { runTurn, type TurnEvent } from '@core/turn';
 
 async function oneTurn() {
@@ -36,6 +36,24 @@ describe('hashPrompt', () => {
     expect(hashPrompt('abc')).toBe(hashPrompt('abc'));
     expect(hashPrompt('abc')).not.toBe(hashPrompt('abd'));
     expect(hashPrompt('')).toMatch(/^[0-9a-f]+$/);
+  });
+});
+
+describe('job log', () => {
+  it('attributes only the jobs whose window overlaps the turn, with the overlapping ms', async () => {
+    clearJobLog();
+    let release = () => {};
+    const held = trackJob('memory', () => new Promise<void>((ok) => (release = ok)));
+    const from = Date.now();
+    await trackJob('card', () => new Promise((ok) => setTimeout(ok, 20)));
+    const to = Date.now();
+    release();
+    await held;
+    await trackJob('summary', () => Promise.resolve()); // after the turn: not attributed
+    const jobs = overlappingJobs(from, to);
+    expect(jobs.map((j) => j.job).toSorted()).toEqual(['card', 'memory']);
+    expect(jobs.find((j) => j.job === 'card')?.ms).toBeGreaterThan(0);
+    expect(overlappingJobs(to + 1000, to + 2000)).toEqual([]);
   });
 });
 

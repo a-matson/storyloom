@@ -4,6 +4,8 @@ import { GenerationStats } from './action';
 export const TurnKind = z.enum(['turn', 'retry']);
 export const TurnOutcome = z.enum(['done', 'stopped', 'error']);
 export const TurnErrorKind = z.enum(['provider', 'storage', 'script', 'cancelled', 'unknown']);
+/** Background model calls that compete with a turn for a generation slot. */
+export const JobKind = z.enum(['memory', 'summary', 'warmup', 'prefetch', 'card']);
 
 const count = z.int().check(z.gte(0));
 
@@ -52,4 +54,6 @@ export const TurnTrace = z.object({
   /** What onModelContext did to the cached prefix; absent on turns before M6-4 and without scripts. */
   scriptCache: z.optional(z.enum(['kept', 'broken', 'rewritten'])),
   timings: z.object({ totalMs: count, ttftMs: z.optional(count) }),
+  /** Background jobs that held a slot while this turn ran, with the overlapping ms; absent on traces before Pre-M7. */
+  overlap: z.optional(z.array(z.object({ job: JobKind, ms: count }))),
 });

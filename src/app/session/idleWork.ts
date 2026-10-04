@@ -1,4 +1,5 @@
 import type { Action, Adventure } from '@core/model';
+import { trackJob } from '@core/trace';
 import { buildWarmupPrompt, generateAlternative, type PreparedContext, type TurnDeps } from '@core/turn';
 import type { Prefetched } from './types';
 
@@ -29,7 +30,8 @@ export async function runIdleWork(
     jobs.push(
       (async () => {
         try {
-          const alt = await generateAlternative(adventure, lastPrepared, deps, last.id, signal, 1);
+          // The alternative's own trace therefore lists `prefetch` as an overlapping job; the story turns are what matters.
+          const alt = await trackJob('prefetch', () => generateAlternative(adventure, lastPrepared, deps, last.id, signal, 1));
           if (!signal.aborted && alt.text.trim()) cb.onPrefetched({ actionId: last.id, text: alt.text, stats: alt.stats, trace: alt.trace });
         } catch {
           // best-effort: Retry falls back to a normal generation
@@ -47,9 +49,11 @@ export async function runIdleWork(
         try {
           const prompt = await buildWarmupPrompt(adventure, actions, deps);
           if (!prompt || signal.aborted) return;
-          for await (const _ of deps.provider.complete({ prompt, maxTokens: 0, temperature: 0, cachePrompt: true, slotId: 0, prefillOnly: true }, signal)) {
-            // drain the prefill
-          }
+          await trackJob('warmup', async () => {
+            for await (const _ of deps.provider.complete({ prompt, maxTokens: 0, temperature: 0, cachePrompt: true, slotId: 0, prefillOnly: true }, signal)) {
+              // drain the prefill
+            }
+          });
           if (!signal.aborted) cb.onWarm('warm');
         } catch {
           if (!signal.aborted) cb.onWarm('idle'); // warm-up failed: next turn is just slower

@@ -155,7 +155,7 @@ test('scripted live play', async ({ page }) => {
     .array(S.TurnTrace)
     .parse(db.traces)
     .toSorted((a, b) => a.createdAt - b.createdAt);
-  const turns = traces.map(({ kind, outcome, stopReason, actionId, timings, stats: s = {} }) => {
+  const turns = traces.map(({ kind, outcome, stopReason, actionId, timings, overlap, stats: s = {} }) => {
     const out = actionId === undefined ? '' : (text.get(actionId) ?? '');
     const { promptTokens = 0, cachedTokens = 0, generatedTokens = 0, generationMs = 0 } = s;
     return {
@@ -168,6 +168,8 @@ test('scripted live play', async ({ page }) => {
       genMs: s.generationMs,
       tokPerSec: generationMs > 0 ? +((generatedTokens / generationMs) * 1000).toFixed(1) : undefined,
       ttftMs: timings.ttftMs,
+      // Which background job held a slot during this turn (Gate V finding 19): the reason a turn is slow.
+      overlap,
       tail: out.slice(-80),
       danglingQuote: (out.match(/"/g) ?? []).length % 2 === 1 || (out.match(/“/g) ?? []).length > (out.match(/”/g) ?? []).length,
     };
