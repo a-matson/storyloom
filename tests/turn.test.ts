@@ -85,6 +85,35 @@ describe('runTurn', () => {
     expect(trace?.scriptLogs).toEqual(['onInput: ran onInput', 'error: onModelContext: boom', 'onOutput: ran onOutput']);
   });
 
+  it('renders a section a script inserted, keeping the cached prefix', async () => {
+    const insert = (i: HookInput): Partial<HookResult> =>
+      i.hook === 'onModelContext'
+        ? { sections: [...(i.sections ?? []).map((s) => ({ kind: s.kind, text: s.text })), { kind: 'script', text: 'The air tastes of iron.' }] }
+        : {};
+    const { adventure, log, deps } = setup(scripted(insert));
+    const events = await collect(runTurn(adventure, log, { type: 'do', text: 'x' }, deps));
+    const ctx = events.find((e) => e.type === 'context');
+    expect(ctx?.type === 'context' && ctx.prompt).toContain('The air tastes of iron.');
+    expect(traces(events)[0]?.scriptCache).toBe('kept');
+  });
+
+  it('marks a prompt the script rewrote as uncached', async () => {
+    const { adventure, log, deps } = setup(scripted((i) => (i.hook === 'onModelContext' ? { text: 'A WHOLE NEW PROMPT' } : {})));
+    const events = await collect(runTurn(adventure, log, { type: 'do', text: 'x' }, deps));
+    const ctx = events.find((e) => e.type === 'context');
+    expect(ctx?.type === 'context' && ctx.prompt).toContain('A WHOLE NEW PROMPT');
+    expect(ctx?.type === 'context' && ctx.prompt).not.toContain('> You x.');
+    expect(traces(events)[0]?.scriptCache).toBe('rewritten');
+  });
+
+  it('builds the context as if the script had not run when onModelContext empties the text', async () => {
+    const { adventure, log, deps } = setup(scripted((i) => (i.hook === 'onModelContext' ? { text: '' } : {})));
+    const events = await collect(runTurn(adventure, log, { type: 'do', text: 'x' }, deps));
+    const ctx = events.find((e) => e.type === 'context');
+    expect(ctx?.type === 'context' && ctx.prompt).toContain('You stand at the gate.');
+    expect(traces(events)[0]?.scriptCache).toBe('kept');
+  });
+
   it('turns provider failures into an error event', async () => {
     const { adventure, log, deps } = setup();
     const failing: TurnDeps = { ...deps, provider: new LlamaServerProvider('x', 'http://x.invalid', () => Promise.resolve(new Response('', { status: 500 }))) };

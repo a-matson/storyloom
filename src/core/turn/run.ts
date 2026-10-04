@@ -62,7 +62,7 @@ export function runTurn(
         yield { type: 'stopped', turnId, reason: prepared.stopped };
         return;
       }
-      yield { type: 'context', turnId, result: prepared.result, prompt: prepared.prompt, stop: prepared.stop };
+      yield { type: 'context', turnId, ...prepared };
       const { text, stats } = yield* generateFor(adventure, run, prepared, deps, signal);
       const action = log.append('continue', text, { turnId, ...(stats ? { stats } : {}) });
       run.actionId = action.id;
@@ -96,7 +96,7 @@ export function retryLast(adventure: Adventure, log: ActionLog, deps: TurnDeps, 
         yield { type: 'stopped', turnId, reason: prepared.stopped };
         return;
       }
-      yield { type: 'context', turnId, result: prepared.result, prompt: prepared.prompt, stop: prepared.stop };
+      yield { type: 'context', turnId, ...prepared };
       const { text, stats } = yield* generateFor(adventure, run, prepared, deps, signal, randomSeed());
       const updated = log.addVersion(last.id, text);
       if (!updated) throw new Error('The action being retried disappeared from the log.');

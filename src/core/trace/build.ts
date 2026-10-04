@@ -1,4 +1,4 @@
-import type { ContextBuildResult } from '../context';
+import type { ContextBuildResult, ScriptCache } from '../context';
 import type { TurnErrorKind, TurnKind, TurnOutcome, TurnTrace } from '../model/types';
 import type { CompletionRequest, CompletionStats } from '../ports/provider';
 import { hashPrompt } from './hash';
@@ -23,6 +23,7 @@ export interface TraceInput {
   modelId?: string | undefined;
   stats?: CompletionStats | undefined;
   scriptLogs?: string[] | undefined;
+  scriptCache?: ScriptCache | undefined;
   ttftMs?: number | undefined;
   totalMs: number;
 }
@@ -75,6 +76,7 @@ export function buildTrace(i: TraceInput): TurnTrace {
     },
     stopReason: i.stats?.stopReason,
     scriptLogs: i.scriptLogs ?? [],
+    ...(i.scriptCache ? { scriptCache: i.scriptCache } : {}),
     timings: { totalMs: i.totalMs, ttftMs: i.ttftMs },
   };
 }

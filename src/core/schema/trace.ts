@@ -49,5 +49,7 @@ export const TurnTrace = z.object({
   /** Why generation ended (`length` means the reply was cut off). */
   stopReason: z.optional(z.string()),
   scriptLogs: z.array(z.string()),
+  /** What onModelContext did to the cached prefix; absent on turns before M6-4 and without scripts. */
+  scriptCache: z.optional(z.enum(['kept', 'broken', 'rewritten'])),
   timings: z.object({ totalMs: count, ttftMs: z.optional(count) }),
 });

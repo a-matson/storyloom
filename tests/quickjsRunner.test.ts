@@ -61,12 +61,21 @@ describe('QuickJsScriptRunner', () => {
     expect(await loaded).toEqual({ ok: false, error: 'output: unexpected token' });
   });
 
-  it('keeps sections out of the worker and puts them back on the result', async () => {
+  it('sends sections as kind/text only and returns what the script sent back', async () => {
     const { workers, runner } = harness();
     const p = runner.run(hookInput);
-    expect(workers[0]?.sent[0]).not.toHaveProperty('input.sections');
+    const sent = workers[0]?.sent[0];
+    expect(sent?.type === 'run' && sent.input.sections).toEqual([{ kind: 'history', text: 'You open it', cacheable: true }]);
+    const edited = [{ kind: 'history', text: 'You open it slowly' }];
+    workers[0]?.reply({ ...okReply(workers[0].runId()), result: { ...okReply(0).result, sections: edited } });
+    expect(await p).toMatchObject({ text: 'done', logs: ['hi'], sections: edited });
+  });
+
+  it('leaves the result without sections when the worker returns none', async () => {
+    const { workers, runner } = harness();
+    const p = runner.run(hookInput);
     workers[0]?.reply(okReply(workers[0].runId()));
-    expect(await p).toMatchObject({ text: 'done', logs: ['hi'], sections });
+    expect((await p).sections).toBeUndefined();
   });
 
   it('turns a worker error into a result error, leaving the text alone', async () => {

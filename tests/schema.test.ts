@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_ADVENTURE_SETTINGS } from '@core/model';
 import * as S from '@core/schema';
 import { makeAdventure } from './fixtures/adventure';
+import { makeTrace } from './fixtures/trace';
 
 describe('schemas', () => {
   it('derive the same defaults the app shipped with', () => {
@@ -38,6 +39,11 @@ describe('schemas', () => {
     const parsed = S.Adventure.parse(adv);
     expect('legacyField' in parsed).toBe(false);
     expect(parsed.scriptState['custom']).toEqual({ n: 1 });
+  });
+
+  it('parse a trace saved before scripts could touch the cache', () => {
+    expect(S.TurnTrace.parse(makeTrace()).scriptCache).toBeUndefined();
+    expect(S.TurnTrace.parse(makeTrace({ scriptCache: 'rewritten' })).scriptCache).toBe('rewritten');
   });
 
   it('reject malformed records with a path', () => {

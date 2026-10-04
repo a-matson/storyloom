@@ -26,6 +26,9 @@ export function TraceSummary({ trace: t }: { trace: TurnTrace }) {
         <Pill tone={t.outcome === 'done' ? 'auto' : 'plain'}>{t.outcome}</Pill>
         <Pill>{t.kind}</Pill>
         {t.errorKind && <Pill>{t.errorKind}</Pill>}
+        {t.scriptCache && t.scriptCache !== 'kept' && (
+          <Pill title={t.scriptCache === 'rewritten' ? 'a script replaced the whole prompt' : 'a script changed a cached section'}>uncached: script</Pill>
+        )}
         {t.stopReason && <span className={`text-caption ${muted}`}>stopped: {t.stopReason}</span>}
       </div>
       <div className="flex flex-col gap-1">

@@ -1,4 +1,4 @@
-import type { ContextBuildResult } from '@core/context';
+import type { ContextBuildResult, ScriptCache } from '@core/context';
 import type { Action, Adventure, AppSettings, TurnTrace } from '@core/model';
 import type { CompletionStats, Embedder, Provider, ScriptRunner, Storage } from '@core/ports';
 import type { CalibratedTokenizer, Tokenizer } from '@core/text';
@@ -11,7 +11,7 @@ export interface GameSnapshot {
   canRedo: boolean;
   busy: boolean;
   streaming: string;
-  context: { result: ContextBuildResult; prompt: string } | null;
+  context: { result: ContextBuildResult; prompt: string; scriptCache?: ScriptCache | undefined } | null;
   error: string | null;
   notice: string | null;
   /** A retry alternative is ready; Retry will be instant. */

@@ -11,6 +11,7 @@ export const SECTION_BG: Record<SectionKind, string> = {
   authorsNote: 'bg-rose',
   lastAction: 'bg-foreground',
   frontMemory: 'bg-muted-foreground',
+  script: 'bg-muted-foreground',
 };
 
 export const SECTION_LABEL: Record<SectionKind, string> = {
@@ -23,4 +24,5 @@ export const SECTION_LABEL: Record<SectionKind, string> = {
   authorsNote: "Author's Note",
   lastAction: 'Last action',
   frontMemory: 'Front memory (script)',
+  script: 'Inserted by a script',
 };

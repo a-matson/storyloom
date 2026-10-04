@@ -9,6 +9,7 @@
 export const PRELUDE = `
 var __logs = [];
 var text = __in.text, history = __in.history, storyCards = __in.storyCards, state = __in.state, info = __in.info;
+var sections = __in.sections;
 var worldInfo = storyCards;
 
 function __str(v) {
@@ -66,6 +67,13 @@ function __out(result) {
   __check(state, 'state', 0);
   __check(storyCards, 'storyCards', 0);
   __check(result, 'result', 0);
-  return JSON.stringify({ result: result === undefined ? null : result, state: state, storyCards: storyCards, logs: __logs });
+  __check(sections, 'sections', 0);
+  return JSON.stringify({
+    result: result === undefined ? null : result,
+    state: state,
+    storyCards: storyCards,
+    sections: sections === undefined ? null : sections,
+    logs: __logs
+  });
 }
 `;
