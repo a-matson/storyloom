@@ -91,7 +91,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
         </main>
         <Sidebar adventure={adv} api={api} utilityModel={!!utilityProvider(app)} hidden={!showSidebar} onClose={() => setShowSidebar(false)} />
       </div>
-      {showContext && state.context && <ContextViewer {...state.context} memories={adv.memories} stats={last?.stats} onClose={() => setShowContext(false)} />}
+      {showContext && state.context && <ContextViewer {...state.context} adventure={adv} stats={last?.stats} onClose={() => setShowContext(false)} />}
       {traceAction !== null && <TraceViewer adventureId={adv.id} actionId={traceAction} onClose={() => setTraceAction(null)} />}
       {state.error !== null && <Toast message={state.error} error onDismiss={api.clearError} />}
       {state.notice !== null && state.error === null && <Toast message={state.notice} />}

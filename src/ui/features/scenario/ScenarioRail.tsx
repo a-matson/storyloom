@@ -150,9 +150,9 @@ function Scripts({ scripts }: { scripts: Scenario['scripts'] }) {
       <div className="grid grid-cols-4 gap-1.5 font-mono text-label">
         {HOOKS.map((h) => (
           <span
-            key={h.key}
-            title={scripts?.[h.key] ? 'has code' : 'empty'}
-            className={cn('rounded-md bg-secondary px-2 py-1.5 text-center', scripts?.[h.key] ? 'text-foreground' : 'text-muted-foreground')}
+            key={h.id}
+            title={scripts?.[h.id] ? 'has code' : 'empty'}
+            className={cn('rounded-md bg-secondary px-2 py-1.5 text-center', scripts?.[h.id] ? 'text-foreground' : 'text-muted-foreground')}
           >
             {h.label}
           </span>

@@ -1,18 +1,19 @@
 import { useState } from 'react';
 import type { ContextBuildResult } from '@core/context';
-import type { Memory } from '@core/model';
+import { hasScripts, type Adventure } from '@core/model';
 import type { CompletionStats } from '@core/ports';
 import { Drawer, DrawerBody, DrawerHeader, Segmented } from '@ui/components/ui/drawer';
 import { TopBarTitle } from '@ui/components/ui/top-bar';
 import { BudgetView } from './BudgetView';
 import { MemoriesView } from './MemoriesView';
+import { ScriptsView } from './ScriptsView';
 import { StatsFooter } from './StatsFooter';
 
 interface Props {
   result: ContextBuildResult;
   prompt: string;
-  /** The adventure's memory bank, for the Memories tab. */
-  memories: Memory[];
+  /** The adventure itself: its memory bank for Memories, its script state for Inspect. */
+  adventure: Adventure;
   /** Backend statistics for the last generation, when available. */
   stats?: CompletionStats | undefined;
   onClose: () => void;
@@ -22,11 +23,13 @@ const VIEWS = [
   { id: 'budget', label: 'Budget' },
   { id: 'memories', label: 'Memories' },
   { id: 'raw', label: 'Raw prompt' },
+  { id: 'inspect', label: 'Inspect' },
 ] as const;
 
-/** What was sent to the model: budget, cards, memories, raw prompt, timings. */
-export function ContextViewer({ result, prompt, memories, stats, onClose }: Props) {
+/** What was sent to the model: budget, cards, memories, raw prompt, timings; Inspect only when the story has scripts. */
+export function ContextViewer({ result, prompt, adventure, stats, onClose }: Props) {
   const [view, setView] = useState<(typeof VIEWS)[number]['id']>('budget');
+  const views = [...VIEWS].filter((v) => v.id !== 'inspect' || hasScripts(adventure.scripts));
   const title = (
     <div className="flex flex-col gap-0.5">
       <TopBarTitle>Context sent to the model</TopBarTitle>
@@ -41,12 +44,13 @@ export function ContextViewer({ result, prompt, memories, stats, onClose }: Prop
   return (
     <Drawer label="Context sent to the model" onClose={onClose}>
       <DrawerHeader title={title} onClose={onClose}>
-        <Segmented value={view} options={[...VIEWS]} onChange={setView} />
+        <Segmented value={view} options={views} onChange={setView} />
       </DrawerHeader>
       <DrawerBody>
         {view === 'budget' && <BudgetView result={result} />}
-        {view === 'memories' && <MemoriesView result={result} memories={memories} />}
+        {view === 'memories' && <MemoriesView result={result} memories={adventure.memories} />}
         {view === 'raw' && <pre className="m-0 font-mono text-caption whitespace-pre-wrap text-prose">{prompt}</pre>}
+        {view === 'inspect' && <ScriptsView adventureId={adventure.id} state={adventure.scriptState} />}
       </DrawerBody>
       {stats && <StatsFooter stats={stats} />}
     </Drawer>
