@@ -39,7 +39,7 @@ export function ActionBlock({ action, isLast, busy, api, onViewContext, onViewTr
   if (action.type === 'see' && action.image) {
     return (
       <figure className="m-0">
-        <img src={action.image.url} alt={action.image.prompt} className="max-w-full rounded-lg" />
+        {action.image.url ? <img src={action.image.url} alt={action.image.prompt} className="max-w-full rounded-lg" /> : null}
         <figcaption className="font-sans text-caption text-muted-foreground">{action.image.prompt}</figcaption>
       </figure>
     );

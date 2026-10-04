@@ -1,0 +1,57 @@
+import { describe, expect, it } from 'vitest';
+import { A1111Provider } from '@adapters/providers/a1111';
+import { ProviderError } from '@adapters/providers/http';
+import type { ImageRequest } from '@core/ports';
+
+// 1x1 transparent PNG.
+const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==';
+
+const req: ImageRequest = { prompt: 'a harbour', width: 512, height: 512, steps: 20, cfgScale: 5 };
+
+/** Records the request and replies with `body`. */
+function stub(body: unknown, init: ResponseInit = {}): { fetch: typeof fetch; calls: { url: string; body: unknown }[] } {
+  const calls: { url: string; body: unknown }[] = [];
+  const f: typeof fetch = async (input, i) => {
+    const r = new Request(input, i);
+    calls.push({ url: r.url, body: i?.body === undefined ? undefined : JSON.parse(await r.text()) });
+    return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' }, ...init });
+  };
+  return { fetch: f, calls };
+}
+
+describe('A1111 image provider', () => {
+  it('lists checkpoints, preferring the title', async () => {
+    const { fetch: f, calls } = stub([{ title: 'sdxl.safetensors [abc]', model_name: 'sdxl' }, { model_name: 'sd15' }, {}]);
+    const p = new A1111Provider('img', 'http://localhost:7860/', f);
+    expect(await p.models()).toEqual(['sdxl.safetensors [abc]', 'sd15']);
+    expect(calls[0]?.url).toBe('http://localhost:7860/sdapi/v1/sd-models');
+  });
+
+  it('returns the first image as a non-empty Blob', async () => {
+    const p = new A1111Provider('img', 'http://x', stub({ images: [PNG] }).fetch);
+    const blob = await p.txt2img(req);
+    expect(blob.size).toBeGreaterThan(0);
+    expect(await blob.slice(1, 4).text()).toBe('PNG');
+  });
+
+  it('sends override_settings only when a model is set', async () => {
+    const plain = stub({ images: [PNG] });
+    await new A1111Provider('img', 'http://x', plain.fetch).txt2img(req);
+    expect(plain.calls[0]?.body).toMatchObject({ prompt: 'a harbour', cfg_scale: 5, negative_prompt: '' });
+    expect(plain.calls[0]?.body).not.toHaveProperty('override_settings');
+
+    const withModel = stub({ images: [PNG] });
+    await new A1111Provider('img', 'http://x', withModel.fetch).txt2img({ ...req, model: 'sdxl', sampler: 'Euler a', seed: 7 });
+    expect(withModel.calls[0]?.body).toMatchObject({ override_settings: { sd_model_checkpoint: 'sdxl' }, sampler_name: 'Euler a', seed: 7 });
+  });
+
+  it('throws on a malformed body, an empty image list and a non-200', async () => {
+    const bad = new A1111Provider('img', 'http://x', stub({ images: [1] }).fetch);
+    await expect(bad.txt2img(req)).rejects.toThrow(ProviderError);
+    const empty = new A1111Provider('img', 'http://x', stub({ images: [] }).fetch);
+    await expect(empty.txt2img(req)).rejects.toThrow(/no image/);
+    const down = new A1111Provider('img', 'http://x', stub({}, { status: 500, statusText: 'Boom' }).fetch);
+    await expect(down.models()).rejects.toThrow(ProviderError);
+    expect(await down.health()).toBe(false);
+  });
+});

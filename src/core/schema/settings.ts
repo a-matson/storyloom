@@ -40,6 +40,17 @@ export const ContextSettings = z.object({
   retryPrefetch: z._default(z.boolean(), false),
 });
 
+/** See mode's txt2img parameters; all defaults [provisional] (SDXL-sized square, cheap step count). */
+export const ImageSettings = z.object({
+  model: z.optional(z.string()),
+  width: z._default(z.int().check(z.gt(0)), 768),
+  height: z._default(z.int().check(z.gt(0)), 768),
+  steps: z._default(z.int().check(z.gt(0)), 24),
+  cfgScale: z._default(z.number(), 5),
+  sampler: z.optional(z.string()),
+  negativePrompt: z.optional(z.string()),
+});
+
 export const AdventureSettings = z.object({
   providerId: z._default(z.string(), 'local'),
   /** Model id as reported by the provider (e.g. GGUF file name). */
@@ -48,16 +59,17 @@ export const AdventureSettings = z.object({
   model: z.prefault(ModelSettings, {}),
   memory: z.prefault(MemorySettings, {}),
   context: z.prefault(ContextSettings, {}),
+  image: z.prefault(ImageSettings, {}),
   textStyle: z._default(z.enum(['print', 'clean', 'hacker']), 'print'),
 });
 
 export const ProviderConfig = z.object({
   id: z.string(),
-  kind: z.enum(['demo', 'llama-server', 'openai-compat', 'koboldcpp', 'ollama']),
+  kind: z.enum(['demo', 'llama-server', 'openai-compat', 'koboldcpp', 'ollama', 'a1111']),
   name: z.string(),
   baseUrl: z.string(),
-  /** Optional: a second, small model server for summaries/cards/image prompts. */
-  role: z.optional(z.enum(['story', 'utility'])),
+  /** Optional: a second, small model server for summaries/cards/image prompts, or the image server. */
+  role: z.optional(z.enum(['story', 'utility', 'image'])),
   /** Prompt template of the model behind this server; the story provider uses the adventure's instead. */
   template: z.optional(TemplateId),
 });

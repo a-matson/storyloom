@@ -1,5 +1,7 @@
 import 'fake-indexeddb/auto';
+import { Dexie } from 'dexie';
 import { describe, expect, it } from 'vitest';
+import { splitAdventure } from '@adapters/storage/dexie/rows';
 import { DexieStorage } from '@adapters/storage';
 import { ActionLog } from '@core/log';
 import { StorageError, TRACE_CAP_PER_ADVENTURE } from '@core/ports';
@@ -122,6 +124,59 @@ describe('DexieStorage', () => {
     const got = await (await reopen(name)).getSettings();
     expect(got?.theme).toBe('dark');
     expect(got?.defaults.context.evictionChunk).toBe(8);
+  });
+});
+
+describe('DexieStorage images', () => {
+  const blob = (text: string) => new Blob([text], { type: 'image/png' });
+
+  it('round-trips a blob and deletes one', async () => {
+    const s = await reopen(freshName());
+    await s.putImage('adv1', 'img1', blob('one'));
+    expect(await (await s.getImage('adv1', 'img1'))?.text()).toBe('one');
+    expect(await s.getImage('adv1', 'nope')).toBeUndefined();
+    await s.deleteImage('adv1', 'img1');
+    expect(await s.getImage('adv1', 'img1')).toBeUndefined();
+  });
+
+  it('deletes an adventure with its images, leaving other adventures alone', async () => {
+    const s = await reopen(freshName());
+    const adv = makeAdventure({ actions: 2 });
+    await s.putAdventure(adv);
+    await s.putImage(adv.id, 'img1', blob('mine'));
+    await s.putImage('elsewhere', 'img1', blob('theirs'));
+    await s.deleteAdventure(adv.id);
+    expect(await s.getImage(adv.id, 'img1')).toBeUndefined();
+    expect(await s.getImage('elsewhere', 'img1')).toBeDefined();
+  });
+
+  it('upgrades a version-2 database to 3 without data loss', async () => {
+    const name = freshName();
+    const adv = makeAdventure({ actions: 6, cards: 2, memories: 2, embeddingDim: 4 });
+    const old = new Dexie(name);
+    old.version(1).stores({
+      adventures: 'id, updatedAt',
+      actions: '[adventureId+seq], adventureId',
+      storyCards: '[adventureId+id], adventureId',
+      memories: '[adventureId+id], adventureId',
+      scenarios: 'id, updatedAt',
+      settings: '',
+    });
+    old.version(2).stores({ traces: 'turnId, adventureId, [adventureId+createdAt]' });
+    await old.open();
+    const rows = splitAdventure(adv);
+    await old.table('adventures').put(rows.meta);
+    await old.table('actions').bulkPut(rows.actions);
+    await old.table('storyCards').bulkPut(rows.cards);
+    await old.table('memories').bulkPut(rows.memories);
+    old.close();
+
+    const s = await reopen(name);
+    const back = await s.getAdventure(adv.id);
+    const f32 = (xs?: number[]) => xs?.map((x) => Math.fround(x));
+    expect(back).toEqual({ ...adv, memories: adv.memories.map((m) => ({ ...m, embedding: f32(m.embedding) })) });
+    await s.putImage(adv.id, 'img1', blob('after upgrade'));
+    expect(await (await s.getImage(adv.id, 'img1'))?.text()).toBe('after upgrade');
   });
 });
 

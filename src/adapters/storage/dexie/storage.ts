@@ -97,11 +97,23 @@ export class DexieStorage implements Storage {
 
   async deleteAdventure(id: string): Promise<void> {
     const db = this.db;
-    await db.transaction('rw', [db.adventures, db.actions, db.storyCards, db.memories, db.traces], async () => {
+    await db.transaction('rw', [db.adventures, db.actions, db.storyCards, db.memories, db.traces, db.images], async () => {
       await db.adventures.delete(id);
-      await Promise.all([db.actions, db.storyCards, db.memories, db.traces].map((t) => t.where('adventureId').equals(id).delete()));
+      await Promise.all([db.actions, db.storyCards, db.memories, db.traces, db.images].map((t) => t.where('adventureId').equals(id).delete()));
     });
     this.saved.delete(id);
+  }
+
+  async putImage(adventureId: string, id: string, blob: Blob): Promise<void> {
+    await this.db.images.put({ adventureId, id, blob, createdAt: Date.now() });
+  }
+
+  async getImage(adventureId: string, id: string): Promise<Blob | undefined> {
+    return (await this.db.images.get([adventureId, id]))?.blob;
+  }
+
+  async deleteImage(adventureId: string, id: string): Promise<void> {
+    await this.db.images.delete([adventureId, id]);
   }
 
   async putTrace(t: TurnTrace): Promise<void> {

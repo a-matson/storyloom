@@ -1,4 +1,5 @@
 import type { ProviderConfig } from '@core/model';
+import { ProviderError } from './http';
 import { LlamaServerProvider } from './llamaServer';
 import { OpenAICompatProvider } from './openaiCompat';
 import type { Provider } from '@core/ports';
@@ -32,6 +33,9 @@ export function createProvider(cfg: ProviderConfig): Provider {
       return new OpenAICompatProvider(cfg.id, cfg.baseUrl, {
         supportsTopK: false,
       });
+    case 'a1111':
+      // An image server speaks /sdapi/v1 only; see `A1111Provider` behind the ImageProvider port.
+      throw new ProviderError('An image server cannot generate text');
     case 'openai-compat':
     default:
       return new OpenAICompatProvider(cfg.id, cfg.baseUrl);

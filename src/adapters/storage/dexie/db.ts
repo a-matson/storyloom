@@ -1,6 +1,6 @@
 import { Dexie, type EntityTable, type Table } from 'dexie';
 import type { AppSettings, Scenario, TurnTrace } from '@core/model';
-import { splitAdventure, type ActionRow, type AdventureRow, type CardRow, type MemoryRow } from './rows';
+import { splitAdventure, type ActionRow, type AdventureRow, type CardRow, type ImageRow, type MemoryRow } from './rows';
 import type { Adventure } from '@core/model';
 
 export class StoryloomDb extends Dexie {
@@ -11,6 +11,7 @@ export class StoryloomDb extends Dexie {
   scenarios!: EntityTable<Scenario, 'id'>;
   settings!: Table<AppSettings, string>;
   traces!: Table<TurnTrace, string>;
+  images!: Table<ImageRow, [string, string]>;
 
   constructor(name = 'storyloom') {
     super(name);
@@ -37,5 +38,7 @@ export class StoryloomDb extends Dexie {
       });
     // Version 2 only adds the (empty) traces table; Dexie carries the v1 tables over.
     this.version(2).stores({ traces: 'turnId, adventureId, [adventureId+createdAt]' });
+    // Version 3 only adds the (empty) images table.
+    this.version(3).stores({ images: '[adventureId+id], adventureId' });
   }
 }
