@@ -14,10 +14,12 @@ export interface TurnRun {
   request?: CompletionRequest;
   generated?: Generated;
   actionId?: string;
+  /** `log()` lines and errors of every hook run in this turn. */
+  scriptLogs: string[];
 }
 
 export function startRun(kind: TurnKind): TurnRun {
-  return { turnId: newId('turn_'), kind, startedAt: Date.now() };
+  return { turnId: newId('turn_'), kind, startedAt: Date.now(), scriptLogs: [] };
 }
 
 /** Failures carry a `kind` (`ProviderError`, `StorageError`); anything else is unknown. */
@@ -46,6 +48,7 @@ export function traceOf(adventure: Adventure, deps: TurnDeps, run: PromptedRun, 
     template: adventure.settings.template,
     providerId: deps.provider.id,
     modelId: adventure.settings.modelId,
+    scriptLogs: run.scriptLogs,
     stats: run.generated?.stats,
     ttftMs: run.generated?.ttftMs,
     totalMs: Date.now() - run.startedAt,

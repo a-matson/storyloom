@@ -26,7 +26,8 @@ export interface SessionServices {
   /** Calibrated after each turn; the fallback behind `tokenizerFor`. */
   tokenizer: CalibratedTokenizer;
   tokenizerFor: (provider: Provider) => Tokenizer;
-  scripts: ScriptRunner;
+  /** Resolved once when the adventure opens; loading the sandbox is lazy. */
+  scriptsFor: (adv: Adventure) => Promise<ScriptRunner>;
   storage: Storage;
   /** Run background work when the browser is idle. */
   idle: (fn: () => void) => void;

@@ -14,7 +14,9 @@ export function ScriptsTab({ draft, update }: TabProps) {
   const scripts = draft.scripts ?? EMPTY;
   return (
     <>
-      <p className="m-0 text-caption text-muted-foreground">Scripts are saved with the scenario; they run from milestone 6.</p>
+      <p className="m-0 text-caption text-muted-foreground">
+        Scripts are copied into every adventure started from this scenario and run in a sandbox while you play.
+      </p>
       {HOOKS.map((h) => (
         <TextField key={h.key} label={h.label} className="font-mono" value={scripts[h.key]} onChange={(v) => update({ scripts: { ...scripts, [h.key]: v } })} />
       ))}

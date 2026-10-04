@@ -1,5 +1,5 @@
 import type { Adventure, AdventureSettings, Scenario, StoryCard } from './types';
-import { DEFAULT_ADVENTURE_SETTINGS, newId } from './types';
+import { DEFAULT_ADVENTURE_SETTINGS, hasScripts, newId, scriptCount } from './types';
 import { applyPlaceholders, findPlaceholders } from '../text/placeholders';
 
 /**
@@ -18,14 +18,14 @@ export function placeholderQuestions(s: Scenario) {
   ]);
 }
 
-/** Library card counts. `scripts`: how many of the four hooks have code. */
+/** Library card counts. */
 export function scenarioSummary(s: Scenario) {
   return {
     type: s.type,
     placeholders: placeholderQuestions(s).length,
     cards: s.storyCards.length,
     branches: s.options?.length ?? 0,
-    scripts: Object.values(s.scripts ?? {}).filter((code) => code.trim() !== '').length,
+    scripts: scriptCount(s.scripts),
   };
 }
 
@@ -82,6 +82,7 @@ export function createAdventureFromScenario(
       thirdPerson: s.plot.thirdPerson ? { ...s.plot.thirdPerson } : undefined,
     },
     storyCards: cards,
+    scripts: hasScripts(s.scripts) ? { ...s.scripts } : undefined,
     memories: [],
     scriptState: { placeholders: Object.entries(answers).map(([question, answer]) => ({ question, answer })) },
     placeholders: Object.entries(answers).map(([question, answer]) => ({ question, answer })),

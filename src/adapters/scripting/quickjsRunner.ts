@@ -83,7 +83,8 @@ export class QuickJsScriptRunner implements ScriptRunner {
       return loading?.resolve({ ok: reply.ok, error: reply.error });
     }
     const waiter = this.take(reply.id);
-    if (!waiter) return;
+    // An error the worker could not tie to a request (a rejected request, say): nothing pending can still be answered.
+    if (!waiter) return reply.type === 'error' ? this.failAll(new Error(reply.message)) : undefined;
     waiter.resolve(reply.type === 'result' ? { ...reply.result, sections: waiter.input.sections } : failed(waiter.input, reply.message));
   }
 
@@ -116,4 +117,9 @@ export class QuickJsScriptRunner implements ScriptRunner {
     this.loading?.resolve({ ok: false, error: err.message });
     this.loading = undefined;
   }
+}
+
+/** The real runner. `new URL(...)` is what makes Vite emit the worker and its wasm as separate chunks. */
+export function createQuickJsRunner(): ScriptRunner {
+  return new QuickJsScriptRunner(() => new Worker(new URL('./scripts.worker.ts', import.meta.url), { type: 'module' }));
 }

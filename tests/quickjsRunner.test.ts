@@ -95,6 +95,13 @@ describe('QuickJsScriptRunner', () => {
     expect(await next).toMatchObject({ text: 'done' });
   });
 
+  it('fails pending runs when the worker reports an error it cannot tie to one', async () => {
+    const { workers, runner } = harness();
+    const p = runner.run(hookInput);
+    workers[0]?.reply({ type: 'error', message: 'bad request: not a run' });
+    await expect(p).rejects.toThrow('bad request: not a run');
+  });
+
   it('rejects everything pending on a malformed reply', async () => {
     const { workers, runner } = harness();
     const p = runner.run(hookInput);
