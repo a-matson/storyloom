@@ -29,8 +29,37 @@ function imageBytes(page: Page) {
   });
 }
 
+/**
+ * Every txt2img exchange and console line, so the measurement says what the server was asked
+ * and what it answered. Base64 payloads are reduced to a head + length; the point is the shape.
+ */
+function capture(page: Page) {
+  const calls: Record<string, unknown>[] = [];
+  const console_: string[] = [];
+  page.on('request', (r) => {
+    if (!r.url().includes('/sdapi/v1/txt2img')) return;
+    calls.push({ at: new Date().toISOString(), url: r.url(), body: r.postData()?.slice(0, 2000) });
+  });
+  page.on('response', (r) => {
+    if (!r.url().includes('/sdapi/v1/txt2img')) return;
+    const call = calls.at(-1) ?? {};
+    void (async () => {
+      try {
+        const first = (JSON.parse(await r.text()) as { images?: unknown[] }).images?.[0];
+        Object.assign(call, { status: r.status(), head: String(first).slice(0, 32), length: String(first).length });
+      } catch (e) {
+        Object.assign(call, { status: r.status(), bodyError: String(e) });
+      }
+    })();
+  });
+  page.on('console', (m) => console_.push(`${m.type()}: ${m.text()}`));
+  page.on('pageerror', (e) => console_.push(`pageerror: ${e.message}`));
+  return { calls, console_ };
+}
+
 test('a real image server renders a See image and a cover', async ({ page }) => {
   test.setTimeout(90 * 60_000);
+  const captured = capture(page);
   const ms: Record<string, number> = {};
   const timed = async (name: string, job: () => Promise<void>) => {
     const t = Date.now();
@@ -60,6 +89,9 @@ test('a real image server renders a See image and a cover', async ({ page }) => 
   await page.getByRole('textbox', { name: 'Take a turn' }).fill('look around and take in the place');
   await timed('turn', async () => {
     await page.getByRole('button', { name: 'Send' }).click();
+    // Send is replaced by Stop while the model streams; waiting for Send alone passes instantly
+    // and timed the click, not the turn.
+    await expect(page.getByRole('button', { name: 'Stop generating' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: TURN_MS });
   });
 
@@ -69,6 +101,8 @@ test('a real image server renders a See image and a cover', async ({ page }) => 
     await page.getByRole('button', { name: 'Send' }).click();
     await expect(page.getByRole('figure').getByRole('img')).toBeVisible({ timeout: GEN_MS });
   });
+  // Our own images are blobs; a `url` src would mean imported data, not a real render.
+  await expect(page.getByRole('figure').getByRole('img')).toHaveAttribute('src', /^blob:/);
   const caption = (await page.getByRole('figure').locator('figcaption').textContent()) ?? '';
   const seen = await page
     .getByRole('figure')
@@ -91,6 +125,38 @@ test('a real image server renders a See image and a cover', async ({ page }) => 
   // One See image and one cover; a failed generation leaves nothing behind.
   expect(blobs.length).toBe(2);
 
-  const path = writeMeasurement('live-images', { imageServer: IMAGES, url: URL, models, ms, caption, seen, blobs });
+  // A second See, left in flight: a turn taken while it renders, then a reload mid-generation.
+  // Both are on the user's path, and the reload is the evidence play fix 2 needs.
+  await page.getByRole('button', { name: 'See', exact: true }).click();
+  await page.getByRole('button', { name: 'Send' }).click();
+  const generating = page.getByText(/Generating… \d+ s/);
+  await expect(generating).toBeVisible({ timeout: TURN_MS });
+  await page.getByRole('button', { name: 'Do', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Take a turn' }).fill('listen for footsteps on the stair');
+  await timed('turnDuringImage', async () => {
+    await page.getByRole('button', { name: 'Send' }).click();
+    await expect(page.getByRole('button', { name: 'Stop generating' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: TURN_MS });
+  });
+  const counter = (await generating.textContent()) ?? '';
+  await page.reload();
+  // The stored image comes back from IndexedDB; nothing resumes the render that was in flight,
+  // so the last block stays where it is — what it says is the finding play fix 2 works from.
+  await expect(page.getByRole('figure').first().getByRole('img')).toBeVisible();
+  const afterReload = (await page.getByRole('figure').last().textContent()) ?? '';
+
+  const path = writeMeasurement('play-images', {
+    imageServer: IMAGES,
+    url: URL,
+    models,
+    ms,
+    caption,
+    seen,
+    blobs,
+    counter,
+    afterReload,
+    txt2img: captured.calls,
+    console: captured.console_,
+  });
   console.log(`wrote ${path}`);
 });
