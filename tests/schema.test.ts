@@ -48,6 +48,12 @@ describe('schemas', () => {
     expect(S.TurnTrace.parse(makeTrace({ scriptCache: 'rewritten' })).scriptCache).toBe('rewritten');
   });
 
+  it('reject an image setting of 0', () => {
+    for (const key of ['width', 'height', 'steps', 'cfgScale']) {
+      expect(S.ImageSettings.safeParse({ [key]: 0 }).success).toBe(false);
+    }
+  });
+
   it('reject malformed records with a path', () => {
     const bad = { ...makeAdventure({ actions: 1 }), storyCards: [{ id: 'c', type: 'x', name: 'n', entry: 'e', triggers: 42 }] };
     const r = S.Adventure.safeParse(bad);
