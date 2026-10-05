@@ -60,7 +60,10 @@ export class A1111Provider implements ImageProvider {
       signal,
     );
     const first = res.images[0];
-    if (first === undefined) throw new ProviderError('The image server returned no image');
+    // KoboldCpp answers a failed render with 200 and `{"images": [""]}`; without this the empty
+    // string decodes to a 0-byte blob and renders as a broken picture nothing can explain.
+    // [measured: docs/measurements/2026-10-05-live-images.json]
+    if (first === undefined || first === '') throw new ProviderError('The image server returned no image');
     // `fetch` on a data: URL is the platform's base64 decoder; no hand-rolled one.
     return await (await fetch(`data:image/png;base64,${first}`)).blob();
   }

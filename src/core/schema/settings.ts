@@ -43,8 +43,10 @@ export const ContextSettings = z.object({
 /** See mode's txt2img parameters; all defaults [provisional] (SDXL-sized square, cheap step count). */
 export const ImageSettings = z.object({
   model: z.optional(z.string()),
-  width: z._default(z.int().check(z.gt(0)), 768),
-  height: z._default(z.int().check(z.gt(0)), 768),
+  // SD 1.5's native size, and 4x faster than 768²: 1m58s against 8m44s on an M2 Pro.
+  // [measured: docs/measurements/2026-10-05-live-images.json]
+  width: z._default(z.int().check(z.gt(0)), 512),
+  height: z._default(z.int().check(z.gt(0)), 512),
   steps: z._default(z.int().check(z.gt(0)), 24),
   cfgScale: z._default(z.number(), 5),
   sampler: z.optional(z.string()),

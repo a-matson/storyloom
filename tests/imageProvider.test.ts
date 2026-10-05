@@ -50,6 +50,9 @@ describe('A1111 image provider', () => {
     await expect(bad.txt2img(req)).rejects.toThrow(ProviderError);
     const empty = new A1111Provider('img', 'http://x', stub({ images: [] }).fetch);
     await expect(empty.txt2img(req)).rejects.toThrow(/no image/);
+    // A real KoboldCpp failure: 200, and an empty string where the base64 PNG should be.
+    const blank = new A1111Provider('img', 'http://x', stub({ images: [''] }).fetch);
+    await expect(blank.txt2img(req)).rejects.toThrow(/no image/);
     const down = new A1111Provider('img', 'http://x', stub({}, { status: 500, statusText: 'Boom' }).fetch);
     await expect(down.models()).rejects.toThrow(ProviderError);
     expect(await down.health()).toBe(false);
