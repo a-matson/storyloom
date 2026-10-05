@@ -4,7 +4,7 @@ import { actionText } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Pill } from '@ui/components/ui/pill';
 import { cn } from '@ui/lib/utils';
-import { OutputTools } from './OutputTools';
+import { OutputTools, actionGrid, textColumn } from './OutputTools';
 import { SeeBlock } from './SeeBlock';
 
 export const PROSE = 'm-0 whitespace-pre-wrap text-prose';
@@ -75,28 +75,26 @@ export function ActionBlock({ action, adventureId, isLast, busy, pendingImages, 
   );
 
   return (
-    <div className="group">
-      {isPlayer ? (
-        <div className="flex items-start gap-3">
-          <Pill tone={action.type === 'story' ? 'story' : action.type === 'say' ? 'say' : 'do'} className="mt-[5px] font-sans">
-            {action.type}
-          </Pill>
-          {paragraph}
-        </div>
-      ) : (
-        paragraph
+    <div className={cn('group', actionGrid)}>
+      {isPlayer && (
+        <Pill tone={action.type === 'story' ? 'story' : action.type === 'say' ? 'say' : 'do'} className="mt-[5px] justify-self-start font-sans">
+          {action.type}
+        </Pill>
       )}
-      {isLast && !busy && (
-        <OutputTools
-          action={action}
-          api={api}
-          speech={speech}
-          onEdit={() => setEditing(true)}
-          onViewContext={onViewContext}
-          onViewTrace={onViewTrace}
-          contextSummary={contextSummary}
-        />
-      )}
+      <div className={textColumn}>
+        {paragraph}
+        {isLast && !busy && (
+          <OutputTools
+            action={action}
+            api={api}
+            speech={speech}
+            onEdit={() => setEditing(true)}
+            onViewContext={onViewContext}
+            onViewTrace={onViewTrace}
+            contextSummary={contextSummary}
+          />
+        )}
+      </div>
     </div>
   );
 }

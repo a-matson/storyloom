@@ -104,6 +104,15 @@ test('the output tools appear on hover and on keyboard focus', async ({ page }) 
   await expect(tools).toHaveCSS('opacity', '1');
 });
 
+test('player and AI text share one left edge', async ({ page }) => {
+  await connectDemo(page);
+  await page.getByRole('button', { name: 'Fantasy' }).click();
+  await takeTurn(page, 'open the letter');
+  const player = await page.getByText('You open the letter.').boundingBox();
+  const ai = await page.getByText('hand stops moving.').boundingBox();
+  expect(Math.abs((player?.x ?? 0) - (ai?.x ?? -1))).toBeLessThanOrEqual(1);
+});
+
 test('the trace viewer shows the latest generation and its prompt', async ({ page }) => {
   await connectDemo(page);
   await page.getByRole('button', { name: 'Fantasy' }).click();

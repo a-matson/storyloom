@@ -4,7 +4,7 @@ import type { GameApi } from '@ui/hooks/useGameSession';
 import { useImageBlob } from '@ui/hooks/useImageBlob';
 import { Button, buttonClass } from '@ui/components/ui/button';
 import { cn } from '@ui/lib/utils';
-import { revealOnHover } from './OutputTools';
+import { revealOnHover, seeIndent } from './OutputTools';
 
 type Image = NonNullable<Action['image']>;
 interface Props {
@@ -98,7 +98,8 @@ export function SeeBlock({ action, image, adventureId, isLast, busy, generating,
   };
 
   return (
-    <figure className="group m-0">
+    // No kind label of its own, so the empty gutter is padding rather than a grid cell — same token, same left edge as the prose.
+    <figure className={cn('group m-0', seeIndent)}>
       {src !== undefined ? (
         <img src={src} alt={image.prompt} className="max-w-full rounded-lg" />
       ) : image.missing === true ? (
