@@ -113,6 +113,26 @@ test('player and AI text share one left edge', async ({ page }) => {
   expect(Math.abs((player?.x ?? 0) - (ai?.x ?? -1))).toBeLessThanOrEqual(1);
 });
 
+test('the focused turn input shows a thin ring in the mode colour', async ({ page }) => {
+  await connectDemo(page);
+  await page.getByRole('button', { name: 'Fantasy' }).click();
+  const input = page.getByRole('textbox', { name: 'Take a turn' });
+  const row = input.locator('..');
+  // Tailwind's shadow utilities compute to a stack of shadows, so assert on the one that shows.
+  const shadow = (l: typeof input) => l.evaluate((el) => getComputedStyle(el).boxShadow);
+  await input.focus();
+  // The global 4 px lantern ring is a box-shadow, so outline-none alone would not hide it.
+  expect(await shadow(input)).not.toContain('233, 168, 76');
+  await expect(row).toHaveCSS('border-color', 'rgb(233, 168, 76)');
+  expect(await shadow(row)).toContain('rgb(233, 168, 76) 0px 0px 0px 1px');
+
+  // The chip takes focus on click, so focus-within needs the input back.
+  await page.getByRole('button', { name: 'Say' }).click();
+  await input.focus();
+  await expect(row).toHaveCSS('border-color', 'rgb(79, 184, 166)');
+  expect(await shadow(row)).toContain('rgb(79, 184, 166) 0px 0px 0px 1px');
+});
+
 test('the trace viewer shows the latest generation and its prompt', async ({ page }) => {
   await connectDemo(page);
   await page.getByRole('button', { name: 'Fantasy' }).click();

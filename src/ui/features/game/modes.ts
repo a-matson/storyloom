@@ -8,6 +8,7 @@ interface ModeStyle {
   hint: string;
   /** Chip when selected; input border, prefix and send button. */
   chip: string;
+  /** Border *and* ring of the turn input while it has focus. */
   focus: string;
   text: string;
   bg: string;
@@ -19,7 +20,7 @@ export const MODES: Record<Mode, ModeStyle> = {
     prefix: '›',
     hint: 'What do you do?',
     chip: 'aria-pressed:border-mode-do aria-pressed:bg-mode-do',
-    focus: 'focus-within:border-mode-do',
+    focus: 'focus-within:border-mode-do focus-within:ring-1 focus-within:ring-mode-do',
     text: 'text-mode-do',
     bg: 'bg-mode-do',
   },
@@ -28,7 +29,7 @@ export const MODES: Record<Mode, ModeStyle> = {
     prefix: '“',
     hint: 'What do you say?',
     chip: 'aria-pressed:border-mode-say aria-pressed:bg-mode-say',
-    focus: 'focus-within:border-mode-say',
+    focus: 'focus-within:border-mode-say focus-within:ring-1 focus-within:ring-mode-say',
     text: 'text-mode-say',
     bg: 'bg-mode-say',
   },
@@ -37,7 +38,7 @@ export const MODES: Record<Mode, ModeStyle> = {
     prefix: '¶',
     hint: 'Narrate what happens next',
     chip: 'aria-pressed:border-mode-story aria-pressed:bg-mode-story',
-    focus: 'focus-within:border-mode-story',
+    focus: 'focus-within:border-mode-story focus-within:ring-1 focus-within:ring-mode-story',
     text: 'text-mode-story',
     bg: 'bg-mode-story',
   },
@@ -46,7 +47,7 @@ export const MODES: Record<Mode, ModeStyle> = {
     prefix: '◉',
     hint: 'Describe an image, or leave blank to auto-prompt (needs an image backend)',
     chip: 'aria-pressed:border-mode-see aria-pressed:bg-mode-see',
-    focus: 'focus-within:border-mode-see',
+    focus: 'focus-within:border-mode-see focus-within:ring-1 focus-within:ring-mode-see',
     text: 'text-mode-see',
     bg: 'bg-mode-see',
   },
