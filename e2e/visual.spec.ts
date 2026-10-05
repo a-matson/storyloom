@@ -33,6 +33,18 @@ test('library', async ({ page }) => {
   await shot(page, 'library');
 });
 
+test('library with the custom opening open, narrow', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('button', { name: /^Demo \(no GPU\)/ }).click();
+  await page.getByRole('button', { name: 'Test connection' }).click();
+  await expect(page.getByText('Connected')).toBeVisible();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Write your own opening' }).click();
+  await expect(page.getByRole('textbox', { name: 'Your opening' })).toBeVisible();
+  await shot(page, 'library-custom-mobile');
+});
+
 test('game with adventure sidebar', async ({ page }) => {
   await startGame(page);
   await shot(page, 'game-adventure');
