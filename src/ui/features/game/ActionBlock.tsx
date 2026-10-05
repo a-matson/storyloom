@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import type { Action } from '@core/model';
+import type { Action, AppSettings } from '@core/model';
 import { actionText } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Pill } from '@ui/components/ui/pill';
@@ -15,6 +15,7 @@ interface Props {
   isLast: boolean;
   busy: boolean;
   api: GameApi;
+  speech: AppSettings['speech'];
   onViewContext: () => void;
   onViewTrace: () => void;
   contextSummary?: string | undefined;
@@ -23,7 +24,7 @@ interface Props {
 const quoted = (a: Action) => a.type === 'do' || a.type === 'say';
 
 /** One action; double-click edits it in place, blur commits, Escape reverts. */
-export function ActionBlock({ action, adventureId, isLast, busy, api, onViewContext, onViewTrace, contextSummary }: Props) {
+export function ActionBlock({ action, adventureId, isLast, busy, api, speech, onViewContext, onViewTrace, contextSummary }: Props) {
   const [editing, setEditing] = useState(false);
   const ref = useRef<HTMLParagraphElement>(null);
   const text = actionText(action);
@@ -77,6 +78,7 @@ export function ActionBlock({ action, adventureId, isLast, busy, api, onViewCont
         <OutputTools
           action={action}
           api={api}
+          speech={speech}
           onEdit={() => setEditing(true)}
           onViewContext={onViewContext}
           onViewTrace={onViewTrace}

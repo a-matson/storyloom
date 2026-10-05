@@ -27,6 +27,7 @@ describe('schemas', () => {
     const parsed = S.AppSettings.parse(old);
     expect(parsed.defaults.context).toMatchObject({ cacheStableLayout: false, evictionChunk: 8, retryPrefetch: false });
     expect(parsed.theme).toBe('dark');
+    expect(parsed.speech).toEqual({ enabled: false, rate: 1 });
   });
 
   it('parse a provider saved before it had a template', () => {

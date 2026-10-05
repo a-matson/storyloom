@@ -74,6 +74,13 @@ export const ProviderConfig = z.object({
   template: z.optional(TemplateId),
 });
 
+/** Read-aloud via the platform `speechSynthesis`; `voiceUri` unset means the system default. */
+export const SpeechSettings = z.object({
+  enabled: z._default(z.boolean(), false),
+  voiceUri: z.optional(z.string()),
+  rate: z._default(z.number(), 1),
+});
+
 export const AppSettings = z.object({
   providers: z.array(ProviderConfig),
   defaultProviderId: z.string(),
@@ -82,6 +89,7 @@ export const AppSettings = z.object({
   highContrast: z._default(z.boolean(), false),
   textAnimation: z._default(z.boolean(), true),
   textSize: z._default(z.enum(['default', 'large', 'larger']), 'default'),
+  speech: z.prefault(SpeechSettings, {}),
   stickyInput: z._default(z.boolean(), true),
   compactButtons: z._default(z.boolean(), false),
 });
