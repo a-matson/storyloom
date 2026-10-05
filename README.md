@@ -64,10 +64,12 @@ run it: same origin, no browser permission prompts, works offline.
 
 ## 3. Open the app
 
-Build the app once and point `--path` at the folder:
+Download `storyloom-dist.zip` from
+[Releases](https://github.com/a-matson/storyloom/releases/latest), unzip it next to your
+model, and point `--path` at the folder:
 
 ```bash
-pnpm install && pnpm build    # writes dist/
+unzip storyloom-dist.zip -d dist
 ```
 
 Then open <http://localhost:8080>. First run lands on Setup: pick **llama-server**, leave the
@@ -83,7 +85,7 @@ plot components, story cards and settings; **View context** shows exactly what w
 the model.
 
 **The hosted demo**, <https://a-matson.github.io/storyloom/>, is the same app without the
-build step, and it still talks to _your_ local server — nothing is sent anywhere else. Chrome
+download, and it still talks to _your_ local server — nothing is sent anywhere else. Chrome
 will ask for permission the first time a public page reaches a server on your machine; allow
 it. If your server refuses the request, see CORS below. For real play, prefer `--path ./dist`.
 
