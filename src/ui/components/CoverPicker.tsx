@@ -11,7 +11,7 @@ import { pickFile } from '@ui/transferUi';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-/** Long side an uploaded cover is downscaled to; a ceiling on the stored blob, not a render cost. [provisional] */
+/** Long side a cover is downscaled to; a ceiling on the stored blob, not a render cost. [provisional] */
 const COVER_MAX_PX = 768;
 
 interface Props {
@@ -30,16 +30,17 @@ export function CoverPicker({ ownerId, coverId, coverUrl, app, image, onChange }
   const [prompt, setPrompt] = useState('');
   const [busy, setBusy] = useState(false);
 
+  // Every path downscales here, so a generated PNG is stored at the same ceiling as an upload.
   const store = async (blob: Blob) => {
     const id = newId('img_');
-    await storage.putImage(ownerId, id, blob);
+    await storage.putImage(ownerId, id, await downscale(blob, COVER_MAX_PX));
     onChange(id);
     if (coverId !== undefined) await storage.deleteImage(ownerId, coverId).catch((e: unknown) => console.warn('could not delete the old cover', e));
   };
 
   const upload = async () => {
     const file = await pickFile('image/*');
-    if (file) await store(await downscale(file, COVER_MAX_PX));
+    if (file) await store(file);
   };
 
   const generate = async () => {
