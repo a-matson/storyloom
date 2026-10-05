@@ -6,11 +6,14 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwA
 
 test('See mode generates an image, keeps the caption and survives a reload', async ({ page }) => {
   const prompts: string[] = [];
+  // A real render takes minutes, so one call is held back to show the waiting state.
+  let delayMs = 0;
   await page.route(`${IMAGES}/**`, async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path === '/sdapi/v1/sd-models') return route.fulfill({ json: [{ title: 'sd_xl_base.safetensors [31e35c80fc]', model_name: 'sd_xl_base' }] });
     if (path !== '/sdapi/v1/txt2img') return route.fulfill({ status: 404, json: {} });
     prompts.push((route.request().postDataJSON() as { prompt: string }).prompt);
+    if (delayMs > 0) await new Promise((done) => setTimeout(done, delayMs));
     return route.fulfill({ json: { images: [PNG] } });
   });
 
@@ -27,8 +30,13 @@ test('See mode generates an image, keeps the caption and survives a reload', asy
 
   await page.getByRole('textbox', { name: 'Take a turn' }).fill('/see a harbour at dusk');
   await page.getByRole('button', { name: 'Send' }).click();
+  delayMs = 3000;
   // The slash command only switches mode; the second send submits the prompt.
   await page.getByRole('button', { name: 'Send' }).click();
+
+  // The counter ticks while the server works: without it two minutes of "Generating…" reads as broken.
+  await expect(page.getByRole('figure')).toContainText(/Generating… [1-9]\d* s/);
+  delayMs = 0;
 
   await expect(page.getByRole('figure')).toContainText('a harbour at dusk');
   const image = page.getByRole('img', { name: 'a harbour at dusk' });

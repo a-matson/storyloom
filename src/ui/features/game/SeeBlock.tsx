@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Action } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { useImageBlob } from '@ui/hooks/useImageBlob';
@@ -32,6 +32,23 @@ async function share(src: string, prompt: string): Promise<void> {
   const file = new File([await (await fetch(src)).blob()], fileName(prompt), { type: 'image/png' });
   if (!navigator.canShare({ files: [file] })) return;
   await navigator.share({ files: [file] });
+}
+
+/**
+ * The waiting state, with its seconds. A real 512²/24-step render takes **two minutes**
+ * [measured: docs/measurements/2026-10-05-play-images.json], so a bare "Generating…" reads as broken.
+ * Mounted only while the wait lasts, so its own state is the count and a Retry starts over.
+ */
+function Generating() {
+  const [s, setS] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setS((n) => n + 1), 1000);
+    return () => {
+      clearInterval(t);
+    };
+  }, []);
+  // ponytail: counts ticks, not wall time, so a backgrounded tab under-counts; Date.now is impure in render.
+  return <div className="font-sans text-caption text-muted-foreground">Generating… {s} s</div>;
 }
 
 /** Under the last image: share, download, retry and delete. Editing the prompt is on the caption. */
@@ -81,9 +98,11 @@ export function SeeBlock({ action, image, adventureId, isLast, busy, api }: Prop
     <figure className="m-0">
       {src !== undefined ? (
         <img src={src} alt={image.prompt} className="max-w-full rounded-lg" />
-      ) : (
+      ) : image.missing === true ? (
+        <div className="font-sans text-caption text-muted-foreground">Image not exported</div>
+      ) : image.imageId !== undefined ? null : ( // the blob is on disk and loading: a reload must not claim it is still generating
         // No skeleton box: a placeholder with its own size would not fit the start-up CSS budget.
-        <div className="font-sans text-caption text-muted-foreground">{image.missing === true ? 'Image not exported' : 'Generating…'}</div>
+        <Generating />
       )}
       {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- pointer shortcut; Retry regenerates without editing */}
       <figcaption
