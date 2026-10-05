@@ -55,6 +55,19 @@ describe('job log', () => {
     expect(jobs.find((j) => j.job === 'card')?.ms).toBeGreaterThan(0);
     expect(overlappingJobs(to + 1000, to + 2000)).toEqual([]);
   });
+
+  it('closes the window of a job that throws and counts it as failed', async () => {
+    clearJobLog();
+    const from = Date.now();
+    // A window needs width to be attributed at all, so the failure takes a few ms.
+    const job = trackJob('image', async () => {
+      await new Promise((ok) => setTimeout(ok, 20));
+      throw new Error('no model loaded');
+    });
+    await expect(job).rejects.toThrow('no model loaded');
+    const jobs = overlappingJobs(from, Date.now());
+    expect(jobs).toEqual([{ job: 'image', ms: expect.any(Number), failed: 1 }]);
+  });
 });
 
 describe('buildTrace', () => {

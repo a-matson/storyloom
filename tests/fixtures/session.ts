@@ -7,7 +7,9 @@ import { AppSettings as AppSettingsSchema } from '@core/schema';
 import { createApproxTokenizer } from '@core/text';
 
 /** A session on the fake llama backend, plus the writes, snapshots, traces and idle callbacks it produced. */
-export function setup(opts: { failSave?: boolean; prefetch?: boolean; warm?: boolean; adventure?: Adventure; images?: ImageProvider } = {}) {
+export function setup(
+  opts: { failSave?: boolean; prefetch?: boolean; warm?: boolean; adventure?: Adventure; images?: ImageProvider; imageTimeoutMs?: number } = {},
+) {
   const handler = createFakeLlama({ wordDelayMs: 0 });
   const provider = new LlamaServerProvider('demo', 'http://demo.invalid', (i, init) => handler(new Request(i, init)));
   const saved: Adventure[] = [];
@@ -47,6 +49,7 @@ export function setup(opts: { failSave?: boolean; prefetch?: boolean; warm?: boo
     frame: (fn) => setTimeout(fn, 0),
     saveDelayMs: 0,
     rewarmDelayMs: 0,
+    imageTimeoutMs: opts.imageTimeoutMs ?? 300_000,
   });
   const snapshots: GameSnapshot[] = [];
   session.subscribe(() => snapshots.push(session.getSnapshot()));

@@ -120,5 +120,8 @@ export function openSession(adventure: Adventure, app: AppSettings): GameSession
     frame: (fn) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(fn) : setTimeout(fn, 16)),
     saveDelayMs: 300,
     rewarmDelayMs: 1000, // [provisional]
+    // Well above the 130 s a 512²/24-step render takes with the story model on the same GPU
+    // [measured: docs/measurements/2026-10-05-play-images.json], so only a hung server is killed.
+    imageTimeoutMs: 300_000, // [provisional]
   });
 }

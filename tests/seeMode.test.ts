@@ -32,6 +32,32 @@ describe('See mode', () => {
     session.see('a harbour');
     await vi.waitFor(() => expect(session.getSnapshot().error).toContain('no model loaded'));
     expect(session.getSnapshot().actions.at(-1)?.image?.imageId).toBeUndefined();
+    // Nothing is running any more, so the block shows its failed state instead of "Generating…".
+    expect(session.getSnapshot().pendingImages).toEqual([]);
+  });
+
+  it('abandons a txt2img that never answers, keeps the prompt and retries', async () => {
+    let hang = true;
+    const { session } = setup({
+      imageTimeoutMs: 20,
+      images: fakeImages(
+        (_req, signal) =>
+          new Promise<Blob>((resolve, reject) => {
+            if (!hang) return resolve(new Blob(['png']));
+            signal?.addEventListener('abort', () => reject(signal.reason as Error));
+          }),
+      ),
+    });
+    session.see('a lantern');
+    const action = session.getSnapshot().actions.at(-1);
+    expect(session.getSnapshot().pendingImages).toEqual([action?.id]);
+    await vi.waitFor(() => expect(session.getSnapshot().error).toContain('did not answer'));
+    expect(session.getSnapshot().pendingImages).toEqual([]);
+    expect(session.getSnapshot().actions.at(-1)?.image?.prompt).toBe('a lantern');
+
+    hang = false;
+    session.regenerateSee(action?.id ?? '');
+    await vi.waitFor(() => expect(session.getSnapshot().actions.at(-1)?.image?.imageId).toBeDefined());
   });
 
   it('says so when no image server is configured', async () => {

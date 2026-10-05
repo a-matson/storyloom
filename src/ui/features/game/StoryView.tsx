@@ -9,6 +9,7 @@ interface Props {
   adventureId: string;
   streaming: string;
   busy: boolean;
+  pendingImages: readonly string[];
   api: GameApi;
   speech: AppSettings['speech'];
   onViewContext: () => void;
@@ -17,7 +18,7 @@ interface Props {
 }
 
 /** The story column: player actions carry a mode pill, AI outputs are plain prose, the last output gets the tools. */
-export function StoryView({ actions, adventureId, streaming, busy, api, speech, onViewContext, onViewTrace, contextSummary }: Props) {
+export function StoryView({ actions, adventureId, streaming, busy, pendingImages, api, speech, onViewContext, onViewTrace, contextSummary }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
   // Follow the newest text: the compiler re-renders this view only when the story, stream or turn state changes.
   useEffect(() => {
@@ -35,6 +36,7 @@ export function StoryView({ actions, adventureId, streaming, busy, api, speech, 
             adventureId={adventureId}
             isLast={i === lastIdx}
             busy={busy}
+            pendingImages={pendingImages}
             api={api}
             speech={speech}
             onViewContext={onViewContext}

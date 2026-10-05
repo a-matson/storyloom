@@ -79,6 +79,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
             adventureId={adv.id}
             streaming={state.streaming}
             busy={state.busy}
+            pendingImages={state.pendingImages}
             api={api}
             speech={app.speech}
             onViewContext={openContext}

@@ -12,6 +12,8 @@ interface Props {
   adventureId: string;
   isLast: boolean;
   busy: boolean;
+  /** A txt2img for this action is running right now. */
+  generating: boolean;
   api: GameApi;
 }
 
@@ -81,7 +83,7 @@ function ImageTools({ id, prompt, src, api }: { id: string; prompt: string; src:
 }
 
 /** A See-mode action: the caption shows while the image is still generating; double-click it to change the prompt. */
-export function SeeBlock({ action, image, adventureId, isLast, busy, api }: Props) {
+export function SeeBlock({ action, image, adventureId, isLast, busy, generating, api }: Props) {
   const [editing, setEditing] = useState(false);
   const ref = useRef<HTMLElement>(null);
   const blobUrl = useImageBlob(adventureId, image.imageId);
@@ -100,9 +102,17 @@ export function SeeBlock({ action, image, adventureId, isLast, busy, api }: Prop
         <img src={src} alt={image.prompt} className="max-w-full rounded-lg" />
       ) : image.missing === true ? (
         <div className="font-sans text-caption text-muted-foreground">Image not exported</div>
-      ) : image.imageId !== undefined ? null : ( // the blob is on disk and loading: a reload must not claim it is still generating
+      ) : image.imageId !== undefined ? null : generating ? ( // the blob is on disk and loading: a reload must not claim it is still generating
         // No skeleton box: a placeholder with its own size would not fit the start-up CSS budget.
         <Generating />
+      ) : (
+        // No job behind this prompt — the server failed, or a reload abandoned the request.
+        <div className="font-sans text-caption text-danger">
+          Could not generate this image
+          <Button className={tool} onClick={() => api.regenerateSee(action.id)}>
+            Retry
+          </Button>
+        </div>
       )}
       {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- pointer shortcut; Retry regenerates without editing */}
       <figcaption

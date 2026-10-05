@@ -54,6 +54,6 @@ export const TurnTrace = z.object({
   /** What onModelContext did to the cached prefix; absent on turns before M6-4 and without scripts. */
   scriptCache: z.optional(z.enum(['kept', 'broken', 'rewritten'])),
   timings: z.object({ totalMs: count, ttftMs: z.optional(count) }),
-  /** Background jobs that held a slot while this turn ran, with the overlapping ms; absent on traces before Pre-M7. */
-  overlap: z.optional(z.array(z.object({ job: JobKind, ms: count }))),
+  /** Background jobs that held a slot while this turn ran, with the overlapping ms and how many threw; absent on traces before Pre-M7. */
+  overlap: z.optional(z.array(z.object({ job: JobKind, ms: count, failed: z.optional(count) }))),
 });
