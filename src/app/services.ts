@@ -36,19 +36,17 @@ export function providerFor(settings: AppSettings, id: string): Provider {
   return p;
 }
 
-const imageProviders = new Map<string, Promise<ImageProvider>>();
+// One slot, not a map: only one image server is configured at a time, and a Map keyed on the
+// URL gained an entry per keystroke in the Image server field and never dropped one.
+let imageCache: { key: string; provider: Promise<ImageProvider> } | undefined;
 
 /** The configured image server, or undefined when See mode has nowhere to go. */
 export function imageProviderFor(settings: AppSettings): Promise<ImageProvider> | undefined {
   const cfg = imageProvider(settings);
   if (!cfg) return undefined;
   const key = `${cfg.id}|${cfg.kind}|${cfg.baseUrl}`;
-  let p = imageProviders.get(key);
-  if (!p) {
-    p = loadImageProvider(cfg);
-    imageProviders.set(key, p);
-  }
-  return p;
+  if (imageCache?.key !== key) imageCache = { key, provider: loadImageProvider(cfg) };
+  return imageCache.provider;
 }
 
 const exactTokenizers = new Map<string, Tokenizer>();

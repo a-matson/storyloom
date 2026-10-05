@@ -25,6 +25,12 @@ export function withChild(root: Scenario, path: string[], child: Scenario): Scen
   return { ...root, options: root.options?.map((o) => (o.id === id ? withChild(o, rest, child) : o)) };
 }
 
+/** Every stored cover in the tree as `[ownerId, coverId]` — the owner a blob is keyed under. */
+export function coverIds(root: Scenario): [ownerId: string, coverId: string][] {
+  const own: [string, string][] = root.coverId === undefined ? [] : [[root.id, root.coverId]];
+  return [...own, ...(root.options ?? []).flatMap(coverIds)];
+}
+
 /** A blank story option under `parent`. */
 export function newOption(parent: Scenario): Scenario {
   return { ...newScenario(), parentId: parent.id };

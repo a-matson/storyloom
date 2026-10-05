@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DEFAULT_APP_SETTINGS, embedderFor, openSession, providerFor } from '@app/services';
+import { DEFAULT_APP_SETTINGS, embedderFor, imageProviderFor, openSession, providerFor } from '@app/services';
 import { createBlankAdventure, type AppSettings } from '@core/model';
 import type { Provider } from '@core/ports';
 
@@ -19,6 +19,19 @@ describe('services', () => {
     const a = providerFor(demoApp, 'demo');
     expect(providerFor(demoApp, 'demo')).toBe(a);
     expect(providerFor(demoApp, 'missing')).toBe(a);
+  });
+
+  it('keeps one image provider, not one per URL keystroke', () => {
+    const withImage = (baseUrl: string): AppSettings => ({
+      ...demoApp,
+      providers: [...demoApp.providers, { id: 'img', kind: 'a1111', name: 'Images', baseUrl, role: 'image' }],
+    });
+    const a = imageProviderFor(withImage('http://localhost:7860'));
+    expect(imageProviderFor(withImage('http://localhost:7860'))).toBe(a);
+    expect(imageProviderFor(withImage('http://localhost:7861'))).not.toBe(a);
+    // The old entry is gone, so coming back re-loads instead of hoarding a provider per typed URL.
+    expect(imageProviderFor(withImage('http://localhost:7860'))).not.toBe(a);
+    expect(imageProviderFor(demoApp)).toBeUndefined();
   });
 
   it('uses the hash embedder when the backend has no embeddings', async () => {
