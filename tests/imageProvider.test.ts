@@ -41,8 +41,8 @@ describe('A1111 image provider', () => {
     expect(plain.calls[0]?.body).not.toHaveProperty('override_settings');
 
     const withModel = stub({ images: [PNG] });
-    await new A1111Provider('img', 'http://x', withModel.fetch).txt2img({ ...req, model: 'sdxl', sampler: 'Euler a', seed: 7 });
-    expect(withModel.calls[0]?.body).toMatchObject({ override_settings: { sd_model_checkpoint: 'sdxl' }, sampler_name: 'Euler a', seed: 7 });
+    await new A1111Provider('img', 'http://x', withModel.fetch).txt2img({ ...req, model: 'sdxl' });
+    expect(withModel.calls[0]?.body).toMatchObject({ override_settings: { sd_model_checkpoint: 'sdxl' } });
   });
 
   it('throws on a malformed body, an empty image list and a non-200', async () => {

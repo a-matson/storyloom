@@ -23,11 +23,18 @@ describe('schemas', () => {
   });
 
   it('fill settings added after a record was saved', () => {
-    const old = { providers: [], defaultProviderId: 'local', defaults: { context: { cacheStableLayout: false } } };
+    // `speech.rate` and `image.sampler` were dropped; a record saved with them must still parse.
+    const old = {
+      providers: [],
+      defaultProviderId: 'local',
+      defaults: { context: { cacheStableLayout: false }, image: { sampler: 'Euler a' } },
+      speech: { rate: 2 },
+    };
     const parsed = S.AppSettings.parse(old);
     expect(parsed.defaults.context).toMatchObject({ cacheStableLayout: false, evictionChunk: 8, retryPrefetch: false });
     expect(parsed.theme).toBe('dark');
-    expect(parsed.speech).toEqual({ enabled: false, rate: 1 });
+    expect(parsed.speech).toEqual({ enabled: false });
+    expect(parsed.defaults.image).not.toHaveProperty('sampler');
   });
 
   it('parse a provider saved before it had a template', () => {

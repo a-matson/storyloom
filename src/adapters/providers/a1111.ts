@@ -48,8 +48,6 @@ export class A1111Provider implements ImageProvider {
       height: req.height,
       steps: req.steps,
       cfg_scale: req.cfgScale,
-      ...(req.sampler ? { sampler_name: req.sampler } : {}),
-      ...(req.seed === undefined ? {} : { seed: req.seed }),
       ...(req.model ? { override_settings: { sd_model_checkpoint: req.model }, override_settings_restore_afterwards: true } : {}),
     };
     const res = await fetchJson(

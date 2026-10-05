@@ -11,8 +11,6 @@ export interface ImageRequest {
   height: number;
   steps: number;
   cfgScale: number;
-  sampler?: string | undefined;
-  seed?: number | undefined;
   /** Checkpoint to switch to for this request only. */
   model?: string | undefined;
 }
