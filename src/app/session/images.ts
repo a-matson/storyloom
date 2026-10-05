@@ -50,7 +50,7 @@ async function auto(host: SeeHost): Promise<void> {
 export function regenerateImage(host: SeeHost, actionId: string, prompt?: string): void {
   const old = host.log.actions.find((a) => a.id === actionId)?.image;
   if (!old) return;
-  const { imageId, ...rest } = old;
+  const { imageId, missing: _wasImported, ...rest } = old;
   const image: Image = { ...rest, ...(prompt !== undefined && { prompt: prompt.trim() }) };
   if (image.prompt === '') return;
   if (imageId !== undefined) drop(host, imageId);

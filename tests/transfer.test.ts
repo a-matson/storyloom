@@ -27,6 +27,15 @@ describe('adventure JSON', () => {
     expect(warnings).toEqual([]);
   });
 
+  it('drops image ids an export cannot carry blobs for', () => {
+    const a = createBlankAdventure('T', 'You wake.');
+    a.coverId = 'img_cover';
+    a.actions.push({ id: 'act_see', type: 'see', versions: [''], active: 0, createdAt: 1, image: { imageId: 'img_1', prompt: 'a door' } });
+    const { adventure: b } = importAdventureJson(exportAdventureJson(a));
+    expect(b.coverId).toBeUndefined();
+    expect(b.actions[1]!.image).toEqual({ prompt: 'a door', missing: true });
+  });
+
   it('names the broken field of a damaged export', () => {
     const json = JSON.parse(exportAdventureJson(createBlankAdventure('T', 'x'))) as { adventure: { actions: unknown[] } };
     json.adventure.actions = [{ id: 'a', type: 'jump', versions: [], active: 0, createdAt: 0 }];

@@ -83,7 +83,7 @@ export function SeeBlock({ action, image, adventureId, isLast, busy, api }: Prop
         <img src={src} alt={image.prompt} className="max-w-full rounded-lg" />
       ) : (
         // No skeleton box: a placeholder with its own size would not fit the start-up CSS budget.
-        <div className="font-sans text-caption text-muted-foreground">Generating…</div>
+        <div className="font-sans text-caption text-muted-foreground">{image.missing === true ? 'Image not exported' : 'Generating…'}</div>
       )}
       {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- pointer shortcut; Retry regenerates without editing */}
       <figcaption

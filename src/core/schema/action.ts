@@ -22,8 +22,16 @@ export const Action = z.object({
   versions: z.array(z.string()),
   active: z.int().check(z.gte(0)),
   createdAt: z.number(),
-  /** Present for `see` actions. `imageId` points at a stored blob; `url` only comes from imported AID data. */
-  image: z.optional(z.object({ imageId: z.optional(z.string()), url: z.optional(z.string()), prompt: z.string(), model: z.optional(z.string()) })),
+  /** Present for `see` actions. `imageId` points at a stored blob; `url` only comes from imported AID data. `missing`: the blob did not come with the import. */
+  image: z.optional(
+    z.object({
+      imageId: z.optional(z.string()),
+      url: z.optional(z.string()),
+      prompt: z.string(),
+      model: z.optional(z.string()),
+      missing: z.optional(z.literal(true)),
+    }),
+  ),
   stats: z.optional(GenerationStats),
   /** The turn that produced this action; links it to its `TurnTrace`. */
   turnId: z.optional(z.string()),
