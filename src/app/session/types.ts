@@ -16,6 +16,8 @@ export interface GameSnapshot {
   notice: string | null;
   /** A retry alternative is ready; Retry will be instant. */
   prefetchReady: boolean;
+  /** `see` action ids with a live `txt2img`. Session state, not schema: after a reload nothing is running, so an image-less block is retryable instead of forever "Generating…". */
+  pendingImages: readonly string[];
   /** KV-cache warm-up state for the next turn. */
   warm: 'idle' | 'warming' | 'warm';
 }
@@ -36,6 +38,8 @@ export interface SessionServices {
   /** Run before the next paint. */
   frame: (fn: () => void) => void;
   saveDelayMs: number;
+  /** A txt2img that runs longer than this is abandoned. */
+  imageTimeoutMs: number;
   /** Quiet time after the last edit before the cache is re-warmed. */
   rewarmDelayMs: number;
 }

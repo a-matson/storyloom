@@ -68,7 +68,7 @@ export class GameSession {
     this.log = new ActionLog(adventure.actions);
     this.app = app;
     this.svc = services;
-    this.snapshot = this.build({ busy: false, streaming: '', context: null, error: null, notice: null, prefetchReady: false, warm: 'idle' });
+    this.snapshot = this.build({ busy: false, streaming: '', context: null, error: null, notice: null, prefetchReady: false, pendingImages: [], warm: 'idle' });
     this.scripts = sessionScripts(services, adventure, (e) => this.emit({ notice: `Scenario scripts are off: ${message(e)}` }));
     // Until these resolve, turns rank memories by recency only and the context length is not clamped to n_ctx.
     this.resolveEmbedder().catch((e: unknown) => console.warn('no embedder; memories rank by recency', e));
@@ -241,6 +241,14 @@ export class GameSession {
   };
 
   readonly onError = (error: string): void => this.emit({ error });
+
+  /** Image jobs in flight. Only this session knows them, so a reload drops them and the block becomes retryable. */
+  private readonly runningImages = new Set<string>();
+  readonly imagePending = (actionId: string, running: boolean): void => {
+    if (running) this.runningImages.add(actionId);
+    else this.runningImages.delete(actionId);
+    this.emit({ pendingImages: [...this.runningImages] });
+  };
 
   /** See mode: one image from the player's prompt (blank = written by the helper model), generated in the background. */
   readonly see = (prompt: string): void => seeImage(prompt, this);

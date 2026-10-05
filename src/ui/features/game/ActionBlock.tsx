@@ -14,6 +14,8 @@ interface Props {
   adventureId: string;
   isLast: boolean;
   busy: boolean;
+  /** Action ids whose image is being generated right now. */
+  pendingImages: readonly string[];
   api: GameApi;
   speech: AppSettings['speech'];
   onViewContext: () => void;
@@ -24,7 +26,7 @@ interface Props {
 const quoted = (a: Action) => a.type === 'do' || a.type === 'say';
 
 /** One action; double-click edits it in place, blur commits, Escape reverts. */
-export function ActionBlock({ action, adventureId, isLast, busy, api, speech, onViewContext, onViewTrace, contextSummary }: Props) {
+export function ActionBlock({ action, adventureId, isLast, busy, pendingImages, api, speech, onViewContext, onViewTrace, contextSummary }: Props) {
   const [editing, setEditing] = useState(false);
   const ref = useRef<HTMLParagraphElement>(null);
   const text = actionText(action);
@@ -40,7 +42,17 @@ export function ActionBlock({ action, adventureId, isLast, busy, api, speech, on
   };
 
   if (action.type === 'see' && action.image)
-    return <SeeBlock action={action} image={action.image} adventureId={adventureId} isLast={isLast} busy={busy} api={api} />;
+    return (
+      <SeeBlock
+        action={action}
+        image={action.image}
+        adventureId={adventureId}
+        isLast={isLast}
+        busy={busy}
+        generating={pendingImages.includes(action.id)}
+        api={api}
+      />
+    );
 
   const paragraph = (
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- pointer shortcut; keyboard users have the Edit button

@@ -57,6 +57,7 @@ function setup(utilityReachable: boolean) {
     frame: (fn) => setTimeout(fn, 0),
     saveDelayMs: 0,
     rewarmDelayMs: 0,
+    imageTimeoutMs: 300_000,
   });
   return { session, story, utility, embeddedFor, idle };
 }

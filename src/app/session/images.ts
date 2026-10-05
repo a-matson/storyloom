@@ -17,6 +17,8 @@ export interface SeeHost {
   helperModel: () => Promise<{ provider: Provider; template: TemplateId }>;
   /** The log changed: publish a snapshot and save. */
   changed: () => void;
+  /** A txt2img for this action started or ended; the snapshot's `pendingImages` follows. */
+  imagePending: (actionId: string, running: boolean) => void;
   onError: (message: string) => void;
 }
 
@@ -80,18 +82,23 @@ async function generate(host: SeeHost, actionId: string, image: Image): Promise<
   const pending = host.svc.imageProviderFor(host.app);
   if (!pending) return host.onError('No image server is configured; add one in Settings.');
   const s = host.adv.settings.image;
+  const ms = host.svc.imageTimeoutMs;
+  host.imagePending(actionId, true);
   try {
     const provider = await pending;
     const blob = await trackJob('image', () =>
-      provider.txt2img({
-        prompt: image.prompt,
-        width: s.width,
-        height: s.height,
-        steps: s.steps,
-        cfgScale: s.cfgScale,
-        negativePrompt: s.negativePrompt,
-        model: s.model,
-      }),
+      provider.txt2img(
+        {
+          prompt: image.prompt,
+          width: s.width,
+          height: s.height,
+          steps: s.steps,
+          cfgScale: s.cfgScale,
+          negativePrompt: s.negativePrompt,
+          model: s.model,
+        },
+        AbortSignal.timeout(ms),
+      ),
     );
     // An erase during those seconds already ran dropOrphanImages; storing now would leak a blob no action owns.
     if (!host.log.actions.some((a) => a.id === actionId)) return;
@@ -100,7 +107,11 @@ async function generate(host: SeeHost, actionId: string, image: Image): Promise<
     host.log.patch(actionId, { image: { ...image, imageId } });
     host.changed();
   } catch (e) {
-    // The caption stays without a picture; Retry on the action is M7-3.
-    host.onError(`Could not generate the image: ${message(e)}`);
+    // The caption and the prompt stay; the block shows its failed state with Retry.
+    // A bare "signal timed out" would not say what timed out, so the timeout names itself.
+    const why = e instanceof Error && e.name === 'TimeoutError' ? `the image server did not answer in ${Math.round(ms / 1000)} s` : message(e);
+    host.onError(`Could not generate the image: ${why}`);
+  } finally {
+    host.imagePending(actionId, false);
   }
 }
