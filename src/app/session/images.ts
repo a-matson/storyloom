@@ -90,7 +90,6 @@ async function generate(host: SeeHost, actionId: string, image: Image): Promise<
         steps: s.steps,
         cfgScale: s.cfgScale,
         negativePrompt: s.negativePrompt,
-        sampler: s.sampler,
         model: s.model,
       }),
     );

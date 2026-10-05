@@ -16,14 +16,13 @@ const subscribe = (l: () => void) => {
 };
 
 /** Speaks `text`, cancelling whatever is queued: one voice at a time, so a long story never piles up. */
-export function speak(text: string, { voiceUri, rate }: AppSettings['speech']) {
+export function speak(text: string, { voiceUri }: AppSettings['speech']) {
   const s = synth();
   if (!s || text === '') return;
   s.cancel();
   const u = new SpeechSynthesisUtterance(text);
   const voice = voiceUri === undefined ? undefined : s.getVoices().find((v) => v.voiceURI === voiceUri);
   if (voice) u.voice = voice;
-  u.rate = rate;
   u.addEventListener('end', () => emit(false));
   u.addEventListener('error', () => emit(false));
   emit(true);

@@ -49,7 +49,6 @@ export const ImageSettings = z.object({
   height: z._default(z.int().check(z.gt(0)), 512),
   steps: z._default(z.int().check(z.gt(0)), 24),
   cfgScale: z._default(z.number().check(z.gt(0)), 5),
-  sampler: z.optional(z.string()),
   negativePrompt: z.optional(z.string()),
 });
 
@@ -80,7 +79,6 @@ export const ProviderConfig = z.object({
 export const SpeechSettings = z.object({
   enabled: z._default(z.boolean(), false),
   voiceUri: z.optional(z.string()),
-  rate: z._default(z.number(), 1),
 });
 
 export const AppSettings = z.object({
