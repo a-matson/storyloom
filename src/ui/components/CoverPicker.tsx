@@ -10,7 +10,7 @@ import { pickFile } from '@ui/transferUi';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-/** Same long side as the See default image size. [provisional] */
+/** Long side an uploaded cover is downscaled to; a ceiling on the stored blob, not a render cost. [provisional] */
 const COVER_MAX_PX = 768;
 
 interface Props {
