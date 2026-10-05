@@ -90,6 +90,19 @@ describe('See mode', () => {
     expect(images.size).toBe(0);
   });
 
+  it('stores nothing when the action is erased while the server works', async () => {
+    let resolve: ((b: Blob) => void) | undefined;
+    const { session, images } = setup({ images: fakeImages(() => new Promise<Blob>((r) => (resolve = r))) });
+    session.see('a lantern');
+    const action = session.getSnapshot().actions.at(-1);
+    await vi.waitFor(() => expect(resolve).toBeDefined());
+    session.eraseTo(action?.id ?? '');
+    resolve?.(new Blob(['png']));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(session.getSnapshot().actions.some((a) => a.type === 'see')).toBe(false);
+    expect(images.size).toBe(0);
+  });
+
   it('writes the prompt with the helper model when the input is blank', async () => {
     const blob = new Blob(['png'], { type: 'image/png' });
     const { session } = setup({ images: fakeImages(() => Promise.resolve(blob)) });
