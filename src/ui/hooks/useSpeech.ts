@@ -41,16 +41,21 @@ export function useSpeech() {
   return { supported: synth() !== undefined, speaking: isSpeaking, speak, stop: stopSpeech };
 }
 
-/** Reads a finished turn aloud; what was already on screen when the adventure opened is not read. */
-export function useReadAloud(speech: AppSettings['speech'], text: string | undefined) {
-  const mounted = useRef(false);
+/**
+ * Reads `text` aloud when a turn finishes — the busy -> idle edge, so what was already on screen
+ * when the adventure opened is never read, and a cancelled turn does not repeat the last paragraph.
+ */
+export function useReadAloud(speech: AppSettings['speech'], busy: boolean, text: string | undefined) {
+  const wasBusy = useRef(false);
+  const read = useRef<string>(undefined);
   useEffect(() => {
-    const first = !mounted.current;
-    mounted.current = true;
-    if (first || !speech.enabled || text === undefined) return undefined;
+    const finished = wasBusy.current && !busy;
+    wasBusy.current = busy;
+    if (!finished || !speech.enabled || text === undefined || text === read.current) return undefined;
+    read.current = text;
     speak(text, speech);
     return stopSpeech; // a new turn, or leaving the adventure, cuts the voice off
-  }, [speech, text]);
+  }, [speech, busy, text]);
 }
 
 const readVoices = (): SpeechSynthesisVoice[] => {

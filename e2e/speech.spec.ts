@@ -1,10 +1,15 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// Headless Chromium ships no speech service, so there is nothing to observe but a stub.
-// It records what the app asked for and fires `onend` only when the app lets it finish.
+interface Spoken {
+  text: string;
+  voice: string | undefined;
+  cancelled: boolean;
+}
+
+// Headless Chromium ships no speech service, so there is nothing to observe but a stub. It reports
+// through exposed bindings rather than a window array: the record then survives a navigation.
 const STUB = () => {
-  const spoken: { text: string; voice: string | undefined; cancelled: boolean }[] = [];
-  Object.defineProperty(window, '__spoken', { value: spoken });
+  const report = window as unknown as { __spoke: (s: { text: string; voice?: string }) => void; __cancelled: () => void };
   class Utterance extends EventTarget {
     rate = 1;
     voice: SpeechSynthesisVoice | null = null;
@@ -21,11 +26,10 @@ const STUB = () => {
       getVoices: () => [{ voiceURI: 'stub://narrator', name: 'Narrator', lang: navigator.language }],
       speak: (u: Utterance) => {
         current = u;
-        spoken.push({ text: u.text, voice: u.voice?.voiceURI, cancelled: false });
+        report.__spoke({ text: u.text, ...(u.voice ? { voice: u.voice.voiceURI } : {}) });
       },
       cancel: () => {
-        const last = spoken.at(-1);
-        if (current && last) last.cancelled = true;
+        if (current) report.__cancelled();
         current = undefined;
       },
       addEventListener: () => {},
@@ -34,38 +38,53 @@ const STUB = () => {
   });
 };
 
-const spoken = (page: Page) => page.evaluate(() => (window as unknown as { __spoken: { text: string; voice?: string; cancelled: boolean }[] }).__spoken);
+/** Installs the stub and returns the list it fills, in Node. */
+async function stubSpeech(page: Page): Promise<Spoken[]> {
+  const spoken: Spoken[] = [];
+  await page.exposeFunction('__spoke', (s: { text: string; voice?: string }) => {
+    spoken.push({ text: s.text, voice: s.voice, cancelled: false });
+  });
+  await page.exposeFunction('__cancelled', () => {
+    const last = spoken.at(-1);
+    if (last) last.cancelled = true;
+  });
+  await page.addInitScript(STUB);
+  return spoken;
+}
 
 test('read aloud speaks a finished turn in the chosen voice, and Stop cancels it', async ({ page }) => {
-  await page.addInitScript(STUB);
+  const spoken = await stubSpeech(page);
   await page.goto('/');
   await page.getByRole('button', { name: /^Demo \(no GPU\)/ }).click();
   await page.getByRole('switch', { name: 'Read aloud' }).click();
   await page.getByRole('combobox', { name: 'Voice' }).selectOption('stub://narrator');
+  // The demo backend only answers once it has been tested; without it there is no turn to read.
+  await page.getByRole('button', { name: 'Test connection' }).click();
+  await expect(page.getByText('Connected')).toBeVisible();
   await page.getByRole('button', { name: 'Continue' }).click();
 
   await page.getByRole('button', { name: 'Fantasy' }).click();
   await expect(page).toHaveURL(/#\/adventure\//);
   // The opening was already on screen when the adventure loaded: it is not read aloud.
-  expect(await spoken(page)).toEqual([]);
+  expect(spoken).toEqual([]);
 
   await page.getByRole('textbox', { name: 'Take a turn' }).fill('I open the door');
   await page.getByRole('button', { name: 'Send' }).click();
 
-  await expect.poll(async () => (await spoken(page)).length).toBe(1);
-  const [first] = await spoken(page);
+  await expect.poll(() => spoken.length).toBe(1);
+  const first = spoken[0];
   expect(first?.voice).toBe('stub://narrator');
   expect(first?.text).not.toBe('');
   await expect(page.getByRole('button', { name: 'Stop' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Stop' }).click();
   await expect(page.getByRole('button', { name: 'Speak' })).toBeVisible();
-  expect((await spoken(page))[0]?.cancelled).toBe(true);
+  expect(first?.cancelled).toBe(true);
 
   // Speak reads the same output again, on demand.
   await page.getByRole('button', { name: 'Speak' }).click();
-  await expect.poll(async () => (await spoken(page)).length).toBe(2);
-  expect((await spoken(page))[1]?.text).toBe(first?.text);
+  await expect.poll(() => spoken.length).toBe(2);
+  expect(spoken[1]?.text).toBe(first?.text);
 });
 
 test('the voice picker stays hidden when the browser has no speech service', async ({ page }) => {

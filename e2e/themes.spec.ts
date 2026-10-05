@@ -13,6 +13,8 @@ test('a styled theme persists across a reload', async ({ page }) => {
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect.poll(() => theme(page)).toBe('slate');
 
+  // The library only opens once the settings are written, so the reload cannot race the save.
+  await expect(page.getByRole('heading', { name: 'My adventures' })).toBeVisible();
   await page.reload();
   await expect.poll(() => theme(page)).toBe('slate');
 });

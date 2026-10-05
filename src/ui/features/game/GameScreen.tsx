@@ -44,7 +44,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
   // Before the first turn there is no built context; estimate from the log.
   const used = ctx?.budget.used ?? tokenizer.count(adv.actions.map((a) => a.versions[a.active] ?? '').join('\n\n'));
   const last = state.actions.at(-1);
-  useReadAloud(app.speech, state.busy || last?.type !== 'continue' ? undefined : actionText(last));
+  useReadAloud(app.speech, state.busy, last?.type === 'continue' ? actionText(last) : undefined);
   const openContext = () => {
     if (!state.context) void api.previewContext();
     setShowContext(true);
