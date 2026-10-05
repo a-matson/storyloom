@@ -65,6 +65,35 @@ test('an uploaded cover survives a reload and shows on the library card', async 
   await expect(page.locator('div[style*="blob:"]')).toBeVisible();
 });
 
+test('a generated cover is re-encoded like an uploaded one', async ({ page }) => {
+  const images = 'http://localhost:7999';
+  await page.route(`${images}/**`, async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/sdapi/v1/sd-models') return route.fulfill({ json: [{ title: 'sd_xl_base.safetensors', model_name: 'sd_xl_base' }] });
+    if (path !== '/sdapi/v1/txt2img') return route.fulfill({ status: 404, json: {} });
+    return route.fulfill({ json: { images: [PNG] } });
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: /^Demo \(no GPU\)/ }).click();
+  await page.getByRole('switch', { name: 'Use an image server' }).click();
+  await page.getByRole('textbox', { name: 'Image server URL' }).fill(`${images}/`);
+  await page.getByRole('button', { name: 'Test', exact: true }).click();
+  await expect(page.getByText('sd_xl_base.safetensors')).toBeVisible();
+  await page.getByRole('button', { name: 'Continue' }).click();
+
+  await page.getByRole('button', { name: '+ New scenario' }).click();
+  await page.getByRole('button', { name: 'Basics' }).click();
+  await page.getByRole('textbox', { name: 'lantern-lit tavern, rainy night, painted illustration' }).fill('a quiet harbour');
+  await page.getByRole('button', { name: 'Generate' }).click();
+
+  const thumb = page.locator('div[style*="blob:"]');
+  await expect(thumb).toBeVisible();
+  const url = (await thumb.getAttribute('style'))?.match(/blob:[^"')]+/)?.[0] ?? '';
+  // The PNG the server returned is stored as WebP: generate goes through the same downscale as upload.
+  expect(await page.evaluate(async (u) => (await fetch(u)).blob().then((b) => b.type), url)).toBe('image/webp');
+});
+
 test('"Surprise me" opens an adventure written by the model', async ({ page }) => {
   await connectDemo(page);
   await page.getByRole('button', { name: 'Surprise me' }).click();
