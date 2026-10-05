@@ -75,7 +75,7 @@ export function ActionBlock({ action, adventureId, isLast, busy, pendingImages, 
   );
 
   return (
-    <div>
+    <div className="group">
       {isPlayer ? (
         <div className="flex items-start gap-3">
           <Pill tone={action.type === 'story' ? 'story' : action.type === 'say' ? 'say' : 'do'} className="mt-[5px] font-sans">
