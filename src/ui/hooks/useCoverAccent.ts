@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import type { AppSettings } from '@core/model';
 import type { Accent } from '@ui/lib/dominantColour';
+import { applyTheme } from '@ui/theme';
 
 // Outside the hook: the React Compiler cannot lower an import expression inside a component or hook.
 const read = (url: string) => import('@ui/lib/dominantColour').then((m) => m.coverAccent(url));
@@ -26,4 +28,13 @@ export function useCoverAccent(url: string | undefined): Accent | undefined {
     };
   }, [url]);
   return accent;
+}
+
+/** The adventure's theme: the app settings plus its text style and, for Dynamic, the cover's accent. Cleared on unmount so the library and setup screens stay plain. */
+export function useAdventureTheme(app: AppSettings, textStyle: 'print' | 'clean' | 'hacker', coverUrl: string | undefined): void {
+  const accent = useCoverAccent(app.theme === 'dynamic' ? coverUrl : undefined);
+  useEffect(() => {
+    applyTheme(app, textStyle, accent);
+    return () => applyTheme(app);
+  }, [app, textStyle, accent]);
 }
