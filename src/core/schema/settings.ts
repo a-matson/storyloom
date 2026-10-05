@@ -85,7 +85,14 @@ export const AppSettings = z.object({
   providers: z.array(ProviderConfig),
   defaultProviderId: z.string(),
   defaults: z.prefault(AdventureSettings, {}),
-  theme: z._default(z.enum(['dark', 'light', 'sepia', 'slate', 'dynamic']), 'dark'),
+  // 'light' was a second name for the sepia token block; stored values migrate instead of failing the parse.
+  theme: z._default(
+    z.pipe(
+      z.enum(['dark', 'light', 'sepia', 'slate', 'dynamic']),
+      z.transform((t) => (t === 'light' ? ('sepia' as const) : t)),
+    ),
+    'dark',
+  ),
   highContrast: z._default(z.boolean(), false),
   textAnimation: z._default(z.boolean(), true),
   textSize: z._default(z.enum(['default', 'large', 'larger']), 'default'),

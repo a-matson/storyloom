@@ -54,8 +54,7 @@
   --sidebar: 360px;
 }
 
-:root[data-theme='sepia'],
-:root[data-theme='light'] {
+:root[data-theme='sepia'] {
   --bg-0: #f4ede1;
   --bg-bar: #fbf7ef;
   --bg-1: #fbf7ef;

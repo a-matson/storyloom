@@ -23,7 +23,6 @@ export const CAPABILITIES: { key: keyof ProviderCapabilities; label: string }[] 
 export const THEMES: { value: AppSettings['theme']; label: string }[] = [
   { value: 'dark', label: 'Dark (Lantern & Ink)' },
   { value: 'sepia', label: 'Sepia' },
-  { value: 'light', label: 'Light' },
   { value: 'slate', label: 'Slate' },
   { value: 'dynamic', label: 'Dynamic (from cover)' },
 ];

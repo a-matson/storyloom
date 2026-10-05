@@ -37,6 +37,11 @@ describe('schemas', () => {
     expect(parsed.defaults.image).not.toHaveProperty('sampler');
   });
 
+  it('migrate the dropped light theme to sepia', () => {
+    const old = { providers: [], defaultProviderId: 'local', theme: 'light' };
+    expect(S.AppSettings.parse(old).theme).toBe('sepia');
+  });
+
   it('parse a provider saved before it had a template', () => {
     const old = { providers: [{ id: 'utility', kind: 'llama-server', name: 'u', baseUrl: 'http://x', role: 'utility' }], defaultProviderId: 'local' };
     expect(S.AppSettings.parse(old).providers[0]?.template).toBeUndefined();
