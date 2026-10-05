@@ -1,4 +1,5 @@
 import type { ModelSettings as Model } from '@core/model';
+import { NumberInput } from './NumberInput';
 import { Section, Setting } from './Section';
 
 type NumKey = { [K in keyof Model]-?: Model[K] extends number | undefined ? K : never }[keyof Model];
@@ -15,23 +16,12 @@ const NUMBERS: { label: string; key: NumKey; step: number; min: number; max?: nu
   { label: 'Seed (blank = random)', key: 'seed', step: 1, min: 0 },
 ];
 
-export const NUMBER_INPUT = 'h-8 w-[84px] rounded-sm border border-border bg-bar px-2 font-mono text-caption';
-
 export function ModelSettings({ model, onChange }: { model: Model; onChange: (patch: Partial<Model>) => void }) {
   return (
     <Section title="Model settings">
       {NUMBERS.map((n) => (
         <Setting key={n.key} label={n.label} htmlFor={`m-${n.key}`}>
-          <input
-            id={`m-${n.key}`}
-            className={NUMBER_INPUT}
-            type="number"
-            step={n.step}
-            min={n.min}
-            max={n.max}
-            value={model[n.key] ?? ''}
-            onChange={(e) => onChange({ [n.key]: e.target.value === '' ? undefined : Number(e.target.value) })}
-          />
+          <NumberInput id={`m-${n.key}`} step={n.step} min={n.min} max={n.max} optional value={model[n.key]} onCommit={(v) => onChange({ [n.key]: v })} />
         </Setting>
       ))}
     </Section>

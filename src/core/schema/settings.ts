@@ -48,7 +48,7 @@ export const ImageSettings = z.object({
   width: z._default(z.int().check(z.gt(0)), 512),
   height: z._default(z.int().check(z.gt(0)), 512),
   steps: z._default(z.int().check(z.gt(0)), 24),
-  cfgScale: z._default(z.number(), 5),
+  cfgScale: z._default(z.number().check(z.gt(0)), 5),
   sampler: z.optional(z.string()),
   negativePrompt: z.optional(z.string()),
 });

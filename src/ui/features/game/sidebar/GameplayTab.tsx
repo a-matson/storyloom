@@ -3,7 +3,8 @@ import { MODEL_PRESETS } from '@core/text';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Select } from '@ui/components/ui/field';
 import { TEMPLATES } from '@ui/features/setup/backends';
-import { ModelSettings, NUMBER_INPUT } from './ModelSettings';
+import { ModelSettings } from './ModelSettings';
+import { NumberInput } from './NumberInput';
 import { Section, Setting } from './Section';
 import { SettingSwitch } from './SettingSwitch';
 
@@ -80,15 +81,15 @@ function MemorySystem({ s, update }: { s: Settings; update: Update }) {
       <SettingSwitch id="auto-summary" label="Auto summarization" checked={s.memory.autoSummary} onChange={(on) => memory({ autoSummary: on })} />
       <SettingSwitch id="memory-bank" label="Memory bank" checked={s.memory.memoryBank} onChange={(on) => memory({ memoryBank: on })} />
       <Setting label="Bank size" htmlFor="bank">
-        <input
+        <NumberInput
           id="bank"
-          className={NUMBER_INPUT}
-          type="number"
           min={10}
           max={2000}
           step={10}
           value={s.memory.bankSize}
-          onChange={(e) => memory({ bankSize: Number(e.target.value) })}
+          onCommit={(v) => {
+            if (v !== undefined) memory({ bankSize: v });
+          }}
         />
       </Setting>
       <SettingSwitch
@@ -137,14 +138,14 @@ function Images({ s, update }: { s: Settings; update: Update }) {
       </Setting>
       {IMAGE_NUMBERS.map((n) => (
         <Setting key={n.key} label={n.label} htmlFor={`img-${n.key}`}>
-          <input
+          <NumberInput
             id={`img-${n.key}`}
-            className={NUMBER_INPUT}
-            type="number"
             step={n.step}
             min={n.min}
             value={s.image[n.key]}
-            onChange={(e) => image({ [n.key]: Number(e.target.value) })}
+            onCommit={(v) => {
+              if (v !== undefined) image({ [n.key]: v });
+            }}
           />
         </Setting>
       ))}
