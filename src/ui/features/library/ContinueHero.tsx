@@ -18,7 +18,7 @@ export function ContinueHero({ latest, backendOk, onOpen }: Props) {
         <div className="flex flex-col gap-2">
           <h1 className="m-0 font-display text-title font-medium">Start your first adventure</h1>
           <p className="m-0 text-muted-foreground">
-            Pick a quick start on the right, or write your own opening. {backendOk === false && 'Connect a backend in Settings first.'}
+            Pick a quick start, or write your own opening. {backendOk === false && 'Connect a backend in Settings first.'}
           </p>
         </div>
       </div>

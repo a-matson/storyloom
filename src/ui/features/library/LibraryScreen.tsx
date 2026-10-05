@@ -77,7 +77,7 @@ export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissN
     <div className="flex h-full flex-col">
       <LibraryHeader backendLabel={backendLabel} backendOk={backendOk} onSettings={onSettings} />
       <div className="flex grow flex-col gap-7 overflow-y-auto px-8 py-7 max-sm:p-4">
-        <div className="flex items-stretch gap-5">
+        <div className="flex items-stretch gap-5 max-sm:flex-col">
           <ContinueHero latest={adventures[0]} backendOk={backendOk} onOpen={onOpen} />
           <QuickStart onStart={start} onSurprise={backendOk === false ? undefined : surprise} />
         </div>

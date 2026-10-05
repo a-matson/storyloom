@@ -20,7 +20,7 @@ export function QuickStart({ onStart, onSurprise }: Props) {
     void onSurprise().finally(() => setWriting(false));
   };
   return (
-    <div className="flex w-80 shrink-0 flex-col gap-2 rounded-lg border border-border bg-card p-4">
+    <div className="flex w-80 shrink-0 flex-col gap-2 rounded-lg border border-border bg-card p-4 max-sm:w-full">
       <SectionLabel>Quick start</SectionLabel>
       <div className="grid grid-cols-2 gap-2">
         {QUICK_STARTS.map((q) => (
@@ -37,7 +37,12 @@ export function QuickStart({ onStart, onSurprise }: Props) {
       </Button>
       {showCustom && (
         <>
-          <Textarea value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="You are…" />
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="custom-opening">
+              <SectionLabel>Your opening</SectionLabel>
+            </label>
+            <Textarea id="custom-opening" value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="You are…" />
+          </div>
           <Button variant="primary" disabled={!custom.trim()} onClick={() => onStart('New adventure', custom.trim())}>
             Begin
           </Button>
