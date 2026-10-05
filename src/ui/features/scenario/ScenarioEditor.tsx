@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { childAt, creatorChoices, placeholderQuestions, withChild, type AppSettings, type Scenario } from '@core/model';
+import { childAt, coverIds, creatorChoices, placeholderQuestions, withChild, type AppSettings, type Scenario } from '@core/model';
 import { storage } from '@app/services';
 import { startScenario } from '@app/scenarios';
 import { Button } from '@ui/components/ui/button';
@@ -56,6 +56,18 @@ async function exportSaved(root: Scenario, save: () => Promise<boolean>): Promis
   if (await save()) await downloadScenarioJson(root);
 }
 
+/**
+ * A cover is written to storage the moment it is generated or uploaded, before the draft is
+ * saved, so a discarded draft would leave the blob behind until the scenario is deleted.
+ */
+function discard(saved: Scenario, draft: Scenario, onExit: () => void): void {
+  if (!confirm('Discard unsaved changes?')) return;
+  const kept = new Set(coverIds(saved).map(([, coverId]) => coverId));
+  for (const [ownerId, coverId] of coverIds(draft))
+    if (!kept.has(coverId)) void storage.deleteImage(ownerId, coverId).catch((e: unknown) => console.warn('could not delete the discarded cover', e));
+  onExit();
+}
+
 function Editor({ saved, path, app, onExit, onPath, onPlay }: Omit<Props, 'id'> & { saved: Scenario }) {
   const [error, setError] = useState<string | null>(null);
   const { draft, dirty, update, save } = useScenarioDraft(saved, setError);
@@ -84,9 +96,7 @@ function Editor({ saved, path, app, onExit, onPath, onPlay }: Omit<Props, 'id'> 
     if (draft.type === 'multipleChoice' || placeholderQuestions(draft).length > 0 || creatorChoices(draft).length > 0) setAsking(true);
     else begin(draft, {}, []);
   };
-  const exit = () => {
-    if (!dirty || confirm('Discard unsaved changes?')) onExit();
-  };
+  const exit = () => (dirty ? discard(saved, draft, onExit) : onExit());
 
   return (
     <div className="flex h-full flex-col">

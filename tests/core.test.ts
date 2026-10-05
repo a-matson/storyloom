@@ -4,7 +4,7 @@ import { formatPlayerInput, trimUnfinishedSentence } from '@core/text/formatting
 import { guessTemplate, renderTemplate, templateMatches } from '@core/text/templates';
 import { createApproxTokenizer, createExactTokenizer, trimToTokens } from '@core/text/tokenizer';
 import { createAdventureFromScenario, missingAnswers, newScenario, placeholderQuestions, scenarioSummary } from '@core/model/scenario';
-import { childAt, newOption, withChild } from '@core/model/scenarioTypes';
+import { childAt, coverIds, newOption, withChild } from '@core/model/scenarioTypes';
 import * as S from '@core/schema';
 import type { Scenario } from '@core/model/types';
 
@@ -69,6 +69,17 @@ describe('multiple choice tree', () => {
     expect(b.title).toBe('B');
     expect(next.options?.[1]).toBe(root.options[1]);
     expect(S.Scenario.parse(JSON.parse(JSON.stringify(next)))).toEqual(next);
+  });
+
+  it('lists every cover in the tree with the owner its blob is keyed under', () => {
+    const root: Scenario = { ...newScenario('Root'), type: 'multipleChoice', coverId: 'img_root' };
+    const a = { ...newOption(root), coverId: 'img_a' };
+    root.options = [a, newOption(root)];
+    expect(coverIds(root)).toEqual([
+      [root.id, 'img_root'],
+      [a.id, 'img_a'],
+    ]);
+    expect(coverIds(newScenario('No cover'))).toEqual([]);
   });
 });
 
