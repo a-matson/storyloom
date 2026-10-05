@@ -36,4 +36,9 @@ test('Dynamic recolours the accent from the cover', async ({ page }) => {
 
   // The cover's accent lands inline, with saturation and lightness inside the readable band.
   await expect(page.locator('html')).toHaveAttribute('style', /--lantern: hsl\(\d+ (4[5-9]|[5-8]\d)% (5[5-9]|6[0-8])%\)/);
+
+  // Back on the library there is no adventure, so Dynamic is plain dark again.
+  await page.getByRole('button', { name: 'Back to library' }).click();
+  await expect(page.getByRole('heading', { name: 'My adventures' })).toBeVisible();
+  await expect(page.locator('html')).not.toHaveAttribute('style', /--lantern/);
 });
