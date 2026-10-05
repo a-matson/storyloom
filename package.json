@@ -1,6 +1,6 @@
 {
   "name": "storyloom",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Single-user, local-first AI text adventure engine (AI Dungeon-style) — frontend game core, pluggable local inference backends.",
   "type": "module",
