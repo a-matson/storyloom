@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { Action } from '@core/model';
+import type { Action, AppSettings } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { ActionBlock, PROSE } from './ActionBlock';
 import { Caret } from './Caret';
@@ -10,13 +10,14 @@ interface Props {
   streaming: string;
   busy: boolean;
   api: GameApi;
+  speech: AppSettings['speech'];
   onViewContext: () => void;
   onViewTrace: () => void;
   contextSummary?: string | undefined;
 }
 
 /** The story column: player actions carry a mode pill, AI outputs are plain prose, the last output gets the tools. */
-export function StoryView({ actions, adventureId, streaming, busy, api, onViewContext, onViewTrace, contextSummary }: Props) {
+export function StoryView({ actions, adventureId, streaming, busy, api, speech, onViewContext, onViewTrace, contextSummary }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
   // Follow the newest text: the compiler re-renders this view only when the story, stream or turn state changes.
   useEffect(() => {
@@ -35,6 +36,7 @@ export function StoryView({ actions, adventureId, streaming, busy, api, onViewCo
             isLast={i === lastIdx}
             busy={busy}
             api={api}
+            speech={speech}
             onViewContext={onViewContext}
             onViewTrace={onViewTrace}
             contextSummary={contextSummary}

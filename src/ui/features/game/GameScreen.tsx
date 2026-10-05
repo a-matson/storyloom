@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { utilityProvider, type Adventure, type AppSettings } from '@core/model';
+import { actionText, utilityProvider, type Adventure, type AppSettings } from '@core/model';
 import { tokenizer } from '@app/services';
 import { useCoverAccent } from '@ui/hooks/useCoverAccent';
 import { useGameSession } from '@ui/hooks/useGameSession';
 import { useImageBlob } from '@ui/hooks/useImageBlob';
+import { useReadAloud } from '@ui/hooks/useSpeech';
 import { applyTheme } from '@ui/theme';
 import { Toast } from '@ui/components/ui/toast';
 import { Sidebar } from './sidebar/Sidebar';
@@ -43,6 +44,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
   // Before the first turn there is no built context; estimate from the log.
   const used = ctx?.budget.used ?? tokenizer.count(adv.actions.map((a) => a.versions[a.active] ?? '').join('\n\n'));
   const last = state.actions.at(-1);
+  useReadAloud(app.speech, state.busy, last?.type === 'continue' ? actionText(last) : undefined);
   const openContext = () => {
     if (!state.context) void api.previewContext();
     setShowContext(true);
@@ -80,6 +82,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
             streaming={state.streaming}
             busy={state.busy}
             api={api}
+            speech={app.speech}
             onViewContext={openContext}
             onViewTrace={() => last && setTraceAction(last.id)}
             contextSummary={ctx ? `${ctx.triggeredCards.length} story cards · ${ctx.usedMemories.length} memories used` : undefined}
