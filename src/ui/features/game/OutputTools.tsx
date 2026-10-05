@@ -20,6 +20,12 @@ const tool = 'h-7 bg-transparent px-2.5 text-caption';
 /** Revealed on hover or keyboard focus; opacity keeps the row's space so nothing shifts. */
 export const revealOnHover =
   'opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 motion-reduce:transition-none pointer-coarse:opacity-100';
+/** Every action block is this grid, so the text column is identical by construction, not by matching paddings. */
+export const actionGrid = 'grid max-sm:gap-y-1 sm:grid-cols-[var(--gutter)_1fr]';
+/** The text cell of `actionGrid`; at max-sm the grid is one column and the label stacks above with the same left edge. */
+export const textColumn = 'sm:col-start-2';
+/** A block with no label of its own (See) clears the same gutter with padding. */
+export const seeIndent = 'sm:ps-[var(--gutter)]';
 const arrow = 'inline-flex size-5 items-center justify-center border-none bg-transparent p-0 text-foreground';
 
 function RetryStack({ action, api }: { action: Action; api: GameApi }) {

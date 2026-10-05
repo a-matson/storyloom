@@ -51,6 +51,8 @@
   --r-3: 12px;
   --r-pill: 999px;
   --story-col: 760px;
+  /* Kind-label column of an action block: the widest pill ("story") plus a 12px gap. */
+  --gutter: 60px;
   --sidebar: 360px;
 }
 
