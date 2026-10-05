@@ -1,9 +1,11 @@
 import { z } from 'zod/mini';
-import type { Adventure, TurnTrace } from '@core/model';
+import type { Action, Adventure, TurnTrace } from '@core/model';
 import { newId } from '@core/model';
 import * as S from '@core/schema';
 
 export const FORMAT = 'storyloom-adventure';
+
+type Image = NonNullable<Action['image']>;
 
 const AdventureExport = z.object({ format: z.literal(FORMAT), version: z.literal(1), exportedAt: z.optional(z.string()), adventure: S.Adventure });
 
@@ -45,12 +47,18 @@ export function firstIssue(error: { issues: readonly { path: readonly PropertyKe
   return i ? `${i.path.join('.') || '(root)'}: ${i.message}` : 'invalid';
 }
 
-/** Fresh ids so an import never overwrites an existing adventure. */
+/** An image blob does not travel with the JSON, so its id is dropped and the See action says so. */
+function withoutBlob({ imageId, ...image }: Image): Image {
+  return { ...image, ...(imageId === undefined ? {} : { missing: true as const }) };
+}
+
+/** Fresh ids so an import never overwrites an existing adventure, and no ids pointing at blobs we do not have. */
 function renumber(a: Adventure): Adventure {
+  const { coverId: _cover, ...rest } = a;
   return {
-    ...a,
+    ...rest,
     id: newId('adv_'),
-    actions: a.actions.map((x) => ({ ...x, id: newId('act_') })),
+    actions: a.actions.map((x) => ({ ...x, id: newId('act_'), ...(x.image && { image: withoutBlob(x.image) }) })),
     storyCards: a.storyCards.map((c) => ({ ...c, id: newId('card_') })),
     memories: [], // embeddings may come from another embedder; rebuilt lazily
     updatedAt: Date.now(),

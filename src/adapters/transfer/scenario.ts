@@ -23,10 +23,10 @@ export function importScenarioJson(json: string): Scenario {
   return renumberScenario(bare.data);
 }
 
-/** Fresh ids for the scenario, its options (all depths) and cards, so an import never overwrites. */
+/** Fresh ids for the scenario, its options (all depths) and cards, so an import never overwrites. The cover blob does not travel with the JSON, so its id goes. */
 export function renumberScenario(s: Scenario, parentId?: string): Scenario {
   const id = newId('scn_');
-  const { parentId: _old, options, ...rest } = s;
+  const { parentId: _old, coverId: _cover, options, ...rest } = s;
   return {
     ...rest,
     id,
