@@ -86,6 +86,24 @@ test('drawers are modal: focus stays inside and Escape closes them', async ({ pa
   await expect(dialog).toBeHidden();
 });
 
+test('the output tools appear on hover and on keyboard focus', async ({ page }) => {
+  await connectDemo(page);
+  await page.getByRole('button', { name: 'Fantasy' }).click();
+  await takeTurn(page, 'open the letter');
+  const story = page.getByText('hand stops moving.');
+  await expect(story).toBeVisible();
+  // toBeVisible ignores opacity, so the reveal is asserted on the computed value.
+  const tools = page.getByRole('button', { name: 'Erase to here' }).locator('..');
+  await expect(tools).toHaveCSS('opacity', '0');
+  await story.hover();
+  await expect(tools).toHaveCSS('opacity', '1');
+
+  await page.mouse.move(0, 0);
+  await expect(tools).toHaveCSS('opacity', '0');
+  await page.getByRole('button', { name: 'Erase to here' }).focus();
+  await expect(tools).toHaveCSS('opacity', '1');
+});
+
 test('the trace viewer shows the latest generation and its prompt', async ({ page }) => {
   await connectDemo(page);
   await page.getByRole('button', { name: 'Fantasy' }).click();

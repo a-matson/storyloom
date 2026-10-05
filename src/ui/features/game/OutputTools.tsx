@@ -4,6 +4,7 @@ import type { GameApi } from '@ui/hooks/useGameSession';
 import { useSpeech } from '@ui/hooks/useSpeech';
 import { Button } from '@ui/components/ui/button';
 import { IconLeft, IconRight } from '@ui/components/Icons';
+import { cn } from '@ui/lib/utils';
 
 interface Props {
   action: Action;
@@ -16,6 +17,9 @@ interface Props {
 }
 
 const tool = 'h-7 bg-transparent px-2.5 text-caption';
+/** Revealed on hover or keyboard focus; opacity keeps the row's space so nothing shifts. */
+export const revealOnHover =
+  'opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 motion-reduce:transition-none pointer-coarse:opacity-100';
 const arrow = 'inline-flex size-5 items-center justify-center border-none bg-transparent p-0 text-foreground';
 
 function RetryStack({ action, api }: { action: Action; api: GameApi }) {
@@ -50,7 +54,7 @@ function RetryStack({ action, api }: { action: Action; api: GameApi }) {
 export function OutputTools({ action, api, speech, onEdit, onViewContext, onViewTrace, contextSummary }: Props) {
   const voice = useSpeech();
   return (
-    <div className="mt-1.5 flex items-center gap-2 font-sans text-caption text-muted-foreground">
+    <div className={cn('mt-1.5 flex items-center gap-2 font-sans text-caption text-muted-foreground', revealOnHover)}>
       {action.type === 'continue' && action.versions.length > 1 && <RetryStack action={action} api={api} />}
       {voice.supported && (
         <Button className={tool} onClick={() => (voice.speaking ? voice.stop() : voice.speak(actionText(action), speech))}>

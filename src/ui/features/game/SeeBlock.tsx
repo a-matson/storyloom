@@ -4,6 +4,7 @@ import type { GameApi } from '@ui/hooks/useGameSession';
 import { useImageBlob } from '@ui/hooks/useImageBlob';
 import { Button, buttonClass } from '@ui/components/ui/button';
 import { cn } from '@ui/lib/utils';
+import { revealOnHover } from './OutputTools';
 
 type Image = NonNullable<Action['image']>;
 interface Props {
@@ -61,7 +62,7 @@ function ImageTools({ id, prompt, src, api }: { id: string; prompt: string; src:
       if (!(e instanceof Error) || e.name !== 'AbortError') console.warn('could not share the image', e);
     });
   return (
-    <div className="mt-1.5 flex items-center gap-2 font-sans text-caption text-muted-foreground">
+    <div className={cn('mt-1.5 flex items-center gap-2 font-sans text-caption text-muted-foreground', revealOnHover)}>
       {src !== undefined && canShareFiles && (
         <Button className={tool} onClick={onShare}>
           Share
@@ -97,7 +98,7 @@ export function SeeBlock({ action, image, adventureId, isLast, busy, generating,
   };
 
   return (
-    <figure className="m-0">
+    <figure className="group m-0">
       {src !== undefined ? (
         <img src={src} alt={image.prompt} className="max-w-full rounded-lg" />
       ) : image.missing === true ? (
