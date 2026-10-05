@@ -29,14 +29,20 @@ export function TurnInput({ mode, text, busy, onText, onKeyDown, onSend, onStop,
       <label htmlFor="turn-input" className="sr-only">
         Take a turn
       </label>
-      <div className={cn('flex h-12 grow items-center gap-2.5 rounded-lg border border-border bg-card pr-2 pl-4', m.focus)}>
+      <div
+        className={cn(
+          'flex h-12 grow items-center gap-2.5 rounded-lg border border-border bg-card pr-2 pl-4 transition-colors motion-reduce:transition-none',
+          m.focus,
+        )}
+      >
         <span className={cn('font-display text-screen-title', m.text)} aria-hidden>
           {m.prefix}
         </span>
         <input
           id="turn-input"
           ref={inputRef}
-          className="h-11 min-w-0 grow border-none bg-transparent font-prose text-[17px] outline-none"
+          /* the container wears the mode-coloured ring instead of the global 4 px one */
+          className="h-11 min-w-0 grow border-none bg-transparent font-prose text-[17px] outline-none focus-visible:shadow-none"
           value={text}
           onChange={(e) => onText(e.target.value)}
           onKeyDown={onKeyDown}
