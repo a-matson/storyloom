@@ -94,6 +94,8 @@ async function generate(host: SeeHost, actionId: string, image: Image): Promise<
         model: s.model,
       }),
     );
+    // An erase during those seconds already ran dropOrphanImages; storing now would leak a blob no action owns.
+    if (!host.log.actions.some((a) => a.id === actionId)) return;
     const imageId = newId('img_');
     await host.svc.storage.putImage(host.adv.id, imageId, blob);
     host.log.patch(actionId, { image: { ...image, imageId } });
