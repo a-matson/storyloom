@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { DEFAULT_ADVENTURE_SETTINGS, newId, type AdventureSettings, type AppSettings } from '@core/model';
+import { trackJob } from '@core/trace';
 import { imageProviderFor, storage } from '@app/services';
 import { CoverThumb } from '@ui/components/CoverThumb';
 import { Button } from '@ui/components/ui/button';
@@ -47,7 +48,9 @@ export function CoverPicker({ ownerId, coverId, coverUrl, app, image, onChange }
     const pending = imageProviderFor(app);
     if (!pending) throw new Error('No image server is configured; add one in Settings.');
     const provider = await pending;
-    await store(await provider.txt2img({ ...(image ?? DEFAULT_ADVENTURE_SETTINGS.image), prompt: text }));
+    // Tracked like See mode: a cover generated mid-turn takes the GPU, so the turn's trace must see it.
+    const blob = await trackJob('image', () => provider.txt2img({ ...(image ?? DEFAULT_ADVENTURE_SETTINGS.image), prompt: text }));
+    await store(blob);
   };
 
   const remove = async () => {
