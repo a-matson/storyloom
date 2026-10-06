@@ -53,10 +53,11 @@ export function SetupScreen({ app, onSave, onBack, firstRun = false }: Props) {
   const [testing, setTesting] = useState(false);
   const [theme, setTheme] = useState(app.theme);
   const [speech, setSpeech] = useState(app.speech);
+  const [speakerAvatars, setSpeakerAvatars] = useState(app.speakerAvatars);
   const [utility, setUtility] = useState(utilityProvider(app));
   const [image, setImage] = useState(imageProvider(app));
 
-  const draft = () => draftSettings(app, { current, kind, url, theme, speech, health, utility, image });
+  const draft = () => draftSettings(app, { current, kind, url, theme, speech, speakerAvatars, health, utility, image });
   // A new backend or URL invalidates the last test.
   const choose = (nextKind: ProviderConfig['kind'], nextUrl: string) => {
     setKind(nextKind);
@@ -112,7 +113,14 @@ export function SetupScreen({ app, onSave, onBack, firstRun = false }: Props) {
         {health && <ConnectionCard health={health} caps={caps} templateOk={templateOk} template={app.defaults.template} />}
         <UtilityCard value={utility} onChange={setUtility} />
         <ImageCard value={image} onChange={setImage} />
-        <AppearanceCard theme={theme} onTheme={setTheme} speech={speech} onSpeech={setSpeech} />
+        <AppearanceCard
+          theme={theme}
+          onTheme={setTheme}
+          speech={speech}
+          onSpeech={setSpeech}
+          speakerAvatars={speakerAvatars}
+          onSpeakerAvatars={setSpeakerAvatars}
+        />
         <SaveRow firstRun={firstRun} onSave={() => onSave(draft())} />
       </div>
     </div>

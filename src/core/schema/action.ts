@@ -35,4 +35,9 @@ export const Action = z.object({
   stats: z.optional(GenerationStats),
   /** The turn that produced this action; links it to its `TurnTrace`. */
   turnId: z.optional(z.string()),
+  /**
+   * Who speaks in which paragraph of the active text (blank-line split), by entity name. Dropped when
+   * the active text changes; an edit that keeps the version only mis-indexes a label. Absent = not read yet.
+   */
+  speakers: z.optional(z.array(z.object({ paragraph: z.int(), name: z.string() }))),
 });

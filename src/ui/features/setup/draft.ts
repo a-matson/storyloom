@@ -9,6 +9,7 @@ interface Choice {
   url: string;
   theme: AppSettings['theme'];
   speech: AppSettings['speech'];
+  speakerAvatars: boolean;
   health: ProviderHealth | null;
   utility: ProviderConfig | undefined;
   image: ProviderConfig | undefined;
@@ -17,7 +18,7 @@ interface Choice {
 const normalizeUrl = (url: string) => url.trim().replace(/\/$/, '');
 
 /** App settings with the chosen backend as default; a tested model also sets template, sampler preset and context size. */
-export function draftSettings(app: AppSettings, { current, kind, url, theme, speech, health, utility, image }: Choice): AppSettings {
+export function draftSettings(app: AppSettings, { current, kind, url, theme, speech, speakerAvatars, health, utility, image }: Choice): AppSettings {
   const cfg: ProviderConfig = {
     ...current,
     kind,
@@ -30,6 +31,7 @@ export function draftSettings(app: AppSettings, { current, kind, url, theme, spe
     ...app,
     theme,
     speech,
+    speakerAvatars,
     providers: [
       cfg,
       ...app.providers.filter((p) => p.id !== cfg.id && p.role !== 'utility' && p.role !== 'image'),

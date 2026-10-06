@@ -99,6 +99,8 @@ export const AppSettings = z.object({
   ),
   highContrast: z._default(z.boolean(), false),
   textAnimation: z._default(z.boolean(), true),
+  /** The speaker's portrait beside dialogue paragraphs. */
+  speakerAvatars: z._default(z.boolean(), true),
   textSize: z._default(z.enum(['default', 'large', 'larger']), 'default'),
   speech: z.prefault(SpeechSettings, {}),
   stickyInput: z._default(z.boolean(), true),

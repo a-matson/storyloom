@@ -144,6 +144,26 @@ describe('GameSession', () => {
     expect(saved.at(-1)?.memories[0]?.stale).toBeUndefined();
   });
 
+  it('guesses speakers for unlabelled AI output after a turn, and a retry clears the label', async () => {
+    const adventure = makeAdventure({ actions: 4, cards: 0 });
+    const said = adventure.actions[1];
+    if (said) said.versions = ['"Hold the rope," Tamsin says.'];
+    adventure.entities = [
+      { id: 'ent_1', kind: 'character', name: 'Tamsin', aliases: [], description: '', facts: [], state: {}, relations: [], firstSeen: 1, lastSeen: 1 },
+    ];
+    const { session, idle, saved } = setup({ adventure });
+    session.submit('continue', '');
+    await settled(session);
+    idle.splice(0).forEach((fn) => fn());
+    await vi.waitFor(() => expect(session.getSnapshot().actions[1]?.speakers).toEqual([{ paragraph: 0, name: 'Tamsin' }]));
+    expect(session.getSnapshot().actions.at(-1)?.speakers).toEqual([]);
+    await session.flush();
+    expect(saved.at(-1)?.actions[1]?.speakers).toHaveLength(1);
+    session.retry();
+    await settled(session);
+    expect(session.getSnapshot().actions.at(-1)?.speakers).toBeUndefined();
+  });
+
   it('defers memory work that has not started when the next turn begins', async () => {
     const adventure = makeAdventure({ actions: 30, cards: 0 });
     adventure.settings.memory = { ...adventure.settings.memory, memoryBank: true, autoSummary: false };

@@ -70,7 +70,8 @@ export class ActionLog {
     const found = this.locate(id);
     if (!found) return undefined;
     const { idx, action: a } = found;
-    const updated: Action = { ...a, versions: [...a.versions, text], active: a.versions.length };
+    const { speakers: _old, ...rest } = a;
+    const updated: Action = { ...rest, versions: [...a.versions, text], active: a.versions.length };
     this.commit(this.replaceAt(idx, updated));
     return updated;
   }
@@ -81,7 +82,8 @@ export class ActionLog {
     if (!found) return undefined;
     const { idx, action: a } = found;
     if (index < 0 || index >= a.versions.length || index === a.active) return a;
-    const updated: Action = { ...a, active: index };
+    const { speakers: _old, ...rest } = a;
+    const updated: Action = { ...rest, active: index };
     this.commit(this.replaceAt(idx, updated));
     return updated;
   }
@@ -117,6 +119,17 @@ export class ActionLog {
     const found = this.locate(id);
     if (!found) return;
     this.commit(this.replaceAt(found.idx, { ...found.action, ...patch }));
+  }
+
+  /**
+   * Speaker labels by action id, outside the undo history: a label is derived data, not a player edit.
+   * ponytail: undo restores arrays holding the unlabelled actions; the next turn's guess relabels them.
+   */
+  annotate(speakers: ReadonlyMap<string, NonNullable<Action['speakers']>>): void {
+    this._actions = this._actions.map((a) => {
+      const s = speakers.get(a.id);
+      return s ? { ...a, speakers: s } : a;
+    });
   }
 
   undo(): boolean {

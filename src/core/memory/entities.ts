@@ -1,5 +1,21 @@
-import type { Entity, EntityFact, ExtractedEntity } from '../model/types';
-import { newId } from '../model/types';
+import type { Action, Adventure, Entity, EntityFact, ExtractedEntity, Speaker } from '../model/types';
+import { actionText, newId } from '../model/types';
+import { guessSpeakers } from '../text/speakers';
+
+const isOutput = (a: Action) => a.type === 'continue' || a.type === 'start';
+
+/**
+ * The client guess for AI output nobody has labelled yet, so the gutter fills before the helper
+ * reads the turn. Every guessed action gets a label list (`[]` when nobody matched) so it is read
+ * once; a retry or version switch clears it. Nothing before the first character exists.
+ */
+export function guessUnlabelled({ actions, entities }: Pick<Adventure, 'actions' | 'entities'>): Map<string, Speaker[]> {
+  const cast = entities.filter((e) => e.kind === 'character');
+  const out = new Map<string, Speaker[]>();
+  if (!cast.length) return out;
+  for (const a of actions) if (a.speakers === undefined && isOutput(a)) out.set(a.id, guessSpeakers(actionText(a), cast));
+  return out;
+}
 
 const norm = (s: string): string =>
   s
@@ -12,6 +28,29 @@ const norm = (s: string): string =>
 export function matchEntity(entities: readonly Entity[], name: string): Entity | undefined {
   const n = norm(name);
   return entities.find((e) => norm(e.name) === n || e.aliases.some((a) => norm(a) === n));
+}
+
+/**
+ * The helper's per-action `speakers` as paragraph labels by action id, for AI output only. The text
+ * decides first (the client rule over every character); an action whose one resolved speaker the
+ * helper names also labels the quoted paragraphs the text names nobody in ("the dragon rumbles").
+ * Names no entity resolves are dropped. Scored on the hand labels, letting the helper's lone name
+ * override the text lost precision (17/21 against 22/23).
+ */
+export function attributeSpeakers(
+  actions: readonly Action[],
+  speakers: readonly { action: number; name: string }[],
+  entities: readonly Entity[],
+): Map<string, Speaker[]> {
+  const cast = entities.filter((e) => e.kind === 'character');
+  const out = new Map<string, Speaker[]>();
+  for (const i of new Set(speakers.map((s) => s.action))) {
+    const a = actions[i];
+    if (!a || !isOutput(a)) continue;
+    const named = [...new Set(speakers.flatMap((s) => (s.action === i ? (matchEntity(entities, s.name)?.name ?? []) : [])))];
+    if (named.length) out.set(a.id, guessSpeakers(actionText(a), cast, named.length === 1 ? named[0] : undefined));
+  }
+  return out;
 }
 
 /**
