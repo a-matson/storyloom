@@ -66,6 +66,18 @@ describe('required elements', () => {
     expect(r.budget.requiredUsed).toBeLessThanOrEqual(r.budget.requiredCap);
   });
 
+  it('drops the scene line before anything else when the required budget is tight', () => {
+    // Cap 280: last action 1 + author's note 155 + essentials 124 fill it exactly, so the scene goes.
+    const r = buildContext(
+      base({
+        actions: [act('start', 'Go.')],
+        plot: { authorsNote: 'a'.repeat(600), plotEssentials: 'b'.repeat(496), scene: { location: 'the mill', present: [] } },
+      }),
+    );
+    expect(r.sections.find((s) => s.kind === 'authorsNote')?.trimmed).toBe(false);
+    expect(r.droppedSections).toEqual(['scene']);
+  });
+
   it('script overrides take precedence over UI plot essentials and author note', () => {
     const r = buildContext(
       base({
@@ -177,7 +189,8 @@ describe('ordering', () => {
     ...Array.from({ length: 40 }, (_, i) => act('continue', `Amanda ${i} ${long(15)}`)),
     act('do', '> You wave at Amanda.'),
   ];
-  const plot = { aiInstructions: 'SYS', plotEssentials: 'ESS', storySummary: 'SUM', authorsNote: 'AN' };
+  const scene = { location: 'the mill', present: ['Amanda'], time: { day: 2, part: 'night' as const } };
+  const plot = { aiInstructions: 'SYS', plotEssentials: 'ESS', storySummary: 'SUM', authorsNote: 'AN', scene };
   const cards = [card('Amanda', ['Amanda'], 'Amanda is your daughter.')];
   const memories = [{ memory: mem('Old memory', 0, 6), score: 1 }];
 
@@ -190,6 +203,7 @@ describe('ordering', () => {
       'storySummary',
       'memories',
       'history',
+      'scene',
       'authorsNote',
       'lastAction',
     ]);
@@ -213,10 +227,12 @@ describe('ordering', () => {
       'storyCards',
       'storySummary',
       'memories',
+      'scene',
       'authorsNote',
       'lastAction',
     ]);
     expect(r.sections.filter((s) => s.cacheable).map((s) => s.kind)).toEqual(['instructions', 'plotEssentials', 'history']);
+    expect(r.sections.find((s) => s.kind === 'scene')?.text).toBe('[Scene: the mill · Present: Amanda · Night, day 2]');
     expect(r.body.startsWith('ESS\n\nRecent Story:\n')).toBe(true);
   });
 

@@ -5,6 +5,19 @@ import { Entity } from './entity';
 import { Memory } from './memory';
 import { AdventureSettings } from './settings';
 
+/** Six parts of a day, not an hour clock: the model writes prose, not timestamps. [provisional] */
+export const DayPart = z.enum(['dawn', 'morning', 'midday', 'afternoon', 'evening', 'night']);
+
+/** Where the story is now: maintained by memory jobs from the helper call, player-editable. */
+export const Scene = z.object({
+  location: z.optional(z.string()),
+  /** Names, not entity ids: the player edits them as text. */
+  present: z.array(z.string()),
+  /** Absent until a passage states the time of day; then it moves only by stated elapsed time. */
+  time: z.optional(z.object({ day: z.int(), part: DayPart })),
+  weather: z.optional(z.string()),
+});
+
 /** Always-on prompt pieces ("Plot Components"). All optional. */
 export const PlotComponents = z.object({
   /** Sent as the system prompt. */
@@ -17,6 +30,8 @@ export const PlotComponents = z.object({
   authorsNote: z.optional(z.string()),
   /** Replace "You" in Do/Say actions with a character name. */
   thirdPerson: z.optional(z.object({ enabled: z.boolean(), name: z.string() })),
+  /** Sent as one `[Scene: …]` line beside the author's note. */
+  scene: z.optional(Scene),
 });
 
 /** `state.memory` in the scripting API: overrides for plot essentials / author's note, plus front memory. */

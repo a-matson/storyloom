@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import type { Scene } from '@core/model';
 
 /**
  * Connect the demo backend, import an adventure of `count` short actions, seed two entities and open it.
@@ -8,7 +9,7 @@ export async function openSeededAdventure(
   page: Page,
   count: number,
   imageServer?: string,
-  opts: { opening?: string; speakerAvatars?: boolean; contextScript?: string } = {},
+  opts: { opening?: string; speakerAvatars?: boolean; contextScript?: string; scene?: Scene } = {},
 ): Promise<void> {
   await page.goto('/');
   await page.getByRole('button', { name: /^Demo \(no GPU\)/ }).click();
@@ -26,50 +27,58 @@ export async function openSeededAdventure(
   await (await chooser).setFiles({ name: 'salt.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ title: 'Salt Road', actions })) });
   const open = page.getByRole('button', { name: `Continue Salt Road ${count} actions` });
   await expect(open).toBeVisible();
-  await seedEntities(page, opts.contextScript);
+  await seedEntities(page, opts.contextScript, opts.scene);
   await open.click();
 }
 
-/** Two entities written straight into the store for the first adventure; the memory cycle never runs in e2e. An import carries no scripts, so a Context script is patched in too. */
-async function seedEntities(page: Page, contextScript?: string): Promise<void> {
-  await page.evaluate(async (context) => {
-    const req = indexedDB.open('storyloom');
-    const db = await new Promise<IDBDatabase>((ok, fail) => {
-      req.addEventListener('success', () => ok(req.result));
-      req.addEventListener('error', () => fail(req.error));
-    });
-    const adv = await new Promise<{ id: string } | undefined>((ok, fail) => {
-      const r = db.transaction('adventures').objectStore('adventures').getAll();
-      r.addEventListener('success', () => ok((r.result as { id: string }[])[0]));
-      r.addEventListener('error', () => fail(r.error));
-    });
-    const base = { adventureId: adv?.id, aliases: [], relations: [], firstSeen: 1, lastSeen: 2 };
-    const tx = db.transaction(['entities', 'adventures'], 'readwrite');
-    if (context && adv) tx.objectStore('adventures').put({ ...adv, scripts: { library: '', input: '', context, output: '' } });
-    tx.objectStore('entities').put({
-      ...base,
-      id: 'ent_merav',
-      kind: 'character',
-      name: 'Merav',
-      aliases: ['the well-warden'],
-      description: 'A well-warden who keeps the salt road maps.',
-      state: { location: 'the well' },
-      facts: [
-        { id: 'f1', text: 'She keeps the needle map.', fromAction: 2, source: 'memory' },
-        { id: 'f2', text: 'She distrusts the caravan.', fromAction: 1, source: 'memory' },
-      ],
-      relations: [{ to: 'Corrow', label: 'owes' }],
-    });
-    tx.objectStore('entities').put({
-      ...base,
-      id: 'ent_well',
-      kind: 'place',
-      name: 'Old Well',
-      description: 'A dry well at the edge of the flats.',
-      state: {},
-      facts: [],
-    });
-    await new Promise((ok) => tx.addEventListener('complete', ok));
-    db.close();
-  }, contextScript);
+/** Two entities written straight into the store for the first adventure; the memory cycle never runs in e2e. An import carries no scripts or scene, so those are patched in too. */
+async function seedEntities(page: Page, contextScript?: string, seedScene?: Scene): Promise<void> {
+  await page.evaluate(
+    async ({ context, scene }) => {
+      const req = indexedDB.open('storyloom');
+      const db = await new Promise<IDBDatabase>((ok, fail) => {
+        req.addEventListener('success', () => ok(req.result));
+        req.addEventListener('error', () => fail(req.error));
+      });
+      const adv = await new Promise<{ id: string; plot: object } | undefined>((ok, fail) => {
+        const r = db.transaction('adventures').objectStore('adventures').getAll();
+        r.addEventListener('success', () => ok((r.result as { id: string; plot: object }[])[0]));
+        r.addEventListener('error', () => fail(r.error));
+      });
+      const base = { adventureId: adv?.id, aliases: [], relations: [], firstSeen: 1, lastSeen: 2 };
+      const tx = db.transaction(['entities', 'adventures'], 'readwrite');
+      if ((context || scene) && adv)
+        tx.objectStore('adventures').put({
+          ...adv,
+          ...(context && { scripts: { library: '', input: '', context, output: '' } }),
+          ...(scene && { plot: { ...adv.plot, scene } }),
+        });
+      tx.objectStore('entities').put({
+        ...base,
+        id: 'ent_merav',
+        kind: 'character',
+        name: 'Merav',
+        aliases: ['the well-warden'],
+        description: 'A well-warden who keeps the salt road maps.',
+        state: { location: 'the well' },
+        facts: [
+          { id: 'f1', text: 'She keeps the needle map.', fromAction: 2, source: 'memory' },
+          { id: 'f2', text: 'She distrusts the caravan.', fromAction: 1, source: 'memory' },
+        ],
+        relations: [{ to: 'Corrow', label: 'owes' }],
+      });
+      tx.objectStore('entities').put({
+        ...base,
+        id: 'ent_well',
+        kind: 'place',
+        name: 'Old Well',
+        description: 'A dry well at the edge of the flats.',
+        state: {},
+        facts: [],
+      });
+      await new Promise((ok) => tx.addEventListener('complete', ok));
+      db.close();
+    },
+    { context: contextScript, scene: seedScene },
+  );
 }

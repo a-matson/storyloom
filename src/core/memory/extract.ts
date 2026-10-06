@@ -11,6 +11,7 @@ import { trackJob } from '../trace';
 import { attributeSpeakers, matchEntity, mergeEntity } from './entities';
 import { EXTRACT_JSON_SCHEMA } from './extractJsonSchema';
 import type { MemoryRange } from './memoryBank';
+import { nextScene } from './scene';
 import type { MaintenanceDeps } from './memoryJobs';
 
 /** The call needs no embedder, so the player's "Update from story" works without one. */
@@ -75,8 +76,8 @@ const NOT_A_NAME = /^\s*you\s*$|^(the|a|an) \p{Ll}/iu;
  * `scriptState.__entitiesAt` advances past a memory once its call ends, unusable reply included,
  * but not when the call was cut: a cut call is retried on the next idle run.
  */
-export async function catchUpEntities(adventure: Adventure, deps: MaintenanceDeps): Promise<EntityUpdate> {
-  const total: EntityUpdate = { touched: 0, speakers: new Map() };
+export async function catchUpEntities(adventure: Adventure, deps: MaintenanceDeps): Promise<EntityUpdate & { sceneUpdated: boolean }> {
+  const total = { touched: 0, speakers: new Map<string, Speaker[]>(), sceneUpdated: false };
   const done = adventure.scriptState.__entitiesAt ?? 0;
   const due = adventure.memories.filter((m) => !m.stale && m.toAction > done).toSorted((a, b) => a.fromAction - b.fromAction);
   for (const m of due.slice(0, ENTITY_BATCH)) {
@@ -85,6 +86,12 @@ export async function catchUpEntities(adventure: Adventure, deps: MaintenanceDep
     if (deps.cancel?.aborted) break;
     total.touched += r.touched;
     for (const [id, s] of r.speakers) total.speakers.set(id, s);
+    // Here, not in `updateEntities`: "Update from story" re-reads old ranges and would add their time again.
+    const scene = r.reply && nextScene(adventure.plot.scene, r.reply, (n) => n !== '' && !NOT_A_NAME.test(n));
+    if (scene && scene !== adventure.plot.scene) {
+      adventure.plot = { ...adventure.plot, scene };
+      total.sceneUpdated = true;
+    }
     adventure.scriptState = { ...adventure.scriptState, __entitiesAt: m.toAction };
   }
   return total;
@@ -95,6 +102,8 @@ export interface EntityUpdate {
   touched: number;
   /** Speaker labels by action id, for `ActionLog.annotate`: actions live in the log, not on `adventure`. */
   speakers: Map<string, Speaker[]>;
+  /** The helper's reply, when there was a usable one. */
+  reply?: ExtractionJson;
 }
 
 /** Extract from the range's actions and fold the result into `adventure.entities`. */
@@ -119,5 +128,5 @@ export async function updateEntities(adventure: Adventure, range: MemoryRange, d
   }
   const touched = entities.filter((e, i) => e !== adventure.entities[i]).length;
   adventure.entities = entities;
-  return { touched, speakers: attributeSpeakers(adventure.actions, reply.speakers, entities) };
+  return { touched, speakers: attributeSpeakers(adventure.actions, reply.speakers, entities), reply };
 }

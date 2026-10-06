@@ -88,7 +88,14 @@ export class MemoryScheduler {
       const { runMemoryMaintenance } = await loadMemoryJobs();
       const deps = { ...(await this.host.helperModel()), embedder: await this.host.embedder() };
       const report = await runMemoryMaintenance(this.host.adventure(), { ...deps, signal: AbortSignal.any([idle, cancel.signal]), cancel: cancel.signal });
-      if (report.memoriesWritten || report.memoriesRegenerated || report.memoriesDropped || report.entitiesTouched || report.summaryUpdated)
+      if (
+        report.memoriesWritten ||
+        report.memoriesRegenerated ||
+        report.memoriesDropped ||
+        report.entitiesTouched ||
+        report.sceneUpdated ||
+        report.summaryUpdated
+      )
         this.host.changed();
       this.label(report.speakers);
     } catch (e) {

@@ -106,6 +106,30 @@ describe('entity extraction in memory maintenance', () => {
     expect([...report.speakers]).toEqual([[said?.id, [{ paragraph: 0, name: 'Mira' }]]]);
   });
 
+  it('moves the scene from the same call: the first reply starts the clock, the next one advances it', async () => {
+    const adv = adventure(18);
+    const reqs: CompletionRequest[] = [];
+    const reply = {
+      importance: 2,
+      timeDelta: { parts: 1 },
+      scene: { location: 'the mill', present: ['Mira'], timeOfDay: 'evening' },
+      entities: [],
+      speakers: [],
+    };
+    const provider = fakeProvider(
+      async function* (req) {
+        reqs.push(req);
+        yield { text: req.prompt.includes(ENTITY_PROMPT) ? JSON.stringify(reply) : 'Mira found the map.', done: true };
+      },
+      false,
+      true,
+    );
+    const report = await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
+    expect(reqs.filter((r) => r.prompt.includes(ENTITY_PROMPT))).toHaveLength(2);
+    expect(report.sceneUpdated).toBe(true);
+    expect(adv.plot.scene).toEqual({ location: 'the mill', present: ['Mira'], time: { day: 1, part: 'night' } });
+  });
+
   it('skips the entity call once the idle signal fires', async () => {
     const adv = adventure(12);
     const { deps, calls } = fakeDeps(adv, { abortAfter: 1 });
