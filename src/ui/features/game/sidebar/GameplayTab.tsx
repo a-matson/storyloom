@@ -157,6 +157,21 @@ function Images({ s, update }: { s: Settings; update: Update }) {
           onChange={(e) => image({ negativePrompt: text(e.target.value) })}
         />
       </Setting>
+      <SettingSwitch
+        id="img-portraits"
+        label="Character portraits"
+        title="Drawn between turns, one character at a time"
+        checked={s.image.portraits}
+        onChange={(on) => image({ portraits: on })}
+      />
+      <Setting label="Portrait style" htmlFor="img-style" title="Added to every portrait prompt; blank picks one from the adventure's tags">
+        <input
+          id="img-style"
+          className={IMAGE_TEXT_INPUT}
+          value={s.image.portraitStyle ?? ''}
+          onChange={(e) => image({ portraitStyle: text(e.target.value) })}
+        />
+      </Setting>
     </Section>
   );
 }

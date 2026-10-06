@@ -8,6 +8,8 @@ interface Host {
   embedder: () => Promise<Embedder>;
   /** The adventure changed in place: publish and save. */
   changed: () => void;
+  /** Image work after the memory jobs; stops starting new renders once `idle` fires. */
+  portraits: (idle: AbortSignal) => Promise<void>;
 }
 
 /**
@@ -31,6 +33,8 @@ export class MemoryScheduler {
   start(idle: AbortSignal): void {
     this.idle = idle;
     if (idle.aborted) return;
+    // Not behind the memory run: typing cuts most of those, and a render does not use slot 1.
+    this.portraits(idle);
     if (this.typing && !this.overdue()) this.waiting = true;
     else void this.run(idle);
   }
@@ -41,6 +45,17 @@ export class MemoryScheduler {
     this.typing = typing;
     if (typing && !this.overdue()) this.running?.abort();
     else if (!typing && this.waiting && !this.running && this.idle && !this.idle.aborted) void this.run(this.idle);
+  }
+
+  /** Started with the idle period and again once a run may have added characters. A render takes minutes and outlives its idle period, so a second queue must not start beside it. */
+  private portraiting = false;
+  private portraits(idle: AbortSignal): void {
+    if (this.portraiting) return;
+    this.portraiting = true;
+    void this.host
+      .portraits(idle)
+      .catch((e: unknown) => console.warn('portraits failed', e))
+      .finally(() => (this.portraiting = false));
   }
 
   private overdue(): boolean {
@@ -65,7 +80,7 @@ export class MemoryScheduler {
     } finally {
       this.running = null;
     }
-    if (!cancel.signal.aborted) return;
+    if (!cancel.signal.aborted) return this.portraits(idle);
     // Cut by typing: earlier jobs of this run may have changed the bank, and the rest waits for the input to clear.
     this.host.changed();
     this.waiting = true;

@@ -31,8 +31,24 @@ describe('adventure JSON', () => {
     const a = createBlankAdventure('T', 'You wake.');
     a.coverId = 'img_cover';
     a.actions.push({ id: 'act_see', type: 'see', versions: [''], active: 0, createdAt: 1, image: { imageId: 'img_1', prompt: 'a door' } });
+    a.entities = [
+      {
+        id: 'ent_1',
+        kind: 'character',
+        name: 'Lena',
+        aliases: [],
+        description: '',
+        facts: [],
+        state: {},
+        relations: [],
+        firstSeen: 0,
+        lastSeen: 0,
+        portraitId: 'img_face',
+      },
+    ];
     const { adventure: b } = importAdventureJson(exportAdventureJson(a));
     expect(b.coverId).toBeUndefined();
+    expect(b.entities[0]).not.toHaveProperty('portraitId');
     expect(b.actions[1]!.image).toEqual({ prompt: 'a door', missing: true });
   });
 

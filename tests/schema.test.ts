@@ -12,7 +12,7 @@ describe('schemas', () => {
       model: { contextLength: 8192, responseLength: 200, temperature: 1.0, topK: 250, topP: 0.95, presencePenalty: 0.25, frequencyPenalty: 0 },
       memory: { autoSummary: true, memoryBank: true, bankSize: 200 },
       context: { cacheStableLayout: true, evictionChunk: 8, rawOutput: false, contextWarning: true, cacheWarming: true, retryPrefetch: false },
-      image: { width: 512, height: 512, steps: 24, cfgScale: 5 },
+      image: { width: 512, height: 512, steps: 24, cfgScale: 5, portraits: true },
       textStyle: 'print',
     });
   });
