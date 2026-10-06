@@ -55,13 +55,20 @@ function withoutBlob({ imageId, ...image }: Image): Image {
 /** Fresh ids so an import never overwrites an existing adventure, and no ids pointing at blobs we do not have. */
 function renumber(a: Adventure): Adventure {
   const { coverId: _cover, ...rest } = a;
+  const ids = new Map([...a.storyCards.map((c) => [c.id, newId('card_')] as const), ...a.entities.map((e) => [e.id, newId('ent_')] as const)]);
+  const id = (old: string) => ids.get(old) ?? old;
   return {
     ...rest,
     id: newId('adv_'),
     actions: a.actions.map((x) => ({ ...x, id: newId('act_'), ...(x.image && { image: withoutBlob(x.image) }) })),
-    storyCards: a.storyCards.map((c) => ({ ...c, id: newId('card_') })),
+    storyCards: a.storyCards.map((c) => ({ ...c, id: id(c.id) })),
     // Without the id the portrait is drawn again between turns.
-    entities: a.entities.map(({ portraitId: _portrait, ...e }) => e),
+    entities: a.entities.map(({ portraitId: _portrait, ...e }) => ({
+      ...e,
+      id: id(e.id),
+      relations: e.relations.map((r) => ({ ...r, to: id(r.to) })),
+      ...(e.cardId && { cardId: id(e.cardId) }),
+    })),
     memories: [], // embeddings may come from another embedder; rebuilt lazily
     updatedAt: Date.now(),
   };

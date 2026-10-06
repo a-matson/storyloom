@@ -8,7 +8,7 @@ export async function openSeededAdventure(
   page: Page,
   count: number,
   imageServer?: string,
-  opts: { opening?: string; speakerAvatars?: boolean } = {},
+  opts: { opening?: string; speakerAvatars?: boolean; contextScript?: string } = {},
 ): Promise<void> {
   await page.goto('/');
   await page.getByRole('button', { name: /^Demo \(no GPU\)/ }).click();
@@ -26,13 +26,13 @@ export async function openSeededAdventure(
   await (await chooser).setFiles({ name: 'salt.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ title: 'Salt Road', actions })) });
   const open = page.getByRole('button', { name: `Continue Salt Road ${count} actions` });
   await expect(open).toBeVisible();
-  await seedEntities(page);
+  await seedEntities(page, opts.contextScript);
   await open.click();
 }
 
-/** Two entities written straight into the store for the first adventure; the memory cycle never runs in e2e. */
-async function seedEntities(page: Page): Promise<void> {
-  await page.evaluate(async () => {
+/** Two entities written straight into the store for the first adventure; the memory cycle never runs in e2e. An import carries no scripts, so a Context script is patched in too. */
+async function seedEntities(page: Page, contextScript?: string): Promise<void> {
+  await page.evaluate(async (context) => {
     const req = indexedDB.open('storyloom');
     const db = await new Promise<IDBDatabase>((ok, fail) => {
       req.addEventListener('success', () => ok(req.result));
@@ -44,7 +44,8 @@ async function seedEntities(page: Page): Promise<void> {
       r.addEventListener('error', () => fail(r.error));
     });
     const base = { adventureId: adv?.id, aliases: [], relations: [], firstSeen: 1, lastSeen: 2 };
-    const tx = db.transaction('entities', 'readwrite');
+    const tx = db.transaction(['entities', 'adventures'], 'readwrite');
+    if (context && adv) tx.objectStore('adventures').put({ ...adv, scripts: { library: '', input: '', context, output: '' } });
     tx.objectStore('entities').put({
       ...base,
       id: 'ent_merav',
@@ -70,5 +71,5 @@ async function seedEntities(page: Page): Promise<void> {
     });
     await new Promise((ok) => tx.addEventListener('complete', ok));
     db.close();
-  });
+  }, contextScript);
 }

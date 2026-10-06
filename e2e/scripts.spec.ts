@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openSeededAdventure } from './seed';
 
 async function connectDemo(page: Page): Promise<void> {
   await page.goto('/');
@@ -87,6 +88,17 @@ test('a Context script that rewrites the prompt is flagged as uncached', async (
   const trace = page.getByRole('dialog', { name: 'Turn trace' });
   await expect(trace.getByText('uncached: script')).toBeVisible();
   await expect(trace.getByText(/onModelContext: saw \d+ sections/)).toBeVisible();
+});
+
+test('a Context script reads the entities, and the trace counts the ones in the prompt', async ({ page }) => {
+  await openSeededAdventure(page, 3, undefined, { contextScript: "log('entities ' + state.entities.map((e) => e.name).join(', ')); null" });
+  await page.getByRole('textbox', { name: 'Take a turn' }).fill('ask Merav for the map');
+  await page.getByRole('button', { name: 'Send' }).click();
+  await page.getByRole('button', { name: 'Trace' }).last().click();
+  const trace = page.getByRole('dialog', { name: 'Turn trace' });
+  await expect(trace.getByText('onModelContext: entities Merav, Old Well')).toBeVisible();
+  // Memories reads "0 used": the one "1 used" row is Entities (Merav was named, the Old Well was not).
+  await expect(trace.getByText('1 used', { exact: true })).toBeVisible();
 });
 
 test('an Output script rewrites the model output and its logs reach the trace', async ({ page }) => {

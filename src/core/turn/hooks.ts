@@ -1,6 +1,6 @@
 import type { Action, Adventure, StoryCard } from '../model/types';
 import { actionText } from '../model/types';
-import { NoopScriptRunner, toScriptCards, type HookInput, type HookName, type HookResult, type ScriptStoryCard } from '../ports/scripting';
+import { NoopScriptRunner, toScriptCards, toScriptEntities, type HookInput, type HookName, type HookResult, type ScriptStoryCard } from '../ports/scripting';
 import type { TurnDeps } from './types';
 
 function scriptCardsToCore(cards: ScriptStoryCard[], existing: StoryCard[]): StoryCard[] {
@@ -40,6 +40,8 @@ export async function runHook(
     history: history.slice(-40).map((a) => ({ text: actionText(a), rawText: actionText(a), type: a.type })),
     storyCards: toScriptCards(adventure.storyCards),
     state: adventure.scriptState,
+    // onInput has no context to read them against.
+    ...(hook !== 'onInput' && { entities: toScriptEntities(adventure.entities) }),
     ...extra,
   };
   // A runner that rejects (a crashed or restarted worker) must not fail the turn either; the trace keeps the reason.
