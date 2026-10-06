@@ -1,6 +1,7 @@
 import type { Adventure, AdventureSettings, Scenario, StoryCard } from './types';
 import { DEFAULT_ADVENTURE_SETTINGS, hasScripts, newId, scriptCount } from './types';
 import { applyPlaceholders, findPlaceholders } from '../text/placeholders';
+import { seedCanonEntities } from '../memory/canon';
 
 /**
  * Scenario → Adventure. The prompt becomes the first action ("start"); plot
@@ -84,7 +85,7 @@ export function createAdventureFromScenario(
     storyCards: cards,
     scripts: hasScripts(s.scripts) ? { ...s.scripts } : undefined,
     memories: [],
-    entities: [],
+    entities: seedCanonEntities(cards, 0),
     scriptState: { placeholders: Object.entries(answers).map(([question, answer]) => ({ question, answer })) },
     placeholders: Object.entries(answers).map(([question, answer]) => ({ question, answer })),
     settings: structuredClone(settings),

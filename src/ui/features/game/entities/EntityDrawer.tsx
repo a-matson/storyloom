@@ -7,9 +7,11 @@ import { Button } from '@ui/components/ui/button';
 import { Drawer, DrawerBody, DrawerHeader } from '@ui/components/ui/drawer';
 import { Input, Select } from '@ui/components/ui/field';
 import { SectionLabel } from '@ui/components/ui/section-label';
+import { Pill } from '@ui/components/ui/pill';
 import { Textarea } from '@ui/components/ui/textarea';
 import { pickFile } from '@ui/transferUi';
 import { Avatar } from './Avatar';
+import { Facts, StateRows, type Update } from './EntityDetails';
 
 interface Props {
   entity: Entity;
@@ -18,16 +20,11 @@ interface Props {
   onClose: () => void;
 }
 
-type Update = (patch: Partial<Entity>) => void;
-
 const list = (s: string) =>
   s
     .split(',')
     .map((x) => x.trim())
     .filter(Boolean);
-
-/** Bring an action into view; the story column's children are the actions in order. */
-const showAction = (index: number) => document.getElementById('story')?.children[index]?.scrollIntoView({ block: 'center' });
 
 /** One entity, edited in place: text fields commit on blur, an emptied state value removes it. */
 export function EntityDrawer({ entity: e, adventure, api, onClose }: Props) {
@@ -44,6 +41,7 @@ export function EntityDrawer({ entity: e, adventure, api, onClose }: Props) {
           <span className="flex items-center gap-3">
             <Avatar name={e.name} adventureId={adventure.id} portraitId={e.portraitId} large />
             <span className="text-card-title font-semibold">{e.name}</span>
+            {e.canon && <Pill title="Seeded from a scenario card">canon</Pill>}
           </span>
         }
         onClose={onClose}
@@ -73,60 +71,6 @@ export function EntityDrawer({ entity: e, adventure, api, onClose }: Props) {
         <Actions entity={e} adventure={adventure} edits={edits} />
       </DrawerBody>
     </Drawer>
-  );
-}
-
-function StateRows({ entity: e, update }: { entity: Entity; update: Update }) {
-  const id = useId();
-  const entries = Object.entries(e.state);
-  if (entries.length === 0) return null;
-  const set = (k: string, value: string) => {
-    const state = { ...e.state, [k]: value };
-    update({ state: Object.fromEntries(Object.entries(state).filter(([, v]) => v !== '')) });
-  };
-  return (
-    <>
-      <SectionLabel>State</SectionLabel>
-      {entries.map(([k, v], i) => (
-        <div key={k} className="flex items-center gap-2 text-control">
-          <label htmlFor={`${id}-${i}`} className="w-28 shrink-0 truncate text-muted-foreground">
-            {k}
-          </label>
-          <Input id={`${id}-${i}`} className="h-8" defaultValue={v} onBlur={(ev) => ev.target.value.trim() !== v && set(k, ev.target.value.trim())} />
-        </div>
-      ))}
-    </>
-  );
-}
-
-function Facts({ entity: e, update, onClose }: { entity: Entity; update: Update; onClose: () => void }) {
-  const pin = (factId: string) => update({ facts: e.facts.map((f) => (f.id === factId ? { ...f, pinned: !f.pinned } : f)) });
-  return (
-    <>
-      <SectionLabel>Facts</SectionLabel>
-      {e.facts.length === 0 && <p className="m-0 text-caption text-muted-foreground">None yet.</p>}
-      <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
-        {e.facts.map((f) => (
-          <li key={f.id} className="flex items-center gap-2 text-control">
-            <Button
-              variant="ghost"
-              className="h-7 shrink-0 font-mono text-caption"
-              aria-label={`Show action ${f.fromAction} in the story`}
-              onClick={() => {
-                onClose();
-                showAction(f.fromAction);
-              }}
-            >
-              action {f.fromAction}
-            </Button>
-            <span className="grow">{f.text}</span>
-            <Button variant="ghost" className="h-7 shrink-0" aria-pressed={!!f.pinned} aria-label={`Pin: ${f.text}`} onClick={() => pin(f.id)}>
-              {f.pinned ? 'Pinned' : 'Pin'}
-            </Button>
-          </li>
-        ))}
-      </ul>
-    </>
   );
 }
 

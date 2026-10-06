@@ -56,7 +56,9 @@ export function attributeSpeakers(
 /**
  * Fold one sighting into an entity (or create it). Model output only adds: facts append (deduped),
  * aliases union, a changed `state` value keeps the old one as a fact. Existing facts — the
- * player's and pinned ones included — and a non-empty description are never replaced.
+ * player's and pinned ones included — and a non-empty description are never replaced. Canon:
+ * a canon entity's description is never set, and a change to a `canonKeys` value is recorded as
+ * a conflict fact instead of applied.
  */
 export function mergeEntity(existing: Entity | undefined, incoming: ExtractedEntity, atAction: number): Entity {
   const base: Entity = existing ?? {
@@ -73,18 +75,23 @@ export function mergeEntity(existing: Entity | undefined, incoming: ExtractedEnt
   };
   const facts = [...base.facts];
   const known = new Set(facts.map((f) => norm(f.text)));
-  const addFact = (text: string): void => {
+  const addFact = (text: string, extra?: Partial<EntityFact>): void => {
     const key = norm(text);
     if (!key || known.has(key)) return;
     known.add(key);
-    facts.push({ id: newId('fact_'), text: text.trim(), fromAction: atAction, source: 'memory' } satisfies EntityFact);
+    facts.push({ id: newId('fact_'), text: text.trim(), fromAction: atAction, source: 'memory', ...extra } satisfies EntityFact);
   };
 
   const state = { ...base.state };
+  const locked = new Set(base.canonKeys);
   for (const [key, value] of Object.entries(incoming.state ?? {})) {
     const old = state[key];
-    if (old !== undefined && norm(old) !== norm(value)) addFact(`${key} was ${old} until action ${atAction}`);
-    state[key] = value;
+    if (old === undefined || norm(old) === norm(value)) state[key] = value;
+    else if (locked.has(key)) addFact(`the story says ${key} is ${value}, but canon says ${old}`, { conflict: true, claim: { key, value } });
+    else {
+      addFact(`${key} was ${old} until action ${atAction}`);
+      state[key] = value;
+    }
   }
   for (const f of incoming.facts) addFact(f);
 
@@ -108,7 +115,7 @@ export function mergeEntity(existing: Entity | undefined, incoming: ExtractedEnt
   return {
     ...base,
     aliases,
-    description: base.description || (incoming.description ?? '').trim(),
+    description: base.canon ? base.description : base.description || (incoming.description ?? '').trim(),
     facts,
     state,
     relations,
