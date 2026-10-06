@@ -186,9 +186,7 @@ export class GameSession {
   }
 
   /** Diagnostics never block play; the next turn writes its own. */
-  private readonly storeTrace = (t: TurnTrace): void => {
-    void this.svc.storage.putTrace(t).catch((e: unknown) => console.warn('could not store turn trace', e));
-  };
+  private readonly storeTrace = (t: TurnTrace): void => void this.svc.storage.putTrace(t).catch((e: unknown) => console.warn('could not store turn trace', e));
 
   /** Memories, summaries and story cards run on the utility server when configured and reachable, else the story provider; each with its own template. */
   readonly helperModel = async (): Promise<{ provider: Provider; template: TemplateId }> => {
@@ -260,7 +258,8 @@ export class GameSession {
   readonly setTyping = (typing: boolean): void => this.memory.setTyping(typing);
 
   // ---- edits --------------------------------------------------------------------
-  private mutate(fn: (log: ActionLog, adv: Adventure) => void): void {
+  /** A player edit: skipped while a turn runs, then published, saved and the cache re-warmed. Public for the lazy edit modules (`entityEdits`). */
+  mutate(fn: (log: ActionLog, adv: Adventure) => void): void {
     if (this.snapshot.busy) return;
     const before = this.log.actions;
     fn(this.log, this.adv);

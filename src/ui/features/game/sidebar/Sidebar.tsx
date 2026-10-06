@@ -6,7 +6,9 @@ import { cn } from '@ui/lib/utils';
 import { CardsTab } from './CardsTab';
 import { DetailsTab } from './DetailsTab';
 import { GameplayTab } from './GameplayTab';
+import { EntityList } from '../entities/EntityList';
 import { PlotTab } from './PlotTab';
+import { CHIP } from './Section';
 
 interface Props {
   adventure: Adventure;
@@ -18,7 +20,7 @@ interface Props {
 }
 
 type Tab = 'adventure' | 'gameplay';
-type SubTab = 'plot' | 'cards' | 'details';
+type SubTab = 'plot' | 'cards' | 'characters' | 'world' | 'details';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'adventure', label: 'Adventure' },
@@ -27,17 +29,18 @@ const TABS: { id: Tab; label: string }[] = [
 
 const tab =
   'border-0 border-b-2 border-transparent bg-transparent px-3 py-2 text-control font-medium text-muted-foreground aria-selected:border-lantern aria-selected:font-semibold aria-selected:text-foreground';
-const chip =
-  'h-7 rounded-full border border-border bg-transparent px-2.5 text-caption font-medium text-muted-foreground aria-pressed:border-lantern aria-pressed:bg-secondary aria-pressed:text-foreground';
 const body = 'flex grow flex-col gap-2 overflow-y-auto px-4 pb-4';
 
 /** Adventure / Gameplay settings panel; an overlay sheet below 1100 px. Mirrors AI Dungeon's in-game settings. */
 export function Sidebar({ adventure, api, utilityModel, hidden, onClose }: Props) {
   const [current, setTab] = useState<Tab>('adventure');
   const [sub, setSub] = useState<SubTab>('plot');
+  const characters = adventure.entities.filter((e) => e.kind === 'character').length;
   const subTabs: { id: SubTab; label: string }[] = [
     { id: 'plot', label: 'Plot' },
     { id: 'cards', label: `Story cards · ${adventure.storyCards.length}` },
+    { id: 'characters', label: `Characters · ${characters}` },
+    { id: 'world', label: `World · ${adventure.entities.length - characters}` },
     { id: 'details', label: 'Details' },
   ];
   return (
@@ -65,9 +68,9 @@ export function Sidebar({ adventure, api, utilityModel, hidden, onClose }: Props
       </div>
       {current === 'adventure' ? (
         <>
-          <div className="flex gap-1.5 px-4 py-3">
+          <div className="flex flex-wrap gap-1.5 px-4 py-3">
             {subTabs.map((t) => (
-              <button key={t.id} type="button" className={chip} aria-pressed={sub === t.id} onClick={() => setSub(t.id)}>
+              <button key={t.id} type="button" className={CHIP} aria-pressed={sub === t.id} onClick={() => setSub(t.id)}>
                 {t.label}
               </button>
             ))}
@@ -75,6 +78,7 @@ export function Sidebar({ adventure, api, utilityModel, hidden, onClose }: Props
           <div className={body}>
             {sub === 'plot' && <PlotTab adventure={adventure} api={api} utilityModel={utilityModel} />}
             {sub === 'cards' && <CardsTab adventure={adventure} api={api} />}
+            {(sub === 'characters' || sub === 'world') && <EntityList key={sub} adventure={adventure} api={api} world={sub === 'world'} />}
             {sub === 'details' && <DetailsTab adventure={adventure} api={api} />}
           </div>
         </>

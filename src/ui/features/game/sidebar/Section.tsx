@@ -5,6 +5,9 @@ import { cn } from '@ui/lib/utils';
 export const SECTION = 'rounded-[10px] border border-border bg-secondary';
 export const SECTION_HEADER = 'flex items-center gap-2 px-3 py-2.5 text-control font-semibold';
 export const SECTION_BODY = 'flex flex-col gap-2 px-3 pb-3';
+/** Toggle chip; `aria-pressed` marks the chosen one. */
+export const CHIP =
+  'h-7 rounded-full border border-border bg-transparent px-2.5 text-caption font-medium text-muted-foreground aria-pressed:border-lantern aria-pressed:bg-secondary aria-pressed:text-foreground';
 
 interface Props {
   title: string;

@@ -76,3 +76,39 @@ export function mergeEntity(existing: Entity | undefined, incoming: ExtractedEnt
     lastSeen: Math.max(base.lastSeen, atAction),
   };
 }
+
+/** Items of `extra` whose key is not in `seen` (nor repeated within `extra`). */
+function unseen<T>(seen: Iterable<string>, extra: readonly T[], key: (t: T) => string): T[] {
+  const keys = new Set(seen);
+  return extra.filter((t) => {
+    const k = key(t);
+    if (!k || keys.has(k)) return false;
+    keys.add(k);
+    return true;
+  });
+}
+
+/**
+ * Fold the stored entity `from` into `into` (the player's Merge): facts, aliases, relations and
+ * missing state values union in; `into` keeps its id, name, kind, description and portrait.
+ */
+export function mergeEntities(into: Entity, from: Entity): Entity {
+  const rel = (r: { to: string; label: string }) => `${norm(r.to)}|${norm(r.label)}`;
+  return {
+    ...into,
+    aliases: [...into.aliases, ...unseen([into.name, ...into.aliases].map(norm), [from.name, ...from.aliases], norm)],
+    description: into.description || from.description,
+    facts: [
+      ...into.facts,
+      ...unseen(
+        into.facts.map((f) => norm(f.text)),
+        from.facts,
+        (f) => norm(f.text),
+      ),
+    ],
+    state: { ...from.state, ...into.state },
+    relations: [...into.relations, ...unseen(into.relations.map(rel), from.relations, rel)],
+    firstSeen: Math.min(into.firstSeen, from.firstSeen),
+    lastSeen: Math.max(into.lastSeen, from.lastSeen),
+  };
+}

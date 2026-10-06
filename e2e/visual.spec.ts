@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openSeededAdventure } from './seed';
 
 // Pixel baselines of the artboard states; they guard the Tailwind/Base UI migration (P5).
 // Linux only: run `pnpm e2e:update-screenshots` (Docker) to regenerate.
@@ -63,6 +64,13 @@ test('story cards and card dialog', async ({ page }) => {
   await page.getByRole('button', { name: '+ New' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await shot(page, 'card-dialog');
+});
+
+test('game with characters tab', async ({ page }) => {
+  await openSeededAdventure(page, 4);
+  await page.getByRole('button', { name: /^Characters/ }).click();
+  await expect(page.getByRole('button', { name: 'Open Merav' })).toBeVisible();
+  await shot(page, 'game-characters');
 });
 
 test('context viewer', async ({ page }) => {
