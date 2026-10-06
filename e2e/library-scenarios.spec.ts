@@ -44,6 +44,41 @@ test('the scenario grid plays, edits and deletes a scenario', async ({ page }) =
   await expect(page.getByRole('button', { name: 'Open Night Ferry' })).toBeVisible();
 });
 
+test('card placeholders are filled when the adventure is created', async ({ page }) => {
+  await connectDemo(page);
+  await page.getByRole('button', { name: '+ New scenario' }).click();
+  // No placeholder in the prompt: the question below can only come from the card.
+  await page.getByRole('textbox', { name: 'Prompt' }).fill('The ferry horn sounds twice.');
+  const rail = page.getByRole('complementary', { name: 'Scenario overview' });
+  await rail.getByRole('button', { name: '+ New' }).click();
+  await page.locator('#card-name').fill('Ferryman');
+  await page.locator('#card-entry').fill('The ferryman never looks up from his rope, not even for ${character.name}.');
+  await page.locator('#card-triggers').fill('${character.name},rope');
+  await page.getByRole('button', { name: 'Finish' }).click();
+  await page.getByRole('button', { name: 'Basics' }).click();
+  await page.getByRole('textbox', { name: 'Title' }).fill('Night Ferry');
+  await page.keyboard.press('ControlOrMeta+s');
+  await expect(page.getByText('Scenario · Story · saved')).toBeVisible();
+  await page.getByRole('button', { name: 'Back to library' }).click();
+
+  await page.getByRole('button', { name: 'Play Night Ferry' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Night Ferry' });
+  await dialog.getByRole('textbox', { name: "Enter your character's name…" }).fill('Merav');
+  await dialog.getByRole('button', { name: 'Begin' }).click();
+  await expect(page).toHaveURL(/#\/adventure\//);
+
+  await page.getByRole('button', { name: 'Story cards · 1' }).click();
+  await expect(page.getByText('Merav,rope')).toBeVisible();
+  await page.getByRole('button', { name: 'Edit story card Ferryman' }).click();
+  await expect(page.locator('#card-entry')).toHaveValue('The ferryman never looks up from his rope, not even for Merav.');
+  await expect(page.locator('#card-triggers')).toHaveValue('Merav,rope');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+
+  // The scenario is not mutated: its card still holds the placeholder, so it still counts one.
+  await page.getByRole('button', { name: 'Back to library' }).click();
+  await expect(page.getByText('Story · 1 placeholder · 1 card')).toBeVisible();
+});
+
 // 1x1 PNG; the upload path re-encodes it through a canvas, so an invalid one would fail the test.
 const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGM4IWcDAALUASNyYth2AAAAAElFTkSuQmCC';
 
