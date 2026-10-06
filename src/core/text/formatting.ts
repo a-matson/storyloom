@@ -2,6 +2,9 @@ import type { Action, ActionType, PlotComponents } from '../model/types';
 import { actionText } from '../model/types';
 import type { CompletionStats } from '../ports/provider';
 
+/** The split `Action.speakers` indexes: blank lines. */
+export const paragraphs = (text: string): string[] => text.split(/\n\s*\n/);
+
 /**
  * Turn a player's raw input into the line that goes into the story text.
  *

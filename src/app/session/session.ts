@@ -49,6 +49,7 @@ export class GameSession {
     helperModel: () => this.helperModel(),
     embedder: () => this.resolveEmbedder(),
     changed: () => this.changed(),
+    annotate: (s) => this.log.annotate(s),
     portraits: async (idle) => (await import('./portraits')).queuePortraits(this, idle),
   });
   private readonly idleWork = new IdleWork({

@@ -1,4 +1,4 @@
-import type { Adventure, Memory } from '../model/types';
+import type { Adventure, Memory, Speaker } from '../model/types';
 import { actionText } from '../model/types';
 import { createMemory, currentRange, dueMemoryRanges, evictToSize, isPlayerAction, MEMORY_SPAN, summaryDue, type MemoryRange } from './memoryBank';
 import { MEMORY_SYSTEM, SUMMARY_SYSTEM, memoryPrompt, sentenceGrammar, summaryPrompt } from '../text/prompts';
@@ -10,7 +10,7 @@ import { trackJob } from '../trace';
 import { catchUpEntities } from './extract';
 
 // For the player's entity edits, which load with these jobs.
-export { mergeEntities } from './entities';
+export { guessUnlabelled, mergeEntities } from './entities';
 export { updateEntities } from './extract';
 export { MEMORY_SPAN } from './memoryBank';
 export { projectEntity } from './projection';
@@ -44,6 +44,8 @@ export interface MaintenanceReport {
   memoriesRejected: number;
   /** Entities created or changed by the extraction that follows each written memory. */
   entitiesTouched: number;
+  /** The helper's speaker labels by action id; the caller applies them through the log. */
+  speakers: Map<string, Speaker[]>;
   summaryUpdated: boolean;
 }
 
@@ -152,6 +154,7 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
     memoriesDropped: 0,
     memoriesRejected: 0,
     entitiesTouched: 0,
+    speakers: new Map(),
     summaryUpdated: false,
   };
   const settings = adventure.settings.memory;
@@ -169,7 +172,7 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
       report.memoriesWritten += 1;
     }
     // The one combined helper call per memory cycle; a bad reply only costs the entities.
-    report.entitiesTouched = await catchUpEntities(adventure, deps);
+    ({ touched: report.entitiesTouched, speakers: report.speakers } = await catchUpEntities(adventure, deps));
     await reembed(adventure, deps);
     const evicted = evictToSize(adventure.memories, settings.bankSize);
     adventure.memories = evicted.memories;

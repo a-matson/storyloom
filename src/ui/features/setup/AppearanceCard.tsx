@@ -11,6 +11,8 @@ interface Props {
   onTheme: (theme: AppSettings['theme']) => void;
   speech: AppSettings['speech'];
   onSpeech: (speech: AppSettings['speech']) => void;
+  speakerAvatars: boolean;
+  onSpeakerAvatars: (on: boolean) => void;
 }
 
 const row = 'flex items-center gap-2.5 text-control';
@@ -49,7 +51,7 @@ function ReadAloud({ speech, onSpeech }: Pick<Props, 'speech' | 'onSpeech'>) {
   );
 }
 
-export function AppearanceCard({ theme, onTheme, speech, onSpeech }: Props) {
+export function AppearanceCard({ theme, onTheme, speech, onSpeech, speakerAvatars, onSpeakerAvatars }: Props) {
   const { supported } = useSpeech();
   return (
     <Card className="flex flex-col gap-2">
@@ -73,6 +75,12 @@ export function AppearanceCard({ theme, onTheme, speech, onSpeech }: Props) {
             </option>
           ))}
         </Select>
+      </div>
+      <div className={row}>
+        <label htmlFor="speaker-avatars" className="grow">
+          Speaker portraits beside dialogue
+        </label>
+        <Switch id="speaker-avatars" checked={speakerAvatars} onChange={onSpeakerAvatars} />
       </div>
       {supported && <ReadAloud speech={speech} onSpeech={onSpeech} />}
     </Card>

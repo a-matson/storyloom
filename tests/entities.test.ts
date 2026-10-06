@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { matchEntity, mergeEntities, mergeEntity } from '@core/memory/entities';
+import { attributeSpeakers, matchEntity, mergeEntities, mergeEntity } from '@core/memory/entities';
 import { ENTITY_ENTRY_TOKENS, projectEntity } from '@core/memory/projection';
-import type { Entity, ExtractedEntity } from '@core/model';
+import type { Action, Entity, ExtractedEntity } from '@core/model';
 
 const seen = (over: Partial<ExtractedEntity> = {}): ExtractedEntity => ({ name: 'Tamsin', kind: 'character', description: '', facts: [], ...over });
 
@@ -71,6 +71,48 @@ describe('mergeEntities', () => {
     expect(merged.facts.map((f) => f.text)).toEqual(['She owes the guild.', 'She has a scar.']);
     expect(merged.state).toEqual({ mood: 'wary', location: 'the docks' });
     expect(merged.relations).toEqual([{ to: 'Odo', label: 'rival' }]);
+  });
+});
+
+describe('attributeSpeakers', () => {
+  const act = (id: string, type: Action['type'], text: string): Action => ({ id, type, versions: [text], active: 0, createdAt: 0 });
+  const cast = [mergeEntity(undefined, seen({ aliases: ['the ferrywoman'] }), 0), mergeEntity(undefined, seen({ name: 'Odo' }), 0)];
+  const actions = [
+    act('a0', 'continue', 'The river is high.\n\n"Hold the rope," the old voice says.'),
+    act('a1', 'say', '> You say "Hello."'),
+    act('a2', 'continue', '"Row," Odo says.\n\n"I am," says Tamsin.'),
+  ];
+
+  it('labels the quoted paragraphs of a lone speaker, by entity name', () => {
+    expect(attributeSpeakers(actions, [{ action: 0, name: 'The Ferrywoman' }], cast).get('a0')).toEqual([{ paragraph: 1, name: 'Tamsin' }]);
+  });
+
+  it('drops names no entity matches and player actions', () => {
+    const out = attributeSpeakers(
+      actions,
+      [
+        { action: 0, name: 'Ysolde' },
+        { action: 1, name: 'Tamsin' },
+        { action: 9, name: 'Odo' },
+      ],
+      cast,
+    );
+    expect(out.size).toBe(0);
+  });
+
+  it('lets the text decide between several speakers of one action', () => {
+    const out = attributeSpeakers(
+      actions,
+      [
+        { action: 2, name: 'Odo' },
+        { action: 2, name: 'Tamsin' },
+      ],
+      cast,
+    );
+    expect(out.get('a2')).toEqual([
+      { paragraph: 0, name: 'Odo' },
+      { paragraph: 1, name: 'Tamsin' },
+    ]);
   });
 });
 

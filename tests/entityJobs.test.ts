@@ -86,6 +86,26 @@ describe('entity extraction in memory maintenance', () => {
     expect(adv.scriptState.__entitiesAt).toBe(adv.memories[3]?.toAction);
   });
 
+  it("reports the helper's speakers as paragraph labels for the log", async () => {
+    const adv = adventure(12);
+    const said = adv.actions[1];
+    if (said) said.versions = ['"Hold the rope," she says.'];
+    const reply = {
+      importance: 2,
+      entities: [{ name: 'Mira', kind: 'character', description: 'A courier.', facts: [] }],
+      speakers: [{ action: 1, name: 'Mira' }],
+    };
+    const provider = fakeProvider(
+      async function* (req) {
+        yield { text: req.prompt.includes(ENTITY_PROMPT) ? JSON.stringify(reply) : 'Mira found the map.', done: true };
+      },
+      false,
+      true,
+    );
+    const report = await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
+    expect([...report.speakers]).toEqual([[said?.id, [{ paragraph: 0, name: 'Mira' }]]]);
+  });
+
   it('skips the entity call once the idle signal fires', async () => {
     const adv = adventure(12);
     const { deps, calls } = fakeDeps(adv, { abortAfter: 1 });

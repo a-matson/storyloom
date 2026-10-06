@@ -1,5 +1,5 @@
 import { jsonrepair } from 'jsonrepair';
-import type { Adventure, ExtractionJson } from '../model/types';
+import type { Adventure, ExtractionJson, Speaker } from '../model/types';
 import { collect } from '../ports/provider';
 import { z } from 'zod/mini';
 import { ExtractedEntity, ExtractionJson as Schema } from '../schema/extraction';
@@ -8,7 +8,7 @@ import { parseJsonReply } from '../text/jsonReply';
 import { EXTRACT_SYSTEM, extractPrompt } from '../text/prompts';
 import { renderTemplate } from '../text/templates';
 import { trackJob } from '../trace';
-import { matchEntity, mergeEntity } from './entities';
+import { attributeSpeakers, matchEntity, mergeEntity } from './entities';
 import { EXTRACT_JSON_SCHEMA } from './extractJsonSchema';
 import type { MemoryRange } from './memoryBank';
 import type { MaintenanceDeps } from './memoryJobs';
@@ -75,32 +75,40 @@ const NOT_A_NAME = /^\s*you\s*$|^(the|a|an) \p{Ll}/iu;
  * `scriptState.__entitiesAt` advances past a memory once its call ends, unusable reply included,
  * but not when the call was cut: a cut call is retried on the next idle run.
  */
-export async function catchUpEntities(adventure: Adventure, deps: MaintenanceDeps): Promise<number> {
-  let touched = 0;
+export async function catchUpEntities(adventure: Adventure, deps: MaintenanceDeps): Promise<EntityUpdate> {
+  const total: EntityUpdate = { touched: 0, speakers: new Map() };
   const done = adventure.scriptState.__entitiesAt ?? 0;
   const due = adventure.memories.filter((m) => !m.stale && m.toAction > done).toSorted((a, b) => a.fromAction - b.fromAction);
   for (const m of due.slice(0, ENTITY_BATCH)) {
     if (deps.signal?.aborted) break;
-    const n = await updateEntities(adventure, m, deps);
+    const r = await updateEntities(adventure, m, deps);
     if (deps.cancel?.aborted) break;
-    touched += n;
+    total.touched += r.touched;
+    for (const [id, s] of r.speakers) total.speakers.set(id, s);
     adventure.scriptState = { ...adventure.scriptState, __entitiesAt: m.toAction };
   }
-  return touched;
+  return total;
 }
 
-/** Extract from the range's actions and fold the result into `adventure.entities`; returns how many entities changed. */
-export async function updateEntities(adventure: Adventure, range: MemoryRange, deps: ExtractDeps): Promise<number> {
+export interface EntityUpdate {
+  /** Entities created or changed. */
+  touched: number;
+  /** Speaker labels by action id, for `ActionLog.annotate`: actions live in the log, not on `adventure`. */
+  speakers: Map<string, Speaker[]>;
+}
+
+/** Extract from the range's actions and fold the result into `adventure.entities`. */
+export async function updateEntities(adventure: Adventure, range: MemoryRange, deps: ExtractDeps): Promise<EntityUpdate> {
   const passage = adventure.actions
     .slice(range.fromAction, range.toAction)
     .map((a, i) => [range.fromAction + i, actionStoryText(a)] as const)
     .filter(([, t]) => t !== '')
     .map(([n, t]) => `[${n}] ${t}`)
     .join('\n');
-  if (!passage) return 0;
+  if (!passage) return { touched: 0, speakers: new Map() };
   const known = adventure.entities.map((e) => e.name);
   const reply = await extractFromPassage(passage, known, deps);
-  if (!reply) return 0;
+  if (!reply) return { touched: 0, speakers: new Map() };
   const at = range.toAction - 1;
   let entities = adventure.entities;
   for (const incoming of reply.entities) {
@@ -111,5 +119,5 @@ export async function updateEntities(adventure: Adventure, range: MemoryRange, d
   }
   const touched = entities.filter((e, i) => e !== adventure.entities[i]).length;
   adventure.entities = entities;
-  return touched;
+  return { touched, speakers: attributeSpeakers(adventure.actions, reply.speakers, entities) };
 }

@@ -4,7 +4,12 @@ import { expect, type Page } from '@playwright/test';
  * Connect the demo backend, import an adventure of `count` short actions, seed two entities and open it.
  * Seeding comes before the first open: a session's save on close rewrites the entities table.
  */
-export async function openSeededAdventure(page: Page, count: number, imageServer?: string): Promise<void> {
+export async function openSeededAdventure(
+  page: Page,
+  count: number,
+  imageServer?: string,
+  opts: { opening?: string; speakerAvatars?: boolean } = {},
+): Promise<void> {
   await page.goto('/');
   await page.getByRole('button', { name: /^Demo \(no GPU\)/ }).click();
   await page.getByRole('button', { name: 'Test connection' }).click();
@@ -13,8 +18,9 @@ export async function openSeededAdventure(page: Page, count: number, imageServer
     await page.getByRole('switch', { name: 'Use an image server' }).click();
     await page.getByRole('textbox', { name: 'Image server URL' }).fill(imageServer);
   }
+  if (opts.speakerAvatars === false) await page.getByRole('switch', { name: 'Speaker portraits beside dialogue' }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
-  const actions = Array.from({ length: count }, (_, i) => ({ text: `The road bends ${i}.` }));
+  const actions = Array.from({ length: count }, (_, i) => ({ text: i === 0 && opts.opening !== undefined ? opts.opening : `The road bends ${i}.` }));
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'Import…' }).click();
   await (await chooser).setFiles({ name: 'salt.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ title: 'Salt Road', actions })) });

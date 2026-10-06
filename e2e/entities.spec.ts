@@ -59,3 +59,25 @@ test('a portrait is drawn on the image server and replaces the initials', async 
   await page.keyboard.press('Escape');
   await expect(card.locator('img')).toHaveAttribute('src', /^blob:/);
 });
+
+const OPENING = 'The well is dry.\n\n"Hold the lamp," Merav says.';
+
+test("dialogue gets the speaker's portrait after a turn", async ({ page }) => {
+  await openSeededAdventure(page, 3, undefined, { opening: OPENING });
+  await page.getByRole('textbox', { name: 'Take a turn' }).fill('wait');
+  await page.getByRole('button', { name: 'Send' }).click();
+  const story = page.locator('#story');
+  // The guess labels the second paragraph only: the first has no dialogue.
+  await expect(story.getByText('Merav says', { exact: true })).toHaveCount(1);
+  await expect(story.locator('p').first().locator('span.block').nth(1)).toContainText('Merav says');
+  const { violations } = await new AxeBuilder({ page }).include('#story').analyze();
+  expect(violations).toEqual([]);
+});
+
+test('no portraits beside dialogue when the setting is off', async ({ page }) => {
+  await openSeededAdventure(page, 3, undefined, { opening: OPENING, speakerAvatars: false });
+  await page.getByRole('textbox', { name: 'Take a turn' }).fill('wait');
+  await page.getByRole('button', { name: 'Send' }).click();
+  await expect(page.getByText('You wait.')).toBeVisible();
+  await expect(page.locator('#story').getByText('Merav says', { exact: true })).toHaveCount(0);
+});

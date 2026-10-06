@@ -1,5 +1,5 @@
 import { loadMemoryJobs, memoryOverdue } from '@core/memory';
-import type { Adventure, TemplateId } from '@core/model';
+import type { Adventure, Speaker, TemplateId } from '@core/model';
 import type { Embedder, Provider } from '@core/ports';
 
 interface Host {
@@ -8,6 +8,8 @@ interface Host {
   embedder: () => Promise<Embedder>;
   /** The adventure changed in place: publish and save. */
   changed: () => void;
+  /** Speaker labels by action id, onto the log. */
+  annotate: (speakers: ReadonlyMap<string, Speaker[]>) => void;
   /** Image work after the memory jobs; stops starting new renders once `idle` fires. */
   portraits: (idle: AbortSignal) => Promise<void>;
 }
@@ -31,12 +33,26 @@ export class MemoryScheduler {
 
   /** The browser is idle after a turn. */
   start(idle: AbortSignal): void {
+    this.guessSpeakers();
     this.idle = idle;
     if (idle.aborted) return;
     // Not behind the memory run: typing cuts most of those, and a render does not use slot 1.
     this.portraits(idle);
     if (this.typing && !this.overdue()) this.waiting = true;
     else void this.run(idle);
+  }
+
+  /** The client guess fills the gutter now; the helper's attribution replaces it when its cycle reaches the turn. */
+  private guessSpeakers(): void {
+    loadMemoryJobs().then(
+      ({ guessUnlabelled }) => this.label(guessUnlabelled(this.host.adventure())),
+      (e: unknown) => console.warn('speaker guess failed', e),
+    );
+  }
+  private label(speakers: ReadonlyMap<string, Speaker[]>): void {
+    if (!speakers.size) return;
+    this.host.annotate(speakers);
+    this.host.changed();
   }
 
   /** The turn input is focused and holds text. */
@@ -74,6 +90,7 @@ export class MemoryScheduler {
       const report = await runMemoryMaintenance(this.host.adventure(), { ...deps, signal: AbortSignal.any([idle, cancel.signal]), cancel: cancel.signal });
       if (report.memoriesWritten || report.memoriesRegenerated || report.memoriesDropped || report.entitiesTouched || report.summaryUpdated)
         this.host.changed();
+      this.label(report.speakers);
     } catch (e) {
       // Background work never blocks play; it retries after the next turn.
       if (!cancel.signal.aborted) console.warn('memory maintenance failed', e);

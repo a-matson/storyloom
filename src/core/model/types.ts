@@ -11,6 +11,8 @@ import type * as X from '../schema/extraction';
  */
 export type ActionType = z.output<typeof S.ActionType>;
 export type Action = z.output<typeof S.Action>;
+/** Who speaks in one paragraph of an action's active text. */
+export type Speaker = NonNullable<Action['speakers']>[number];
 export type TurnTrace = z.output<typeof S.TurnTrace>;
 export type TurnKind = z.output<typeof S.TurnKind>;
 export type TurnOutcome = z.output<typeof S.TurnOutcome>;

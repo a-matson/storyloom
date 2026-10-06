@@ -70,7 +70,8 @@ async function refreshEntity(host: GameSession, id: string): Promise<void> {
   const toAction = e.lastSeen + 1;
   try {
     const { updateEntities, MEMORY_SPAN } = await loadMemoryJobs();
-    await updateEntities(host.adv, { fromAction: Math.max(e.firstSeen, toAction - MEMORY_SPAN), toAction }, await host.helperModel());
+    const r = await updateEntities(host.adv, { fromAction: Math.max(e.firstSeen, toAction - MEMORY_SPAN), toAction }, await host.helperModel());
+    host.log.annotate(r.speakers);
     host.changed();
   } catch (err) {
     host.onError(`Could not update ${e.name}: ${message(err)}`);
