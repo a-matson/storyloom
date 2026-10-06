@@ -14,7 +14,8 @@ import { brotliCompressSync } from 'node:zlib';
 // css: M7-5 added the Slate theme block; user raised 5.8 -> 6.2 to leave room for one more theme.
 // css: 6.18 measured 2026-10-05 (play fix 6: the mode-coloured focus ring); user raised 6.2 -> 6.5.
 // js: 132.08 measured 2026-10-06 (play fix 7: the toast's own dismiss timer); user raised 132.5 -> 133.0.
-const BUDGET_KB = { js: 133.0, css: 6.5 };
+// js: 132.77 measured 2026-10-06 (M9-1a: the Entity schema, its Dexie table, projectEntity); user raised 133.0 -> 133.5.
+const BUDGET_KB = { js: 133.5, css: 6.5 };
 
 const html = readFileSync('dist/index.html', 'utf8');
 const files = [...html.matchAll(/(?:src|href)="[^"]*?(assets\/[^"]+\.(js|css))"/g)].map(

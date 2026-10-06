@@ -149,6 +149,7 @@ describe('embedder changes', () => {
         return Promise.resolve(texts.map(() => [1, 0]));
       },
     };
+    adventure.scriptState.__entitiesAt = 24;
     const provider = { id: 'p' } as unknown as Provider; // nothing is due, so it is never called
     await runMemoryMaintenance(adventure, { provider, embedder, template: adventure.settings.template });
     expect(embedded).toEqual(['old', 'none']);
@@ -163,6 +164,7 @@ describe('embedder changes', () => {
   it('waits for the embedder to report its dimensions', async () => {
     const adventure = createBlankAdventure('T', 'Start.');
     adventure.memories = [mem('old', 0, 0, 0, [1, 0, 0])];
+    adventure.scriptState.__entitiesAt = 6;
     const embedder: Embedder = { id: 'new', dimensions: 0, embed: () => Promise.reject(new Error('not called')) };
     await runMemoryMaintenance(adventure, { provider: { id: 'p' } as unknown as Provider, embedder, template: adventure.settings.template });
     expect(adventure.memories[0]?.embedding).toEqual([1, 0, 0]);

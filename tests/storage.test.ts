@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { splitAdventure } from '@adapters/storage/dexie/rows';
 import { DexieStorage } from '@adapters/storage';
 import { ActionLog } from '@core/log';
+import { mergeEntity } from '@core/memory/entities';
 import { newScenario } from '@core/model';
 import { StorageError, TRACE_CAP_PER_ADVENTURE } from '@core/ports';
 import { markPending } from '@adapters/storage';
@@ -54,6 +55,29 @@ describe('DexieStorage', () => {
     await s.putAdventure(edited);
     expect(await (await reopen(name)).getAdventure(adv.id)).toEqual(edited);
     expect((await s.listAdventures())[0]?.actionCount).toBe(5);
+  });
+
+  it('saves entities: round-trip, edit, removal, and delete with the adventure', async () => {
+    const name = freshName();
+    const s = await reopen(name);
+    const tam = mergeEntity(
+      undefined,
+      { name: 'Tamsin', kind: 'character', description: 'A ferrywoman.', facts: ['She rows.'], state: { location: 'the docks' } },
+      2,
+    );
+    const odo = mergeEntity(undefined, { name: 'Odo', kind: 'character', description: 'A captain.', facts: [] }, 3);
+    const adv = { ...makeAdventure({ actions: 4, cards: 1 }), entities: [tam, odo] };
+    await s.putAdventure(adv);
+    // Rows come back in key order, not insertion order.
+    expect((await (await reopen(name)).getAdventure(adv.id))?.entities).toEqual([tam, odo].toSorted((a, b) => a.id.localeCompare(b.id)));
+    const moved = mergeEntity(tam, { name: 'Tamsin', kind: 'character', description: '', facts: [], state: { location: 'the inn' } }, 5);
+    await s.putAdventure({ ...adv, entities: [moved] });
+    expect((await (await reopen(name)).getAdventure(adv.id))?.entities).toEqual([moved]);
+    await s.deleteAdventure(adv.id);
+    const db = new Dexie(name);
+    await db.open();
+    expect(await db.table('entities').count()).toBe(0);
+    db.close();
   });
 
   it('migrates whole-adventure records from the old IndexedDB store', async () => {

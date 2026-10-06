@@ -1,6 +1,7 @@
 import type { Action, Adventure, TemplateId } from '../model/types';
 import { LooseCardJson } from '../schema/card';
 import { actionStoryText } from '../text/formatting';
+import { parseJsonReply } from '../text/jsonReply';
 import { CARD_SYSTEM, cardPrompt } from '../text/prompts';
 import { normaliseTriggers } from './storyCards';
 import { renderTemplate } from '../text/templates';
@@ -110,33 +111,22 @@ export async function generateStoryCard(req: GenerateCardRequest, deps: Generate
 }
 
 /** Extract `{name, entry, triggers}` from model output, tolerating prose, fences and (with `repair`) broken JSON. */
-export function parseCardJson(text: string, repair: (json: string) => string = (j) => j): { name: string; entry: string; triggers: string[] } | null {
-  const trimmed = text.trim();
-  const fence = /```(?:json)?\s*([\s\S]*?)```/i.exec(trimmed)?.[1];
-  const first = trimmed.indexOf('{');
-  const last = trimmed.lastIndexOf('}');
-  const candidates = [trimmed, fence, first >= 0 ? trimmed.slice(first, last > first ? last + 1 : undefined) : undefined];
-  for (const c of candidates) {
-    if (!c) continue;
-    let data: unknown;
-    try {
-      data = JSON.parse(repair(c));
-    } catch {
-      continue; // not JSON even after repair; try the next candidate
-    }
-    const card = LooseCardJson.safeParse(data);
-    if (!card.success) continue;
-    const { name, title, entry, description, triggers, keys } = card.data;
-    const body = entry ?? description ?? '';
-    if (!body.trim()) continue;
-    const raw = triggers ?? keys ?? [];
-    return {
-      name: name ?? title ?? '',
-      entry: body,
-      triggers: typeof raw === 'string' ? raw.split(',') : raw.filter((t): t is string => typeof t === 'string'),
-    };
-  }
-  return null;
+export function parseCardJson(text: string, repair?: (json: string) => string): { name: string; entry: string; triggers: string[] } | null {
+  return parseJsonReply(text, acceptCard, repair);
+}
+
+function acceptCard(data: unknown): { name: string; entry: string; triggers: string[] } | null {
+  const card = LooseCardJson.safeParse(data);
+  if (!card.success) return null;
+  const { name, title, entry, description, triggers, keys } = card.data;
+  const body = entry ?? description ?? '';
+  if (!body.trim()) return null;
+  const raw = triggers ?? keys ?? [];
+  return {
+    name: name ?? title ?? '',
+    entry: body,
+    triggers: typeof raw === 'string' ? raw.split(',') : raw.filter((t): t is string => typeof t === 'string'),
+  };
 }
 
 /** Story the generator reads, about 600 tokens. [provisional] */

@@ -7,6 +7,7 @@ import { collect, type Provider } from '../ports/provider';
 import type { Embedder } from '../ports/embedder';
 import { joinStory, trimUnfinishedSentence } from '../text/formatting';
 import { trackJob } from '../trace';
+import { catchUpEntities } from './extract';
 
 /**
  * Background memory maintenance. Call after each committed turn; it is safe
@@ -35,6 +36,8 @@ export interface MaintenanceReport {
   memoriesDropped: number;
   /** Ranges skipped because the model continued the story twice. */
   memoriesRejected: number;
+  /** Entities created or changed by the extraction that follows each written memory. */
+  entitiesTouched: number;
   summaryUpdated: boolean;
 }
 
@@ -142,6 +145,7 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
     memoriesRegenerated: 0,
     memoriesDropped: 0,
     memoriesRejected: 0,
+    entitiesTouched: 0,
     summaryUpdated: false,
   };
   const settings = adventure.settings.memory;
@@ -158,6 +162,8 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
       adventure.memories = [...adventure.memories, memory];
       report.memoriesWritten += 1;
     }
+    // The one combined helper call per memory cycle; a bad reply only costs the entities.
+    report.entitiesTouched = await catchUpEntities(adventure, deps);
     await reembed(adventure, deps);
     const evicted = evictToSize(adventure.memories, settings.bankSize);
     adventure.memories = evicted.memories;
