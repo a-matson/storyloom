@@ -104,6 +104,29 @@ test('the output tools appear on hover and on keyboard focus', async ({ page }) 
   await expect(tools).toHaveCSS('opacity', '1');
 });
 
+test('an older action is editable from the keyboard', async ({ page }) => {
+  await connectDemo(page);
+  await page.getByRole('button', { name: 'Fantasy' }).click();
+  await takeTurn(page, 'open the letter');
+  await expect(page.getByText('hand stops moving.')).toBeVisible();
+  await takeTurn(page, 'stand up');
+  // The tools only render once the turn is done, so this is the "not busy" wait: editing is off while busy.
+  await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible();
+
+  // The Edit button lives on the last action only, so an older one is reachable by focus + Enter.
+  const older = page.getByText('You open the letter.');
+  await older.focus();
+  await page.keyboard.press('Enter');
+  await expect(older).toHaveAttribute('contenteditable', 'true');
+  // Typed, not filled: the caret has to be in the paragraph for a keyboard-only edit to work.
+  await page.keyboard.type(' Then burn it.');
+  await page.getByRole('textbox', { name: 'Take a turn' }).focus(); // blur commits
+
+  await expect(page.getByText('You open the letter. Then burn it.')).toBeVisible();
+  // Editing an older action leaves the later ones alone.
+  await expect(page.getByText('You stand up.')).toBeVisible();
+});
+
 test('player and AI text share one left edge', async ({ page }) => {
   await connectDemo(page);
   await page.getByRole('button', { name: 'Fantasy' }).click();

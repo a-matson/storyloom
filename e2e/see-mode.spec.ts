@@ -62,6 +62,15 @@ test('See mode generates an image, keeps the caption and survives a reload', asy
 
   // Editing the caption regenerates: a second txt2img call with the new prompt.
   const caption = page.getByRole('figure').locator('figcaption');
+  // Keyboard path: Enter opens the editor, Escape closes it without a new render.
+  await caption.focus();
+  await page.keyboard.press('Enter');
+  await expect(caption).toHaveAttribute('contenteditable', 'true');
+  await caption.fill('a harbour at noon');
+  await page.keyboard.press('Escape');
+  await expect(caption).toHaveText('a harbour at dusk');
+  expect(prompts).toHaveLength(1);
+
   await caption.dblclick();
   await caption.fill('a harbour at dawn');
   await page.getByRole('figure').click({ position: { x: 1, y: 1 } });

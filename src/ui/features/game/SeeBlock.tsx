@@ -4,7 +4,7 @@ import type { GameApi } from '@ui/hooks/useGameSession';
 import { useImageBlob } from '@ui/hooks/useImageBlob';
 import { Button, buttonClass } from '@ui/components/ui/button';
 import { cn } from '@ui/lib/utils';
-import { revealOnHover, seeIndent } from './OutputTools';
+import { caretAtEnd, revealOnHover, seeIndent } from './OutputTools';
 
 type Image = NonNullable<Action['image']>;
 interface Props {
@@ -91,6 +91,10 @@ export function SeeBlock({ action, image, adventureId, isLast, busy, generating,
   // `url` only comes from imported AI Dungeon data; ours are blobs.
   const src = image.url ?? blobUrl;
 
+  useEffect(() => {
+    if (editing && ref.current) caretAtEnd(ref.current);
+  }, [editing]);
+
   const commit = () => {
     setEditing(false);
     const next = ref.current?.innerText ?? image.prompt;
@@ -116,20 +120,29 @@ export function SeeBlock({ action, image, adventureId, isLast, busy, generating,
           </Button>
         </div>
       )}
-      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- pointer shortcut; Retry regenerates without editing */}
+      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the caption is the edit control; Enter opens it */}
       <figcaption
         ref={ref}
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the caption is the control, so it has to be reachable
+        tabIndex={0}
         className={cn('font-sans text-caption text-muted-foreground', editing && 'rounded-[4px] outline-1 outline-offset-4 outline-lantern outline-dashed')}
         contentEditable={editing}
         suppressContentEditableWarning
         onDoubleClick={() => !busy && setEditing(true)}
         onBlur={commit}
         onKeyDown={(e) => {
+          if (e.key === 'Enter' && !editing) {
+            if (busy) return;
+            e.preventDefault();
+            setEditing(true);
+            return;
+          }
           if (e.key !== 'Escape') return;
           setEditing(false);
           if (ref.current) ref.current.innerText = image.prompt;
         }}
-        title={editing ? 'Editing — click outside to generate a new image' : 'Double-click to edit the prompt'}
+        aria-keyshortcuts="Enter"
+        title={editing ? 'Editing — click outside to generate a new image' : 'Double-click or press Enter to edit the prompt'}
       >
         {image.prompt}
       </figcaption>

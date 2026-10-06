@@ -1,10 +1,10 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Action, AppSettings } from '@core/model';
 import { actionText } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Pill } from '@ui/components/ui/pill';
 import { cn } from '@ui/lib/utils';
-import { OutputTools, actionGrid, textColumn } from './OutputTools';
+import { OutputTools, actionGrid, caretAtEnd, textColumn } from './OutputTools';
 import { SeeBlock } from './SeeBlock';
 
 export const PROSE = 'm-0 whitespace-pre-wrap text-prose';
@@ -34,6 +34,10 @@ export function ActionBlock({ action, adventureId, isLast, busy, pendingImages, 
   // Do/Say are stored as "> You …"; the pill already says which.
   const display = quoted(action) ? text.replace(/^>\s*/, '') : text;
 
+  useEffect(() => {
+    if (editing && ref.current) caretAtEnd(ref.current);
+  }, [editing]);
+
   const commit = () => {
     setEditing(false);
     const next = ref.current?.innerText ?? display;
@@ -55,20 +59,30 @@ export function ActionBlock({ action, adventureId, isLast, busy, pendingImages, 
     );
 
   const paragraph = (
-    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- pointer shortcut; keyboard users have the Edit button
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the paragraph is the edit control; Enter opens it
     <p
       ref={ref}
+      // ponytail: one tab stop per action, so a 5 000-action story is 5 000 stops; a roving tabindex or a skip link if it ever hurts.
+      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the paragraph is the control, so it has to be reachable
+      tabIndex={0}
       className={cn(PROSE, isPlayer && 'text-foreground', editing && 'rounded-[4px] outline-1 outline-offset-4 outline-lantern outline-dashed')}
       contentEditable={editing}
       suppressContentEditableWarning
       onDoubleClick={() => !busy && setEditing(true)}
       onBlur={commit}
       onKeyDown={(e) => {
+        if (e.key === 'Enter' && !editing) {
+          if (busy) return;
+          e.preventDefault();
+          setEditing(true);
+          return;
+        }
         if (e.key !== 'Escape') return;
         setEditing(false);
         if (ref.current) ref.current.innerText = display;
       }}
-      title={editing ? 'Editing — click outside to save' : 'Double-click to edit'}
+      aria-keyshortcuts="Enter"
+      title={editing ? 'Editing — click outside to save' : 'Double-click or press Enter to edit'}
     >
       {display}
     </p>
