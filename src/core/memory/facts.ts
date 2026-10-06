@@ -7,14 +7,17 @@ export interface RankedFact {
 
 /**
  * Facts for the next prompt, best first: pinned facts, then facts of entities present in the scene
- * (what the next sentence needs), then facts of entities the recent text names; newest first in
- * each tier. Other entities' facts are left out. A canon conflict ranks as pinned and is kept as
- * worded, so the model always sees the disagreement. W1-4 replaces the name match with lexical/vector fusion.
+ * (what the next sentence needs), then facts of entities the recent text names. Within a tier, facts
+ * the query matches lexically (`lexical`, BM25 ids best first) lead, then newest first. Other
+ * entities' facts are left out: a lexical hit on "the" must not spend the structured cap. A canon
+ * conflict ranks as pinned and is kept as worded, so the model always sees the disagreement.
  */
-export function rankFacts(entities: Entity[], present: ReadonlySet<string>, mentioned: ReadonlySet<string>): RankedFact[] {
+export function rankFacts(entities: Entity[], present: ReadonlySet<string>, mentioned: ReadonlySet<string>, lexical: readonly string[] = []): RankedFact[] {
   const tier = ({ entity, fact }: RankedFact): number => (fact.pinned || fact.conflict ? 0 : present.has(entity.id) ? 1 : mentioned.has(entity.id) ? 2 : 3);
+  const hits = new Map(lexical.map((id, i) => [id, i]));
+  const hit = (r: RankedFact) => hits.get(r.fact.id) ?? Infinity;
   return entities
     .flatMap((entity) => entity.facts.map((fact) => ({ entity, fact })))
     .filter((r) => tier(r) < 3)
-    .toSorted((a, b) => tier(a) - tier(b) || b.fact.fromAction - a.fact.fromAction);
+    .toSorted((a, b) => tier(a) - tier(b) || hit(a) - hit(b) || b.fact.fromAction - a.fact.fromAction);
 }

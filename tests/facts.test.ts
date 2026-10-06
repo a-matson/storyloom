@@ -26,6 +26,11 @@ describe('rankFacts', () => {
     expect(ids(['lena'], ['orrin'])).toEqual(['absent-conflict', 'absent-pinned', 'orrin-pinned', 'lena-new', 'lena-old', 'orrin-new']);
   });
 
+  it('puts lexical hits first within each tier, never above a pinned or present fact', () => {
+    const ranked = rankFacts([absent, orrin, lena], new Set(['lena']), new Set(['orrin']), ['mem_x', 'orrin-new', 'lena-old', 'absent']);
+    expect(ranked.map((r) => r.fact.id)).toEqual(['absent-conflict', 'absent-pinned', 'orrin-pinned', 'lena-old', 'lena-new', 'orrin-new']);
+  });
+
   it('keeps a conflicted fact as worded, flag intact', () => {
     const ranked = rankFacts([absent], new Set(['absent']), new Set());
     expect(ranked.find((r) => r.fact.id === 'absent-conflict')?.fact.conflict).toBe(true);

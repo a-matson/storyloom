@@ -1,5 +1,6 @@
 import type { Action, Memory } from '../model/types';
 import { newId } from '../model/types';
+import { mmr, rrf, RRF_K } from './fusion';
 
 /**
  * Memory Bank: storage, retrieval and scheduling of AI-written memories.
@@ -12,7 +13,8 @@ import { newId } from '../model/types';
  *  - the Story Summary is refreshed every 15 actions.
  *
  * Retrieval: memories are embedded; the most recent action is embedded as the
- * query; cosine similarity ranks the bank; the builder takes as many as fit.
+ * query; cosine similarity and BM25 rank the bank, fused by RRF, the head diversified
+ * by MMR; the builder takes as many as fit.
  * Memories are only used once the whole history no longer fits the context.
  *
  * Eviction: when the bank is full, the least-used memory (then the oldest) is
@@ -125,8 +127,28 @@ export interface RankedMemory {
   score: number;
 }
 
-/** Rank the bank by relevance to a query embedding. Brute force is fine for ≤ 800 vectors. */
-export function rankMemories(memories: Memory[], query: number[] | undefined, limit = Infinity): RankedMemory[] {
+/** [provisional] how much of the fused head MMR reorders; more than a memory block holds */
+export const MMR_POOL = 30;
+
+const vectorSim = (a: Memory, b: Memory): number => (a.embedding && a.embedding.length === b.embedding?.length ? cosine(a.embedding, b.embedding) : 0);
+
+/**
+ * Rank the bank by relevance to a query embedding. Brute force is fine for ≤ 800 vectors.
+ * Given `lexical` (BM25 hits, best first; ids that are not memories are ignored), the cosine order
+ * is fused with it by RRF and the head is reordered by MMR; score 1 is first in both lists.
+ */
+export function rankMemories(memories: Memory[], query: number[] | undefined, limit = Infinity, lexical?: readonly string[]): RankedMemory[] {
+  const ranked = rankByCosine(memories, query);
+  if (!lexical) return ranked.slice(0, limit);
+  const byId = new Map(ranked.map((r) => [r.memory.id, r.memory]));
+  const fused = rrf([ranked.map((r) => r.memory.id), lexical]).flatMap(([id, score]) => {
+    const memory = byId.get(id);
+    return memory ? [{ item: memory, score: (score * (RRF_K + 1)) / 2 }] : [];
+  });
+  return [...mmr(fused.slice(0, MMR_POOL), vectorSim), ...fused.slice(MMR_POOL)].slice(0, limit).map(({ item, score }) => ({ memory: item, score }));
+}
+
+function rankByCosine(memories: Memory[], query: number[] | undefined): RankedMemory[] {
   const ranked: RankedMemory[] = [];
   for (const m of memories) {
     if (!isActive(m)) continue;
@@ -134,8 +156,7 @@ export function rankMemories(memories: Memory[], query: number[] | undefined, li
     const score = query && m.embedding?.length === query.length ? cosine(m.embedding, query) : 0;
     ranked.push({ memory: m, score });
   }
-  ranked.sort((a, b) => b.score - a.score || b.memory.createdAt - a.memory.createdAt);
-  return ranked.slice(0, limit);
+  return ranked.toSorted((a, b) => b.score - a.score || b.memory.createdAt - a.memory.createdAt);
 }
 
 /**

@@ -55,7 +55,7 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
   const mentioned = matchCards(compileCards(entities.map(projectEntity)), recent.map(actionStoryText)).flatMap((m) => byId.get(m.card.id) ?? []);
   const facts = fill(
     'facts',
-    rankFacts(entities, new Set(here.map((e) => e.id)), new Set(mentioned.map((e) => e.id))),
+    rankFacts(entities, new Set(here.map((e) => e.id)), new Set(mentioned.map((e) => e.id)), input.factHits),
     (r) => `${r.entity.name}: ${r.fact.text}`,
     '\n',
   );
