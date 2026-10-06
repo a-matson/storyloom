@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openSeededAdventure } from './seed';
 
 async function connectDemo(page: Page): Promise<void> {
   await page.goto('/');
@@ -76,4 +77,30 @@ test('the Memories tab shows the bank and marks edited ranges stale', async ({ p
   dialog = await openMemories();
   await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 1 · stale 1 · forgotten 0');
   await expect(dialog.getByText('stale', { exact: true })).toBeVisible();
+});
+
+async function takeTurnAndViewContext(page: Page) {
+  await page.getByRole('textbox', { name: 'Take a turn' }).fill('look around');
+  await page.getByRole('button', { name: 'Send' }).click();
+  await page.getByRole('button', { name: 'View context' }).last().click();
+  return page.getByRole('dialog', { name: 'Context sent to the model' });
+}
+
+test('a present entity sends its facts and card under the structured cap', async ({ page }) => {
+  await openSeededAdventure(page, 3, undefined, { scene: { location: 'the Old Well', present: ['Merav'] } });
+  const dialog = await takeTurnAndViewContext(page);
+  await expect(dialog.getByTestId('structured-budget')).toContainText(/\d+ \/ \d+/);
+  await dialog.getByRole('button', { name: 'Raw prompt' }).click();
+  await expect(dialog.getByText(/Established facts:\s+Merav: She keeps the needle map\.\s+Merav: She distrusts the caravan\./)).toBeVisible();
+  // The scene's location is an entity too, so its card follows the present character's.
+  await expect(
+    dialog.getByText(/Known entities:\s+Merav: A well-warden who keeps the salt road maps\.\s+location: the well\s+Old Well: A dry well/),
+  ).toBeVisible();
+});
+
+test('without a scene or a mention, no structured blocks are sent', async ({ page }) => {
+  await openSeededAdventure(page, 3);
+  const dialog = await takeTurnAndViewContext(page);
+  await expect(dialog.getByText('Free', { exact: true })).toBeVisible();
+  await expect(dialog.getByTestId('structured-budget')).toHaveCount(0);
 });

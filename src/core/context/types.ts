@@ -1,6 +1,6 @@
 import type { CardMatch } from '../cards/storyCards';
 import type { RankedMemory } from '../memory/memoryBank';
-import type { Action, Memory, PlotComponents, StoryCard } from '../model/types';
+import type { Action, Entity, Memory, PlotComponents, StoryCard } from '../model/types';
 import type { Tokenizer } from '../text/tokenizer';
 
 export type SectionKind =
@@ -12,6 +12,8 @@ export type SectionKind =
   | 'memories'
   | 'authorsNote'
   | 'scene'
+  | 'facts'
+  | 'entityCards'
   | 'lastAction'
   | 'frontMemory'
   /** Inserted by a script through `sections`; never part of the cacheable prefix. */
@@ -38,6 +40,9 @@ interface ContextBudget {
   historyUsed: number;
   memoriesBudget: number;
   memoriesUsed: number;
+  /** Shared cap for scene, facts and entity cards; what they leave goes to the dynamic budget. */
+  structuredBudget: number;
+  structuredUsed: number;
   used: number;
   free: number;
 }
@@ -51,12 +56,16 @@ export interface ContextBuildSettings {
   evictionChunk: number;
   /** Share of the budget reserved for Required elements. AID: 0.7. */
   requiredShare?: number;
+  /** Cap on scene + facts + entity cards, as a share of `contextLength`. Default 0.1. [provisional] */
+  structuredShare?: number;
 }
 
 export interface ContextBuildInput {
   actions: Action[];
   plot: PlotComponents;
   storyCards: StoryCard[];
+  /** Sent as facts and projected cards under the structured cap, never through `storyCards`. */
+  entities: Entity[];
   /** Memories ranked by relevance to the most recent action, best first. */
   rankedMemories: RankedMemory[];
   /** Scripting: `state.memory.frontMemory`, appended after the last action. */
@@ -80,6 +89,9 @@ export interface ContextBuildResult {
   usedMemories: Memory[];
   /** The ranking the memories were picked from, so the viewer can show scores as sent. */
   rankedMemories: RankedMemory[];
+  usedFacts: { entityId: string; factId: string }[];
+  /** Entities with a card or a fact in the prompt. */
+  usedEntityIds: string[];
   /** Action indices [from, to) included in the history block; null if none. */
   historyRange: { from: number; to: number } | null;
   /** Index of the action used as "last action"; -1 if none. */

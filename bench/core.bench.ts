@@ -20,7 +20,7 @@ test('core benchmarks', async () => {
     const adv = makeAdventure({ actions: n, cards: 40, memories: Math.min(200, Math.floor(n / 6)) });
     const ranked = rankMemories(adv.memories, adv.memories[0]?.embedding, 20);
     bench.add(`buildContext ${n} actions`, () => {
-      buildContext({ actions: adv.actions, plot: adv.plot, storyCards: adv.storyCards, rankedMemories: ranked, settings, tokenizer });
+      buildContext({ actions: adv.actions, plot: adv.plot, storyCards: adv.storyCards, entities: adv.entities, rankedMemories: ranked, settings, tokenizer });
     });
     bench.add(`structuredClone whole adventure, ${n} actions`, () => structuredClone(adv));
     const bytes = (v: unknown) => new TextEncoder().encode(JSON.stringify(v)).length;

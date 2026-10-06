@@ -6,6 +6,9 @@ export const HEADERS = {
   storySummary: 'Story Summary:',
   memories: 'Memories:',
   history: 'Recent Story:',
+  facts: 'Established facts:',
+  // Not "World Lore:", so a projected entity never reads as a hand-written card.
+  entityCards: 'Known entities:',
 } as const satisfies Partial<Record<SectionKind, string>>;
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

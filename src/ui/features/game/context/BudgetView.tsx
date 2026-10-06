@@ -20,6 +20,7 @@ function SectionRow({ s, result }: { s: ContextSection; result: ContextBuildResu
         )}
         {s.kind === 'storyCards' && <span className={muted}> · {result.triggeredCards.length} triggered</span>}
         {s.kind === 'memories' && <span className={muted}> · {result.usedMemories.length} retrieved</span>}
+        {s.kind === 'facts' && <span className={muted}> · {result.usedFacts.length} facts</span>}
       </span>
       {s.cacheable && <Pill tone="auto">cached prefix</Pill>}
       {s.trimmed && <Pill>trimmed</Pill>}
@@ -74,6 +75,15 @@ export function BudgetView({ result }: { result: ContextBuildResult }) {
           <span className="grow" />
           <span className={`${mono} ${muted}`}>{result.budget.free.toLocaleString()}</span>
         </div>
+        {result.budget.structuredUsed > 0 && (
+          <div className="flex items-center gap-2 px-3 py-2" data-testid="structured-budget">
+            <span className={muted}>Structured blocks (scene, facts, entities)</span>
+            <span className="grow" />
+            <span className={`${mono} ${muted}`}>
+              {result.budget.structuredUsed.toLocaleString()} / {result.budget.structuredBudget.toLocaleString()}
+            </span>
+          </div>
+        )}
       </div>
       {result.triggeredCards.length > 0 && <Cards result={result} />}
       {result.usedMemories.length > 0 && (

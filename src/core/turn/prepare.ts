@@ -1,7 +1,6 @@
 import { applyScriptSections, buildContext, renderBody, type ContextBuildInput, type ContextBuildResult, type ScriptCache } from '../context';
-import { projectEntity } from '../memory/projection';
 import { rankMemories, touchUsed, type RankedMemory } from '../memory/memoryBank';
-import type { Action, Adventure, StoryCard } from '../model/types';
+import type { Action, Adventure } from '../model/types';
 import { actionText } from '../model/types';
 import type { Embedder } from '../ports/embedder';
 import type { HookResult } from '../ports/scripting';
@@ -18,20 +17,13 @@ function promptBudget(adventure: Adventure, { contextSize }: TurnDeps): number {
   return contextSize === undefined ? contextLength : Math.max(0, Math.min(contextLength, contextSize - responseLength));
 }
 
-/** Story cards plus entities projected as cards; a hand-written card of the same name, or one promoted from the entity, wins. */
-function cardsWithEntities(adventure: Adventure): StoryCard[] {
-  const named = new Set(adventure.storyCards.flatMap((c) => [c.id, c.name.trim().toLowerCase()]));
-  // A promoted entity whose card was later deleted projects again.
-  const projected = adventure.entities.filter((e) => !(e.cardId && named.has(e.cardId)) && !named.has(e.name.trim().toLowerCase())).map(projectEntity);
-  return projected.length ? [...adventure.storyCards, ...projected] : adventure.storyCards;
-}
-
 function contextInput(adventure: Adventure, actions: Action[], rankedMemories: RankedMemory[], deps: TurnDeps, cacheStableLayout: boolean): ContextBuildInput {
   const memory = adventure.scriptState.memory ?? {};
   return {
     actions,
     plot: adventure.plot,
-    storyCards: cardsWithEntities(adventure),
+    storyCards: adventure.storyCards,
+    entities: adventure.entities,
     rankedMemories,
     frontMemory: memory.frontMemory,
     overrides: { plotEssentials: memory.context, authorsNote: memory.authorsNote },

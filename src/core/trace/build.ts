@@ -16,8 +16,6 @@ export interface TraceInput {
   errorKind?: TurnErrorKind | undefined;
   actionId?: string | undefined;
   result: ContextBuildResult;
-  /** A projected card carries its entity's id. */
-  entityIds?: ReadonlySet<string> | undefined;
   prompt: string;
   /** The request as sent; its seed and stop list are the ones that took effect. */
   request: CompletionRequest;
@@ -52,7 +50,7 @@ export function buildTrace(i: TraceInput): TurnTrace {
     triggeredCardIds: result.triggeredCards.map((m) => m.card.id),
     droppedCardIds: result.droppedCards.map((m) => m.card.id),
     memoryIds: result.usedMemories.map((m) => m.id),
-    entitiesUsed: result.triggeredCards.map((m) => m.card.id).filter((id) => i.entityIds?.has(id)),
+    entitiesUsed: result.usedEntityIds,
     historyRange: result.historyRange,
     droppedSections: result.droppedSections,
     warnings: result.warnings,
