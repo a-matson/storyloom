@@ -57,7 +57,8 @@ export class MemoryScheduler {
       const { runMemoryMaintenance } = await loadMemoryJobs();
       const deps = { ...(await this.host.helperModel()), embedder: await this.host.embedder() };
       const report = await runMemoryMaintenance(this.host.adventure(), { ...deps, signal: AbortSignal.any([idle, cancel.signal]), cancel: cancel.signal });
-      if (report.memoriesWritten || report.memoriesRegenerated || report.memoriesDropped || report.summaryUpdated) this.host.changed();
+      if (report.memoriesWritten || report.memoriesRegenerated || report.memoriesDropped || report.entitiesTouched || report.summaryUpdated)
+        this.host.changed();
     } catch (e) {
       // Background work never blocks play; it retries after the next turn.
       if (!cancel.signal.aborted) console.warn('memory maintenance failed', e);

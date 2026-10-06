@@ -75,6 +75,7 @@ export function mapAidJson(data: unknown, warnings: string[], settings: Adventur
     plot: { aiInstructions: d.instructions, plotEssentials: d.memory, authorsNote: d.authorsNote, storySummary: d.storySummary },
     storyCards: mapAidCards(d.storyCards ?? d.worldInfo ?? [], warnings),
     memories: [],
+    entities: [],
     scriptState: {},
     placeholders: [],
     settings: structuredClone(settings),

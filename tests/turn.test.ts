@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { LlamaServerProvider } from '@adapters/providers/llamaServer';
 import { createFakeLlama } from '@adapters/providers/demo/fakeLlama';
 import { ActionLog } from '@core/log';
+import { mergeEntity } from '@core/memory/entities';
 import { createBlankAdventure } from '@core/model';
 import { NoopScriptRunner, type CompletionRequest, type HookInput, type HookResult, type Provider } from '@core/ports';
 import { createApproxTokenizer } from '@core/text';
@@ -235,6 +236,26 @@ describe('turn traces', () => {
     }
     const { adventure, log, deps } = setup(new Stopper());
     expect(traces(await collect(runTurn(adventure, log, { type: 'do', text: 'x' }, deps)))).toEqual([]);
+  });
+
+  it('triggers an entity as a projected card by its alias, unless a story card has its name', async () => {
+    const { adventure, log, deps } = setup();
+    log.append('do', '> You hail the ferrywoman.');
+    const entity = mergeEntity(
+      undefined,
+      { name: 'Tamsin', kind: 'character', aliases: ['ferrywoman'], description: 'Tamsin rows the night ferry.', facts: [] },
+      0,
+    );
+    adventure.entities = [entity];
+    const prepared = await prepareContext(adventure, log.actions, deps);
+    if ('stopped' in prepared) throw new Error('context build stopped');
+    expect(prepared.result.triggeredCards.map((m) => m.card.id)).toEqual([entity.id]);
+    expect(prepared.prompt).toContain('Tamsin rows the night ferry.');
+    expect(adventure.storyCards).toEqual([]);
+    adventure.storyCards = [{ id: 'c1', type: 'Character', name: 'tamsin', entry: 'The hand-written Tamsin.', triggers: ['ferrywoman'] }];
+    const withCard = await prepareContext(adventure, log.actions, deps);
+    if ('stopped' in withCard) throw new Error('context build stopped');
+    expect(withCard.result.triggeredCards.map((m) => m.card.id)).toEqual(['c1']);
   });
 
   it('traces a prefetched alternative against the action it would re-roll', async () => {

@@ -1,6 +1,7 @@
 import { z } from 'zod/mini';
 import { Action } from './action';
 import { StoryCard } from './card';
+import { Entity } from './entity';
 import { Memory } from './memory';
 import { AdventureSettings } from './settings';
 
@@ -37,6 +38,8 @@ export const ScriptState = z.looseObject({
   placeholders: z.optional(z.array(Placeholder)),
   /** Action count at the last Story Summary refresh (memory jobs). */
   __summaryAt: z.optional(z.number()),
+  /** `toAction` of the newest memory whose entities were extracted (memory jobs). */
+  __entitiesAt: z.optional(z.number()),
 });
 
 export const CardGeneratorSettings = z.object({
@@ -61,6 +64,8 @@ export const Adventure = z.object({
   plot: PlotComponents,
   storyCards: z.array(StoryCard),
   memories: z.array(Memory),
+  /** Characters, places, items and factions extracted by memory maintenance; stored records predating them parse as none. */
+  entities: z.prefault(z.array(Entity), []),
   scriptState: ScriptState,
   /** Copied from the scenario at creation, so later scenario edits never change a running story. */
   scripts: z.optional(ScenarioScripts),

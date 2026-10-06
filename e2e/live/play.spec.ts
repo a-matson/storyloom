@@ -98,6 +98,7 @@ function readDb(page: Page) {
       adventures: await all('adventures'),
       actions: await all('actions'),
       memories: await all('memories'),
+      entities: await all('entities'),
       traces: await all('traces'),
       cards: await all('storyCards'),
     };
@@ -111,7 +112,7 @@ async function settledDb(page: Page) {
   let prev = '';
   for (let i = 0; i < 18; i++) {
     const db = await readDb(page);
-    const key = JSON.stringify([db.memories, db.adventures]);
+    const key = JSON.stringify([db.memories, db.entities, db.adventures]);
     if (key === prev) return db;
     prev = key;
     await page.waitForTimeout(10_000);
@@ -176,6 +177,10 @@ test('scripted live play', async ({ page }) => {
       danglingQuote: (out.match(/"/g) ?? []).length % 2 === 1 || (out.match(/“/g) ?? []).length > (out.match(/”/g) ?? []).length,
     };
   });
+  const entities = z.array(S.Entity).parse(db.entities);
+  const entityIds = new Set(entities.map((e) => e.id));
+  // The newest prompt that carried a projected entity: the Raw prompt a prompt-construction PR shows.
+  const entityPrompt = traces.findLast((t) => t.triggeredCardIds.some((id) => entityIds.has(id)))?.prompt;
   const stopReasons: Record<string, number> = {};
   for (const t of turns) stopReasons[t.stopReason ?? 'none'] = (stopReasons[t.stopReason ?? 'none'] ?? 0) + 1;
   // A label keeps same-day re-runs from overwriting each other.
@@ -191,6 +196,15 @@ test('scripted live play', async ({ page }) => {
       .array(z.omit(S.Memory, { embedding: true }))
       .parse(db.memories)
       .map(({ fromAction, toAction, text: t, stale, forgotten }) => ({ fromAction, toAction, text: t, stale, forgotten })),
+    entities: entities.map(({ kind, name, aliases, description, facts, state }) => ({
+      kind,
+      name,
+      aliases,
+      description,
+      facts: facts.map((f) => f.text),
+      state,
+    })),
+    entityPrompt,
     cards: z
       .array(S.StoryCard)
       .parse(db.cards)

@@ -27,6 +27,31 @@ export function sentenceGrammar(max: number): string {
   return `root ::= sentence{1,${max}}\nsentence ::= [^.!?"“”\\n> ] [^.!?"“”\\n>]* [.!?] " "?\n`;
 }
 
+export const EXTRACT_SYSTEM = 'You keep a record of the people, places, items and factions in an interactive story. Reply with JSON only.';
+
+/** One original passage -> record pair, so the model sees facts rather than a retelling. [provisional] */
+const EXTRACT_EXAMPLE =
+  'Example (from a different story; never copy its names):\n---\n[4] The clockmaker, Ysolde Brenn, sets the Brass Owl on her bench. "The Guild of Hours wants it back by dawn," she says.\n' +
+  '[5] > You ask what it does.\n[6] Ysolde winds the owl. Its eyes open, and it recites the vault code of the Copper Exchange.\n---\n' +
+  '{"importance": 3, "timeDelta": "a few minutes", "entities": [{"name": "Ysolde Brenn", "kind": "character", "aliases": ["the clockmaker"], "description": "A clockmaker with a workshop.", ' +
+  '"facts": ["She has the Brass Owl."], "state": {"location": "her workshop"}}, ' +
+  '{"name": "Brass Owl", "kind": "item", "description": "A clockwork owl that recites the vault code of the Copper Exchange.", "facts": ["The Guild of Hours wants it back by dawn."]}, ' +
+  '{"name": "Guild of Hours", "kind": "faction", "description": "A guild that claims the Brass Owl.", "facts": []}, ' +
+  '{"name": "Copper Exchange", "kind": "place", "description": "A place with a vault.", "facts": []}], ' +
+  '"speakers": [{"action": 4, "name": "Ysolde Brenn"}], "threads": ["Return the Brass Owl to the Guild of Hours by dawn."]}\n\n';
+
+export function extractPrompt(passage: string, knownNames: string[]): string {
+  return (
+    `${EXTRACT_EXAMPLE}List every named character, place, item and faction in this passage, with what it tells about each. ` +
+    'Only things with a proper name; skip common nouns like "the path" or "wolves". An unnamed role ("the ferrywoman") is an alias of the named person it refers to.' +
+    `\n\n---\n${passage}\n---\n\n` +
+    (knownNames.length ? `Already recorded (use these exact names when the passage means them): ${knownNames.join(', ')}.\n` : '') +
+    'Give each entity a one-sentence description and 0–3 facts: short sentences about what lasts (who or what it is, what it owns, injuries, loyalties), not single actions or dialogue, and nothing the passage does not state. ' +
+    'The player is "you", not an entity. importance is 1 (routine) to 5 (story-changing). speakers names who talks in each numbered paragraph. ' +
+    'Return {"importance": number, "timeDelta": string, "entities": [...], "speakers": [...], "threads": string[]}.'
+  );
+}
+
 export const SUMMARY_SYSTEM =
   'You maintain a running summary of an interactive story. Keep it information-dense and chronological, ' +
   'under 250 words, dropping details that no longer matter. Output only the summary.';

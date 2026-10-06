@@ -1,5 +1,6 @@
 import type { z } from 'zod/mini';
 import * as S from '../schema';
+import type * as X from '../schema/extraction';
 
 /**
  * Core data model: types inferred from the zod schemas in `core/schema`, the single source of truth.
@@ -18,6 +19,10 @@ export type JobKind = z.output<typeof S.JobKind>;
 export type PlotComponents = z.output<typeof S.PlotComponents>;
 export type StoryCard = z.output<typeof S.StoryCard>;
 export type Memory = z.output<typeof S.Memory>;
+export type Entity = z.output<typeof S.Entity>;
+export type EntityFact = z.output<typeof S.EntityFact>;
+export type ExtractedEntity = z.output<typeof X.ExtractedEntity>;
+export type ExtractionJson = z.output<typeof X.ExtractionJson>;
 export type TemplateId = z.output<typeof S.TemplateId>;
 export type ModelSettings = z.output<typeof S.ModelSettings>;
 export type AdventureSettings = z.output<typeof S.AdventureSettings>;
