@@ -3,6 +3,7 @@ import { selectHistory } from './history';
 import { selectMemories, type MemoriesResult } from './memories';
 import { renderBody } from './render';
 import { selectRequired } from './required';
+import { selectStructured } from './structured';
 import type { ContextBuildInput, ContextBuildResult, ContextSection, RenderedSections, SectionKind } from './types';
 
 /**
@@ -13,8 +14,9 @@ import type { ContextBuildInput, ContextBuildResult, ContextSection, RenderedSec
  * cache-stable layout that keeps a byte-stable, append-only prefix so local
  * backends reuse their KV cache every turn.
  *
- * Stages, in budget order: required (70% cap) → cards (25% of the rest) →
- * history → memories (whatever is left) → assemble in layout order.
+ * Stages, in budget order: required (70% cap) → structured (scene, facts,
+ * entity cards; 10% cap) → cards (25% of the rest) → history → memories
+ * (whatever is left) → assemble in layout order.
  */
 export function buildContext(input: ContextBuildInput): ContextBuildResult {
   const { actions, settings, tokenizer } = input;
@@ -25,7 +27,11 @@ export function buildContext(input: ContextBuildInput): ContextBuildResult {
   const requiredCap = Math.floor(total * (settings.requiredShare ?? 0.7));
 
   const req = selectRequired(input, requiredCap, out, warnings, droppedSections);
-  const dynamicAvailable = Math.max(0, total - req.requiredUsed);
+  const afterRequired = Math.max(0, total - req.requiredUsed);
+  // Taken before cards and history so the scene is never starved; the cap is a ceiling, not a reservation.
+  const structuredCap = Math.min(afterRequired, Math.floor(total * (settings.structuredShare ?? 0.1)));
+  const structured = selectStructured(input, req.lastActionIndex, structuredCap, out);
+  const dynamicAvailable = afterRequired - structured.structuredUsed;
   const cards = selectCards(actions, req.lastActionIndex, input.storyCards, dynamicAvailable, tokenizer, out, warnings);
   const end = req.lastActionIndex; // history excludes the last action
   const history = selectHistory(actions, end, dynamicAvailable, cards, settings, tokenizer, out, warnings);
@@ -56,6 +62,8 @@ export function buildContext(input: ContextBuildInput): ContextBuildResult {
       historyUsed: history.historyUsed,
       memoriesBudget: memories.memoriesBudget,
       memoriesUsed: memories.memoriesUsed,
+      structuredBudget: structured.structuredBudget,
+      structuredUsed: structured.structuredUsed,
       used,
       free: Math.max(0, total - used),
     },
@@ -63,6 +71,8 @@ export function buildContext(input: ContextBuildInput): ContextBuildResult {
     droppedCards: cards.droppedCards,
     usedMemories: memories.usedMemories,
     rankedMemories: input.rankedMemories,
+    usedFacts: structured.usedFacts,
+    usedEntityIds: structured.usedEntityIds,
     historyRange: history.historyRange,
     lastActionIndex: req.lastActionIndex,
     historyFullyIncluded: history.historyFullyIncluded,
@@ -72,19 +82,33 @@ export function buildContext(input: ContextBuildInput): ContextBuildResult {
 }
 
 // Cache-stable layout moves history up into the prefix and lore after it, so only the tail changes per turn.
-// The scene changes every memory cycle, so it sits in the uncacheable tail in both layouts.
+// Scene, facts and entity cards change every memory cycle, so they sit in the uncacheable tail in both layouts.
 const STABLE_ORDER: SectionKind[] = [
   'plotEssentials',
   'history',
   'storyCards',
   'storySummary',
   'memories',
+  'entityCards',
+  'facts',
   'scene',
   'authorsNote',
   'lastAction',
   'frontMemory',
 ];
-const AID_ORDER: SectionKind[] = ['plotEssentials', 'storyCards', 'storySummary', 'memories', 'history', 'scene', 'authorsNote', 'lastAction', 'frontMemory'];
+const AID_ORDER: SectionKind[] = [
+  'plotEssentials',
+  'storyCards',
+  'storySummary',
+  'memories',
+  'history',
+  'entityCards',
+  'facts',
+  'scene',
+  'authorsNote',
+  'lastAction',
+  'frontMemory',
+];
 const STABLE_PREFIX = new Set<SectionKind>(['instructions', 'plotEssentials', 'history']);
 const AID_PREFIX = new Set<SectionKind>(['instructions', 'plotEssentials']);
 

@@ -1,12 +1,11 @@
 import type { Action, PlotComponents } from '../model/types';
 import { actionStoryText } from '../text/formatting';
 import { trimHeadToTokens, trimToTokens, type Tokenizer } from '../text/tokenizer';
-import { renderScene, renderSection } from './render';
+import { renderSection } from './render';
 import type { ContextBuildInput, RenderedSections, SectionKind } from './types';
 
 // When the cap is hit, lower-priority elements go first: the author's note matters most.
-// The scene line is last: ~20 tokens that must never push the author's note out. [provisional]
-const REQUIRED_PRIORITY: SectionKind[] = ['authorsNote', 'plotEssentials', 'instructions', 'storySummary', 'scene'];
+const REQUIRED_PRIORITY: SectionKind[] = ['authorsNote', 'plotEssentials', 'instructions', 'storySummary'];
 
 /** Index of the most recent action that contributes story text (skips `see`). */
 export function findLastActionIndex(actions: Action[]): number {
@@ -30,7 +29,6 @@ function plotValues(plot: PlotComponents, overrides: ContextBuildInput['override
     plotEssentials: (overrides?.plotEssentials || plot.plotEssentials || '').trim(),
     instructions: (plot.aiInstructions ?? '').trim(),
     storySummary: (plot.storySummary ?? '').trim(),
-    scene: renderScene(plot.scene),
   };
 }
 

@@ -25,6 +25,7 @@ function base(over: Partial<ContextBuildInput> = {}): ContextBuildInput {
     actions: [],
     plot: {},
     storyCards: [],
+    entities: [],
     rankedMemories: [],
     settings: { contextLength: 400, memoryBankEnabled: true, cacheStableLayout: false, evictionChunk: 8 },
     tokenizer: tok,
@@ -64,18 +65,6 @@ describe('required elements', () => {
     expect(r.droppedSections).toEqual(['instructions', 'storySummary']);
     expect(r.system).toBe('');
     expect(r.budget.requiredUsed).toBeLessThanOrEqual(r.budget.requiredCap);
-  });
-
-  it('drops the scene line before anything else when the required budget is tight', () => {
-    // Cap 280: last action 1 + author's note 155 + essentials 124 fill it exactly, so the scene goes.
-    const r = buildContext(
-      base({
-        actions: [act('start', 'Go.')],
-        plot: { authorsNote: 'a'.repeat(600), plotEssentials: 'b'.repeat(496), scene: { location: 'the mill', present: [] } },
-      }),
-    );
-    expect(r.sections.find((s) => s.kind === 'authorsNote')?.trimmed).toBe(false);
-    expect(r.droppedSections).toEqual(['scene']);
   });
 
   it('script overrides take precedence over UI plot essentials and author note', () => {

@@ -16,7 +16,8 @@ import { brotliCompressSync } from 'node:zlib';
 // js: 132.08 measured 2026-10-06 (play fix 7: the toast's own dismiss timer); user raised 132.5 -> 133.0.
 // js: 132.77 measured 2026-10-06 (M9-1a: the Entity schema, its Dexie table, projectEntity); user raised 133.0 -> 133.5.
 // js: 133.58 measured 2026-10-06 (M9-W1-1: the Scene schema and its prompt line; main was 133.37); user raised 133.5 -> 134.0.
-const BUDGET_KB = { js: 134.0, css: 6.5 };
+// js: 134.22 measured 2026-10-06 (M9-W1-2: structured blocks and fact ranking on the turn path); user raised 134.0 -> 135.0.
+const BUDGET_KB = { js: 135.0, css: 6.5 };
 
 const html = readFileSync('dist/index.html', 'utf8');
 const files = [...html.matchAll(/(?:src|href)="[^"]*?(assets\/[^"]+\.(js|css))"/g)].map(
