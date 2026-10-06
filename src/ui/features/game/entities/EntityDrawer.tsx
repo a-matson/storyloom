@@ -8,6 +8,7 @@ import { Drawer, DrawerBody, DrawerHeader } from '@ui/components/ui/drawer';
 import { Input, Select } from '@ui/components/ui/field';
 import { SectionLabel } from '@ui/components/ui/section-label';
 import { Textarea } from '@ui/components/ui/textarea';
+import { pickFile } from '@ui/transferUi';
 import { Avatar } from './Avatar';
 
 interface Props {
@@ -41,13 +42,14 @@ export function EntityDrawer({ entity: e, adventure, api, onClose }: Props) {
       <DrawerHeader
         title={
           <span className="flex items-center gap-3">
-            <Avatar name={e.name} large />
+            <Avatar name={e.name} adventureId={adventure.id} portraitId={e.portraitId} large />
             <span className="text-card-title font-semibold">{e.name}</span>
           </span>
         }
         onClose={onClose}
       />
       <DrawerBody>
+        <Portrait entity={e} edits={edits} />
         <label htmlFor={`${id}-name`}>
           <SectionLabel>Name</SectionLabel>
         </label>
@@ -128,7 +130,38 @@ function Facts({ entity: e, update, onClose }: { entity: Entity; update: Update;
   );
 }
 
-function Actions({ entity: e, adventure, edits }: { entity: Entity; adventure: Adventure; edits: ReturnType<typeof entityEdits> }) {
+type Edits = ReturnType<typeof entityEdits>;
+
+/** Drawn between turns when an image server is configured; these are the player's overrides. */
+function Portrait({ entity: e, edits }: { entity: Entity; edits: Edits }) {
+  const [drawing, setDrawing] = useState(false);
+  const regenerate = () => {
+    setDrawing(true);
+    void edits.regeneratePortrait(e.id).finally(() => setDrawing(false));
+  };
+  const upload = async () => {
+    const file = await pickFile('image/*');
+    if (file) await edits.uploadPortrait(e.id, file);
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <SectionLabel>Portrait</SectionLabel>
+      <Button className="h-7" onClick={regenerate} disabled={drawing}>
+        {drawing ? 'Drawing…' : e.portraitId ? 'Redraw' : 'Draw'}
+      </Button>
+      <Button className="h-7" onClick={() => void upload()}>
+        Upload
+      </Button>
+      {e.portraitId && (
+        <Button variant="ghost" className="h-7" onClick={() => edits.clearPortrait(e.id)}>
+          Clear
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function Actions({ entity: e, adventure, edits }: { entity: Entity; adventure: Adventure; edits: Edits }) {
   const [into, setInto] = useState('');
   const [updating, setUpdating] = useState(false);
   const others = adventure.entities.filter((x) => x.id !== e.id);

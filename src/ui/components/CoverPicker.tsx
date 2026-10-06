@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { DEFAULT_ADVENTURE_SETTINGS, newId, type AdventureSettings, type AppSettings } from '@core/model';
 import { trackJob } from '@core/trace';
+import { downscale } from '@app/image';
 import { imageProviderFor, storage } from '@app/services';
 import { CoverThumb } from '@ui/components/CoverThumb';
 import { Button } from '@ui/components/ui/button';
 import { Input } from '@ui/components/ui/field';
 import { SectionLabel } from '@ui/components/ui/section-label';
-import { downscale } from '@ui/lib/image';
 import { pickFile } from '@ui/transferUi';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));

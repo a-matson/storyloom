@@ -60,6 +60,8 @@ function renumber(a: Adventure): Adventure {
     id: newId('adv_'),
     actions: a.actions.map((x) => ({ ...x, id: newId('act_'), ...(x.image && { image: withoutBlob(x.image) }) })),
     storyCards: a.storyCards.map((c) => ({ ...c, id: newId('card_') })),
+    // Without the id the portrait is drawn again between turns.
+    entities: a.entities.map(({ portraitId: _portrait, ...e }) => e),
     memories: [], // embeddings may come from another embedder; rebuilt lazily
     updatedAt: Date.now(),
   };

@@ -50,6 +50,10 @@ export const ImageSettings = z.object({
   steps: z._default(z.int().check(z.gt(0)), 24),
   cfgScale: z._default(z.number().check(z.gt(0)), 5),
   negativePrompt: z.optional(z.string()),
+  /** Character portraits are rendered between turns when an image server is configured. */
+  portraits: z._default(z.boolean(), true),
+  /** Appended to every portrait prompt so they match; unset = derived from the adventure's tags. */
+  portraitStyle: z.optional(z.string()),
 });
 
 export const AdventureSettings = z.object({

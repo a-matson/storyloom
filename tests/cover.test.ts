@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fitWithin } from '../src/ui/lib/image';
+import { fitWithin } from '../src/app/image';
 
 describe('fitWithin', () => {
   it('keeps the aspect ratio when it shrinks', () => {

@@ -4,11 +4,15 @@ import { expect, type Page } from '@playwright/test';
  * Connect the demo backend, import an adventure of `count` short actions, seed two entities and open it.
  * Seeding comes before the first open: a session's save on close rewrites the entities table.
  */
-export async function openSeededAdventure(page: Page, count: number): Promise<void> {
+export async function openSeededAdventure(page: Page, count: number, imageServer?: string): Promise<void> {
   await page.goto('/');
   await page.getByRole('button', { name: /^Demo \(no GPU\)/ }).click();
   await page.getByRole('button', { name: 'Test connection' }).click();
   await expect(page.getByText('Connected')).toBeVisible();
+  if (imageServer !== undefined) {
+    await page.getByRole('switch', { name: 'Use an image server' }).click();
+    await page.getByRole('textbox', { name: 'Image server URL' }).fill(imageServer);
+  }
   await page.getByRole('button', { name: 'Continue' }).click();
   const actions = Array.from({ length: count }, (_, i) => ({ text: `The road bends ${i}.` }));
   const chooser = page.waitForEvent('filechooser');

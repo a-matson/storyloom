@@ -1,12 +1,15 @@
 import { expect, test, type Page } from '@playwright/test';
 import { z } from 'zod/mini';
+import type { Entity } from '@core/model';
 import * as S from '@core/schema';
-import { writeMeasurement } from '../../bench/env';
+import { OUT_DIR, writeMeasurement } from '../../bench/env';
 
 // `pnpm measure live <url>`: plays the real app against a real llama-server; never runs in CI.
 const URL = process.env['MEASURE_URL'];
 // Optional second server for memories/summaries/cards (`MEASURE_UTILITY=http://localhost:8081`).
 const UTILITY = process.env['MEASURE_UTILITY'];
+// Optional A1111 server; portraits are then drawn between turns (`MEASURE_IMAGES=http://localhost:7860`).
+const IMAGES = process.env['MEASURE_IMAGES'];
 test.skip(!URL, 'needs MEASURE_URL (a running llama-server)');
 
 // A player reads the output before typing; idle memory jobs run in this gap. [provisional]
@@ -120,6 +123,37 @@ async function settledDb(page: Page) {
   return readDb(page);
 }
 
+/** What landed in IndexedDB for each portrait, decoded the way the app shows it; plus a Characters tab screenshot. */
+async function portraits(page: Page, entities: Entity[]) {
+  const ids = entities.flatMap((e) => (e.portraitId === undefined ? [] : [{ name: e.name, id: e.portraitId }]));
+  const sizes = await page.evaluate(async (wanted) => {
+    const req = indexedDB.open('storyloom');
+    const db = await new Promise<IDBDatabase>((ok, fail) => {
+      req.addEventListener('success', () => ok(req.result));
+      req.addEventListener('error', () => fail(req.error));
+    });
+    const rows = await new Promise<{ id: string; blob: Blob }[]>((ok, fail) => {
+      const r = db.transaction('images').objectStore('images').getAll();
+      r.addEventListener('success', () => ok(r.result as { id: string; blob: Blob }[]));
+      r.addEventListener('error', () => fail(r.error));
+    });
+    db.close();
+    return Promise.all(
+      wanted.map(async ({ name, id }) => {
+        const blob = rows.find((r) => r.id === id)?.blob;
+        if (!blob) return { name, stored: false };
+        const bitmap = await createImageBitmap(blob);
+        return { name, stored: true, type: blob.type, bytes: blob.size, width: bitmap.width, height: bitmap.height };
+      }),
+    );
+  }, ids);
+  const toggle = page.getByRole('button', { name: 'Adventure settings' });
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+  await page.getByRole('button', { name: /^Characters/ }).click();
+  await page.screenshot({ path: `${OUT_DIR}/${new Date().toISOString().slice(0, 10)}-portraits.png` });
+  return sizes;
+}
+
 test('scripted live play', async ({ page }) => {
   test.setTimeout(60 * 60_000);
   await page.goto('/');
@@ -131,6 +165,27 @@ test('scripted live play', async ({ page }) => {
     await page.getByRole('switch', { name: 'Use a utility model' }).click();
     await page.getByRole('textbox', { name: 'Utility server URL' }).fill(UTILITY);
   }
+  if (IMAGES) {
+    await page.getByRole('switch', { name: 'Use an image server' }).click();
+    await page.getByRole('textbox', { name: 'Image server URL' }).fill(IMAGES);
+  }
+  // A render outlives the DB settling (minutes, and nothing is written until it ends), so the run waits on the requests themselves.
+  const renders: { ms?: number; failed?: string }[] = [];
+  let rendering = 0;
+  const isRender = (r: { url: () => string }) => r.url().endsWith('/sdapi/v1/txt2img');
+  page.on('request', (r) => void (isRender(r) && rendering++));
+  page.on('requestfinished', (r) => {
+    if (!isRender(r)) return;
+    renders.push({ ms: Math.round(r.timing().responseEnd) });
+    rendering--;
+  });
+  page.on('requestfailed', (r) => {
+    if (!isRender(r)) return;
+    renders.push({ failed: r.failure()?.errorText ?? 'failed' });
+    rendering--;
+  });
+  const portraitLog: string[] = [];
+  page.on('console', (m) => void (/portrait/i.test(m.text()) && portraitLog.push(m.text())));
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Fantasy' }).click();
   await expect(page).toHaveURL(/#\/adventure\//);
@@ -145,7 +200,11 @@ test('scripted live play', async ({ page }) => {
     if (i === 14) await eraseUndoRedo(page);
   }
 
-  const db = await settledDb(page);
+  let db = await settledDb(page);
+  if (IMAGES) {
+    await expect.poll(() => rendering, { timeout: 2 * TURN_MS, intervals: [5000] }).toBe(0);
+    db = await settledDb(page);
+  }
   const text = new Map(
     z
       .array(S.Action)
@@ -205,6 +264,7 @@ test('scripted live play', async ({ page }) => {
       state,
     })),
     entityPrompt,
+    ...(IMAGES && { images: IMAGES, renders, portraitLog, portraits: await portraits(page, entities) }),
     cards: z
       .array(S.StoryCard)
       .parse(db.cards)

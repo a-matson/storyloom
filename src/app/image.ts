@@ -1,4 +1,4 @@
-/** Picked cover photos are re-encoded before they are stored, so a 12 MP phone photo is not persisted whole. */
+/** Images are re-encoded before they are stored: a 12 MP phone photo is not persisted whole, and a portrait is kept at the size it is shown. */
 
 /** Box `w`x`h` into `max` on its long side, never upscaling. Integers, at least 1 px. */
 export function fitWithin(w: number, h: number, max: number): { w: number; h: number } {

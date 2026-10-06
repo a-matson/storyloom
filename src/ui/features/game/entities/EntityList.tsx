@@ -35,7 +35,7 @@ export function EntityList({ adventure, api, world }: { adventure: Adventure; ap
       {shown.map((e) => (
         <button key={e.id} type="button" className={`${SECTION} p-0 text-left`} aria-label={`Open ${e.name}`} onClick={() => setOpen(e.id)}>
           <div className={`${SECTION_HEADER} cursor-pointer`}>
-            <Avatar name={e.name} />
+            <Avatar name={e.name} adventureId={adventure.id} portraitId={e.portraitId} />
             <span className="flex min-w-0 grow flex-col">
               <span className="truncate">{e.name}</span>
               <span className="truncate text-caption font-normal text-muted-foreground">
