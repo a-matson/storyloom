@@ -72,8 +72,19 @@ export function buildContext(input: ContextBuildInput): ContextBuildResult {
 }
 
 // Cache-stable layout moves history up into the prefix and lore after it, so only the tail changes per turn.
-const STABLE_ORDER: SectionKind[] = ['plotEssentials', 'history', 'storyCards', 'storySummary', 'memories', 'authorsNote', 'lastAction', 'frontMemory'];
-const AID_ORDER: SectionKind[] = ['plotEssentials', 'storyCards', 'storySummary', 'memories', 'history', 'authorsNote', 'lastAction', 'frontMemory'];
+// The scene changes every memory cycle, so it sits in the uncacheable tail in both layouts.
+const STABLE_ORDER: SectionKind[] = [
+  'plotEssentials',
+  'history',
+  'storyCards',
+  'storySummary',
+  'memories',
+  'scene',
+  'authorsNote',
+  'lastAction',
+  'frontMemory',
+];
+const AID_ORDER: SectionKind[] = ['plotEssentials', 'storyCards', 'storySummary', 'memories', 'history', 'scene', 'authorsNote', 'lastAction', 'frontMemory'];
 const STABLE_PREFIX = new Set<SectionKind>(['instructions', 'plotEssentials', 'history']);
 const AID_PREFIX = new Set<SectionKind>(['instructions', 'plotEssentials']);
 

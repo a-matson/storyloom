@@ -11,6 +11,7 @@ export type SectionKind =
   | 'storySummary'
   | 'memories'
   | 'authorsNote'
+  | 'scene'
   | 'lastAction'
   | 'frontMemory'
   /** Inserted by a script through `sections`; never part of the cacheable prefix. */

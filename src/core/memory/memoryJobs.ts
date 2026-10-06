@@ -46,6 +46,8 @@ export interface MaintenanceReport {
   entitiesTouched: number;
   /** The helper's speaker labels by action id; the caller applies them through the log. */
   speakers: Map<string, Speaker[]>;
+  /** `plot.scene` moved, from the same helper call. */
+  sceneUpdated: boolean;
   summaryUpdated: boolean;
 }
 
@@ -155,6 +157,7 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
     memoriesRejected: 0,
     entitiesTouched: 0,
     speakers: new Map(),
+    sceneUpdated: false,
     summaryUpdated: false,
   };
   const settings = adventure.settings.memory;
@@ -172,7 +175,7 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
       report.memoriesWritten += 1;
     }
     // The one combined helper call per memory cycle; a bad reply only costs the entities.
-    ({ touched: report.entitiesTouched, speakers: report.speakers } = await catchUpEntities(adventure, deps));
+    ({ touched: report.entitiesTouched, speakers: report.speakers, sceneUpdated: report.sceneUpdated } = await catchUpEntities(adventure, deps));
     await reembed(adventure, deps);
     const evicted = evictToSize(adventure.memories, settings.bankSize);
     adventure.memories = evicted.memories;

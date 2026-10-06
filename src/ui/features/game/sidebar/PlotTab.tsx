@@ -7,6 +7,7 @@ import { Pill } from '@ui/components/ui/pill';
 import { Switch } from '@ui/components/ui/switch';
 import { Textarea } from '@ui/components/ui/textarea';
 import { MemoryStatus } from './MemoryStatus';
+import { SceneSection } from './SceneSection';
 import { Section, SECTION, SECTION_HEADER } from './Section';
 
 type TextKey = 'aiInstructions' | 'storySummary' | 'plotEssentials' | 'authorsNote';
@@ -69,6 +70,7 @@ export function PlotTab({ adventure, api, utilityModel }: { adventure: Adventure
           {f.key === 'storySummary' && adventure.settings.memory.autoSummary && <SummaryCadence adventure={adventure} />}
         </Section>
       ))}
+      {p.scene && <SceneSection scene={p.scene} api={api} />}
       <ThirdPerson plot={p} api={api} />
       <MemoryStatus adventure={adventure} utilityModel={utilityModel} />
     </>

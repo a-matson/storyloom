@@ -1,4 +1,5 @@
 import { z } from 'zod/mini';
+import { DayPart } from './adventure';
 import { EntityKind, Relation } from './entity';
 
 // Not re-exported from `./index`: only the lazy memory jobs parse these, so they stay off the start-up bundle.
@@ -24,8 +25,17 @@ export const ExtractedEntity = z.object({
  */
 export const ExtractionJson = z.object({
   importance: z.int().check(z.gte(1), z.lte(5)),
-  /** Story time that passed in the passage, in words ("an hour", "three days"). */
-  timeDelta: z.optional(z.string()),
+  /** Story time the passage states has passed; absent means none. A part is a sixth of a day. */
+  timeDelta: z.optional(z.object({ days: z.optional(z.int()), parts: z.optional(z.int()) })),
+  /** Where the passage ends. `timeOfDay` only anchors a scene that has no clock yet. */
+  scene: z.optional(
+    z.object({
+      location: z.optional(z.string()),
+      present: z.optional(z.array(z.string())),
+      timeOfDay: z.optional(DayPart),
+      weather: z.optional(z.string()),
+    }),
+  ),
   entities: z.array(ExtractedEntity).check(z.maxLength(8)),
   /** Who speaks in which numbered action. */
   speakers: z.array(z.object({ action: z.number(), name: z.string() })),
