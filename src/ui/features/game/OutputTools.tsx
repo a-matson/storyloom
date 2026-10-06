@@ -28,6 +28,20 @@ export const textColumn = 'sm:col-start-2';
 export const seeIndent = 'sm:ps-[var(--gutter)]';
 const arrow = 'inline-flex size-5 items-center justify-center border-none bg-transparent p-0 text-foreground';
 
+/**
+ * `contentEditable` turns on a render after the key that asked for it, and an element that
+ * already had focus gets no caret of its own, so typing would go nowhere. Call it when editing opens.
+ */
+export function caretAtEnd(el: HTMLElement): void {
+  el.focus();
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  range.collapse(false);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+}
+
 function RetryStack({ action, api }: { action: Action; api: GameApi }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-card px-2 py-1">
