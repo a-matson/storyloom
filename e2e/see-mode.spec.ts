@@ -96,6 +96,9 @@ test('a failed render, and one a reload abandoned, both offer Retry', async ({ p
   await expect(figure).toContainText('a harbour at dusk');
   // The toast says why; it sits over the command row, so it goes before the next turn.
   await expect(page.getByRole('alert')).toContainText('Could not generate the image');
+  // Errors never auto-dismiss, unlike info toasts.
+  await page.waitForTimeout(6000);
+  await expect(page.getByRole('alert')).toContainText('Could not generate the image');
   await page.getByRole('button', { name: 'dismiss' }).click();
 
   fail = false;

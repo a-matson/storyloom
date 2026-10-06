@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { actionText, utilityProvider, type Adventure, type AppSettings } from '@core/model';
 import { tokenizer } from '@app/services';
 import { useAdventureTheme } from '@ui/hooks/useCoverAccent';
@@ -33,10 +33,6 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
 
   const coverUrl = useImageBlob(adv.id, adv.coverId) ?? adv.coverUrl;
   useAdventureTheme(app, adv.settings.textStyle, coverUrl);
-  useEffect(() => {
-    const t = state.notice === null ? undefined : window.setTimeout(api.clearNotice, 4000);
-    return () => window.clearTimeout(t);
-  }, [state.notice, api]);
 
   const ctx = state.context?.result;
   // Before the first turn there is no built context; estimate from the log.
@@ -101,7 +97,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
       {showContext && state.context && <ContextViewer {...state.context} adventure={adv} stats={last?.stats} onClose={() => setShowContext(false)} />}
       {traceAction !== null && <TraceViewer adventureId={adv.id} actionId={traceAction} onClose={() => setTraceAction(null)} />}
       {state.error !== null && <Toast message={state.error} error onDismiss={api.clearError} />}
-      {state.notice !== null && state.error === null && <Toast message={state.notice} />}
+      {state.notice !== null && state.error === null && <Toast message={state.notice} onDismiss={api.clearNotice} />}
     </div>
   );
 }

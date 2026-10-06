@@ -20,6 +20,43 @@ const CONTEXT_SCRIPT = `const modifier = (text) => {
 };
 modifier(text);`;
 
+const MESSAGE_SCRIPT = `const modifier = (text) => {
+  state.message = 'A bell rings somewhere.';
+  return { text };
+};
+modifier(text);`;
+
+test('an info toast auto-dismisses, and hovering it holds it on screen', async ({ page }) => {
+  await connectDemo(page);
+  await page.getByRole('button', { name: '+ New scenario' }).click();
+  await page.getByRole('textbox', { name: 'Prompt' }).fill('You stand in the market of Corrow.');
+  await page.getByRole('button', { name: 'Basics' }).click();
+  await page.getByRole('textbox', { name: 'Title' }).fill('Bell Market');
+  await page.getByRole('button', { name: 'Scripts' }).click();
+  await page.getByRole('button', { name: 'Output', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Output', exact: true }).fill(MESSAGE_SCRIPT);
+  await page.keyboard.press('ControlOrMeta+s');
+  await expect(page.getByText('Scenario · Story · saved')).toBeVisible();
+  await page.getByRole('button', { name: 'Back to library' }).click();
+
+  await page.getByRole('button', { name: 'Play Bell Market' }).click();
+  await page.getByRole('dialog', { name: 'Bell Market' }).getByRole('button', { name: 'Begin' }).click();
+  await page.getByRole('textbox', { name: 'Take a turn' }).fill('listen');
+  await page.getByRole('button', { name: 'Send' }).click();
+
+  const toast = page.getByRole('status').filter({ hasText: 'A bell rings somewhere.' });
+  await expect(toast).toBeVisible();
+  // The toast pops up under the cursor left on Send, and a stationary cursor fires no mouseover; move away first.
+  await page.mouse.move(0, 0);
+  // Pointed at, the timer is held: still there well past the 5 s it would otherwise live.
+  await toast.hover();
+  await page.waitForTimeout(6000);
+  await expect(toast).toBeVisible();
+  // Off it, the timer restarts and runs out.
+  await page.mouse.move(0, 0);
+  await expect(toast).toBeHidden({ timeout: 8000 });
+});
+
 test('a Context script that rewrites the prompt is flagged as uncached', async ({ page }) => {
   await connectDemo(page);
   await page.getByRole('button', { name: '+ New scenario' }).click();
