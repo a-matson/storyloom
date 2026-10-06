@@ -29,6 +29,8 @@ export const TurnTrace = z.object({
   triggeredCardIds: z.array(z.string()),
   droppedCardIds: z.array(z.string()),
   memoryIds: z.array(z.string()),
+  /** Entities whose projected card was in the prompt (also in `triggeredCardIds`); absent on traces before M9-1e. */
+  entitiesUsed: z.optional(z.array(z.string())),
   historyRange: z.nullable(z.object({ from: count, to: count })),
   droppedSections: z.array(z.string()),
   warnings: z.array(z.string()),

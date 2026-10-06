@@ -52,6 +52,25 @@ describe('adventure JSON', () => {
     expect(b.actions[1]!.image).toEqual({ prompt: 'a door', missing: true });
   });
 
+  it('gives entities fresh ids and repoints their relations and promoted cards', () => {
+    const a = createBlankAdventure('T', 'You wake.');
+    a.storyCards = [{ id: 'card_1', type: 'character', name: 'Lena', entry: 'Lena.', triggers: ['Lena'] }];
+    const base = { kind: 'character' as const, aliases: [], description: '', facts: [], state: {}, firstSeen: 0, lastSeen: 0 };
+    a.entities = [
+      { ...base, id: 'ent_1', name: 'Lena', relations: [{ to: 'ent_2', label: 'sister' }], cardId: 'card_1' },
+      { ...base, id: 'ent_2', name: 'Mira', relations: [{ to: 'ent_gone', label: 'owes' }] },
+    ];
+    const { adventure: b } = importAdventureJson(exportAdventureJson(a));
+    const [lena, mira] = b.entities;
+    expect(b.entities.map((e) => e.name)).toEqual(['Lena', 'Mira']);
+    expect(lena?.id).not.toBe('ent_1');
+    expect(lena?.id).toMatch(/^ent_/);
+    expect(lena?.relations).toEqual([{ to: mira?.id, label: 'sister' }]);
+    expect(lena?.cardId).toBe(b.storyCards[0]?.id);
+    expect(mira?.relations).toEqual([{ to: 'ent_gone', label: 'owes' }]);
+    expect(mira).not.toHaveProperty('cardId');
+  });
+
   it('names the broken field of a damaged export', () => {
     const json = JSON.parse(exportAdventureJson(createBlankAdventure('T', 'x'))) as { adventure: { actions: unknown[] } };
     json.adventure.actions = [{ id: 'a', type: 'jump', versions: [], active: 0, createdAt: 0 }];

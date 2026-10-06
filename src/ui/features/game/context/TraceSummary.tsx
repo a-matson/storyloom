@@ -49,6 +49,7 @@ export function TraceSummary({ trace: t }: { trace: TurnTrace }) {
           {t.triggeredCardIds.length} triggered{t.droppedCardIds.length > 0 ? `, ${t.droppedCardIds.length} dropped` : ''}
         </Row>
         <Row label="Memories">{t.memoryIds.length} used</Row>
+        {t.entitiesUsed && <Row label="Entities">{t.entitiesUsed.length} used</Row>}
         {t.droppedSections.length > 0 && <Row label="Dropped">{t.droppedSections.join(', ')}</Row>}
       </div>
       <SectionLabel>Sections</SectionLabel>

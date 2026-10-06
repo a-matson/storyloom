@@ -121,6 +121,15 @@ describe('runInSandbox', () => {
     expect(runInSandbox(wasm, scripts({ context: 'null' }), input({ hook: 'onModelContext' })).sections).toBeUndefined();
   });
 
+  it('reads state.entities but never writes them back', () => {
+    const entities = [{ id: 'ent_1', kind: 'character', name: 'Tamsin', aliases: [], description: 'Rows.', facts: ['Owes a debt.'], state: {} }];
+    const context = 'state.entities[0].name = "X"; state.entities = []; ({ text: state.entities[0].name + " " + state.entities.length })';
+    const out = runInSandbox(wasm, scripts({ context }), input({ hook: 'onModelContext', entities }));
+    expect(out.text).toBe('Tamsin 1');
+    expect(out.state).not.toHaveProperty('entities');
+    expect(run('({ text: String(state.entities) })').text).toBe('undefined');
+  });
+
   it('refuses a function in state', () => {
     expect(run('state.fn = () => 1; null').error).toBe('Error: state is not JSON: state.fn');
   });

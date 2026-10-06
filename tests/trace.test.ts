@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { createFakeLlama } from '@adapters/providers/demo/fakeLlama';
 import { LlamaServerProvider } from '@adapters/providers/llamaServer';
 import { ActionLog } from '@core/log';
-import { createBlankAdventure } from '@core/model';
+import { mergeEntity } from '@core/memory/entities';
+import { createBlankAdventure, type TurnTrace } from '@core/model';
+import { NoopScriptRunner, type HookInput, type HookResult } from '@core/ports';
 import * as S from '@core/schema';
 import { createApproxTokenizer } from '@core/text';
 import { buildTrace, clearJobLog, hashPrompt, overlappingJobs, TRACE_PROMPT_CAP, trackJob } from '@core/trace';
@@ -93,5 +95,35 @@ describe('buildTrace', () => {
     expect(big.promptChars).toBe(prompt.length);
     expect(big.promptHash).toBe(hashPrompt(prompt));
     expect(trace.promptTruncated).toBe(false);
+  });
+
+  it('lists the projected entities in the prompt, not plain story cards, and hands them to two hooks', async () => {
+    const handler = createFakeLlama({ wordDelayMs: 0 });
+    const provider = new LlamaServerProvider('demo', 'http://demo.invalid', (i, init) => handler(new Request(i, init)));
+    const adventure = createBlankAdventure('Test', 'You stand at the gate with Tamsin.');
+    const tamsin = mergeEntity(undefined, { name: 'Tamsin', kind: 'character', aliases: [], description: 'Tamsin rows.', facts: ['She owes a debt.'] }, 0);
+    const absent = mergeEntity(undefined, { name: 'Orrin', kind: 'character', aliases: [], description: 'Orrin sleeps.', facts: [] }, 0);
+    adventure.entities = [tamsin, absent];
+    adventure.storyCards = [{ id: 'card_gate', type: 'location', name: 'Gate', entry: 'An iron gate.', triggers: ['gate'] }];
+    const seen = new Map<string, HookInput['entities']>();
+    const scripts = new (class extends NoopScriptRunner {
+      override run(input: HookInput): Promise<HookResult> {
+        seen.set(input.hook, input.entities);
+        return super.run(input);
+      }
+    })();
+    let trace: TurnTrace | undefined;
+    for await (const e of runTurn(
+      adventure,
+      new ActionLog(adventure.actions),
+      { type: 'do', text: 'wait' },
+      { provider, tokenizer: createApproxTokenizer(), scripts },
+    ))
+      if (e.type === 'trace') trace = e.trace;
+    expect(trace?.triggeredCardIds).toContain('card_gate');
+    expect(trace?.entitiesUsed).toEqual([tamsin.id]);
+    expect(seen.has('onInput') && seen.get('onInput')).toBeUndefined();
+    expect(seen.get('onModelContext')?.map((e) => e.name)).toEqual(['Tamsin', 'Orrin']);
+    expect(seen.get('onOutput')?.[0]?.facts).toEqual(['She owes a debt.']);
   });
 });

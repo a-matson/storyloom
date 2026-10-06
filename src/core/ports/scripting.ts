@@ -1,4 +1,4 @@
-import type { Action, ScriptState, StoryCard } from '../model/types';
+import type { Action, Entity, ScriptState, StoryCard } from '../model/types';
 
 export type { ScriptState } from '../model/types';
 import type { ContextSection } from '../context/types';
@@ -37,6 +37,17 @@ export interface ScriptStoryCard {
   description: string;
 }
 
+/** Read-only and flattened (facts as plain text, no ids or sources) so a script cannot mistake it for a writable record. */
+export interface ScriptEntity {
+  id: string;
+  kind: Entity['kind'];
+  name: string;
+  aliases: string[];
+  description: string;
+  facts: string[];
+  state: Record<string, string>;
+}
+
 export interface ScriptInfo {
   characterNames: string[];
   actionCount: number;
@@ -69,6 +80,8 @@ export interface HookInput {
    * the whole prompt (cache miss every turn).
    */
   sections?: ContextSection[] | undefined;
+  /** `state.entities` in onModelContext and onOutput; never written back. */
+  entities?: ScriptEntity[] | undefined;
 }
 
 export interface HookResult {
@@ -94,6 +107,18 @@ export interface ScriptRunner {
 /** Converts core StoryCards to the script-facing shape (`keys` is the raw comma-separated string). */
 export function toScriptCards(cards: StoryCard[]): ScriptStoryCard[] {
   return cards.map((c) => ({ id: c.id, keys: c.triggers.join(','), entry: c.entry, type: c.type, title: c.name, description: c.notes ?? '' }));
+}
+
+export function toScriptEntities(entities: Entity[]): ScriptEntity[] {
+  return entities.map((e) => ({
+    id: e.id,
+    kind: e.kind,
+    name: e.name,
+    aliases: e.aliases,
+    description: e.description,
+    facts: e.facts.map((f) => f.text),
+    state: e.state,
+  }));
 }
 
 /** The script-facing shape of the built sections; `tokens`/`trimmed` stay host-side. */

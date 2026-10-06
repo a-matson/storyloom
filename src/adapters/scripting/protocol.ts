@@ -11,6 +11,16 @@ const HookName = z.enum(['onInput', 'onModelContext', 'onOutput']);
  */
 const ScriptSection = z.object({ kind: z.string(), text: z.string(), cacheable: z.optional(z.boolean()) });
 
+const ScriptEntity = z.object({
+  id: z.string(),
+  kind: z.string(),
+  name: z.string(),
+  aliases: z.array(z.string()),
+  description: z.string(),
+  facts: z.array(z.string()),
+  state: z.record(z.string(), z.string()),
+});
+
 export const SandboxInput = z.object({
   hook: HookName,
   text: z.string(),
@@ -25,6 +35,8 @@ export const SandboxInput = z.object({
   }),
   /** onModelContext only. */
   sections: z.optional(z.array(ScriptSection)),
+  /** onModelContext and onOutput only; the prelude exposes them as a frozen, non-enumerable `state.entities`. */
+  entities: z.optional(z.array(ScriptEntity)),
 });
 export type SandboxInput = z.infer<typeof SandboxInput>;
 
