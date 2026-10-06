@@ -74,6 +74,10 @@ test('card placeholders are filled when the adventure is created', async ({ page
   await expect(page.locator('#card-triggers')).toHaveValue('Merav,rope');
   await page.getByRole('button', { name: 'Cancel' }).click();
 
+  // The Character card seeds a canon entity.
+  await page.getByRole('button', { name: 'Characters · 1' }).click();
+  await expect(page.getByRole('button', { name: 'Open Ferryman' }).getByText('canon', { exact: true })).toBeVisible();
+
   // The scenario is not mutated: its card still holds the placeholder, so it still counts one.
   await page.getByRole('button', { name: 'Back to library' }).click();
   await expect(page.getByText('Story · 1 placeholder · 1 card')).toBeVisible();

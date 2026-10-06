@@ -74,6 +74,38 @@ test("dialogue gets the speaker's portrait after a turn", async ({ page }) => {
   expect(violations).toEqual([]);
 });
 
+test('a canon conflict is shown on the fact and resolved from the drawer', async ({ page }) => {
+  const fact = (id: string, value: string) => ({
+    id,
+    text: `the story says eyes is ${value}, but canon says grey`,
+    fromAction: 2,
+    source: 'memory' as const,
+    conflict: true,
+    claim: { key: 'eyes', value },
+  });
+  await openSeededAdventure(page, 3, undefined, {
+    entities: [
+      { id: 'ent_tamsin', name: 'Tamsin', canon: true, state: { eyes: 'grey' }, canonKeys: ['eyes'], facts: [fact('c1', 'blue'), fact('c2', 'green')] },
+    ],
+  });
+  await page.getByRole('button', { name: 'Characters · 2' }).click();
+  await page.getByRole('button', { name: 'Open Tamsin' }).click();
+  const drawer = page.getByRole('dialog', { name: 'Tamsin' });
+  await expect(drawer.getByText('canon', { exact: true })).toBeVisible();
+  await expect(drawer.getByRole('button', { name: 'Lock eyes as canon' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(drawer.getByText('conflict', { exact: true })).toHaveCount(2);
+  const { violations } = await new AxeBuilder({ page }).include('dialog').analyze();
+  expect(violations).toEqual([]);
+  await drawer.getByRole('listitem').filter({ hasText: 'green' }).getByRole('button', { name: 'Keep canon' }).click();
+  await expect(drawer.getByText(/eyes is green/)).toHaveCount(0);
+  await drawer.getByRole('button', { name: 'Accept the story' }).click();
+  await expect(drawer.getByText('conflict', { exact: true })).toHaveCount(0);
+  await expect(drawer.getByRole('button', { name: 'Lock eyes as canon' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(drawer.getByRole('textbox', { name: 'eyes' })).toHaveValue('blue');
+  await page.keyboard.press('Escape');
+  await expect(page.getByText('eyes: blue')).toBeVisible();
+});
+
 test('no portraits beside dialogue when the setting is off', async ({ page }) => {
   await openSeededAdventure(page, 3, undefined, { opening: OPENING, speakerAvatars: false });
   await page.getByRole('textbox', { name: 'Take a turn' }).fill('wait');

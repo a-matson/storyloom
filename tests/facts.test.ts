@@ -22,8 +22,8 @@ describe('rankFacts', () => {
   const absent = entity('absent', [fact('absent', 9), fact('absent-pinned', 2, { pinned: true }), fact('absent-conflict', 3, { conflict: true })]);
   const ids = (present: string[], mentioned: string[]) => rankFacts([absent, orrin, lena], new Set(present), new Set(mentioned)).map((r) => r.fact.id);
 
-  it('ranks pinned, then present, then mentioned facts, newest first, and leaves the rest out', () => {
-    expect(ids(['lena'], ['orrin'])).toEqual(['absent-pinned', 'orrin-pinned', 'lena-new', 'lena-old', 'orrin-new']);
+  it('ranks pinned and conflicted, then present, then mentioned facts, newest first, and leaves the rest out', () => {
+    expect(ids(['lena'], ['orrin'])).toEqual(['absent-conflict', 'absent-pinned', 'orrin-pinned', 'lena-new', 'lena-old', 'orrin-new']);
   });
 
   it('keeps a conflicted fact as worded, flag intact', () => {

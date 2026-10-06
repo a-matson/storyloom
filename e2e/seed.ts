@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test';
-import type { Scene } from '@core/model';
+import type { Entity, Scene } from '@core/model';
 
 /**
  * Connect the demo backend, import an adventure of `count` short actions, seed two entities and open it.
@@ -9,7 +9,7 @@ export async function openSeededAdventure(
   page: Page,
   count: number,
   imageServer?: string,
-  opts: { opening?: string; speakerAvatars?: boolean; contextScript?: string; scene?: Scene } = {},
+  opts: { opening?: string; speakerAvatars?: boolean; contextScript?: string; scene?: Scene; entities?: Partial<Entity>[] } = {},
 ): Promise<void> {
   await page.goto('/');
   await page.getByRole('button', { name: /^Demo \(no GPU\)/ }).click();
@@ -27,14 +27,17 @@ export async function openSeededAdventure(
   await (await chooser).setFiles({ name: 'salt.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ title: 'Salt Road', actions })) });
   const open = page.getByRole('button', { name: `Continue Salt Road ${count} actions` });
   await expect(open).toBeVisible();
-  await seedEntities(page, opts.contextScript, opts.scene);
+  await seedEntities(page, opts.contextScript, opts.scene, opts.entities);
   await open.click();
 }
 
-/** Two entities written straight into the store for the first adventure; the memory cycle never runs in e2e. An import carries no scripts or scene, so those are patched in too. */
-async function seedEntities(page: Page, contextScript?: string, seedScene?: Scene): Promise<void> {
+/**
+ * Two entities (plus `more`) written straight into the store for the first adventure; the memory cycle
+ * never runs in e2e. An import carries no scripts or scene, so those are patched in too.
+ */
+async function seedEntities(page: Page, contextScript?: string, seedScene?: Scene, more: Partial<Entity>[] = []): Promise<void> {
   await page.evaluate(
-    async ({ context, scene }) => {
+    async ({ context, scene, extra }) => {
       const req = indexedDB.open('storyloom');
       const db = await new Promise<IDBDatabase>((ok, fail) => {
         req.addEventListener('success', () => ok(req.result));
@@ -76,9 +79,10 @@ async function seedEntities(page: Page, contextScript?: string, seedScene?: Scen
         state: {},
         facts: [],
       });
+      for (const e of extra) tx.objectStore('entities').put({ ...base, kind: 'character', aliases: [], description: '', state: {}, facts: [], ...e });
       await new Promise((ok) => tx.addEventListener('complete', ok));
       db.close();
     },
-    { context: contextScript, scene: seedScene },
+    { context: contextScript, scene: seedScene, extra: more },
   );
 }

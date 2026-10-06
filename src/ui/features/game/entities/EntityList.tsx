@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Adventure, Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
+import { Pill } from '@ui/components/ui/pill';
 import { CHIP, SECTION, SECTION_HEADER } from '../sidebar/Section';
 import { Avatar } from './Avatar';
 import { EntityDrawer } from './EntityDrawer';
@@ -37,7 +38,10 @@ export function EntityList({ adventure, api, world }: { adventure: Adventure; ap
           <div className={`${SECTION_HEADER} cursor-pointer`}>
             <Avatar name={e.name} adventureId={adventure.id} portraitId={e.portraitId} />
             <span className="flex min-w-0 grow flex-col">
-              <span className="truncate">{e.name}</span>
+              <span className="flex items-center gap-1.5">
+                <span className="truncate">{e.name}</span>
+                {e.canon && <Pill>canon</Pill>}
+              </span>
               <span className="truncate text-caption font-normal text-muted-foreground">
                 {Object.entries(e.state)
                   .map(([k, v]) => `${k}: ${v}`)
