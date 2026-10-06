@@ -79,8 +79,8 @@ function StateRows({ entity: e, update }: { entity: Entity; update: Update }) {
   const entries = Object.entries(e.state);
   if (entries.length === 0) return null;
   const set = (k: string, value: string) => {
-    const { [k]: _, ...rest } = e.state;
-    update({ state: value ? { ...rest, [k]: value } : rest });
+    const state = { ...e.state, [k]: value };
+    update({ state: Object.fromEntries(Object.entries(state).filter(([, v]) => v !== '')) });
   };
   return (
     <>
