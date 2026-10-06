@@ -28,7 +28,8 @@ export function StoryView({ actions, adventureId, streaming, busy, pendingImages
   const lastIdx = actions.length - 1;
   return (
     <div className="flex grow justify-center overflow-y-auto px-10 pt-8 pb-6 max-sm:px-[18px] max-sm:pt-5 max-sm:pb-0">
-      <div className="flex w-full max-w-story flex-col gap-[22px] font-prose text-(length:--prose-size) leading-(--prose-leading)">
+      {/* The id lets the entity drawer scroll to an action: this column's children are the actions in order. */}
+      <div id="story" className="flex w-full max-w-story flex-col gap-[22px] font-prose text-(length:--prose-size) leading-(--prose-leading)">
         {actions.map((a, i) => (
           <ActionBlock
             key={a.id}

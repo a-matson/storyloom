@@ -13,6 +13,9 @@ import { EXTRACT_JSON_SCHEMA } from './extractJsonSchema';
 import type { MemoryRange } from './memoryBank';
 import type { MaintenanceDeps } from './memoryJobs';
 
+/** The call needs no embedder, so the player's "Update from story" works without one. */
+type ExtractDeps = Pick<MaintenanceDeps, 'provider' | 'template' | 'cancel'>;
+
 // Entities are checked one by one, so a bad one (a lowercase name without the grammar) costs only itself.
 const Envelope = z.looseObject({ entities: z.array(z.unknown()) });
 
@@ -37,7 +40,7 @@ const accepter =
  * The combined helper call: entities, speakers, importance, time and threads for one passage
  * whose paragraphs are numbered by action index. Null when the reply is unusable or cut.
  */
-export async function extractFromPassage(passage: string, knownNames: string[], deps: MaintenanceDeps): Promise<ExtractionJson | null> {
+export async function extractFromPassage(passage: string, knownNames: string[], deps: ExtractDeps): Promise<ExtractionJson | null> {
   const caps = await deps.provider.capabilities();
   const rendered = renderTemplate(deps.template, EXTRACT_SYSTEM, extractPrompt(passage, knownNames), caps.jsonSchema ? '' : '{');
   const { text, stats } = await trackJob('entity', () =>
@@ -87,7 +90,7 @@ export async function catchUpEntities(adventure: Adventure, deps: MaintenanceDep
 }
 
 /** Extract from the range's actions and fold the result into `adventure.entities`; returns how many entities changed. */
-async function updateEntities(adventure: Adventure, range: MemoryRange, deps: MaintenanceDeps): Promise<number> {
+export async function updateEntities(adventure: Adventure, range: MemoryRange, deps: ExtractDeps): Promise<number> {
   const passage = adventure.actions
     .slice(range.fromAction, range.toAction)
     .map((a, i) => [range.fromAction + i, actionStoryText(a)] as const)

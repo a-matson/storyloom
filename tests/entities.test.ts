@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchEntity, mergeEntity } from '@core/memory/entities';
+import { matchEntity, mergeEntities, mergeEntity } from '@core/memory/entities';
 import { ENTITY_ENTRY_TOKENS, projectEntity } from '@core/memory/projection';
 import type { Entity, ExtractedEntity } from '@core/model';
 
@@ -53,6 +53,24 @@ describe('entity merge rules', () => {
     expect(matchEntity([e], '  THE ferrywoman ')).toBe(e);
     expect(matchEntity([e], 'tamsin')).toBe(e);
     expect(matchEntity([e], 'Odo')).toBeUndefined();
+  });
+});
+
+describe('mergeEntities', () => {
+  it('unions facts, aliases, relations and missing state, keeping the target', () => {
+    const into: Entity = { ...mergeEntity(undefined, seen({ facts: ['She owes the guild.'], state: { mood: 'wary' } }), 2), portraitId: 'p1' };
+    const from: Entity = {
+      ...mergeEntity(undefined, seen({ name: 'The ferrywoman', description: 'Rows the night ferry.', facts: ['she owes the guild', 'She has a scar.'] }), 9),
+      state: { mood: 'calm', location: 'the docks' },
+      relations: [{ to: 'Odo', label: 'rival' }],
+      portraitId: 'p2',
+    };
+    const merged = mergeEntities(into, from);
+    expect(merged).toMatchObject({ id: into.id, name: 'Tamsin', portraitId: 'p1', description: 'Rows the night ferry.', firstSeen: 2, lastSeen: 9 });
+    expect(merged.aliases).toEqual(['The ferrywoman']);
+    expect(merged.facts.map((f) => f.text)).toEqual(['She owes the guild.', 'She has a scar.']);
+    expect(merged.state).toEqual({ mood: 'wary', location: 'the docks' });
+    expect(merged.relations).toEqual([{ to: 'Odo', label: 'rival' }]);
   });
 });
 

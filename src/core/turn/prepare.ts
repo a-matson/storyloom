@@ -18,10 +18,11 @@ function promptBudget(adventure: Adventure, { contextSize }: TurnDeps): number {
   return contextSize === undefined ? contextLength : Math.max(0, Math.min(contextLength, contextSize - responseLength));
 }
 
-/** Story cards plus entities projected as cards; a hand-written card of the same name wins. */
+/** Story cards plus entities projected as cards; a hand-written card of the same name, or one promoted from the entity, wins. */
 function cardsWithEntities(adventure: Adventure): StoryCard[] {
-  const named = new Set(adventure.storyCards.map((c) => c.name.trim().toLowerCase()));
-  const projected = adventure.entities.filter((e) => !named.has(e.name.trim().toLowerCase())).map(projectEntity);
+  const named = new Set(adventure.storyCards.flatMap((c) => [c.id, c.name.trim().toLowerCase()]));
+  // A promoted entity whose card was later deleted projects again.
+  const projected = adventure.entities.filter((e) => !(e.cardId && named.has(e.cardId)) && !named.has(e.name.trim().toLowerCase())).map(projectEntity);
   return projected.length ? [...adventure.storyCards, ...projected] : adventure.storyCards;
 }
 

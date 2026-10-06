@@ -9,6 +9,12 @@ import { joinStory, trimUnfinishedSentence } from '../text/formatting';
 import { trackJob } from '../trace';
 import { catchUpEntities } from './extract';
 
+// For the player's entity edits, which load with these jobs.
+export { mergeEntities } from './entities';
+export { updateEntities } from './extract';
+export { MEMORY_SPAN } from './memoryBank';
+export { projectEntity } from './projection';
+
 /**
  * Background memory maintenance. Call after each committed turn; it is safe
  * to call often (it does nothing when nothing is due) and never blocks the
