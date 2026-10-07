@@ -64,12 +64,18 @@ function lastTurn(page: Page) {
       });
     const action = await newest('actions');
     const trace = await newest('traces');
+    const memories = await new Promise<{ text: string; forgotten?: boolean; stale?: boolean }[]>((ok, fail) => {
+      const r = db.transaction('memories').objectStore('memories').getAll();
+      r.addEventListener('success', () => ok(r.result as { text: string }[]));
+      r.addEventListener('error', () => fail(r.error));
+    });
     db.close();
     const versions = (action['versions'] ?? []) as string[];
     return {
       output: versions[(action['active'] ?? 0) as number] ?? '',
       prompt: (trace['prompt'] ?? '') as string,
       model: trace['modelId'] as string | undefined,
+      bank: memories.filter((m) => !m.forgotten && !m.stale).map((m) => m.text),
     };
   });
 }
@@ -133,23 +139,27 @@ test('recall benchmark', async ({ page }) => {
 
   // ponytail: probes stay in the log, so a fact restated at depth 30 helps itself at 60.
   // Erasing them instead would trigger stale-memory regeneration and distort the idle windows.
-  const rows: { depth: number; id: string; class: string; verdict: Verdict; judge: string; retrieved: boolean; tail: string }[] = [];
+  type Row = { depth: number; id: string; class: string; verdict: Verdict; judge: string; retrieved: boolean; tail: string };
+  // On a retrieval miss: did the bank hold the fact (a ranking miss) or not (a summary miss)?
+  const rows: (Row & { miss?: { bankHit: boolean; prompt: string } })[] = [];
   let story = planted.length + 2;
   let model: string | undefined;
   for (const depth of DEPTHS) {
     for (; story < depth; story++) await turn(page, ...(FILLERS[story % FILLERS.length] ?? ['Do', 'look around']));
     for (const f of FACTS) {
       await turn(page, f.probe[0], f.probe[1]);
-      const { output, prompt, model: m } = await lastTurn(page);
+      const { output, prompt, model: m, bank } = await lastTurn(page);
       model = m;
+      const retrieved = retrievalHit(prompt, f);
       rows.push({
         depth,
         id: f.id,
         class: f.class,
         verdict: scoreProbe(output, f),
         judge: await judge(output, f),
-        retrieved: retrievalHit(prompt, f),
+        retrieved,
         tail: output.slice(-200),
+        ...(retrieved ? {} : { miss: { bankHit: bank.some((t) => retrievalHit(t, f)), prompt } }),
       });
     }
   }
