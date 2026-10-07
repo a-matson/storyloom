@@ -241,11 +241,10 @@ describe('turn traces', () => {
   it('sends a mentioned entity as a card under the structured cap, not through story cards, unless a story card has its name', async () => {
     const { adventure, log, deps } = setup();
     log.append('do', '> You hail the ferrywoman.');
-    const entity = mergeEntity(
-      undefined,
-      { name: 'Tamsin', kind: 'character', aliases: ['ferrywoman'], description: 'Tamsin rows the night ferry.', facts: [] },
-      0,
-    );
+    const entity = {
+      ...mergeEntity(undefined, { name: 'Tamsin', kind: 'character', aliases: ['ferrywoman'], description: 'Tamsin rows the night ferry.', facts: [] }, 0),
+      lastSeen: 1,
+    };
     adventure.entities = [entity];
     const prepared = await prepareContext(adventure, log.actions, deps);
     if ('stopped' in prepared) throw new Error('context build stopped');

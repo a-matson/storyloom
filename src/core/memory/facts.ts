@@ -6,6 +6,14 @@ export interface RankedFact {
 }
 
 /**
+ * Whether the prompt may use the entity: canon, carded, touched by the player (a player or pinned
+ * fact), or seen in two extracted ranges (each range stamps its last action, so `lastSeen` moves).
+ * One sighting is too often a misread for the structured cap.
+ */
+export const isConfirmed = (e: Entity): boolean =>
+  !!e.canon || !!e.cardId || e.lastSeen > e.firstSeen || e.facts.some((f) => f.source !== 'memory' || f.pinned);
+
+/**
  * Facts for the next prompt, best first: pinned facts, then facts of entities present in the scene
  * (what the next sentence needs), then facts of entities the recent text names. Within a tier, facts
  * the query matches lexically (`lexical`, BM25 ids best first) lead, then newest first. Other

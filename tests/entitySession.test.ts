@@ -14,7 +14,7 @@ const gate: Entity = {
   state: {},
   relations: [],
   firstSeen: 0,
-  lastSeen: 0,
+  lastSeen: 1,
 };
 
 function withGate(...more: Entity[]) {

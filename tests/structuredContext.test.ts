@@ -20,7 +20,7 @@ function entity(name: string, description: string, facts: string[], state: Recor
     state,
     relations: [],
     firstSeen: 0,
-    lastSeen: 0,
+    lastSeen: 1,
   };
 }
 
@@ -81,5 +81,11 @@ describe('structured elements', () => {
     expect(r.sections.find((s) => s.kind === 'entityCards')?.text).not.toContain('ferryman');
     expect(r.sections.find((s) => s.kind === 'facts')?.text).toContain('Orrin: He fears water.');
     expect(r.triggeredCards.map((m) => m.card.id)).toEqual(['c-orrin']);
+  });
+
+  it('sends nothing for an entity seen in one range only', () => {
+    const r = buildContext({ ...input(2000), entities: [{ ...lena, lastSeen: 0 }, orrin] });
+    expect(r.sections.find((s) => s.kind === 'facts')?.text).toBe('Established facts:\nOrrin: He fears water.');
+    expect(r.usedEntityIds).toEqual([orrin.id]);
   });
 });
