@@ -20,9 +20,15 @@ interface Props {
 const chip =
   'h-[34px] rounded-full border border-border bg-secondary px-3.5 text-control font-medium text-foreground aria-pressed:font-semibold aria-pressed:text-lantern-ink';
 
+/** Lazy: the entity edits stay out of the start-up bundle. */
+function sendCorrection(api: GameApi, text: string, clear: () => void): void {
+  clear();
+  import('@app/session/entities').then(({ correct }) => correct(api, text)).catch((err: unknown) => api.onError(String(err)));
+}
+
 /**
  * Take-a-turn row. Enter sends, Ctrl/⌘+Enter continues, Ctrl/⌘+R retries,
- * Ctrl/⌘+Z undoes (input empty); `/do /say /story /see` switch mode.
+ * Ctrl/⌘+Z undoes (input empty); `/do /say /story /see` switch mode, `/correct …` pins a fact.
  */
 export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retryReady = false }: Props) {
   const [mode, setMode] = useState<Mode>('do');
@@ -34,9 +40,13 @@ export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retry
   const send = () => {
     if (busy) return;
     const slash = parseSlash(text);
+    if (slash?.kind === 'correct') {
+      if (slash.text.trim() !== '') sendCorrection(api, slash.text, () => setText(''));
+      return;
+    }
     if (slash) {
-      setMode(slash[0]);
-      setText(slash[1]);
+      setMode(slash.mode);
+      setText(slash.rest);
       return;
     }
     setText('');
@@ -96,7 +106,9 @@ export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retry
             Erase
           </Button>
         </div>
-        <div className="font-mono text-label text-muted-foreground">Enter send · Ctrl+Enter continue · Ctrl+R retry · Ctrl+Z undo · /do /say /story /see</div>
+        <div className="font-mono text-label text-muted-foreground">
+          Enter send · Ctrl+Enter continue · Ctrl+R retry · Ctrl+Z undo · /do /say /story /see /correct
+        </div>
       </div>
     </footer>
   );

@@ -127,6 +127,18 @@ test('an older action is editable from the keyboard', async ({ page }) => {
   await expect(page.getByText('You stand up.')).toBeVisible();
 });
 
+test('/correct pins a fact without adding to the story', async ({ page }) => {
+  await connectDemo(page);
+  await page.getByRole('button', { name: 'Fantasy' }).click();
+  await takeTurn(page, 'open the letter');
+  await expect(page.getByText('hand stops moving.')).toBeVisible();
+
+  await takeTurn(page, '/correct It is the dead of winter.');
+  await expect(page.getByText('Added to Plot Essentials')).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Take a turn' })).toHaveValue('');
+  await expect(page.getByText('It is the dead of winter.')).toBeHidden();
+});
+
 test('player and AI text share one left edge', async ({ page }) => {
   await connectDemo(page);
   await page.getByRole('button', { name: 'Fantasy' }).click();
