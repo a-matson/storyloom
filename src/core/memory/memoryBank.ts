@@ -1,4 +1,4 @@
-import type { Action, Memory } from '../model/types';
+import type { Action, Adventure, Memory } from '../model/types';
 import { newId } from '../model/types';
 import { mmr, rrf, RRF_K } from './fusion';
 
@@ -91,6 +91,18 @@ export const MEMORY_OVERDUE = 6;
 export function memoryOverdue(actionCount: number, existing: Pick<Memory, 'toAction'>[]): boolean {
   const start = existing.reduce((n, m) => Math.max(n, m.toAction), 0);
   return actionCount - start - MEMORY_LAG >= MEMORY_OVERDUE;
+}
+
+/**
+ * Memories waiting for the combined entity call before it runs regardless of typing or the next
+ * turn. Without it a fast player starves it: each idle gap goes to the next memory, and typing cuts
+ * the entity call after it (no entities in a 90-turn run with a 6 s read gap). [provisional]
+ */
+export const ENTITY_OVERDUE = 2;
+
+export function entitiesOverdue(adventure: Pick<Adventure, 'memories' | 'scriptState'>): boolean {
+  const done = adventure.scriptState.__entitiesAt ?? 0;
+  return adventure.memories.filter((m) => !m.stale && m.toAction > done).length >= ENTITY_OVERDUE;
 }
 
 export function createMemory(text: string, actions: Action[], range: MemoryRange, embedding?: number[]): Memory {

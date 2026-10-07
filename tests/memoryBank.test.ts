@@ -4,6 +4,7 @@ import {
   actionsUntilSummary,
   cosine,
   dueMemoryRanges,
+  entitiesOverdue,
   evictToSize,
   markStale,
   MEMORY_SPAN,
@@ -78,6 +79,13 @@ describe('memory scheduling', () => {
     expect(memoryOverdue(18, [])).toBe(true);
     expect(memoryOverdue(23, [mem('m0', 0)])).toBe(false);
     expect(memoryOverdue(24, [mem('m0', 0)])).toBe(true);
+  });
+
+  it('calls entity extraction overdue once two memories wait for it', () => {
+    const memories = [mem('m0', 0), mem('m1', 6)];
+    expect(entitiesOverdue({ memories: memories.slice(0, 1), scriptState: {} })).toBe(false);
+    expect(entitiesOverdue({ memories, scriptState: {} })).toBe(true);
+    expect(entitiesOverdue({ memories, scriptState: { __entitiesAt: memories[0]?.toAction ?? 0 } })).toBe(false);
   });
 });
 

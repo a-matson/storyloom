@@ -1,4 +1,4 @@
-import { loadMemoryJobs, memoryOverdue } from '@core/memory';
+import { entitiesOverdue, loadMemoryJobs, memoryOverdue } from '@core/memory';
 import type { Adventure, Speaker, TemplateId } from '@core/model';
 import type { Embedder, Provider } from '@core/ports';
 
@@ -17,7 +17,8 @@ interface Host {
 /**
  * Memory and summary jobs on slot 1, between turns. Slots share one GPU, so a job that overlaps the
  * next story request slows it: jobs wait while the player types, and the first keystroke cuts a
- * running one (it re-runs when the input clears). A memory overdue by ~3 turns runs regardless.
+ * running one (it re-runs when the input clears). A memory overdue by ~3 turns, or two memories
+ * still waiting for the entity call, run regardless.
  */
 export class MemoryScheduler {
   private typing = false;
@@ -76,10 +77,15 @@ export class MemoryScheduler {
 
   private overdue(): boolean {
     const adv = this.host.adventure();
-    return memoryOverdue(adv.actions.length, adv.memories);
+    return memoryOverdue(adv.actions.length, adv.memories) || entitiesOverdue(adv);
   }
 
   private async run(idle: AbortSignal): Promise<void> {
+    // An overdue run outlives its idle period; a second one beside it would redo its ranges on the same slot.
+    if (this.running) {
+      this.waiting = true;
+      return;
+    }
     this.waiting = false;
     const cancel = new AbortController();
     this.running = cancel;
@@ -104,7 +110,11 @@ export class MemoryScheduler {
     } finally {
       this.running = null;
     }
-    if (!cancel.signal.aborted) return this.portraits(idle);
+    if (!cancel.signal.aborted) {
+      const next = this.idle;
+      if (this.waiting && next && !next.aborted && (!this.typing || this.overdue())) return this.run(next);
+      return this.portraits(idle);
+    }
     // Cut by typing: earlier jobs of this run may have changed the bank, and the rest waits for the input to clear.
     this.host.changed();
     this.waiting = true;

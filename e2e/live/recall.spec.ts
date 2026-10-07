@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { z } from 'zod/mini';
+import * as S from '@core/schema';
 import { FACTS, FILLERS, retrievalHit, scoreProbe, type SeededFact, type Verdict } from '../../bench/recall';
 import { writeMeasurement } from '../../bench/env';
 
@@ -84,6 +86,47 @@ function lastTurn(page: Page) {
  * The second opinion on a keyword verdict. A direct `/completion` call, not the page's
  * provider: it needs no chat template for a yes/no and still only one server.
  */
+/** Per-turn cost and the wave-1 state (entities, scene) at the end of the run, for the M9 review. */
+async function costAndState(page: Page) {
+  const db = await page.evaluate(async () => {
+    const req = indexedDB.open('storyloom');
+    const idb = await new Promise<IDBDatabase>((ok, fail) => {
+      req.addEventListener('success', () => ok(req.result));
+      req.addEventListener('error', () => fail(req.error));
+    });
+    const all = (store: string) =>
+      new Promise<Record<string, unknown>[]>((ok, fail) => {
+        const r = idb.transaction(store).objectStore(store).getAll();
+        r.addEventListener('success', () => ok(r.result as Record<string, unknown>[]));
+        r.addEventListener('error', () => fail(r.error));
+      });
+    const out = { traces: await all('traces'), entities: await all('entities'), adventures: await all('adventures') };
+    idb.close();
+    return out;
+  });
+  const traces = z
+    .array(S.TurnTrace)
+    .parse(db.traces)
+    .toSorted((a, b) => a.createdAt - b.createdAt);
+  return {
+    turns: traces.map(({ kind, outcome, stats, timings, overlap, sections, entitiesUsed }) => ({
+      kind,
+      outcome,
+      promptTokens: stats?.promptTokens,
+      totalMs: timings.totalMs,
+      ttftMs: timings.ttftMs,
+      overlap,
+      sections: Object.fromEntries(sections.map((s) => [s.kind, s.tokens])),
+      entitiesUsed: entitiesUsed?.length,
+    })),
+    entities: z
+      .array(S.Entity)
+      .parse(db.entities)
+      .map(({ kind, name, canon, facts, state }) => ({ kind, name, canon, state, facts: facts.map((f) => (f.conflict ? `CONFLICT ${f.text}` : f.text)) })),
+    scene: db.adventures.map((a) => (a['plot'] as { scene?: unknown } | undefined)?.scene),
+  };
+}
+
 async function judge(output: string, fact: SeededFact): Promise<string> {
   const prompt = `Passage:\n"""${output}"""\n\nStatement: "${fact.statement}"\n\nDoes the passage contradict the statement? Answer with one word: yes, no, or unclear.\nAnswer:`;
   const res = await fetch(`${URL}/completion`, {
@@ -120,6 +163,9 @@ async function plantCanon(page: Page): Promise<void> {
 
 test('recall benchmark', async ({ page }) => {
   test.setTimeout(3 * 60 * 60_000);
+  // Background jobs fail only into the console; the review needs to see them.
+  const warnings: string[] = [];
+  page.on('console', (m) => void (['warning', 'error'].includes(m.type()) && warnings.push(m.text().slice(0, 300))));
   await page.goto('/');
   await page.getByRole('button', { name: /^llama-server/ }).click();
   await page.getByRole('textbox', { name: /Server URL/ }).fill(URL ?? '');
@@ -139,7 +185,7 @@ test('recall benchmark', async ({ page }) => {
 
   // ponytail: probes stay in the log, so a fact restated at depth 30 helps itself at 60.
   // Erasing them instead would trigger stale-memory regeneration and distort the idle windows.
-  type Row = { depth: number; id: string; class: string; verdict: Verdict; judge: string; retrieved: boolean; tail: string };
+  type Row = { depth: number; id: string; class: string; verdict: Verdict; judge: string; retrieved: boolean; tail: string; scene?: string | undefined };
   // On a retrieval miss: did the bank hold the fact (a ranking miss) or not (a summary miss)?
   const rows: (Row & { miss?: { bankHit: boolean; prompt: string } })[] = [];
   let story = planted.length + 2;
@@ -159,6 +205,7 @@ test('recall benchmark', async ({ page }) => {
         judge: await judge(output, f),
         retrieved,
         tail: output.slice(-200),
+        scene: /\[Scene:[^\]]*\]/.exec(prompt)?.[0],
         ...(retrieved ? {} : { miss: { bankHit: bank.some((t) => retrievalHit(t, f)), prompt } }),
       });
     }
@@ -172,7 +219,16 @@ test('recall benchmark', async ({ page }) => {
     if (r.retrieved) cell['retrieved'] = (cell['retrieved'] ?? 0) + 1;
   }
   const label = process.env['MEASURE_LABEL'];
-  const path = writeMeasurement(label ? `recall-${label}` : 'recall', { url: URL, model, depths: DEPTHS, stalls, byClass, probes: rows });
+  const path = writeMeasurement(label ? `recall-${label}` : 'recall', {
+    url: URL,
+    model,
+    depths: DEPTHS,
+    stalls,
+    byClass,
+    probes: rows,
+    ...(await costAndState(page)),
+    warnings,
+  });
   console.log(`wrote ${path}`);
   expect(rows.length).toBe(FACTS.length * DEPTHS.length);
 });
