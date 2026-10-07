@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { correct, entityEdits } from '@app/session/entities';
+import { correct } from '@app/session/correct';
+import { entityEdits } from '@app/session/entities';
 import { createBlankAdventure, type Entity } from '@core/model';
 import { setup } from './fixtures/session';
 

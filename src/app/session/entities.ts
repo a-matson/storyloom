@@ -60,23 +60,6 @@ export function entityEdits(host: GameSession) {
 }
 
 /**
- * `/correct …`: a pinned player fact on the entity the text names (pinned facts lead the facts
- * block), else a Plot Essentials line, which is always sent. Never an action; the notice says
- * where it landed so an unmatched name is visible.
- */
-export async function correct(host: GameSession, text: string): Promise<void> {
-  const { entityNamedIn } = await loadMemoryJobs();
-  const t = text.trim();
-  if (!t || host.getSnapshot().busy) return;
-  const e = entityNamedIn(host.adv.entities, t);
-  host.mutate((log, adv) => {
-    if (e) patch(adv, e.id, { facts: [...e.facts, { id: newId('fact_'), text: t, fromAction: log.actions.length, source: 'player', pinned: true }] });
-    else adv.plot = { ...adv.plot, plotEssentials: [adv.plot.plotEssentials, t].filter(Boolean).join('\n') };
-  });
-  host.emit({ notice: e ? `Pinned to ${e.name}` : 'Added to Plot Essentials' });
-}
-
-/**
  * One combined helper call (slot 1) over the last memory span the entity was seen in; new facts
  * fold in through the merge rules, so nothing the player wrote is replaced. Player-triggered, so it
  * sits outside the per-cycle budget.

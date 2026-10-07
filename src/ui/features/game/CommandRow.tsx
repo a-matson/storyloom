@@ -1,4 +1,5 @@
 import { useEffect, useState, type KeyboardEvent } from 'react';
+import { correct } from '@app/session/correct';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
 import { StatusDot } from '@ui/components/ui/status-dot';
@@ -20,12 +21,6 @@ interface Props {
 const chip =
   'h-[34px] rounded-full border border-border bg-secondary px-3.5 text-control font-medium text-foreground aria-pressed:font-semibold aria-pressed:text-lantern-ink';
 
-/** Lazy: the entity edits stay out of the start-up bundle. */
-function sendCorrection(api: GameApi, text: string, clear: () => void): void {
-  clear();
-  import('@app/session/entities').then(({ correct }) => correct(api, text)).catch((err: unknown) => api.onError(String(err)));
-}
-
 /**
  * Take-a-turn row. Enter sends, Ctrl/⌘+Enter continues, Ctrl/⌘+R retries,
  * Ctrl/⌘+Z undoes (input empty); `/do /say /story /see` switch mode, `/correct …` pins a fact.
@@ -41,7 +36,8 @@ export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retry
     if (busy) return;
     const slash = parseSlash(text);
     if (slash?.kind === 'correct') {
-      if (slash.text.trim() !== '') sendCorrection(api, slash.text, () => setText(''));
+      if (slash.text.trim() !== '') setText('');
+      void correct(api, slash.text);
       return;
     }
     if (slash) {
