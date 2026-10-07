@@ -6,7 +6,7 @@ import * as S from '@core/schema';
 import { FACTS, FILLERS, isOrig, retrievalHit, scenarioJson, scoreProbe, type Verdict } from '../../bench/recall';
 import { HISTORY_FILE, HISTORY_SETTINGS, RecallHistory, sliceHistory, stripAdventure, turnEnds } from '../../bench/recallHistory';
 import { writeMeasurement } from '../../bench/env';
-import { costAndState, lastTurn, readAdventure, rewind, run, shownAdventure, turn, type Rows } from './recallPage';
+import { costAndState, lastTurn, readAdventure, rewind, run, shownAdventure, turn, type Rows } from '../../bench/recallPage';
 
 // `pnpm measure recall-record <url>` once per fact set, then `pnpm measure recall <url>`; never runs in CI.
 const URL = process.env['MEASURE_URL'];
