@@ -1,6 +1,7 @@
 import { Bench } from 'tinybench';
 import { test } from 'vitest';
 import { buildContext } from '@core/context';
+import { bm25, buildIndex, tokenise } from '@core/memory/lexical';
 import { rankMemories } from '@core/memory/memoryBank';
 import { findTriggeredCards } from '@core/cards/storyCards';
 import { createApproxTokenizer } from '@core/text/tokenizer';
@@ -40,6 +41,9 @@ test('core benchmarks', async () => {
     const bank = makeAdventure({ actions: 0, cards: 0, memories: m }).memories;
     const query = bank[0]?.embedding;
     bench.add(`rankMemories ${m} × 384d`, () => rankMemories(bank, query, 20));
+    // The whole per-turn hybrid path: index rebuilt, BM25, RRF with cosine, MMR over the head.
+    const text = bank[0]?.text ?? '';
+    bench.add(`hybrid rank ${m} texts`, () => rankMemories(bank, query, 20, bm25(buildIndex(bank), tokenise(text))));
   }
 
   await bench.run();

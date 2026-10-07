@@ -1,5 +1,6 @@
 import { applyScriptSections, buildContext, renderBody, type ContextBuildInput, type ContextBuildResult, type ScriptCache } from '../context';
-import { rankMemories, touchUsed, type RankedMemory } from '../memory/memoryBank';
+import { bm25, buildIndex, tokenise } from '../memory/lexical';
+import { isActive, rankMemories, touchUsed, type RankedMemory } from '../memory/memoryBank';
 import type { Action, Adventure } from '../model/types';
 import { actionText } from '../model/types';
 import type { Embedder } from '../ports/embedder';
@@ -47,8 +48,17 @@ async function buildExact(input: ContextBuildInput): Promise<ContextBuildResult>
   return result;
 }
 
-async function rankForQuery(adventure: Adventure, query: string, embedder?: Embedder): Promise<RankedMemory[]> {
-  if (!adventure.settings.memory.memoryBank || adventure.memories.length === 0) return [];
+interface Retrieval {
+  rankedMemories: RankedMemory[];
+  factHits: string[];
+}
+
+/** One BM25 index over the active bank and every entity fact, so both rank against one corpus and one query. */
+async function rankForQuery(adventure: Adventure, query: string, embedder?: Embedder): Promise<Retrieval> {
+  const bank = adventure.settings.memory.memoryBank ? adventure.memories.filter(isActive) : [];
+  const facts = adventure.entities.flatMap((e) => e.facts.map((f) => ({ id: f.id, text: `${e.name}: ${f.text}` })));
+  const hits = bm25(buildIndex([...bank, ...facts]), tokenise(query));
+  if (!bank.length) return { rankedMemories: [], factHits: hits };
   let queryVec: number[] | undefined;
   if (embedder && query) {
     try {
@@ -57,7 +67,7 @@ async function rankForQuery(adventure: Adventure, query: string, embedder?: Embe
       queryVec = undefined; // embedding failure falls back to recency-only ranking
     }
   }
-  return rankMemories(adventure.memories, queryVec);
+  return { rankedMemories: rankMemories(adventure.memories, queryVec, Infinity, hits), factHits: hits };
 }
 
 const withoutSystem = (text: string, system: string): string => (system && text.startsWith(`${system}\n\n`) ? text.slice(system.length + 2) : text);
@@ -93,8 +103,8 @@ export async function prepareContext(
   scriptLogs?: string[],
 ): Promise<PreparedContext | { stopped: string }> {
   const last = actions.at(-1);
-  const rankedMemories = await rankForQuery(adventure, last ? actionText(last) : '', deps.embedder);
-  const result = await buildExact(contextInput(adventure, actions, rankedMemories, deps, adventure.settings.context.cacheStableLayout));
+  const { rankedMemories, factHits } = await rankForQuery(adventure, last ? actionText(last) : '', deps.embedder);
+  const result = await buildExact({ ...contextInput(adventure, actions, rankedMemories, deps, adventure.settings.context.cacheStableLayout), factHits });
 
   const fullText = `${result.system ? `${result.system}\n\n` : ''}${result.body}`;
   const hook = await runHook(

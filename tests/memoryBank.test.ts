@@ -11,6 +11,7 @@ import {
   rankMemories,
   summaryDue,
 } from '@core/memory/memoryBank';
+import { bm25, buildIndex, tokenise } from '@core/memory/lexical';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import { createBlankAdventure } from '@core/model';
 import type { Action, Memory } from '@core/model/types';
@@ -87,6 +88,15 @@ describe('retrieval and eviction', () => {
     const c = { ...mem('c', 12, 0, 2, [1, 0]), stale: true };
     expect(cosine([1, 0], [1, 0])).toBeCloseTo(1);
     expect(rankMemories([a, b, c], [1, 0]).map((r) => r.memory.id)).toEqual(['a', 'b']);
+  });
+
+  it('fuses a BM25 hit with cosine, so a memory naming the queried character outranks a closer vector', () => {
+    const near = { ...mem('near', 0, 0, 0, [1, 0]), text: 'The ferrywoman poled across the dark water.' };
+    const named = { ...mem('named', 6, 0, 1, [0.6, 0.8]), text: 'Tamsin hid the pendant under the jetty.' };
+    const query = [1, 0];
+    expect(rankMemories([near, named], query).map((r) => r.memory.id)).toEqual(['near', 'named']);
+    const hits = bm25(buildIndex([near, named]), tokenise('Where did Tamsin go?'));
+    expect(rankMemories([near, named], query, Infinity, hits).map((r) => r.memory.id)).toEqual(['named', 'near']);
   });
 
   it('forgets the least-used, then oldest, memories but keeps them flagged', () => {

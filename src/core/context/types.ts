@@ -68,6 +68,8 @@ export interface ContextBuildInput {
   entities: Entity[];
   /** Memories ranked by relevance to the most recent action, best first. */
   rankedMemories: RankedMemory[];
+  /** Fact ids the most recent action matches lexically (BM25), best first. */
+  factHits?: readonly string[];
   /** Scripting: `state.memory.frontMemory`, appended after the last action. */
   frontMemory?: string | undefined;
   /** Scripting: `state.memory.context` / `.authorsNote` take precedence over the UI values. */
