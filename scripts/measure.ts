@@ -6,7 +6,7 @@
  *   gatev <url>           llama-server checks: template, tokenizer error, warming, layout, evictionChunk, CORS
  *   live <url> [label]    plays 20 scripted turns in the real app; per-turn stats, memories, summary
  *   images <image-url> <url>  See mode and a cover against a real A1111 server
- *   recall <url> [label]  plants 12 facts and probes them at turns 30/60/90; the memory recall baseline
+ *   recall <url> [label]  plays an imported scenario, plants 24 facts and probes them at turns 30/60/90; the memory recall baseline
  */
 import { spawnSync } from 'node:child_process';
 

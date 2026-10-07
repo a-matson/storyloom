@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { z } from 'zod/mini';
 import * as S from '@core/schema';
-import { FACTS, FILLERS, retrievalHit, scoreProbe, type SeededFact, type Verdict } from '../../bench/recall';
+import { FACTS, FILLERS, isOrig, retrievalHit, scenarioJson, scoreProbe, type SeededFact, type Verdict } from '../../bench/recall';
 import { writeMeasurement } from '../../bench/env';
 
 // `pnpm measure recall <url>`: the recall baseline against a real llama-server; never runs in CI.
@@ -66,11 +66,14 @@ function lastTurn(page: Page) {
       });
     const action = await newest('actions');
     const trace = await newest('traces');
-    const memories = await new Promise<{ text: string; forgotten?: boolean; stale?: boolean }[]>((ok, fail) => {
-      const r = db.transaction('memories').objectStore('memories').getAll();
-      r.addEventListener('success', () => ok(r.result as { text: string }[]));
-      r.addEventListener('error', () => fail(r.error));
-    });
+    const all = <T>(store: string) =>
+      new Promise<T[]>((ok, fail) => {
+        const r = db.transaction(store).objectStore(store).getAll();
+        r.addEventListener('success', () => ok(r.result as T[]));
+        r.addEventListener('error', () => fail(r.error));
+      });
+    const memories = await all<{ text: string; forgotten?: boolean; stale?: boolean }>('memories');
+    const entities = await all<{ canon?: boolean; facts?: { text: string }[] }>('entities');
     db.close();
     const versions = (action['versions'] ?? []) as string[];
     return {
@@ -78,6 +81,7 @@ function lastTurn(page: Page) {
       prompt: (trace['prompt'] ?? '') as string,
       model: trace['modelId'] as string | undefined,
       bank: memories.filter((m) => !m.forgotten && !m.stale).map((m) => m.text),
+      canonFacts: entities.filter((e) => e.canon).flatMap((e) => (e.facts ?? []).map((f) => f.text)),
     };
   });
 }
@@ -140,25 +144,14 @@ async function judge(output: string, fact: SeededFact): Promise<string> {
   return word.startsWith('yes') ? 'contradicts' : word.startsWith('no') ? 'consistent' : 'unclear';
 }
 
-async function plantCanon(page: Page): Promise<void> {
-  // The sidebar starts open on wide screens; the header button toggles it.
-  const toggle = page.getByRole('button', { name: 'Adventure settings' });
-  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
-  const essentials = FACTS.filter((f) => f.plant[0] === 'essentials').map((f) => f.plant[1]);
-  if (essentials.length > 0) {
-    await page.locator('summary', { hasText: 'Plot Essentials' }).click();
-    await page.getByRole('textbox', { name: 'Plot Essentials' }).fill(essentials.join(' '));
-  }
-  await page.getByRole('button', { name: /^Story cards/ }).click();
-  for (const f of FACTS) {
-    if (f.plant[0] !== 'card' || !f.card) continue;
-    await page.getByRole('button', { name: '+ New' }).click();
-    await page.locator('#card-name').fill(f.card.name);
-    await page.locator('#card-entry').fill(f.plant[1]);
-    await page.locator('#card-triggers').fill(f.card.triggers);
-    await page.getByRole('button', { name: 'Finish' }).click();
-  }
-  await page.getByRole('button', { name: 'Close settings' }).click();
+/** Canon is planted as scenario cards, not adventure cards: only a scenario's cards seed canon entities. */
+async function playScenario(page: Page): Promise<void> {
+  const s = S.Scenario.parse(scenarioJson());
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByTitle('Storyloom scenario JSON').click();
+  await (await chooser).setFiles({ name: 'recall.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(s)) });
+  await page.getByRole('button', { name: `Play ${s.title}` }).click();
+  await page.getByRole('dialog', { name: s.title }).getByRole('button', { name: 'Begin' }).click();
 }
 
 test('recall benchmark', async ({ page }) => {
@@ -172,29 +165,33 @@ test('recall benchmark', async ({ page }) => {
   await page.getByRole('button', { name: 'Test connection' }).click();
   await expect(page.getByText('Connected')).toBeVisible();
   await page.getByRole('button', { name: 'Continue' }).click();
-  await page.getByRole('button', { name: 'Fantasy' }).click();
+  await playScenario(page);
   await expect(page).toHaveURL(/#\/adventure\//);
-  await plantCanon(page);
 
-  // Turns 1-10: the eight acted plants, with a filler after every fourth.
+  // Turns 1-20: the sixteen acted plants, with a filler after every fourth.
   const planted = FACTS.filter((f) => f.plant[0] === 'Do' || f.plant[0] === 'Say');
+  let story = 0;
   for (const [i, f] of planted.entries()) {
     await turn(page, f.plant[0] as 'Do' | 'Say', f.plant[1]);
-    if (i % 4 === 3) await turn(page, ...(FILLERS[i] ?? FILLERS[0] ?? ['Do', 'look around']));
+    story++;
+    if (i % 4 === 3) {
+      await turn(page, ...(FILLERS[i] ?? FILLERS[0] ?? ['Do', 'look around']));
+      story++;
+    }
   }
 
   // ponytail: probes stay in the log, so a fact restated at depth 30 helps itself at 60.
   // Erasing them instead would trigger stale-memory regeneration and distort the idle windows.
-  type Row = { depth: number; id: string; class: string; verdict: Verdict; judge: string; retrieved: boolean; tail: string; scene?: string | undefined };
+  type Row = { depth: number; id: string; class: string; verdict: Verdict; judge: string; retrieved: boolean; output: string; scene?: string | undefined };
   // On a retrieval miss: did the bank hold the fact (a ranking miss) or not (a summary miss)?
-  const rows: (Row & { miss?: { bankHit: boolean; prompt: string } })[] = [];
-  let story = planted.length + 2;
+  // On a canon probe: did memory content (a memory, or a canon entity's fact) contradict the canon?
+  const rows: (Row & { miss?: { bankHit: boolean; prompt: string }; memoryContra?: boolean })[] = [];
   let model: string | undefined;
   for (const depth of DEPTHS) {
     for (; story < depth; story++) await turn(page, ...(FILLERS[story % FILLERS.length] ?? ['Do', 'look around']));
     for (const f of FACTS) {
       await turn(page, f.probe[0], f.probe[1]);
-      const { output, prompt, model: m, bank } = await lastTurn(page);
+      const { output, prompt, model: m, bank, canonFacts } = await lastTurn(page);
       model = m;
       const retrieved = retrievalHit(prompt, f);
       rows.push({
@@ -204,27 +201,33 @@ test('recall benchmark', async ({ page }) => {
         verdict: scoreProbe(output, f),
         judge: await judge(output, f),
         retrieved,
-        tail: output.slice(-200),
+        output,
         scene: /\[Scene:[^\]]*\]/.exec(prompt)?.[0],
         ...(retrieved ? {} : { miss: { bankHit: bank.some((t) => retrievalHit(t, f)), prompt } }),
+        ...(f.class === 'canon' ? { memoryContra: [...bank, ...canonFacts].some((t) => scoreProbe(t, f) === 'contradicted') } : {}),
       });
     }
   }
 
-  const byClass: Record<string, Record<string, number>> = {};
-  for (const r of rows) {
-    const key = `${r.class}@${r.depth}`;
-    const cell = (byClass[key] ??= { honoured: 0, absent: 0, contradicted: 0, retrieved: 0 });
-    cell[r.verdict] = (cell[r.verdict] ?? 0) + 1;
-    if (r.retrieved) cell['retrieved'] = (cell['retrieved'] ?? 0) + 1;
-  }
+  const tally = (of: typeof rows) => {
+    const byClass: Record<string, Record<string, number>> = {};
+    for (const r of of) {
+      const cell = (byClass[`${r.class}@${r.depth}`] ??= { honoured: 0, absent: 0, contradicted: 0, retrieved: 0 });
+      cell[r.verdict] = (cell[r.verdict] ?? 0) + 1;
+      if (r.retrieved) cell['retrieved'] = (cell['retrieved'] ?? 0) + 1;
+    }
+    return byClass;
+  };
+  const orig = new Set(FACTS.filter(isOrig).map((f) => f.id));
   const label = process.env['MEASURE_LABEL'];
   const path = writeMeasurement(label ? `recall-${label}` : 'recall', {
     url: URL,
     model,
     depths: DEPTHS,
     stalls,
-    byClass,
+    byClass: tally(rows),
+    // The v1.0.0 baseline's 12 facts, comparable to it and to the wave-1 runs.
+    orig: tally(rows.filter((r) => orig.has(r.id))),
     probes: rows,
     ...(await costAndState(page)),
     warnings,
