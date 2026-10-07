@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { entitiesOverdue } from '@core/memory/memoryBank';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import type { CompletionRequest } from '@core/ports';
 import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure as adventure } from './fixtures/memoryJobs';
@@ -135,5 +136,19 @@ describe('entity extraction in memory maintenance', () => {
     const { deps, calls } = fakeDeps(adv, { abortAfter: 1 });
     expect(await runMemoryMaintenance(adv, deps)).toMatchObject({ memoriesWritten: 1, entitiesTouched: 0 });
     expect(calls.filter((c) => c.includes(ENTITY_PROMPT))).toHaveLength(0);
+  });
+
+  it('runs an overdue backlog after the idle signal fires, so fast play cannot starve it', async () => {
+    const adv = adventure(30);
+    const cc = new AbortController();
+    const provider = fakeProvider(async function* (req) {
+      if (req.prompt.includes(ENTITY_PROMPT)) cc.abort();
+      yield { text: req.prompt.includes(ENTITY_PROMPT) ? '{"importance": 1, "entities": []}' : 'Mira found the map.', done: true };
+    });
+    const base = fakeDeps(adv).deps;
+    await runMemoryMaintenance(adv, { ...base, provider, signal: cc.signal, cancel: cc.signal });
+    expect(entitiesOverdue(adv)).toBe(true);
+    await runMemoryMaintenance(adv, { ...base, provider, signal: AbortSignal.abort() });
+    expect(adv.scriptState.__entitiesAt).toBe(adv.memories[1]?.toAction);
   });
 });

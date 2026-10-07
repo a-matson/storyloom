@@ -10,7 +10,7 @@ import { renderTemplate } from '../text/templates';
 import { trackJob } from '../trace';
 import { attributeSpeakers, matchEntity, mergeEntity } from './entities';
 import { EXTRACT_JSON_SCHEMA } from './extractJsonSchema';
-import type { MemoryRange } from './memoryBank';
+import { entitiesOverdue, type MemoryRange } from './memoryBank';
 import { nextScene } from './scene';
 import type { MaintenanceDeps } from './memoryJobs';
 
@@ -80,8 +80,9 @@ export async function catchUpEntities(adventure: Adventure, deps: MaintenanceDep
   const total = { touched: 0, speakers: new Map<string, Speaker[]>(), sceneUpdated: false };
   const done = adventure.scriptState.__entitiesAt ?? 0;
   const due = adventure.memories.filter((m) => !m.stale && m.toAction > done).toSorted((a, b) => a.fromAction - b.fromAction);
+  const overdue = entitiesOverdue(adventure);
   for (const m of due.slice(0, ENTITY_BATCH)) {
-    if (deps.signal?.aborted) break;
+    if (deps.signal?.aborted && !overdue) break;
     const r = await updateEntities(adventure, m, deps);
     if (deps.cancel?.aborted) break;
     total.touched += r.touched;
