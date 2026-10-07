@@ -87,7 +87,7 @@ export class GameSession {
     this.adv.actions = this.log.actions;
     return { ...rest, adventure: { ...this.adv }, actions: this.log.actions, canUndo: this.log.canUndo, canRedo: this.log.canRedo };
   }
-  private emit(patch: Partial<GameSnapshot> = {}): void {
+  emit(patch: Partial<GameSnapshot> = {}): void {
     this.snapshot = this.build({ ...this.snapshot, ...patch });
     for (const fn of this.listeners) fn();
   }

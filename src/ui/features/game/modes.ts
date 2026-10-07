@@ -55,9 +55,13 @@ export const MODES: Record<Mode, ModeStyle> = {
 
 export const MODE_IDS: Mode[] = ['do', 'say', 'story', 'see'];
 
-/** `/say hello` → ['say', 'hello']; anything else → null. */
-export function parseSlash(raw: string): [Mode, string] | null {
-  const m = /^\/(do|say|story|see)\s*(.*)$/s.exec(raw);
+export type Slash = { kind: 'mode'; mode: Mode; rest: string } | { kind: 'correct'; text: string };
+
+/** `/say hello` switches mode; `/correct …` is a fact, not a mode: it must not become an action. */
+export function parseSlash(raw: string): Slash | null {
+  const m = /^\/(do|say|story|see|correct)(?:\s+(.*))?$/s.exec(raw);
+  const rest = m?.[2] ?? '';
+  if (m?.[1] === 'correct') return { kind: 'correct', text: rest };
   const mode = MODE_IDS.find((id) => id === m?.[1]);
-  return mode === undefined ? null : [mode, m?.[2] ?? ''];
+  return mode === undefined ? null : { kind: 'mode', mode, rest };
 }

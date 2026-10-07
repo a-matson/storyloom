@@ -10,7 +10,7 @@ import { trackJob } from '../trace';
 import { catchUpEntities } from './extract';
 
 // For the player's entity edits, which load with these jobs.
-export { guessUnlabelled, mergeEntities } from './entities';
+export { entityNamedIn, guessUnlabelled, mergeEntities } from './entities';
 export { updateEntities } from './extract';
 export { MEMORY_SPAN } from './memoryBank';
 export { projectEntity } from './projection';

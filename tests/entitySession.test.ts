@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { correct } from '@app/session/correct';
 import { entityEdits } from '@app/session/entities';
 import { createBlankAdventure, type Entity } from '@core/model';
 import { setup } from './fixtures/session';
@@ -60,5 +61,27 @@ describe('GameSession entity edits', () => {
     expect(rest).toEqual([]);
     expect(only?.aliases).toEqual(['Iron door']);
     expect(only?.facts.map((f) => f.text)).toEqual(['It is locked at dusk.', 'It creaks.']);
+  });
+
+  it('correct pins a player fact on the named entity, adds no action and sends it next turn', async () => {
+    const { session } = withGate();
+    const actions = session.getSnapshot().adventure.actions.length;
+    await correct(session, 'The gate is painted red.');
+    const snap = session.getSnapshot();
+    expect(snap.adventure.actions).toHaveLength(actions);
+    expect(snap.adventure.entities[0]?.facts.at(-1)).toMatchObject({ text: 'The gate is painted red.', source: 'player', pinned: true });
+    expect(snap.notice).toBe('Pinned to Gate');
+    await session.previewContext();
+    expect(session.getSnapshot().context?.prompt).toContain('Gate: The gate is painted red.');
+  });
+
+  it('correct with no named entity appends to Plot Essentials', async () => {
+    const { session } = withGate();
+    session.updatePlot({ plotEssentials: 'You are a courier.' });
+    await correct(session, 'It is winter.');
+    const snap = session.getSnapshot();
+    expect(snap.adventure.plot.plotEssentials).toBe('You are a courier.\nIt is winter.');
+    expect(snap.adventure.entities[0]?.facts).toHaveLength(1);
+    expect(snap.notice).toBe('Added to Plot Essentials');
   });
 });

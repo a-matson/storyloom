@@ -30,6 +30,24 @@ export function matchEntity(entities: readonly Entity[], name: string): Entity |
   return entities.find((e) => norm(e.name) === n || e.aliases.some((a) => norm(a) === n));
 }
 
+const words = (s: string): string =>
+  ` ${s
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()} `;
+
+/** The entity whose name or alias `text` contains as whole words; the longest wins, so "Lena Morrow" beats "Lena". */
+export function entityNamedIn(entities: readonly Entity[], text: string): Entity | undefined {
+  const t = words(text);
+  let best: { e: Entity; len: number } | undefined;
+  for (const e of entities)
+    for (const n of [e.name, ...e.aliases]) {
+      const k = words(n);
+      if (k.trim() && t.includes(k) && k.length > (best?.len ?? 0)) best = { e, len: k.length };
+    }
+  return best?.e;
+}
+
 /**
  * The helper's per-action `speakers` as paragraph labels by action id, for AI output only. The text
  * decides first (the client rule over every character); an action whose one resolved speaker the

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { attributeSpeakers, matchEntity, mergeEntities, mergeEntity } from '@core/memory/entities';
+import { attributeSpeakers, entityNamedIn, matchEntity, mergeEntities, mergeEntity } from '@core/memory/entities';
 import { ENTITY_ENTRY_TOKENS, projectEntity } from '@core/memory/projection';
 import type { Action, Entity, ExtractedEntity } from '@core/model';
 
@@ -53,6 +53,15 @@ describe('entity merge rules', () => {
     expect(matchEntity([e], '  THE ferrywoman ')).toBe(e);
     expect(matchEntity([e], 'tamsin')).toBe(e);
     expect(matchEntity([e], 'Odo')).toBeUndefined();
+  });
+
+  it('finds the entity a sentence names, longest name first, whole words only', () => {
+    const lena = mergeEntity(undefined, seen({ name: 'Lena' }), 1);
+    const morrow = mergeEntity(undefined, seen({ name: 'Lena Morrow', aliases: ['the Captain'] }), 1);
+    expect(entityNamedIn([lena, morrow], 'Lena Morrow has blue eyes.')).toBe(morrow);
+    expect(entityNamedIn([lena, morrow], "lena's eyes are blue")).toBe(lena);
+    expect(entityNamedIn([lena, morrow], 'The captain never drinks')).toBe(morrow);
+    expect(entityNamedIn([lena, morrow], 'Magdalena is tall')).toBeUndefined();
   });
 });
 
