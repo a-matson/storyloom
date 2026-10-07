@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { MemoryScheduler } from '@app/session/memoryScheduler';
-import type { Embedder } from '@core/ports';
+import { entitiesOverdue } from '@core/memory';
+import type { Adventure } from '@core/model';
+import type { Embedder, Provider } from '@core/ports';
 import { ENTITY_PROMPT, fakeProvider, memoryAdventure } from './fixtures/memoryJobs';
 
 describe('MemoryScheduler', () => {
@@ -37,5 +39,46 @@ describe('MemoryScheduler', () => {
     release();
     await vi.waitFor(() => expect(adv.scriptState.__entitiesAt).toBe(adv.memories.at(-1)?.toAction));
     expect(most).toBe(1);
+  });
+
+  const host = (adv: Adventure, provider: Provider) => {
+    const embedder: Embedder = { id: 'e', dimensions: 2, embed: (t) => Promise.resolve(t.map(() => [1, 0])) };
+    return {
+      adventure: () => adv,
+      helperModel: () => Promise.resolve({ provider, template: adv.settings.template }),
+      embedder: () => Promise.resolve(embedder),
+      changed: () => {},
+      annotate: () => {},
+      portraits: () => Promise.resolve(),
+    };
+  };
+
+  // An import starts with no memories, so one idle run writes them all; the entity calls must not wait a turn per batch.
+  it('drains an entity backlog within one idle period', async () => {
+    const adv = memoryAdventure(80);
+    let entityCalls = 0;
+    const provider = fakeProvider(async function* (req) {
+      if (req.prompt.includes(ENTITY_PROMPT)) entityCalls++;
+      yield { text: req.prompt.includes(ENTITY_PROMPT) ? '{"importance": 1, "entities": []}' : 'Mira found the map.', done: true };
+    });
+    new MemoryScheduler(host(adv, provider)).start(new AbortController().signal);
+    await vi.waitFor(() => expect(adv.memories.length).toBeGreaterThan(4));
+    await vi.waitFor(() => expect(entitiesOverdue(adv)).toBe(false));
+    expect(entityCalls).toBeGreaterThan(2);
+  });
+
+  it('does not re-run while the helper makes no progress', async () => {
+    const adv = memoryAdventure(80);
+    let calls = 0;
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    // oxlint-disable-next-line require-yield -- a helper that fails before its first token
+    const provider = fakeProvider(async function* () {
+      calls++;
+      throw new Error('down');
+    });
+    new MemoryScheduler(host(adv, provider)).start(new AbortController().signal);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(calls).toBe(1);
+    warn.mockRestore();
   });
 });

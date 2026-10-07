@@ -1,0 +1,2461 @@
+{
+  "format": "storyloom-recall-history",
+  "version": 1,
+  "recordedAt": "2026-10-07T15:25:10.055Z",
+  "model": "Wayfarer-2-12B-Q4_K_M.gguf",
+  "facts": [
+    "char-scar",
+    "char-sword",
+    "char-knee",
+    "char-name",
+    "place-ferry",
+    "place-cellar",
+    "place-tamsin",
+    "place-gate",
+    "canon-iron",
+    "canon-moons",
+    "canon-dead",
+    "canon-crown",
+    "char-eye-2",
+    "char-horses-2",
+    "char-sister-2",
+    "char-heron-2",
+    "place-bell-2",
+    "place-bridge-2",
+    "place-shrine-2",
+    "place-healer-2",
+    "canon-keep-2",
+    "canon-captain-2",
+    "canon-order-2",
+    "canon-brother-2"
+  ],
+  "turnEnds": [
+    3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67, 69, 71, 73, 75, 77, 79, 81,
+    83, 85, 87, 89, 91, 93, 95, 97, 99, 101, 103, 105, 107, 109, 111, 113, 115, 117, 119, 121, 123, 125, 127, 129, 131, 133, 135, 137, 139, 141, 143, 145, 147,
+    149, 151, 153, 155, 157, 159, 161, 163, 165, 167, 169, 171, 173, 175, 177, 179, 181
+  ],
+  "adventure": {
+    "id": "adv_55083ac6-f568-4ecf-8367-3f7ef2224eef",
+    "title": "Recall bench",
+    "description": "",
+    "tags": ["fantasy"],
+    "scenarioId": "scn_5296ecf0-5984-4e1a-9348-e6ccb533d7db",
+    "actions": [
+      {
+        "id": "act_cec57396-8121-4375-a0c9-c0d17d7217a0",
+        "type": "start",
+        "versions": [
+          "You come down out of the hills into the Marches at dusk, a letter of passage in your coat and a long way still to go. A woman waits by a boat at the foot of the road, watching you come."
+        ],
+        "active": 0,
+        "createdAt": 1791384483373
+      },
+      {
+        "id": "act_f875a2cc-d4e8-4f2d-9273-9db83c000b3f",
+        "type": "do",
+        "versions": ["> You show the ferrywoman the long scar on my left cheek and ask if she remembers me."],
+        "active": 0,
+        "createdAt": 1791384484539,
+        "turnId": "turn_4cfb86c8-00ca-48a2-97f9-42d0ea7cae8f"
+      },
+      {
+        "id": "act_fd89a415-fe99-4f27-9fa4-1ccc6340302d",
+        "type": "continue",
+        "versions": [
+          "The woman stares at your scar, her lined face twitching with recognition. She steps closer, studying the raised flesh more carefully. \"Aye, I remember that cut,\" she mutters, her voice rough as sandpaper. \"Bled like a stuck pig when you crossed here three winters back.\" She spits into the river. \"What business brings you back to this hellhole?\"\n\nThe current tugs at the boat's mooring line, and she jerks her head toward the craft. \"Ferry fee's doubled since last time, and there's a new law about crossing - anyone with a scar like that has to pay extra for what happened before.\""
+        ],
+        "active": 0,
+        "createdAt": 1791384493776,
+        "stats": {
+          "promptTokens": 174,
+          "cachedTokens": 123,
+          "generatedTokens": 136,
+          "promptMs": 438.803,
+          "generationMs": 7143.191
+        },
+        "turnId": "turn_4cfb86c8-00ca-48a2-97f9-42d0ea7cae8f"
+      },
+      {
+        "id": "act_a7d7116e-af33-45fc-878e-d45ab77446e1",
+        "type": "do",
+        "versions": ["> You unwrap my grandfather's bronze sword, Dawnsplitter, and set it on the table."],
+        "active": 0,
+        "createdAt": 1791384500197,
+        "turnId": "turn_1b589011-1670-4227-9f18-eb055aef0d30"
+      },
+      {
+        "id": "act_8171a721-8ca5-42dc-8636-da921c64b50e",
+        "type": "continue",
+        "versions": [
+          "The ferrywoman's eyes narrow as she sees the ancient bronze blade, its patterns worn smooth by decades of hands. \"Dawnsplitter,\" she breathes, reaching out before catching herself. \"Your grandfather was old even when you first came through here.\" She shakes her head, suddenly alert. \"The new taxman has been asking questions about who's carrying old relics like that. Bronze kills just as quick as iron in the right hands.\"\n\nShe glances toward the riverbank where three figures stand in the deepening twilight. \"Those three have been waiting for someone like you. You can try to run, but the Marches swallow up strays quicker than they ever did before.\""
+        ],
+        "active": 0,
+        "createdAt": 1791384508082,
+        "stats": {
+          "promptTokens": 330,
+          "cachedTokens": 277,
+          "generatedTokens": 141,
+          "promptMs": 415.159,
+          "generationMs": 7446.813
+        },
+        "turnId": "turn_1b589011-1670-4227-9f18-eb055aef0d30"
+      },
+      {
+        "id": "act_4dc39d2f-fbbf-4fd6-aa80-810e2a4bfca3",
+        "type": "do",
+        "versions": ["> You favour my right knee as I walk; it was broken last winter and never set straight."],
+        "active": 0,
+        "createdAt": 1791384514629,
+        "turnId": "turn_7c5547dd-1131-437b-9a3a-610f41c9997f"
+      },
+      {
+        "id": "act_294f0141-1430-413e-b9b8-d72528ae9a42",
+        "type": "continue",
+        "versions": [
+          "The ferrywoman notices your limp immediately, her eyes sharp with calculation. \"Hurt leg means you can't run far, and a bronze sword means you've got something worth taking,\" she says, loud enough for the figures on the riverbank to hear. One of them raises a crossbow in response.\n\nShe grabs your wrist with surprising strength, studying the calluses there. \"You're still too young to have learned the right way to swing that blade, but old enough to die if you try.\" The woman glances at the men approaching, then back to you. \"Last chance to give me half of what's in your pack and I'll get you across fast, or take your odds with them.\""
+        ],
+        "active": 0,
+        "createdAt": 1791384522777,
+        "stats": {
+          "promptTokens": 490,
+          "cachedTokens": 438,
+          "generatedTokens": 144,
+          "promptMs": 429.719,
+          "generationMs": 7693.078
+        },
+        "turnId": "turn_7c5547dd-1131-437b-9a3a-610f41c9997f"
+      },
+      {
+        "id": "act_c0826602-bc58-41a6-8694-d4370201dd58",
+        "type": "say",
+        "versions": ["> You say \"My name is Oriel Vance. I am a cartographer out of Hallow Down.\""],
+        "active": 0,
+        "createdAt": 1791384529062,
+        "turnId": "turn_361d2627-5bde-4cd6-9d5c-e9f697de81a3"
+      },
+      {
+        "id": "act_749afed1-5f5e-4ddb-abc0-06594b1cdf04",
+        "type": "continue",
+        "versions": [
+          "The ferrywoman's face hardens when you speak your name. She leans back, hands moving instinctively toward the club hanging from her belt. \"Vance. That's a cursed name in these parts now.\"\n\nBehind her, one of the men on the riverbank shouts something and points toward you both. The woman turns to watch them approach, then spits again. \"They're calling your name like it's a prayer to the dead. Seems your grandfather's reputation died with him.\"\n\nShe moves closer, speaking in a low voice. \"The cartographer from Hallow Down was hanged three days ago for mapping roads that weren't supposed to exist. Someone was paying good silver to find where he'd hidden the maps, and whoever put the bounty on his head is still out there.\""
+        ],
+        "active": 0,
+        "createdAt": 1791384538206,
+        "stats": {
+          "promptTokens": 655,
+          "cachedTokens": 601,
+          "generatedTokens": 162,
+          "promptMs": 428.991,
+          "generationMs": 8689.422
+        },
+        "turnId": "turn_361d2627-5bde-4cd6-9d5c-e9f697de81a3"
+      },
+      {
+        "id": "act_0bc05ceb-cd2e-4f68-a63d-c28454314b98",
+        "type": "say",
+        "versions": ["> You say \"Is anyone there?\""],
+        "active": 0,
+        "createdAt": 1791384544510,
+        "turnId": "turn_1b0f6325-6618-488d-8fec-d4e56269c57b"
+      },
+      {
+        "id": "act_64cc690e-20f9-4a22-b218-e497474b589f",
+        "type": "continue",
+        "versions": [
+          "The ferrywoman's face goes pale as parchment. She jerks backward, knocking over a bucket that clangs loudly against the dock planks. The approaching men freeze mid-step, their crossbows wavering in their grips.\n\n\"You're one of them,\" she hisses, backing away until she bumps into her boat. \"The dead don't speak here - never have and never will.\" Her hands shake as she grabs a long pole, using it to keep you at a distance. The three men on the riverbank lower their weapons, exchanging nervous glances.\n\n\"Speak again and I'll put you in the river myself,\" the woman snaps, but her voice wavers."
+        ],
+        "active": 0,
+        "createdAt": 1791384552561,
+        "stats": {
+          "promptTokens": 848,
+          "cachedTokens": 784,
+          "generatedTokens": 144,
+          "promptMs": 444.246,
+          "generationMs": 7576.072
+        },
+        "turnId": "turn_1b0f6325-6618-488d-8fec-d4e56269c57b"
+      },
+      {
+        "id": "act_1b059cbd-b6de-49eb-a880-e487acf008eb",
+        "type": "do",
+        "versions": ["> You note that the ferry landing sits on the north bank, below the broken mill."],
+        "active": 0,
+        "createdAt": 1791384558963,
+        "turnId": "turn_ddd19927-e1ed-4850-959b-fe42797d6c4f"
+      },
+      {
+        "id": "act_759f9414-ee20-4b9f-9046-6b3933c1d271",
+        "type": "continue",
+        "versions": [
+          "The ferrywoman follows your gaze to the crumbling ruins of the mill wheel above them. \"Smart boy, noticing where we are,\" she says, though her grip on the pole never loosens. \"That's Millbrook Landing - where the old families used to grind grain before the water table dropped and everything went to rot.\"\n\nShe jerks her thumb toward the three men still standing watch. \"See those bastards? They work for the Iron Guild now, taking their cut from anyone stupid enough to try crossing here without paying the proper tribute.\" The woman's eyes narrow as she studies your face."
+        ],
+        "active": 0,
+        "createdAt": 1791384566041,
+        "stats": {
+          "promptTokens": 1009,
+          "cachedTokens": 935,
+          "generatedTokens": 122,
+          "promptMs": 617.123,
+          "generationMs": 6437.908
+        },
+        "turnId": "turn_ddd19927-e1ed-4850-959b-fe42797d6c4f"
+      },
+      {
+        "id": "act_6e94732b-1848-4f58-9372-cb18f299a1f6",
+        "type": "do",
+        "versions": ["> You find the trapdoor to the cellar behind the inn's kitchen hearth."],
+        "active": 0,
+        "createdAt": 1791384572394,
+        "turnId": "turn_d4d57c1c-b050-4212-a116-7bde1457ccb7"
+      },
+      {
+        "id": "act_ab0323d2-2b5c-4149-aac4-fc95fb009011",
+        "type": "continue",
+        "versions": [
+          "Coals crackle in the hearth as you crouch beside the wooden frame that houses it. Your fingers trace the outline of a trapdoor, its outline nearly invisible against the dark stonework. The hinges groan when you pull it open, releasing a rush of cold air thick with mold and old smoke.\n\nThe space below is narrow, with just enough room to crawl on hands and knees. A few candles lie scattered across rough-hewn stone steps leading down into absolute darkness. Flickering lamplight from the kitchen above casts dancing shadows that make the empty cellar look alive.\n\n\"Found something interesting?\""
+        ],
+        "active": 0,
+        "createdAt": 1791384579733,
+        "stats": {
+          "promptTokens": 1148,
+          "cachedTokens": 1074,
+          "generatedTokens": 126,
+          "promptMs": 573.478,
+          "generationMs": 6703.394
+        },
+        "turnId": "turn_d4d57c1c-b050-4212-a116-7bde1457ccb7"
+      },
+      {
+        "id": "act_35e11807-f9dd-4b66-b7af-efe01eda95ee",
+        "type": "do",
+        "versions": ["> You leave Tamsin at her ferry on the river and walk inland alone."],
+        "active": 0,
+        "createdAt": 1791384585836,
+        "turnId": "turn_e05ce242-460f-44ba-aceb-d5e81ef833c0"
+      },
+      {
+        "id": "act_a8980707-5751-41e1-85a2-89567da52979",
+        "type": "continue",
+        "versions": [
+          "Cold wind stings your face as you leave the dock behind, your boots squelching through muddy paths that twist between crumbling stone houses. The woman who called herself Tamsin watches from her boat, one hand resting on the club at her belt while the other holds a lamp against the deepening twilight.\n\nBehind you, the three men from the Iron Guild whisper together before shouldering their crossbows and following at a distance. Their footsteps echo off the narrow walls of buildings that lean precariously over the street. A dog barks from somewhere in the maze of alleys, its sound sharp with hunger."
+        ],
+        "active": 0,
+        "createdAt": 1791384593276,
+        "stats": {
+          "promptTokens": 1290,
+          "cachedTokens": 1217,
+          "generatedTokens": 128,
+          "promptMs": 576.172,
+          "generationMs": 6821.56
+        },
+        "turnId": "turn_e05ce242-460f-44ba-aceb-d5e81ef833c0"
+      },
+      {
+        "id": "act_d6f16b4b-d3bc-42ed-b5f6-aae2ca7c5004",
+        "type": "do",
+        "versions": ["> You walk the earthen wall around the village to its single gate, the only way in."],
+        "active": 0,
+        "createdAt": 1791384599761,
+        "turnId": "turn_91473033-6c89-4a4d-95a4-1e3c9ae64d56"
+      },
+      {
+        "id": "act_e8495dd2-e673-45bd-b754-94c4403e42bc",
+        "type": "continue",
+        "versions": [
+          "Broken glass from shattered windows crunches underfoot as you follow the ancient stone wall's curve toward the village center. Patches of ice glisten in the dark crevices where mortar has crumbled away, leaving gaps wide enough for a man to slip through.\n\nThe gate ahead looms massive - reinforced with iron bands and topped with jagged metal spikes that catch the moonlight like broken teeth. A single torch flickers beside it, casting wild shadows across the face of a guard whose breathing forms small clouds in the cold air.\n\n\"Halt!\" His voice carries the authority of someone who's killed before."
+        ],
+        "active": 0,
+        "createdAt": 1791384607087,
+        "stats": {
+          "promptTokens": 1437,
+          "cachedTokens": 1361,
+          "generatedTokens": 124,
+          "promptMs": 587.841,
+          "generationMs": 6683.74
+        },
+        "turnId": "turn_91473033-6c89-4a4d-95a4-1e3c9ae64d56"
+      },
+      {
+        "id": "act_4dfdb034-3261-4d6e-a7fa-1f9e4e6a3a87",
+        "type": "do",
+        "versions": ["> You watch the clouds gather."],
+        "active": 0,
+        "createdAt": 1791384613176,
+        "turnId": "turn_e280a736-a8e0-44db-a20a-5d14f353bd61"
+      },
+      {
+        "id": "act_81df2bb2-8acd-423e-bfb2-326b418fe836",
+        "type": "continue",
+        "versions": [
+          "Thick black clouds roll across the night sky like smoke from a funeral pyre, blocking out what little moonlight had tried to pierce the gloom. The torch beside the gate sputters and dies, plunging everything into complete darkness save for the weak glow of distant hearth fires in village windows.\n\nThe guard curses under his breath, groping for something in his coat. A striking sound echoes through the night as he lights a new torch, its flame casting dancing shadows that make the iron spikes atop the gate look like writhing serpents.\n\n\"Storm coming,\" he mutters, more to himself than to you."
+        ],
+        "active": 0,
+        "createdAt": 1791384622166,
+        "stats": {
+          "promptTokens": 1593,
+          "cachedTokens": 1504,
+          "generatedTokens": 130,
+          "promptMs": 639.879,
+          "generationMs": 8304.512
+        },
+        "turnId": "turn_e280a736-a8e0-44db-a20a-5d14f353bd61"
+      },
+      {
+        "id": "act_e8be2a30-67c1-489c-b576-b82426391c71",
+        "type": "do",
+        "versions": ["> You tug the patch over my missing left eye straight; a falconer's bird took the eye years ago."],
+        "active": 0,
+        "createdAt": 1791384628609,
+        "turnId": "turn_30d159cb-f3ea-4800-aedc-4a7b354ca0c9"
+      },
+      {
+        "id": "act_6849c5d8-530e-44dd-a999-c1885461eea4",
+        "type": "continue",
+        "versions": [
+          "The guard squints at your face as you adjust the patch, noting how your fingers work to conceal the wound beneath. His torch flickers in the rising wind as he studies the careful way you position the cloth - a man who has practiced this motion many times before.\n\n\"Falconer's work,\" he says, more statement than question. His free hand moves to rest on his sword hilt. \"Haven't seen one of your kind here in years. The birds all fled after the poisonings started.\"\n\nA heavy drop of rain hits the iron gate above you, followed by another. The guard glances up at the darkening sky before returning his gaze to you."
+        ],
+        "active": 0,
+        "createdAt": 1791384636814,
+        "stats": {
+          "promptTokens": 1746,
+          "cachedTokens": 1640,
+          "generatedTokens": 136,
+          "promptMs": 772.821,
+          "generationMs": 7333.149
+        },
+        "turnId": "turn_30d159cb-f3ea-4800-aedc-4a7b354ca0c9"
+      },
+      {
+        "id": "act_f7aca3ce-26b5-49b9-ad75-a61699aa4a27",
+        "type": "do",
+        "versions": ["> You refuse to go near the horses; I have been afraid of them since one threw me as a child."],
+        "active": 0,
+        "createdAt": 1791384643040,
+        "turnId": "turn_b5a830d2-e0ef-4f0d-8b21-f2acdc8b07db"
+      },
+      {
+        "id": "act_c6371f3c-724a-45a5-95be-a8b789738a28",
+        "type": "continue",
+        "versions": [
+          "The guard notices your reluctance as you back away from his horse, the animal stamping impatiently in the mounting cold. Rain begins pattering against the iron spikes above, each drop echoing like tiny hammers striking stone.\n\n\"That fear will get you killed in these parts,\" he mutters, swinging up into the saddle in one fluid motion. His mount snorts steam into the darkness as he kicks it toward the gate mechanism. \"Horses are the only thing keeping bandits off these roads at night.\"\n\nThe massive gate groans open just wide enough for a single rider, revealing the muddy path beyond where more rain falls in sheets."
+        ],
+        "active": 0,
+        "createdAt": 1791384662762,
+        "stats": {
+          "promptTokens": 1904,
+          "cachedTokens": 1799,
+          "generatedTokens": 132,
+          "promptMs": 825.644,
+          "generationMs": 18808.075
+        },
+        "turnId": "turn_b5a830d2-e0ef-4f0d-8b21-f2acdc8b07db"
+      },
+      {
+        "id": "act_7847756f-7f79-4f4b-9275-68ba062b2281",
+        "type": "say",
+        "versions": ["> You say \"My sister Lenna keeps the lighthouse at Gull Point. I send her every coin I can spare.\""],
+        "active": 0,
+        "createdAt": 1791384669016,
+        "turnId": "turn_e8d446be-c8e0-47b6-b16f-e66062d5729e"
+      },
+      {
+        "id": "act_aebcffb1-5bda-4b93-92a7-1e0c101e001c",
+        "type": "continue",
+        "versions": [
+          "The guard's face shifts from suspicion to something approaching understanding. He studies your expression in the flickering torchlight, weighing truth against deception. \"Gull Point?\" he repeats, leaning forward in his saddle. \"That's three leagues through bandit country even at midday. You'd have to be desperate or mad to attempt it alone at night.\"\n\nHe spits into the muddy road. \"Your sister Lenna - that's the lighthouse keeper who went blind last winter? I heard she'd taken on apprentice, but I didn't know her brother was still breathing.\" His tone carries a note of grim approval."
+        ],
+        "active": 0,
+        "createdAt": 1791384682408,
+        "stats": {
+          "promptTokens": 2060,
+          "cachedTokens": 1953,
+          "generatedTokens": 128,
+          "promptMs": 831.705,
+          "generationMs": 12427.638
+        },
+        "turnId": "turn_e8d446be-c8e0-47b6-b16f-e66062d5729e"
+      },
+      {
+        "id": "act_7c91233d-24e7-4c3c-85ff-7a5379fb9be1",
+        "type": "do",
+        "versions": ["> You roll up my sleeve to show the stranger the blue heron tattooed on my forearm."],
+        "active": 0,
+        "createdAt": 1791384689011,
+        "turnId": "turn_981c0f30-7abc-4cf4-adfd-d169adeabbcf"
+      },
+      {
+        "id": "act_bcb31991-9cdc-4360-95d9-74634a28314b",
+        "type": "continue",
+        "versions": [
+          "The guard leans down from his saddle, torchlight catching the intricate lines of the blue heron etched into your skin. Recognition flashes across his scarred features - this is no simple village mark, but the kind of permanent ink that tells a story.\n\n\"Old Brotherhood work,\" he says, voice dropping lower. \"But the heron died out when the old masters went to ground after the plague summers.\" His horse shifts nervously as thunder rumbles overhead. \"That means you got that somewhere dark and dangerous, or someone gave it to you in secret.\"\n\nRain begins falling harder now, mixing with the mud to create a treacherous slurry beneath your feet."
+        ],
+        "active": 0,
+        "createdAt": 1791384710104,
+        "stats": {
+          "promptTokens": 2207,
+          "cachedTokens": 2105,
+          "generatedTokens": 135,
+          "promptMs": 830.571,
+          "generationMs": 20128.564
+        },
+        "turnId": "turn_981c0f30-7abc-4cf4-adfd-d169adeabbcf"
+      },
+      {
+        "id": "act_2ec038a9-a725-4a5b-8c77-6d0daa747ead",
+        "type": "do",
+        "versions": ["> You sleep until first light."],
+        "active": 0,
+        "createdAt": 1791384716543,
+        "turnId": "turn_9ae1fc58-010a-4bc0-a107-f8f0e52aa8e9"
+      },
+      {
+        "id": "act_d93a0b0d-8459-4a01-8fa8-b59b0ec7a7d1",
+        "type": "continue",
+        "versions": [
+          "Dawn paints the world in shades of gray and rust as you wake shivering under a stone archway, the sharp bite of river water still clinging to your clothes. Above, the ferrywoman's boat sits moored exactly where it was last night, but she's nowhere in sight. The Iron Guild men have gone too, leaving behind only muddy boot prints and the distant echo of horse hooves.\n\nYour stomach twists with hunger as you check your pack - still secure, though half-empty after paying passage to this cursed place. Through the archway's gap, you can see the village proper stretching up the hillside, its stone houses leaning together like broken teeth in a corpse's mouth."
+        ],
+        "active": 0,
+        "createdAt": 1791384731515,
+        "stats": {
+          "promptTokens": 2342,
+          "cachedTokens": 2259,
+          "generatedTokens": 144,
+          "promptMs": 657.323,
+          "generationMs": 14233.526
+        },
+        "turnId": "turn_9ae1fc58-010a-4bc0-a107-f8f0e52aa8e9"
+      },
+      {
+        "id": "act_f2d4ff5f-8c80-4393-ad02-fa3393823f58",
+        "type": "do",
+        "versions": ["> You climb the bell tower on the hill; its bell is cracked and has not rung in years."],
+        "active": 0,
+        "createdAt": 1791384738025,
+        "turnId": "turn_dd3ee683-1c7c-4af6-aba5-19b78095e606"
+      },
+      {
+        "id": "act_d1c1c2f7-0556-4fe0-81d2-0ce3c78ee3bf",
+        "type": "continue",
+        "versions": [
+          "Rusted hinges scream as you push open the narrow door to the bell tower, metal shrieking like a wounded animal. Inside, the air tastes of damp stone and something older - the sharp bite of old copper mixed with whatever residue clings to an unused bell.\n\nThe spiral staircase spirals upward through decades of neglect. Chunks of mortar have crumbled away from the walls, leaving exposed timber beams that look ready to collapse under their own weight. Your boots find purchase on uneven stone steps slick with condensation that's been weeping down from somewhere above.\n\nAt the top, a massive bell hangs motionless, its surface scarred by years of corrosion and a jagged crack running from bottom to top."
+        ],
+        "active": 0,
+        "createdAt": 1791384750877,
+        "stats": {
+          "promptTokens": 2506,
+          "cachedTokens": 2409,
+          "generatedTokens": 144,
+          "promptMs": 834.976,
+          "generationMs": 11931.21
+        },
+        "turnId": "turn_dd3ee683-1c7c-4af6-aba5-19b78095e606"
+      },
+      {
+        "id": "act_6b962cb7-f878-45f2-bd52-e69d96405da0",
+        "type": "do",
+        "versions": ["> You cross the rope bridge over the gorge west of the village, testing each plank; three are missing."],
+        "active": 0,
+        "createdAt": 1791384757025,
+        "turnId": "turn_7054e660-f116-475f-bf94-233e7264696a"
+      },
+      {
+        "id": "act_9f7f4777-d806-4d20-83f7-47cd95673a92",
+        "type": "continue",
+        "versions": [
+          "The rope creaks ominously as you test the first plank, your weight straining the ancient knots that hold it in place. The wood feels solid beneath your boots, though dark stains along its edges suggest years of rotten timbers replaced by something stronger.\n\nThe second plank gives you more confidence - recent wood cut from living trees, its surface still bearing traces of bark. But as you move toward the third, the gap between that plank and the next yawns wide before you. No one has bothered to replace the missing section, leaving a three-foot chasm over churning black water below."
+        ],
+        "active": 0,
+        "createdAt": 1791384766503,
+        "stats": {
+          "promptTokens": 2672,
+          "cachedTokens": 2573,
+          "generatedTokens": 126,
+          "promptMs": 843.886,
+          "generationMs": 8525.485
+        },
+        "turnId": "turn_7054e660-f116-475f-bf94-233e7264696a"
+      },
+      {
+        "id": "act_88363242-5216-476a-97e9-c2d0260127fe",
+        "type": "do",
+        "versions": ["> You leave an offering at the shrine of the antlered god in the birch wood."],
+        "active": 0,
+        "createdAt": 1791384772956,
+        "turnId": "turn_bb576ebb-a155-4508-be05-eeee19a48dc0"
+      },
+      {
+        "id": "act_16a8b153-5d6b-46cb-844a-33933b937949",
+        "type": "continue",
+        "versions": [
+          "Ancient moss clings to the carved stone as you push through dense undergrowth toward the clearing. The air here tastes of damp earth and something else - a strange sweetness that hangs like incense, though no torches burn among the twisted birch trees.\n\nThe shrine emerges from shadows, its surface covered in faded symbols you don't recognize. Carved antlers frame a hollow space where previous pilgrims have left offerings - bones wrapped in strips of cloth, small bronze coins, and dried herbs that crumble when touched.\n\nYou place your grandfather's silver hairpin in the space, its tarnished surface gleaming dully in the filtered light."
+        ],
+        "active": 0,
+        "createdAt": 1791384793437,
+        "stats": {
+          "promptTokens": 2817,
+          "cachedTokens": 2721,
+          "generatedTokens": 133,
+          "promptMs": 668.786,
+          "generationMs": 19696.381
+        },
+        "turnId": "turn_bb576ebb-a155-4508-be05-eeee19a48dc0"
+      },
+      {
+        "id": "act_d8f70e39-2d95-4861-932d-4f03066ed14d",
+        "type": "do",
+        "versions": ["> You visit the healer, old Brannoch, whose hut stands on stilts in the marsh east of the village."],
+        "active": 0,
+        "createdAt": 1791384799972,
+        "turnId": "turn_0944db9e-2dcc-4ea1-959a-87f064bcfe29"
+      },
+      {
+        "id": "act_b4ceb6c9-2ff4-41c7-8ab4-5c44ef038a88",
+        "type": "continue",
+        "versions": [
+          "Mud squelches beneath your boots as you wade through the treacherous marshes east of Millbrook Landing. The wooden walkway creaks ominously under your weight, its planks slick with moss and worse substances that make the wood shine like oil in the gray light.\n\nBrannoch's hut squats at the end of the path like a toad on a log, its roof sagging under decades of weather and neglect. Smoke curls from a chimney made of tin cans and rusted iron - the one thing that breaks the rule about carrying iron across water. A warning carved into the doorframe reads \"Death comes for those who cheat fate twice.\""
+        ],
+        "active": 0,
+        "createdAt": 1791384814682,
+        "stats": {
+          "promptTokens": 2974,
+          "cachedTokens": 2873,
+          "generatedTokens": 138,
+          "promptMs": 856.458,
+          "generationMs": 13717.468
+        },
+        "turnId": "turn_0944db9e-2dcc-4ea1-959a-87f064bcfe29"
+      },
+      {
+        "id": "act_1709396c-5afc-459a-b508-03e1221e91ef",
+        "type": "say",
+        "versions": ["> You say \"Fair weather for travelling.\""],
+        "active": 0,
+        "createdAt": 1791384820975,
+        "turnId": "turn_50d3275f-2ac0-404c-9b58-bb2bbc8641e8"
+      },
+      {
+        "id": "act_faa81150-f338-4acb-82c8-9151b5d74d83",
+        "type": "continue",
+        "versions": [
+          "The ferrywoman's lined face twists into something that might pass for a smile, though her eyes remain hard as river stones. \"Fair weather?\" she scoffs, gesturing toward the darkening sky where storm clouds gather like mourners at a funeral. \"You call this fair? Half the road to Gull Point is washed out from last week's rains, and the other half's crawling with bandits who'd gut a man for the boots on his feet.\"\n\nShe spits into the murky water. \"But you're right about one thing - the weather's got no loyalty to anyone, least of all fools like you who think old names and old weapons mean anything in these parts.\""
+        ],
+        "active": 0,
+        "createdAt": 1791384842822,
+        "stats": {
+          "promptTokens": 3120,
+          "cachedTokens": 3035,
+          "generatedTokens": 143,
+          "promptMs": 679.057,
+          "generationMs": 21049.36
+        },
+        "turnId": "turn_50d3275f-2ac0-404c-9b58-bb2bbc8641e8"
+      },
+      {
+        "id": "act_8001faa4-c417-4002-aff3-4bc70360b2e7",
+        "type": "do",
+        "versions": ["> You look around."],
+        "active": 0,
+        "createdAt": 1791384848971,
+        "turnId": "turn_fc63a9dd-dd99-49a6-a1c3-e96bbe921d72"
+      },
+      {
+        "id": "act_eb4b2270-bce4-4642-89b3-80f0f1310557",
+        "type": "continue",
+        "versions": [
+          "The ferry dock sits at the mouth of a narrow channel where the Blackwater River meets salt marsh and tidal flats. Weather-beaten posts driven into the mud mark old moorings now long abandoned, their surfaces scarred by decades of hard use and neglect.\n\nTamsin leans against her boat's prow, arms crossed as she watches you survey the surroundings. Behind her, the craft's hull bears scars from recent storms - deep gouges where debris has struck the wood and patches where hasty repairs have been made with whatever materials came to hand.\n\nFurther up the channel, a series of wooden platforms extend into the water like the ribs of some massive creature emerging from the mud."
+        ],
+        "active": 0,
+        "createdAt": 1791384863407,
+        "stats": {
+          "promptTokens": 3267,
+          "cachedTokens": 3186,
+          "generatedTokens": 137,
+          "promptMs": 680.009,
+          "generationMs": 13666.762
+        },
+        "turnId": "turn_fc63a9dd-dd99-49a6-a1c3-e96bbe921d72"
+      },
+      {
+        "id": "act_47be5745-6748-420f-9d2e-e690e90bbfe6",
+        "type": "do",
+        "versions": ["> You follow the path east."],
+        "active": 0,
+        "createdAt": 1791384869969,
+        "turnId": "turn_526388fe-8156-47df-9e49-474bbde14417"
+      },
+      {
+        "id": "act_f2ddaa6d-f12d-4b9c-a338-0f4bd064c341",
+        "type": "continue",
+        "versions": [
+          "Mud sucks at your boots as you follow the narrow path that winds through the marshes east of Millbrook Landing. The wooden walkway groans underfoot, its planks slick with moss and worse substances that make the wood shine like oil in the gray light.\n\nAhead, Old Brannoch's hut squats at the end of the path like a toad on a log, its roof sagging under decades of weather and neglect. Smoke curls from a chimney made of tin cans and rusted iron - the one thing that breaks the rule about carrying iron across water. A warning carved into the doorframe reads \"Death comes for those who cheat fate twice.\""
+        ],
+        "active": 0,
+        "createdAt": 1791384881800,
+        "stats": {
+          "promptTokens": 3410,
+          "cachedTokens": 3327,
+          "generatedTokens": 138,
+          "promptMs": 684.581,
+          "generationMs": 11052.539
+        },
+        "turnId": "turn_526388fe-8156-47df-9e49-474bbde14417"
+      },
+      {
+        "id": "act_d1309512-905d-4a21-ac05-92d1e1762744",
+        "type": "do",
+        "versions": ["> You listen for anything moving."],
+        "active": 0,
+        "createdAt": 1791384887971,
+        "turnId": "turn_3064cca8-23c2-479a-bfa5-9f59af49bebb"
+      },
+      {
+        "id": "act_a3e5ba7e-b25f-4fba-8f38-51320c37bfb3",
+        "type": "continue",
+        "versions": [
+          "The marsh stretches around you in silence broken only by the distant cry of a bird and the soft lapping of water against wood. Your ears strain for any sound out of place - a footstep on the walkway, the creak of a bowstring being drawn, or the rustle of clothing as someone moves through the tall reeds.\n\nInstead, there's only the persistent drip of moisture from rotting timber above and the rhythmic thudding of your own heartbeat. The wooden planks beneath your feet feel solid enough, though their age shows in the dark stains along their edges where previous boards have failed."
+        ],
+        "active": 0,
+        "createdAt": 1791384897778,
+        "stats": {
+          "promptTokens": 3554,
+          "cachedTokens": 3471,
+          "generatedTokens": 124,
+          "promptMs": 685.981,
+          "generationMs": 9026.306
+        },
+        "turnId": "turn_3064cca8-23c2-479a-bfa5-9f59af49bebb"
+      },
+      {
+        "id": "act_c13ce9d3-b107-4186-bca2-4650138316b7",
+        "type": "say",
+        "versions": ["> You say \"Is anyone there?\""],
+        "active": 0,
+        "createdAt": 1791384903956,
+        "turnId": "turn_650f60e9-2076-4192-a127-1aef618ce0f6"
+      },
+      {
+        "id": "act_3a0e69b4-5aec-4453-adad-2326a30e8ade",
+        "type": "continue",
+        "versions": [
+          "The ferrywoman's face goes pale as parchment. She jerks backward, knocking over a bucket that clangs loudly against the dock planks. The approaching men freeze mid-step, their crossbows wavering in their grips.\n\n\"You're one of them,\" she hisses, backing away until she bumps into her boat. \"The dead don't speak here - never have and never will.\" Her hands shake as she grabs a long pole, using it to keep you at a distance. The three men on the riverbank lower their weapons, exchanging nervous glances.\n\n\"Speak again and I'll put you in the river myself,\" the woman snaps, but her voice wavers."
+        ],
+        "active": 0,
+        "createdAt": 1791384926187,
+        "stats": {
+          "promptTokens": 3685,
+          "cachedTokens": 3601,
+          "generatedTokens": 144,
+          "promptMs": 689.327,
+          "generationMs": 21478.899
+        },
+        "turnId": "turn_650f60e9-2076-4192-a127-1aef618ce0f6"
+      },
+      {
+        "id": "act_2b2c8159-3b05-45e0-a44a-f13585d986c3",
+        "type": "do",
+        "versions": ["> You check my pack."],
+        "active": 0,
+        "createdAt": 1791384932481,
+        "turnId": "turn_e1933915-6e7d-48b6-8360-77e284dfaa40"
+      },
+      {
+        "id": "act_a7d06db0-91e6-478a-a542-b8bb4f9d1656",
+        "type": "continue",
+        "versions": [
+          "Your pack's contents reveal the meager supplies of someone traveling light and smart. A piece of dried meat that tastes more of salt than anything else, a waterskin half-full of lukewarm water, and three silver coins tied in a cloth bundle - all that remains after paying for passage. Beneath these basics, you find the folded map showing routes through the Marches, its edges yellowed with age.\n\nMost telling are the empty spaces where your real supplies should be: no rope, no extra clothing for the cold nights ahead, and nothing to replace the arrowheads that went missing when you last stopped for repairs."
+        ],
+        "active": 0,
+        "createdAt": 1791384946246,
+        "stats": {
+          "promptTokens": 3858,
+          "cachedTokens": 3752,
+          "generatedTokens": 127,
+          "promptMs": 889.635,
+          "generationMs": 12772.44
+        },
+        "turnId": "turn_e1933915-6e7d-48b6-8360-77e284dfaa40"
+      },
+      {
+        "id": "act_4a73d767-3667-429a-a0b5-05758eeee682",
+        "type": "do",
+        "versions": ["> You rest a while in the shade."],
+        "active": 0,
+        "createdAt": 1791384952449,
+        "turnId": "turn_bf7e629d-9484-461e-be63-f90e591a29e9"
+      },
+      {
+        "id": "act_bbc8f3f2-2a3a-4117-bfa6-445d9fb56355",
+        "type": "continue",
+        "versions": [
+          "Shade feels good against your skin as you settle onto a fallen log near the path. The rotting wood gives slightly under your weight, releasing a musty aroma that blends with the ever-present dampness of the marshes. Water laps gently against the walkway's supports somewhere behind you.\n\nAs you sit, a rustling sound comes from the tall reeds to your left. A small animal—maybe a rat or some kind of marsh bird—scurries through the undergrowth, though whether it's fleeing something or simply going about its business is impossible to tell. The sun remains hidden behind thick clouds, turning the world into shades of gray and black."
+        ],
+        "active": 0,
+        "createdAt": 1791384973935,
+        "stats": {
+          "promptTokens": 3993,
+          "cachedTokens": 3884,
+          "generatedTokens": 134,
+          "promptMs": 893.261,
+          "generationMs": 20522.258
+        },
+        "turnId": "turn_bf7e629d-9484-461e-be63-f90e591a29e9"
+      },
+      {
+        "id": "act_69735691-7baa-4f99-80e1-1847136ea662",
+        "type": "do",
+        "versions": ["> You drink from my waterskin."],
+        "active": 0,
+        "createdAt": 1791384980464,
+        "turnId": "turn_f558179f-edfc-47fc-b0e2-a398c0d21d8d"
+      },
+      {
+        "id": "act_c28df67a-0f8e-49a2-a43a-d2d002cea9a9",
+        "type": "continue",
+        "versions": [
+          "Water tastes faintly of leather and something else - possibly the river itself that tainted it during the crossing. The liquid slakes your thirst but leaves a metallic aftertaste that reminds you of the ferrywoman's fear.\n\nThe drink reminds you of how far you still have to travel and how little time you have to reach Gull Point before your sister runs out of supplies. Three days, maybe four, if the roads remain passable and bandits don't take notice of a lone traveler with a bronze sword."
+        ],
+        "active": 0,
+        "createdAt": 1791384992253,
+        "stats": {
+          "promptTokens": 4134,
+          "cachedTokens": 4026,
+          "generatedTokens": 105,
+          "promptMs": 898.217,
+          "generationMs": 10792.888
+        },
+        "turnId": "turn_f558179f-edfc-47fc-b0e2-a398c0d21d8d"
+      },
+      {
+        "id": "act_c53d4413-cfc4-48bd-bb83-9270e26bfc30",
+        "type": "do",
+        "versions": ["> You watch the clouds gather."],
+        "active": 0,
+        "createdAt": 1791384998446,
+        "turnId": "turn_e3c9af9a-f506-4a55-aedc-00078d663b53"
+      },
+      {
+        "id": "act_e9cc718c-e220-4cf7-8f63-1ddd3cd5b13a",
+        "type": "continue",
+        "versions": [
+          "Thick black clouds roll across the night sky like smoke from a funeral pyre, blocking out what little moonlight had tried to pierce the gloom. The torch beside the gate sputters and dies, plunging everything into complete darkness save for the weak glow of distant hearth fires in village windows.\n\nThe guard curses under his breath, groping for something in his coat. A striking sound echoes through the night as he lights a new torch, its flame casting dancing shadows that make the iron spikes atop the gate look like writhing serpents.\n\n\"Storm coming,\" he mutters, more to himself than to you."
+        ],
+        "active": 0,
+        "createdAt": 1791385009299,
+        "stats": {
+          "promptTokens": 4245,
+          "cachedTokens": 4138,
+          "generatedTokens": 130,
+          "promptMs": 901.291,
+          "generationMs": 9885.261
+        },
+        "turnId": "turn_e3c9af9a-f506-4a55-aedc-00078d663b53"
+      },
+      {
+        "id": "act_9fc077cc-c82f-42db-9e82-4bf7c31dddb3",
+        "type": "do",
+        "versions": ["> You walk on until dusk."],
+        "active": 0,
+        "createdAt": 1791385015413,
+        "turnId": "turn_21b5d533-ead8-4ae5-aa52-3a2c793d110a"
+      },
+      {
+        "id": "act_f7cb5fdf-0644-425b-ab4b-8fdec11200e6",
+        "type": "continue",
+        "versions": [
+          "Mud splashes around your boots as you push forward through the marshes, following a path that winds between pools of stagnant water and patches of treacherous quicksand marked by rotting driftwood. The sun sinks lower, painting the sky in shades of blood and copper.\n\nBehind you, smoke rises from Old Brannoch's hut as the healer prepares whatever concoctions he trades to desperate travelers. Ahead, the path leads toward a cluster of ramshackle buildings where people gather around cook fires, their voices carrying across the water like ghosts.\n\nYou arrive at what passes for a village square in this forgotten corner of the Marches - a patch of muddy ground with three leaning structures that might once have been stores or workshops."
+        ],
+        "active": 0,
+        "createdAt": 1791385025637,
+        "stats": {
+          "promptTokens": 4382,
+          "cachedTokens": 4274,
+          "generatedTokens": 153,
+          "promptMs": 859.54,
+          "generationMs": 9280.894
+        },
+        "turnId": "turn_21b5d533-ead8-4ae5-aa52-3a2c793d110a"
+      },
+      {
+        "id": "act_750e57ad-3234-481c-83da-7fb11adfd068",
+        "type": "say",
+        "versions": ["> You say \"A long road for a short errand.\""],
+        "active": 0,
+        "createdAt": 1791385031878,
+        "turnId": "turn_548a1bdc-b536-415e-8037-5cdf144b8246"
+      },
+      {
+        "id": "act_43c6f557-2698-4018-88c4-da73605fd60c",
+        "type": "continue",
+        "versions": [
+          "The ferrywoman's lined face twists into something between amusement and contempt. She spits into the murky water of the Blackwater River, her gaze fixed on the distant hills where your journey will begin. \"Short errands make long roads when bandits and worse things take notice,\" she mutters, adjusting the mooring line with hands that bear old scars.\n\nOne of the three men who have been watching you from the riverbank calls out something in a harsh voice, and the woman's shoulders tense. \"Time's running short for crossing, and these fools are getting restless,\" she says, jerking her head toward the men."
+        ],
+        "active": 0,
+        "createdAt": 1791385053495,
+        "stats": {
+          "promptTokens": 4547,
+          "cachedTokens": 4434,
+          "generatedTokens": 131,
+          "promptMs": 920.433,
+          "generationMs": 20573.597
+        },
+        "turnId": "turn_548a1bdc-b536-415e-8037-5cdf144b8246"
+      },
+      {
+        "id": "act_7953ad8f-e66a-489c-a900-70ea3f7ecca0",
+        "type": "do",
+        "versions": ["> You make camp and light a small fire."],
+        "active": 0,
+        "createdAt": 1791385059876,
+        "turnId": "turn_e4ec574c-bf3b-4a91-a969-cd10dd5b24cd"
+      },
+      {
+        "id": "act_e6234ecc-b34a-4cdb-be72-e0e871717ac6",
+        "type": "continue",
+        "versions": [
+          "Smoke from your small fire curls upward through the deepening twilight as you settle beneath a stone archway near the old ferry dock. The flames cast dancing shadows across the crumbling masonry, but their heat offers little comfort against the bone-deep chill that seeps from the ground.\n\nYou position yourself with a clear view of both the path leading toward the village and the muddy approach from which you came. The fire illuminates a few feet around you, but beyond that radius the darkness presses in like something alive.\n\nBehind you, the abandoned mill creaks softly in the wind, its broken wheel turning uselessly in the current."
+        ],
+        "active": 0,
+        "createdAt": 1791385081241,
+        "stats": {
+          "promptTokens": 4687,
+          "cachedTokens": 4577,
+          "generatedTokens": 130,
+          "promptMs": 916.547,
+          "generationMs": 20373.67
+        },
+        "turnId": "turn_e4ec574c-bf3b-4a91-a969-cd10dd5b24cd"
+      },
+      {
+        "id": "act_2ed82798-6812-4a9a-9180-2164f6c15244",
+        "type": "do",
+        "versions": ["> You sleep until first light."],
+        "active": 0,
+        "createdAt": 1791385087394,
+        "turnId": "turn_33cf9038-1de4-407e-b2c3-debc9563abdf"
+      },
+      {
+        "id": "act_9f1fbe43-81cd-4f3c-acc8-e18fc0e46af4",
+        "type": "continue",
+        "versions": [
+          "Dawn breaks gray and cold as you wake beneath the stone archway, your breath visible in the frigid air. The ferrywoman's boat still sits moored where it was yesterday, but she's nowhere in sight. Only footprints in the muddy ground and the distant echo of hammering from one of the village workshops break the silence.\n\nYou check your pack—still secure, though more light reveals how thoroughly you've been stripped of non-essential supplies. The bronze sword still sits heavy at your hip, but without rope or proper rations, survival in the Marches will be even more precarious than you'd hoped."
+        ],
+        "active": 0,
+        "createdAt": 1791385096315,
+        "stats": {
+          "promptTokens": 4823,
+          "cachedTokens": 4716,
+          "generatedTokens": 129,
+          "promptMs": 875.681,
+          "generationMs": 7964.687
+        },
+        "turnId": "turn_33cf9038-1de4-407e-b2c3-debc9563abdf"
+      },
+      {
+        "id": "act_2e7550b6-bb76-4c65-a397-dfa802423eb6",
+        "type": "do",
+        "versions": ["> You wash my face in the stream."],
+        "active": 0,
+        "createdAt": 1791385102875,
+        "turnId": "turn_cfd32c5c-b6ba-4ad2-96a0-c1fe9141225d"
+      },
+      {
+        "id": "act_a30a1121-76be-4390-9595-2b5caa3c47ff",
+        "type": "continue",
+        "versions": [
+          "Cold water cuts through the grime on your skin like ice shards, and you rinse away the blood and sweat of the past few days. The stream gurgles over ancient stones worn smooth by centuries of current, its waters dark with sediment from the surrounding hills.\n\nThe ferrywoman watches from her mooring as you wash, her face unreadable in the early morning light. She says nothing, but you notice her grip tightens on the club at her belt when you look toward the three men still hovering near the village entrance.\n\n\"Careful there,\" she calls out finally, her voice carrying across the water."
+        ],
+        "active": 0,
+        "createdAt": 1791385126549,
+        "stats": {
+          "promptTokens": 4960,
+          "cachedTokens": 4851,
+          "generatedTokens": 127,
+          "promptMs": 921.262,
+          "generationMs": 20044.744
+        },
+        "turnId": "turn_cfd32c5c-b6ba-4ad2-96a0-c1fe9141225d"
+      },
+      {
+        "id": "act_d2037d95-b62e-4044-8ce2-4a71885c395b",
+        "type": "do",
+        "versions": ["> You count the coins I have left."],
+        "active": 0,
+        "createdAt": 1791385132913,
+        "turnId": "turn_7fb99e10-5154-4583-ad86-2fb4f575a3d2"
+      },
+      {
+        "id": "act_87923ba9-96cb-43ad-bc00-fbba6c35559e",
+        "type": "continue",
+        "versions": [
+          "Three silver pennies rest in your palm, their metal warm from your body heat. One bears the face of a king you don't recognize, another shows a hawk in flight, and the third is so worn it's impossible to make out its original design.\n\nThe ferrywoman notices you counting your coins, her expression darkening as she studies the pathetic sum. \"Three silvers won't get you far on this road,\" she mutters, spitting into the river. \"Ferry costs more than passage alone now, and the new law about scarred travelers means you'll need extra for the taxmen.\""
+        ],
+        "active": 0,
+        "createdAt": 1791385147239,
+        "stats": {
+          "promptTokens": 5095,
+          "cachedTokens": 4986,
+          "generatedTokens": 126,
+          "promptMs": 919.054,
+          "generationMs": 13331.899
+        },
+        "turnId": "turn_7fb99e10-5154-4583-ad86-2fb4f575a3d2"
+      },
+      {
+        "id": "act_4256e470-23dd-4d42-9493-0dade4ceb3c0",
+        "type": "do",
+        "versions": ["> You ask a passing carter for news."],
+        "active": 0,
+        "createdAt": 1791385153371,
+        "turnId": "turn_e45d11c3-a08d-43ab-99e7-a3ad86afbcee"
+      },
+      {
+        "id": "act_b3eef396-9288-47d1-b40a-c9710c697c1f",
+        "type": "continue",
+        "versions": [
+          "The carter's wagon creaks to a halt as you approach, his horse snorting steam in the morning air. A dozen crates of grain sit behind him, their contents enough to feed a small village for a week. Sweat stains darken his threadbare coat despite the chill.\n\n\"News?\" he laughs bitterly, wiping mud from his hands with a cloth that's seen better years. \"Only news is that tax collectors are shaking down every cart heading north, and bandits have been stripping travelers naked between here and the border.\" He jerks his thumb toward a cluster of crows circling something in the distance."
+        ],
+        "active": 0,
+        "createdAt": 1791385174976,
+        "stats": {
+          "promptTokens": 5230,
+          "cachedTokens": 5120,
+          "generatedTokens": 129,
+          "promptMs": 923.993,
+          "generationMs": 20569.432
+        },
+        "turnId": "turn_e45d11c3-a08d-43ab-99e7-a3ad86afbcee"
+      },
+      {
+        "id": "act_0641bbdc-de87-4038-a9ad-4aca3673a79d",
+        "type": "say",
+        "versions": ["> You say \"Fair weather for travelling.\""],
+        "active": 0,
+        "createdAt": 1791385181413,
+        "turnId": "turn_ba7c2577-dc8b-4c71-a962-52e0df6f3a97"
+      },
+      {
+        "id": "act_d896b172-a9eb-4672-a2cb-986cd8e422b3",
+        "type": "continue",
+        "versions": [
+          "The ferrywoman's lined face twists into something that might pass for a smile, though her eyes remain hard as river stones. \"Fair weather?\" she scoffs, gesturing toward the darkening sky where storm clouds gather like mourners at a funeral. \"You call this fair? Half the road to Gull Point is washed out from last week's rains, and the other half's crawling with bandits who'd gut a man for the boots on his feet.\"\n\nShe spits into the murky water. \"But you're right about one thing - the weather's got no loyalty to anyone, least of all fools like you who think old names and old weapons mean anything in these parts.\""
+        ],
+        "active": 0,
+        "createdAt": 1791385197610,
+        "stats": {
+          "promptTokens": 5367,
+          "cachedTokens": 5258,
+          "generatedTokens": 143,
+          "promptMs": 928.13,
+          "generationMs": 15186.759
+        },
+        "turnId": "turn_ba7c2577-dc8b-4c71-a962-52e0df6f3a97"
+      },
+      {
+        "id": "act_df243888-8fd0-4fa8-8825-026d78d64520",
+        "type": "do",
+        "versions": ["> You climb the low ridge ahead."],
+        "active": 0,
+        "createdAt": 1791385203923,
+        "turnId": "turn_13fa99b0-ee15-49da-988d-b5ad2aaf3b08"
+      },
+      {
+        "id": "act_701104e6-a0cb-410d-b936-65442159ecca",
+        "type": "continue",
+        "versions": [
+          "Sharp stones dig into your palms as you haul yourself up the low ridge, each handhold sending a cascade of loose rocks down the slope behind you. The morning mist clings to everything like a second skin, turning your breath into wisps of vapor that hang in the air.\n\nFrom the ridge's crest, the full scope of Millbrook Landing unfolds below - a patchwork of broken stone walls and collapsed roofs where the village used to be. Smoke rises from perhaps a dozen hearth fires, their locations marked by the thin trails they leave in the gray morning air.\n\nThe road eastward cuts through a narrow pass between two larger hills, its surface already rutted by cart wheels and recent rain."
+        ],
+        "active": 0,
+        "createdAt": 1791385219036,
+        "stats": {
+          "promptTokens": 5597,
+          "cachedTokens": 5409,
+          "generatedTokens": 143,
+          "promptMs": 1411.352,
+          "generationMs": 13613.218
+        },
+        "turnId": "turn_13fa99b0-ee15-49da-988d-b5ad2aaf3b08"
+      },
+      {
+        "id": "act_118496d9-214a-416b-9817-ef6fb4522fd7",
+        "type": "do",
+        "versions": ["> You wait for the rain to pass."],
+        "active": 0,
+        "createdAt": 1791385225438,
+        "turnId": "turn_f30897a6-55e8-4f6c-b731-0337697b86bc"
+      },
+      {
+        "id": "act_47c914f3-3ecb-42ea-bc18-e3f0b9d1316f",
+        "type": "continue",
+        "versions": [
+          "Rain hammers against the bell tower's ancient roof in a steady drumbeat that drowns out all other sounds. The massive cracked bell above you remains silent as water streams down the stone walls, pooling on the uneven floor where chunks of mortar have crumbled away.\n\nThrough the narrow windows, you watch lightning split the dark sky in jagged white forks. The ferrywoman's boat rocks violently in the channel below, its mooring lines straining against the wind. She huddles beneath a canvas tarp spread between two wooden posts, her expression grim as she watches the storm lash the water into white-capped fury."
+        ],
+        "active": 0,
+        "createdAt": 1791385250607,
+        "stats": {
+          "promptTokens": 5848,
+          "cachedTokens": 5559,
+          "generatedTokens": 128,
+          "promptMs": 9039.052,
+          "generationMs": 13803.02
+        },
+        "turnId": "turn_f30897a6-55e8-4f6c-b731-0337697b86bc"
+      },
+      {
+        "id": "act_e11d3019-f3a0-4216-8702-ac49e7e5d11a",
+        "type": "do",
+        "versions": ["> You sharpen my blade."],
+        "active": 0,
+        "createdAt": 1791385257036,
+        "turnId": "turn_57aead33-e784-4626-83f4-cb8254093948"
+      },
+      {
+        "id": "act_f19c5856-a6c0-438a-adb2-feac231ef22b",
+        "type": "continue",
+        "versions": [
+          "The whetstone grinds against the bronze edge of your grandfather's sword with a satisfying shriek, bronze sparks scattering into the wind. Each stroke smooths away the small imperfections that have accumulated during your journey, bringing back some of the weapon's ancient sharpness.\n\nThe ferrywoman watches from below as you work, her lined face betraying something between wariness and respect. She spits into the murky water. \"Bronze kills just as quick as iron in the right hands,\" she calls up, though whether this is warning or encouragement remains unclear.\n\nYour sharpening continues in the morning light, each pass revealing more of the intricate designs etched into the metal by your grandfather's hand years ago."
+        ],
+        "active": 0,
+        "createdAt": 1791385274810,
+        "stats": {
+          "promptTokens": 5957,
+          "cachedTokens": 5695,
+          "generatedTokens": 145,
+          "promptMs": 2037.123,
+          "generationMs": 15638.686
+        },
+        "turnId": "turn_57aead33-e784-4626-83f4-cb8254093948"
+      },
+      {
+        "id": "act_a4ae539c-94a6-4eef-99e8-28b1a1956b21",
+        "type": "do",
+        "versions": ["> You press on towards the village."],
+        "active": 0,
+        "createdAt": 1791385281091,
+        "turnId": "turn_4cb0bb6e-525f-4f4e-a7c7-05f62976cb32"
+      },
+      {
+        "id": "act_cb65155f-694c-4844-96b1-d2b1d3623a00",
+        "type": "continue",
+        "versions": [
+          "The path slopes upward from the ferry dock, leading past crumbling stone walls that once formed the village's outer defenses. Sharp stones bite into your boots as you walk, their edges slick with morning dew that turns to ice in the wind. The air here tastes of smoke and something else—decay.\n\nTwo men in roughspun clothes emerge from a collapsed building ahead, their movements careful and measured. One carries an iron-tipped staff while his companion grips a rusted blade with white-knuckled tension. They spread out to block your path, forcing you to stop.\n\n\"Morning traveler,\" the man with the staff calls out, his voice carrying the flat tone of someone who has done this many times before."
+        ],
+        "active": 0,
+        "createdAt": 1791385306585,
+        "stats": {
+          "promptTokens": 5637,
+          "cachedTokens": 5297,
+          "generatedTokens": 149,
+          "promptMs": 2522.966,
+          "generationMs": 22811.384
+        },
+        "turnId": "turn_4cb0bb6e-525f-4f4e-a7c7-05f62976cb32"
+      },
+      {
+        "id": "act_5668068a-8e00-4f6a-8dd6-37e758a9dc19",
+        "type": "do",
+        "versions": ["> You look around."],
+        "active": 0,
+        "createdAt": 1791385312769,
+        "turnId": "turn_595e6588-ae36-45d0-b19e-d93e5b699282"
+      },
+      {
+        "id": "act_b39eb018-0c02-4803-970c-4212612ceb5d",
+        "type": "continue",
+        "versions": [
+          "The village square sits in a depression between three ramshackle buildings that lean against each other for support. Mud and ice create treacherous footing beneath scattered refuse - broken pottery, rusted metal scraps, and the gnawed bones of small animals. The nearest structure, what might once have been a store, bears the fresh marks of an axe blade hacking at its door frame.\n\nTwo women emerge from the largest building, carrying buckets of gray water that steams in the morning air. Their clothing hangs in rags, and they move with the stiff gait of people who've spent too long bent over work."
+        ],
+        "active": 0,
+        "createdAt": 1791385322951,
+        "stats": {
+          "promptTokens": 5717,
+          "cachedTokens": 5453,
+          "generatedTokens": 128,
+          "promptMs": 1985.378,
+          "generationMs": 8108.899
+        },
+        "turnId": "turn_595e6588-ae36-45d0-b19e-d93e5b699282"
+      },
+      {
+        "id": "act_518450f9-8e4f-4932-98bf-b01c8f1ea245",
+        "type": "do",
+        "versions": ["> You follow the path east."],
+        "active": 0,
+        "createdAt": 1791385329233,
+        "turnId": "turn_98f1654e-8524-4199-8d2a-d76c7cf5f0ad"
+      },
+      {
+        "id": "act_b2f50df9-dae7-4927-ae8a-d95677421c1c",
+        "type": "continue",
+        "versions": [
+          "Mud splashes around your boots as you push forward through the marshes, following a path that winds between pools of stagnant water and patches of treacherous quicksand marked by rotting driftwood. The sun sinks lower, painting the sky in shades of blood and copper.\n\nBehind you, smoke rises from Old Brannoch's hut as the healer prepares whatever concoctions he trades to desperate travelers. Ahead, the path leads toward a cluster of ramshackle buildings where people gather around cook fires, their voices carrying across the water like ghosts.\n\nYou arrive at what passes for a village square in this forgotten corner of the Marches - a patch of muddy ground with three leaning structures that might once have been stores or workshops."
+        ],
+        "active": 0,
+        "createdAt": 1791385353488,
+        "stats": {
+          "promptTokens": 5744,
+          "cachedTokens": 5585,
+          "generatedTokens": 153,
+          "promptMs": 1198.529,
+          "generationMs": 22971.859
+        },
+        "turnId": "turn_98f1654e-8524-4199-8d2a-d76c7cf5f0ad"
+      },
+      {
+        "id": "act_d6ad6def-7399-4600-8f49-1ab8fa103095",
+        "type": "do",
+        "versions": ["> You listen for anything moving."],
+        "active": 0,
+        "createdAt": 1791385359782,
+        "turnId": "turn_ddae6ceb-8516-4dc6-8daa-e327e8dfe0a2"
+      },
+      {
+        "id": "act_b376c65c-2611-4dd3-8a45-6444c588570d",
+        "type": "continue",
+        "versions": [
+          "The marsh stretches around you in silence broken only by the distant cry of a bird and the soft lapping of water against wood. Your ears strain for any sound out of place - a footstep on the walkway, the creak of a bowstring being drawn, or the rustle of clothing as someone moves through the tall reeds.\n\nInstead, there's only the persistent drip of moisture from rotting timber above and the rhythmic thudding of your own heartbeat. The wooden planks beneath your feet feel solid enough, though their age shows in the dark stains along their edges where previous boards have failed."
+        ],
+        "active": 0,
+        "createdAt": 1791385375268,
+        "stats": {
+          "promptTokens": 6008,
+          "cachedTokens": 5744,
+          "generatedTokens": 124,
+          "promptMs": 2039.953,
+          "generationMs": 13372.939
+        },
+        "turnId": "turn_ddae6ceb-8516-4dc6-8daa-e327e8dfe0a2"
+      },
+      {
+        "id": "act_7123c27e-ab20-4dec-9f90-6315e3901f74",
+        "type": "say",
+        "versions": ["> You say \"Is anyone there?\""],
+        "active": 0,
+        "createdAt": 1791385381814,
+        "turnId": "turn_a3ef84c3-2c87-485a-a1ec-b09564372e6f"
+      },
+      {
+        "id": "act_62bf56a6-3fdd-40e0-9c28-49a1b4610912",
+        "type": "continue",
+        "versions": [
+          "The ferrywoman's face goes pale as parchment. She jerks backward, knocking over a bucket that clangs loudly against the dock planks. The approaching men freeze mid-step, their crossbows wavering in their grips.\n\n\"You're one of them,\" she hisses, backing away until she bumps into her boat. \"The dead don't speak here - never have and never will.\" Her hands shake as she grabs a long pole, using it to keep you at a distance. The three men on the riverbank lower their weapons, exchanging nervous glances.\n\n\"Speak again and I'll put you in the river myself,\" the woman snaps, but her voice wavers."
+        ],
+        "active": 0,
+        "createdAt": 1791385406520,
+        "stats": {
+          "promptTokens": 5587,
+          "cachedTokens": 5263,
+          "generatedTokens": 144,
+          "promptMs": 2482.054,
+          "generationMs": 22150.296
+        },
+        "turnId": "turn_a3ef84c3-2c87-485a-a1ec-b09564372e6f"
+      },
+      {
+        "id": "act_aad625f8-4b85-450d-9da6-767fa82711ea",
+        "type": "do",
+        "versions": ["> You check my pack."],
+        "active": 0,
+        "createdAt": 1791385412900,
+        "turnId": "turn_52bfce2d-1e69-4478-84bb-53b3e43b5de3"
+      },
+      {
+        "id": "act_0c19498b-21c5-4300-a2bf-8e4d5b115297",
+        "type": "continue",
+        "versions": [
+          "Your pack's contents reveal the meager supplies of someone traveling light and smart. A piece of dried meat that tastes more of salt than anything else, a waterskin half-full of lukewarm water, and three silver coins tied in a cloth bundle - all that remains after paying for passage. Beneath these basics, you find the folded map showing routes through the Marches, its edges yellowed with age.\n\nMost telling are the empty spaces where your real supplies should be: no rope, no extra clothing for the cold nights ahead, and nothing to replace the arrowheads that went missing when you last stopped for repairs."
+        ],
+        "active": 0,
+        "createdAt": 1791385429159,
+        "stats": {
+          "promptTokens": 5736,
+          "cachedTokens": 5414,
+          "generatedTokens": 127,
+          "promptMs": 2489.711,
+          "generationMs": 13694.482
+        },
+        "turnId": "turn_52bfce2d-1e69-4478-84bb-53b3e43b5de3"
+      },
+      {
+        "id": "act_ddac7a9e-d612-492f-a3ce-9dda027170fb",
+        "type": "do",
+        "versions": ["> You rest a while in the shade."],
+        "active": 0,
+        "createdAt": 1791385435431,
+        "turnId": "turn_c5b5c86e-057b-40eb-bea9-ab95e59e2d28"
+      },
+      {
+        "id": "act_df561ba9-daff-4d10-bbe3-a4c32c0169c2",
+        "type": "continue",
+        "versions": [
+          "Shade feels good against your skin as you settle onto a fallen log near the path. The rotting wood gives slightly under your weight, releasing a musty aroma that blends with the ever-present dampness of the marshes. Water laps gently against the walkway's supports somewhere behind you.\n\nAs you sit, a rustling sound comes from the tall reeds to your left. A small animal—maybe a rat or some kind of marsh bird—scurries through the undergrowth, though whether it's fleeing something or simply going about its business is impossible to tell. The sun remains hidden behind thick clouds, turning the world into shades of gray and black."
+        ],
+        "active": 0,
+        "createdAt": 1791385451068,
+        "stats": {
+          "promptTokens": 5871,
+          "cachedTokens": 5546,
+          "generatedTokens": 134,
+          "promptMs": 2504.699,
+          "generationMs": 13038.511
+        },
+        "turnId": "turn_c5b5c86e-057b-40eb-bea9-ab95e59e2d28"
+      },
+      {
+        "id": "act_66212ad3-cc03-425f-b215-f887db19364e",
+        "type": "do",
+        "versions": ["> You drink from my waterskin."],
+        "active": 0,
+        "createdAt": 1791385457459,
+        "turnId": "turn_1bf72765-825a-4d08-a33b-3c973f1f0a66"
+      },
+      {
+        "id": "act_7e27b330-e1b4-480a-9d83-41155b5cf9dd",
+        "type": "continue",
+        "versions": [
+          "Water tastes faintly of leather and something else - possibly the river itself that tainted it during the crossing. The liquid slakes your thirst but leaves a metallic aftertaste that reminds you of the ferrywoman's fear.\n\nThe drink reminds you of how far you still have to travel and how little time you have to reach Gull Point before your sister runs out of supplies. Three days, maybe four, if the roads remain passable and bandits don't take notice of a lone traveler with a bronze sword."
+        ],
+        "active": 0,
+        "createdAt": 1791385466515,
+        "stats": {
+          "promptTokens": 5931,
+          "cachedTokens": 5688,
+          "generatedTokens": 105,
+          "promptMs": 1845.509,
+          "generationMs": 7122.615
+        },
+        "turnId": "turn_1bf72765-825a-4d08-a33b-3c973f1f0a66"
+      },
+      {
+        "id": "act_81d26b3a-6983-4377-af56-6e89aa4e2e47",
+        "type": "do",
+        "versions": ["> You watch the clouds gather."],
+        "active": 0,
+        "createdAt": 1791385472905,
+        "turnId": "turn_2ab0cb7f-a0c4-471e-a8b0-86b6a0bc63aa"
+      },
+      {
+        "id": "act_5420b467-d187-4901-8e11-79474963b649",
+        "type": "continue",
+        "versions": [
+          "Thick black clouds roll across the night sky like smoke from a funeral pyre, blocking out what little moonlight had tried to pierce the gloom. The torch beside the gate sputters and dies, plunging everything into complete darkness save for the weak glow of distant hearth fires in village windows.\n\nThe guard curses under his breath, groping for something in his coat. A striking sound echoes through the night as he lights a new torch, its flame casting dancing shadows that make the iron spikes atop the gate look like writhing serpents.\n\n\"Storm coming,\" he mutters, more to himself than to you."
+        ],
+        "active": 0,
+        "createdAt": 1791385496715,
+        "stats": {
+          "promptTokens": 6122,
+          "cachedTokens": 5800,
+          "generatedTokens": 130,
+          "promptMs": 2492.165,
+          "generationMs": 21224.064
+        },
+        "turnId": "turn_2ab0cb7f-a0c4-471e-a8b0-86b6a0bc63aa"
+      },
+      {
+        "id": "act_ddf28f6d-4c45-4556-b134-1d3a1cb2dd2a",
+        "type": "do",
+        "versions": ["> You walk on until dusk."],
+        "active": 0,
+        "createdAt": 1791385502947,
+        "turnId": "turn_5e456d89-cd1a-413b-85e5-89a2aad00567"
+      },
+      {
+        "id": "act_0f8ee077-b96a-4626-a1bb-a61671f29ebb",
+        "type": "continue",
+        "versions": [
+          "Mud squelches beneath your boots as you follow the narrow path eastward, each step carrying you deeper into territory where bandits and worse things hunt. The sun sinks lower, painting the sky in shades of copper and blood that match the mood of the Marches.\n\nYou pass through a gap between two hills where the road narrows to little more than a muddy track. Scattered bones litter the ground on both sides—some human, some animal—all picked clean by scavengers and weather. The cart ruts cut deep into the soft earth here, suggesting heavy traffic despite the obvious dangers."
+        ],
+        "active": 0,
+        "createdAt": 1791385519429,
+        "stats": {
+          "promptTokens": 5794,
+          "cachedTokens": 5348,
+          "generatedTokens": 123,
+          "promptMs": 3179.986,
+          "generationMs": 13230.782
+        },
+        "turnId": "turn_5e456d89-cd1a-413b-85e5-89a2aad00567"
+      },
+      {
+        "id": "act_de87d522-3493-4e69-a8cd-4cf1902c7182",
+        "type": "say",
+        "versions": ["> You say \"A long road for a short errand.\""],
+        "active": 0,
+        "createdAt": 1791385526022,
+        "turnId": "turn_ef8dd35e-ba88-4c3f-95c6-bc793a078774"
+      },
+      {
+        "id": "act_a7b845f0-0ce5-4b73-872d-2afaec370819",
+        "type": "continue",
+        "versions": [
+          "The ferrywoman's lined face twists into something between amusement and contempt. She spits into the murky water of the Blackwater River, her gaze fixed on the distant hills where your journey will begin. \"Short errands make long roads when bandits and worse things take notice,\" she mutters, adjusting the mooring line with hands that bear old scars.\n\nOne of the three men who have been watching you from the riverbank calls out something in a harsh voice, and the woman's shoulders tense. \"Time's running short for crossing, and these fools are getting restless,\" she says, jerking her head toward the men."
+        ],
+        "active": 0,
+        "createdAt": 1791385541369,
+        "stats": {
+          "promptTokens": 5929,
+          "cachedTokens": 5478,
+          "generatedTokens": 131,
+          "promptMs": 3342.059,
+          "generationMs": 8374.066
+        },
+        "turnId": "turn_ef8dd35e-ba88-4c3f-95c6-bc793a078774"
+      },
+      {
+        "id": "act_5bb38be7-5e43-4d41-901b-1f059f18ea08",
+        "type": "do",
+        "versions": ["> You make camp and light a small fire."],
+        "active": 0,
+        "createdAt": 1791385547591,
+        "turnId": "turn_e322fc99-287f-4910-b2a9-3e6c51a6edfd"
+      },
+      {
+        "id": "act_c65d8c9c-ed0c-4244-a584-43ecdad85c44",
+        "type": "continue",
+        "versions": [
+          "Smoke from your small fire curls upward through the deepening twilight as you settle beneath a stone archway near the old ferry dock. The flames cast dancing shadows across the crumbling masonry, but their heat offers little comfort against the bone-deep chill that seeps from the ground.\n\nYou position yourself with a clear view of both the path leading toward the village and the muddy approach from which you came. The fire illuminates a few feet around you, but beyond that radius the darkness presses in like something alive.\n\nBehind you, the abandoned mill creaks softly in the wind, its broken wheel turning uselessly in the current."
+        ],
+        "active": 0,
+        "createdAt": 1791385572308,
+        "stats": {
+          "promptTokens": 6109,
+          "cachedTokens": 5621,
+          "generatedTokens": 130,
+          "promptMs": 3621.452,
+          "generationMs": 20982.863
+        },
+        "turnId": "turn_e322fc99-287f-4910-b2a9-3e6c51a6edfd"
+      },
+      {
+        "id": "act_934c84ff-8603-49ea-b57b-1621afd31ba5",
+        "type": "do",
+        "versions": ["> You sleep until first light."],
+        "active": 0,
+        "createdAt": 1791385578741,
+        "turnId": "turn_e03ec0a8-8da1-4b4a-9964-0a4ed06dfcc0"
+      },
+      {
+        "id": "act_c457d8cf-ef6b-4819-b604-33bd99afbf01",
+        "type": "continue",
+        "versions": [
+          "Dawn arrives gray and cold as you wake beneath the stone archway, your breath visible in the frigid air. The ferrywoman's boat still sits moored where it was yesterday, but she's nowhere in sight. Only footprints in the muddy ground and the distant echo of hammering from one of the village workshops break the silence.\n\nYou check your pack—still secure, though more light reveals how thoroughly you've been stripped of non-essential supplies. The bronze sword still sits heavy at your hip, but without rope or proper rations, survival in the Marches will be even more precarious than you'd hoped."
+        ],
+        "active": 0,
+        "createdAt": 1791385595764,
+        "stats": {
+          "promptTokens": 6172,
+          "cachedTokens": 5760,
+          "generatedTokens": 129,
+          "promptMs": 2994.391,
+          "generationMs": 13920.804
+        },
+        "turnId": "turn_e03ec0a8-8da1-4b4a-9964-0a4ed06dfcc0"
+      },
+      {
+        "id": "act_c35bb18d-2007-4730-a1c2-2348a82e7e58",
+        "type": "do",
+        "versions": ["> You wash my face in the stream."],
+        "active": 0,
+        "createdAt": 1791385602308,
+        "turnId": "turn_61a7e5df-6975-4505-8888-14ec9d7154fa"
+      },
+      {
+        "id": "act_0d1cbb0e-f28e-45ba-917c-83c57ac24753",
+        "type": "continue",
+        "versions": [
+          "Cold water cuts through the grime on your skin like ice shards, and you rinse away the blood and sweat of the past few days. The stream gurgles over ancient stones worn smooth by centuries of current, its waters dark with sediment from the surrounding hills.\n\nThe ferrywoman watches from below as you wash, her lined face betraying something between wariness and respect. She spits into the murky water. \"Bronze kills just as quick as iron in the right hands,\" she calls up, though whether this is warning or encouragement remains unclear.\n\nYour sharpening continues in the morning light, each pass revealing more of the intricate designs etched into the metal by your grandfather's hand years ago."
+        ],
+        "active": 0,
+        "createdAt": 1791385628538,
+        "stats": {
+          "promptTokens": 5775,
+          "cachedTokens": 5287,
+          "generatedTokens": 144,
+          "promptMs": 3624.136,
+          "generationMs": 22530.009
+        },
+        "turnId": "turn_61a7e5df-6975-4505-8888-14ec9d7154fa"
+      },
+      {
+        "id": "act_81cdc873-308b-40b9-ad33-a3e10ee3f2fd",
+        "type": "do",
+        "versions": ["> You count the coins I have left."],
+        "active": 0,
+        "createdAt": 1791385634937,
+        "turnId": "turn_3a1c3a94-0c68-4cb6-afdc-4bd8a048280d"
+      },
+      {
+        "id": "act_d6039661-db70-4281-b3a4-5f2888248260",
+        "type": "continue",
+        "versions": [
+          "Three silver pennies rest in your palm, their metal warm from your body heat. One bears the face of a king you don't recognize, another shows a hawk in flight, and the third is so worn it's impossible to make out its original design.\n\nThe ferrywoman notices you counting your coins, her expression darkening as she studies the pathetic sum. \"Three silvers won't get you far on this road,\" she mutters, spitting into the river. \"Ferry costs more than passage alone now, and the new law about scarred travelers means you'll need extra for the taxmen.\""
+        ],
+        "active": 0,
+        "createdAt": 1791385651985,
+        "stats": {
+          "promptTokens": 5903,
+          "cachedTokens": 5439,
+          "generatedTokens": 126,
+          "promptMs": 3429.079,
+          "generationMs": 13515.886
+        },
+        "turnId": "turn_3a1c3a94-0c68-4cb6-afdc-4bd8a048280d"
+      },
+      {
+        "id": "act_71461b76-4339-40a0-b530-ec6d06a0d892",
+        "type": "do",
+        "versions": ["> You ask a passing carter for news."],
+        "active": 0,
+        "createdAt": 1791385658485,
+        "turnId": "turn_06268292-b78d-4617-99d1-5052487f0787"
+      },
+      {
+        "id": "act_ceb094fc-84f5-4640-9170-9daaff8c5ed3",
+        "type": "continue",
+        "versions": [
+          "The carter's wagon creaks to a halt as you approach, his horse snorting steam in the morning air. A dozen crates of grain sit behind him, their contents enough to feed a small village for a week. Sweat stains darken his threadbare coat despite the chill.\n\n\"News?\" he laughs bitterly, wiping mud from his hands with a cloth that's seen better years. \"Only news is that tax collectors are shaking down every cart heading north, and bandits have been stripping travelers naked between here and the border.\" He jerks his thumb toward a cluster of crows circling something in the distance."
+        ],
+        "active": 0,
+        "createdAt": 1791385670666,
+        "stats": {
+          "promptTokens": 5991,
+          "cachedTokens": 5573,
+          "generatedTokens": 129,
+          "promptMs": 3159.827,
+          "generationMs": 8902.737
+        },
+        "turnId": "turn_06268292-b78d-4617-99d1-5052487f0787"
+      },
+      {
+        "id": "act_b6345db0-8aa2-4dd5-a0a7-36b7883f8d44",
+        "type": "say",
+        "versions": ["> You say \"Fair weather for travelling.\""],
+        "active": 0,
+        "createdAt": 1791385677003,
+        "turnId": "turn_c17ae6e5-82cf-4201-ae6b-3eb0d9839966"
+      },
+      {
+        "id": "act_766006d0-72b1-409a-b9bc-3694e6758a24",
+        "type": "continue",
+        "versions": [
+          "The ferrywoman's lined face twists into something that might pass for a smile, though her eyes remain hard as river stones. She spits into the murky water of the Blackwater River, her gaze fixed on the distant hills where your journey will begin. \"Fair weather?\" she scoffs, gesturing toward the darkening sky where storm clouds gather like mourners at a funeral. \"You call this fair? Half the road to Gull Point is washed out from last week's rains, and the other half's crawling with bandits who'd gut a man for the boots on his feet.\""
+        ],
+        "active": 0,
+        "createdAt": 1791385689406,
+        "stats": {
+          "promptTokens": 6127,
+          "cachedTokens": 5711,
+          "generatedTokens": 123,
+          "promptMs": 2995.794,
+          "generationMs": 9312.301
+        },
+        "turnId": "turn_c17ae6e5-82cf-4201-ae6b-3eb0d9839966"
+      },
+      {
+        "id": "act_7a94be37-662e-4cba-9469-1070453876d7",
+        "type": "do",
+        "versions": ["> You climb the low ridge ahead."],
+        "active": 0,
+        "createdAt": 1791385695989,
+        "turnId": "turn_3d283d03-fbe2-4e19-a052-00e6d092f121"
+      },
+      {
+        "id": "act_ebfc0ea2-9130-4d35-9508-19fe3a138d04",
+        "type": "continue",
+        "versions": [
+          "Sharp stones cut into your palms as you haul yourself up the low ridge, each handhold sending a cascade of loose rocks down the slope behind you. The morning mist clings to everything like a second skin, turning your breath into wisps of vapor that hang in the air.\n\nFrom the ridge's crest, the full scope of Millbrook Landing unfolds below - a patchwork of broken stone walls and collapsed roofs where the village used to be. Smoke rises from perhaps a dozen hearth fires, their locations marked by the thin trails they leave in the gray morning air.\n\nThe road ahead narrows to little more than a muddy track."
+        ],
+        "active": 0,
+        "createdAt": 1791385721056,
+        "stats": {
+          "promptTokens": 5798,
+          "cachedTokens": 5228,
+          "generatedTokens": 130,
+          "promptMs": 4109.445,
+          "generationMs": 20824.292
+        },
+        "turnId": "turn_3d283d03-fbe2-4e19-a052-00e6d092f121"
+      },
+      {
+        "id": "act_bc224644-d269-42df-8d7a-6dd96d875771",
+        "type": "do",
+        "versions": ["> You wait for the rain to pass."],
+        "active": 0,
+        "createdAt": 1791385727566,
+        "turnId": "turn_49bc3292-4e20-4008-8e3f-2f9b57f89b21"
+      },
+      {
+        "id": "act_3478b913-33f0-4410-a28c-f194f0698721",
+        "type": "continue",
+        "versions": [
+          "Rain hammers against the bell tower's ancient roof in a steady drumbeat that drowns out all other sounds. The massive cracked bell above you remains silent as water streams down the stone walls, pooling on the uneven floor where chunks of mortar have crumbled away.\n\nThrough the narrow windows, you watch lightning split the dark sky in jagged white forks. The ferrywoman's boat rocks violently in the channel below, its mooring lines straining against the wind. She huddles beneath a canvas tarp spread between two wooden posts, her expression grim as she watches the storm lash the water into white-capped fury."
+        ],
+        "active": 0,
+        "createdAt": 1791385746802,
+        "stats": {
+          "promptTokens": 6083,
+          "cachedTokens": 5365,
+          "generatedTokens": 128,
+          "promptMs": 5223.199,
+          "generationMs": 13897.916
+        },
+        "turnId": "turn_49bc3292-4e20-4008-8e3f-2f9b57f89b21"
+      },
+      {
+        "id": "act_573a04fe-b877-4bd5-95ef-49fa10b01ca6",
+        "type": "do",
+        "versions": ["> You sharpen my blade."],
+        "active": 0,
+        "createdAt": 1791385753115,
+        "turnId": "turn_7bbbca22-41df-4b17-8701-a64a6ae33375"
+      },
+      {
+        "id": "act_ced8fd30-1b44-4dfd-87d6-09c8289933e6",
+        "type": "continue",
+        "versions": [
+          "The whetstone grinds against the bronze edge of your grandfather's sword with a satisfying shriek, bronze sparks scattering into the wind. Each stroke smooths away the small imperfections that have accumulated during your journey, bringing back some of the weapon's ancient sharpness.\n\nThe ferrywoman watches from below as you work, her lined face betraying something between wariness and respect. She spits into the murky water. \"Bronze kills just as quick as iron in the right hands,\" she calls up, though whether this is warning or encouragement remains unclear.\n\nYour sharpening continues in the morning light, each pass revealing more of the intricate designs etched into the metal by your grandfather's hand years ago."
+        ],
+        "active": 0,
+        "createdAt": 1791385780959,
+        "stats": {
+          "promptTokens": 6216,
+          "cachedTokens": 5501,
+          "generatedTokens": 145,
+          "promptMs": 5239.753,
+          "generationMs": 22481.067
+        },
+        "turnId": "turn_7bbbca22-41df-4b17-8701-a64a6ae33375"
+      },
+      {
+        "id": "act_ddc7aeaa-cef3-4336-94e0-dc21521ed59b",
+        "type": "do",
+        "versions": ["> You press on towards the village."],
+        "active": 0,
+        "createdAt": 1791385787230,
+        "turnId": "turn_012bcca7-3137-49be-856a-c15964faa985"
+      },
+      {
+        "id": "act_0aaa4c18-6c59-4b4e-92b2-002ddc75490b",
+        "type": "continue",
+        "versions": [
+          "Sharp stones crunch underfoot as you climb the narrow path leading up from the ferry dock. The morning mist clings to everything like a second skin, turning your breath into wisps of vapor that hang in the air. The wind carries the sharp bite of approaching rain and something else—decay.\n\nYou reach the top of the rise and look down into what remains of Millbrook Landing. Three collapsed buildings form a rough triangle around a muddy square where a handful of people move with the cautious haste of prey animals. Steam rises from cooking fires, though the smoke carries an acrid chemical stench that burns your nostrils."
+        ],
+        "active": 0,
+        "createdAt": 1791385806372,
+        "stats": {
+          "promptTokens": 6398,
+          "cachedTokens": 5651,
+          "generatedTokens": 128,
+          "promptMs": 5519.54,
+          "generationMs": 10318.789
+        },
+        "turnId": "turn_012bcca7-3137-49be-856a-c15964faa985"
+      },
+      {
+        "id": "act_b71e3bf3-fd74-4187-a277-adabf9692f90",
+        "type": "do",
+        "versions": ["> You look around."],
+        "active": 0,
+        "createdAt": 1791385812781,
+        "turnId": "turn_607d70d6-70a7-4acd-ab3a-568162742083"
+      },
+      {
+        "id": "act_33f0ea9c-7a34-40a1-b614-741a05592b77",
+        "type": "continue",
+        "versions": [
+          "The ferrywoman watches you survey the surroundings, her gaze sharp and calculating as she studies the pathetic sum in your palm. The muddy ground around the dock squelches under foot, littered with debris from decades of hard use—broken pottery shards, rusted metal scraps, and the picked-clean bones of small animals that once thrived in these wetlands.\n\nA cluster of crows circles something unseen in the distance, their cries carrying across the water like funeral dirges. The nearest building, a collapsed store with fresh axe marks carved into its door frame, speaks to recent violence that has claimed more than just animals as prey."
+        ],
+        "active": 0,
+        "createdAt": 1791385825740,
+        "stats": {
+          "promptTokens": 6394,
+          "cachedTokens": 5786,
+          "generatedTokens": 131,
+          "promptMs": 4383.534,
+          "generationMs": 8499.198
+        },
+        "turnId": "turn_607d70d6-70a7-4acd-ab3a-568162742083"
+      },
+      {
+        "id": "act_a4ac9fa0-0ede-4d91-8463-288c7d080a9e",
+        "type": "do",
+        "versions": ["> You follow the path east."],
+        "active": 0,
+        "createdAt": 1791385832282,
+        "turnId": "turn_e5d74608-d96f-40f5-8eec-979fab8be6f8"
+      },
+      {
+        "id": "act_82722a5f-7528-49b0-989e-e565c8315f80",
+        "type": "continue",
+        "versions": [
+          "Mud sucks at your boots as you push further along the winding path, each footstep sinking deeper into the soft marshland. The morning mist thickens as you move away from the ferry dock, turning the air into a swirling gray curtain that muffles sound and distorts distances.\n\nAhead, the path splits. To the left, it continues through the deeper marshes toward what looks like a cluster of ramshackle buildings hidden among the reeds. To the right, a narrower trail winds up toward higher ground where the earth becomes more solid beneath your feet.\n\nYou hear something splash behind you—not just water, but something heavy hitting the path with force."
+        ],
+        "active": 0,
+        "createdAt": 1791385846509,
+        "stats": {
+          "promptTokens": 6063,
+          "cachedTokens": 5356,
+          "generatedTokens": 136,
+          "promptMs": 5154.859,
+          "generationMs": 8737.392
+        },
+        "turnId": "turn_e5d74608-d96f-40f5-8eec-979fab8be6f8"
+      },
+      {
+        "id": "act_5ea800b7-6190-4127-b428-9972ea76f99a",
+        "type": "do",
+        "versions": ["> You listen for anything moving."],
+        "active": 0,
+        "createdAt": 1791385852782,
+        "turnId": "turn_3c36b087-5b9e-43a3-957d-6f5cd1f8313d"
+      },
+      {
+        "id": "act_54c2c6ef-f826-4506-988d-8966984074ff",
+        "type": "continue",
+        "versions": [
+          "The marsh stretches around you in silence broken only by the distant cry of a bird and the soft lapping of water against wood. Your ears strain for any sound out of place - a footstep on the walkway, the creak of a bowstring being drawn, or the rustle of clothing as someone moves through the tall reeds.\n\nInstead, there's only the persistent drip of moisture from rotting timber above and the rhythmic thudding of your own heartbeat. The wooden planks beneath your feet feel solid enough, though their age shows in the dark stains along their edges where previous boards have failed."
+        ],
+        "active": 0,
+        "createdAt": 1791385878508,
+        "stats": {
+          "promptTokens": 6205,
+          "cachedTokens": 5498,
+          "generatedTokens": 124,
+          "promptMs": 5202.4,
+          "generationMs": 20401.016
+        },
+        "turnId": "turn_3c36b087-5b9e-43a3-957d-6f5cd1f8313d"
+      },
+      {
+        "id": "act_8fef20ec-5729-48de-9169-0aadf46ddc55",
+        "type": "say",
+        "versions": ["> You say \"Is anyone there?\""],
+        "active": 0,
+        "createdAt": 1791385884859,
+        "turnId": "turn_b29b9639-efb3-4f72-ac48-9115ce53abdc"
+      },
+      {
+        "id": "act_14f01149-4926-41a9-b22f-e9bb7aaca2d1",
+        "type": "continue",
+        "versions": [
+          "The ferrywoman's face goes pale as parchment. She jerks backward, knocking over a bucket that clangs loudly against the dock planks. The approaching men freeze mid-step, their crossbows wavering in their grips.\n\n\"You're one of them,\" she hisses, backing away until she bumps into her boat. \"The dead don't speak here - never have and never will.\" Her hands shake as she grabs a long pole, using it to keep you at a distance. The three men on the riverbank lower their weapons, exchanging nervous glances.\n\n\"Speak again and I'll put you in the river myself,\" the woman snaps, but her voice wavers."
+        ],
+        "active": 0,
+        "createdAt": 1791385905807,
+        "stats": {
+          "promptTokens": 6336,
+          "cachedTokens": 5628,
+          "generatedTokens": 144,
+          "promptMs": 5227.6,
+          "generationMs": 15616.148
+        },
+        "turnId": "turn_b29b9639-efb3-4f72-ac48-9115ce53abdc"
+      },
+      {
+        "id": "act_ea1f6576-9597-49e8-888f-d95d5fdb2eb7",
+        "type": "do",
+        "versions": ["> You check my pack."],
+        "active": 0,
+        "createdAt": 1791385912421,
+        "turnId": "turn_d1eb3aff-b21d-431b-ba25-ca6e2ea93030"
+      },
+      {
+        "id": "act_5af3e58a-5c17-440b-b7d7-3a29643b2f43",
+        "type": "continue",
+        "versions": [
+          "Your pack sits against the stone archway where you left it, secured with a leather cord that shows signs of recent use by someone else. When you open it, the contents reveal exactly what you feared - someone has stripped away most of your non-essential supplies.\n\nThe bronze water flask remains intact, though now empty and showing tooth marks along its edges where small animals have gnawed at it during the night. Your emergency rations have been picked clean, leaving only a few scraps of salted meat wrapped in rotting cloth. The rope and fishing line you packed are gone, as are the spare boots and extra clothing."
+        ],
+        "active": 0,
+        "createdAt": 1791385931714,
+        "stats": {
+          "promptTokens": 6009,
+          "cachedTokens": 5243,
+          "generatedTokens": 128,
+          "promptMs": 5714.296,
+          "generationMs": 8184.493
+        },
+        "turnId": "turn_d1eb3aff-b21d-431b-ba25-ca6e2ea93030"
+      },
+      {
+        "id": "act_68f238da-d755-447a-954a-c55f527f531a",
+        "type": "do",
+        "versions": ["> You rest a while in the shade."],
+        "active": 0,
+        "createdAt": 1791385937949,
+        "turnId": "turn_95301618-60b8-4653-80c5-6fbbde7c27ec"
+      },
+      {
+        "id": "act_b95b133d-0858-49c8-9153-426eaadc0134",
+        "type": "continue",
+        "versions": [
+          "Shade filters through the morning mist as you settle onto a fallen log near the path leading toward Old Brannoch's hut. The rotting wood gives slightly under your weight, releasing the musty aroma of decay that pervades the marshlands. Water laps gently against the wooden walkway behind you, marking time in steady, rhythmic splashes.\n\nThe ferrywoman watches from her mooring as you rest, her lined face betraying wariness despite the distance between you. She spits into the murky water. \"Bronze kills just as quick as iron in the right hands,\" she calls up again, though whether this is encouragement or warning remains unclear."
+        ],
+        "active": 0,
+        "createdAt": 1791385964883,
+        "stats": {
+          "promptTokens": 6145,
+          "cachedTokens": 5376,
+          "generatedTokens": 134,
+          "promptMs": 5670.273,
+          "generationMs": 21163.52
+        },
+        "turnId": "turn_95301618-60b8-4653-80c5-6fbbde7c27ec"
+      },
+      {
+        "id": "act_412f51f7-4b89-4316-98c9-852f3a00ffae",
+        "type": "do",
+        "versions": ["> You drink from my waterskin."],
+        "active": 0,
+        "createdAt": 1791385971074,
+        "turnId": "turn_a3838152-96b2-46c3-aa9e-9d07c9d1635e"
+      },
+      {
+        "id": "act_93056066-b6d7-4729-bffa-109c697bd396",
+        "type": "continue",
+        "versions": [
+          "Cold water bites at your throat as you lift the waterskin to your lips, the taste of river sediment mingling with leather and something else—something metallic that clings to the metal spout. The liquid soothes your dry mouth but leaves a bitter aftertaste that makes your tongue tingle with warning.\n\nThe ferrywoman watches you drink with sharp attention, her gaze fixed on the nearly empty container. She spits into the murky water of the Blackwater River, sending small ripples spreading outward like a stone thrown into still water.\n\n\"Empty soon enough,\" she mutters, adjusting the mooring line with hands that bear old scars from years of handling ropes in these treacherous currents."
+        ],
+        "active": 0,
+        "createdAt": 1791385992945,
+        "stats": {
+          "promptTokens": 6365,
+          "cachedTokens": 5518,
+          "generatedTokens": 144,
+          "promptMs": 6164.61,
+          "generationMs": 15603.74
+        },
+        "turnId": "turn_a3838152-96b2-46c3-aa9e-9d07c9d1635e"
+      },
+      {
+        "id": "act_837ef7de-4153-46e9-9e82-b4c85395fd4f",
+        "type": "do",
+        "versions": ["> You watch the clouds gather."],
+        "active": 0,
+        "createdAt": 1791385999171,
+        "turnId": "turn_663af0f7-48e9-4005-a3cd-42dcd7af54bb"
+      },
+      {
+        "id": "act_f52182d6-6606-4397-9d6e-4d9f67626fdb",
+        "type": "continue",
+        "versions": [
+          "Thick black clouds roll across the night sky like smoke from a funeral pyre, blocking out what little moonlight had tried to pierce the gloom. The torch beside the gate sputters and dies, plunging everything into complete darkness save for the weak glow of distant hearth fires in village windows.\n\nThe guard curses under his breath, groping for something in his coat. A striking sound echoes through the night as he lights a new torch, its flame casting dancing shadows that make the iron spikes atop the gate look like writhing serpents.\n\n\"Storm coming,\" he mutters, more to himself than to you."
+        ],
+        "active": 0,
+        "createdAt": 1791386026610,
+        "stats": {
+          "promptTokens": 6552,
+          "cachedTokens": 5669,
+          "generatedTokens": 130,
+          "promptMs": 6417.648,
+          "generationMs": 20932.1
+        },
+        "turnId": "turn_663af0f7-48e9-4005-a3cd-42dcd7af54bb"
+      },
+      {
+        "id": "act_d2979769-cdaa-448b-b080-a0fb6795e7c9",
+        "type": "do",
+        "versions": ["> You walk on until dusk."],
+        "active": 0,
+        "createdAt": 1791386032839,
+        "turnId": "turn_5bd9441b-fc43-4530-a365-9b0d93a783a8"
+      },
+      {
+        "id": "act_c35cea36-3004-4721-a795-d0312bfc4705",
+        "type": "continue",
+        "versions": [
+          "Mud and ice create treacherous footing as you continue eastward along the winding path through the marshlands. The morning mist thickens around you, transforming the air into a swirling gray curtain that muffles sound and distorts distances. Your boots squelch with every step, sinking deeper into the soft earth beneath the surface water.\n\nAs you round a bend in the path, a putrid stench hits your nostrils - the sweet rot of decay mixed with something metallic that burns your throat. Through the thinning mist ahead, you spot a cluster of ramshackle buildings nestled among the reeds, their walls leaning at dangerous angles."
+        ],
+        "active": 0,
+        "createdAt": 1791386054184,
+        "stats": {
+          "promptTokens": 6211,
+          "cachedTokens": 5227,
+          "generatedTokens": 132,
+          "promptMs": 7005.606,
+          "generationMs": 14218.534
+        },
+        "turnId": "turn_5bd9441b-fc43-4530-a365-9b0d93a783a8"
+      },
+      {
+        "id": "act_01cbf388-f8c0-40da-b6f9-b230016edf99",
+        "type": "say",
+        "versions": ["> You say \"A long road for a short errand.\""],
+        "active": 0,
+        "createdAt": 1791386060388,
+        "turnId": "turn_40308e75-e1a0-4bff-b27d-da742435f9e9"
+      },
+      {
+        "id": "act_ca5ba999-5866-4ba2-acff-b0c49aa1309b",
+        "type": "continue",
+        "versions": [
+          "The ferrywoman's lined face twists into something between amusement and contempt. She spits into the murky water of the Blackwater River, her gaze fixed on the distant hills where your journey will begin. \"Fair weather?\" she laughs bitterly, gesturing toward the darkening sky where storm clouds gather like mourners at a funeral. \"You call this fair? Half the road to Gull Point is washed out from last week's rains, and the other half's crawling with bandits who'd gut a man for the boots on his feet.\"\n\nOne of the three men who have been watching you from the riverbank calls out something in a harsh voice, and the woman's shoulders tense."
+        ],
+        "active": 0,
+        "createdAt": 1791386081219,
+        "stats": {
+          "promptTokens": 6355,
+          "cachedTokens": 5366,
+          "generatedTokens": 142,
+          "promptMs": 7106.674,
+          "generationMs": 13627.52
+        },
+        "turnId": "turn_40308e75-e1a0-4bff-b27d-da742435f9e9"
+      },
+      {
+        "id": "act_09838854-ba99-4989-bd64-c81529db54d4",
+        "type": "do",
+        "versions": ["> You make camp and light a small fire."],
+        "active": 0,
+        "createdAt": 1791386087571,
+        "turnId": "turn_1ed3db88-d2f8-48e6-a1e8-697c95351d36"
+      },
+      {
+        "id": "act_a389aa2b-e67c-40a7-844d-187b503324a7",
+        "type": "continue",
+        "versions": [
+          "Smoke rises from your small fire as you settle against the stone archway near the ferry dock, the ancient masonry still warm from yesterday's sun. The flames cast dancing shadows across the crumbling wall, but little heat penetrates the morning chill that seeps through your threadbare coat. Around you, the marshland lies silent except for the occasional splash of something large moving through the deeper water channels.\n\nThe ferrywoman watches from her mooring as you build your fire, her lined face unreadable in the gray light filtering through the morning mist. She spits into the murky water of the Blackwater River, sending small ripples spreading outward like a stone thrown into still water."
+        ],
+        "active": 0,
+        "createdAt": 1791386122780,
+        "stats": {
+          "promptTokens": 6541,
+          "cachedTokens": 5520,
+          "generatedTokens": 141,
+          "promptMs": 10887.912,
+          "generationMs": 22510.756
+        },
+        "turnId": "turn_1ed3db88-d2f8-48e6-a1e8-697c95351d36"
+      },
+      {
+        "id": "act_8055041c-221c-4ba4-a94f-c7b7a2523e7a",
+        "type": "do",
+        "versions": ["> You sleep until first light."],
+        "active": 0,
+        "createdAt": 1791386129294,
+        "turnId": "turn_92af8fd9-d15f-4d96-89bb-e80e875c15be"
+      },
+      {
+        "id": "act_53c9ed32-a1b0-445b-81bb-c87c35336670",
+        "type": "continue",
+        "versions": [
+          "Dawn's gray light filters through the morning mist as you wake beneath the stone archway, your breath forming small clouds in the frigid air. The ferrywoman's boat still sways gently at its mooring, but she is nowhere to be seen. Fresh footprints in the muddy ground around the dock show where someone has been moving during the night.\n\nYou check your pack and find that whatever was stolen is gone - rope, fishing line, extra boots, and most of your food supplies have vanished. The waterskin is empty now, and the leather cord that held it together shows tooth marks from small creatures that gnawed at it while you slept."
+        ],
+        "active": 0,
+        "createdAt": 1791386151960,
+        "stats": {
+          "promptTokens": 6233,
+          "cachedTokens": 5126,
+          "generatedTokens": 135,
+          "promptMs": 7947.139,
+          "generationMs": 14603.356
+        },
+        "turnId": "turn_92af8fd9-d15f-4d96-89bb-e80e875c15be"
+      },
+      {
+        "id": "act_108be636-f9b6-4e3d-ad34-f7818ef32236",
+        "type": "do",
+        "versions": ["> You wash my face in the stream."],
+        "active": 0,
+        "createdAt": 1791386158370,
+        "turnId": "turn_0cf3b3cd-2cfa-4619-a8a2-9246f5a72d67"
+      },
+      {
+        "id": "act_55433204-a857-4e40-9d9e-26428f6631f5",
+        "type": "continue",
+        "versions": [
+          "Cold water from the mountain stream bites at your skin like ice needles as you splash it over your face. The water runs pink with blood from where the ferrywoman's rope burned into your wrists during the crossing. She watched from her position near the dock, her lined face showing neither sympathy nor malice—only the sharp attention of someone who has survived by reading every nuance in those around her.\n\n\"You're heading to Gull Point, aren't you?\" she calls out, her voice cutting through the morning mist that rises from the channel. \"Your sister's the lighthouse keeper, yes? Word is she took on an apprentice after the plague summers cleaned out most of the coastal families.\""
+        ],
+        "active": 0,
+        "createdAt": 1791386188464,
+        "stats": {
+          "promptTokens": 6376,
+          "cachedTokens": 5267,
+          "generatedTokens": 140,
+          "promptMs": 7982.51,
+          "generationMs": 22028.011
+        },
+        "turnId": "turn_0cf3b3cd-2cfa-4619-a8a2-9246f5a72d67"
+      },
+      {
+        "id": "act_e0265674-fd5a-4ee8-a569-99eb618560ba",
+        "type": "do",
+        "versions": ["> You count the coins I have left."],
+        "active": 0,
+        "createdAt": 1791386195047,
+        "turnId": "turn_212f392f-e02d-47f1-88cd-973a34b8e1e4"
+      },
+      {
+        "id": "act_c1c958b1-4d94-42ea-b07b-5bbfc3062068",
+        "type": "continue",
+        "versions": [
+          "Three silver coins rest in your palm, their metal warm from your body heat. One bears the face of a king you don't recognize, another shows a hawk in flight, and the third is so worn it's impossible to make out its original design.\n\nThe ferrywoman notices you counting your coins, her expression darkening as she studies the pathetic sum. \"Three silvers won't get you far on this road,\" she mutters, spitting into the river. \"Ferry costs more than passage alone now, and the new law about scarred travelers means you'll need extra for the taxmen.\""
+        ],
+        "active": 0,
+        "createdAt": 1791386211472,
+        "stats": {
+          "promptTokens": 6538,
+          "cachedTokens": 5415,
+          "generatedTokens": 125,
+          "promptMs": 8166.723,
+          "generationMs": 8121.756
+        },
+        "turnId": "turn_212f392f-e02d-47f1-88cd-973a34b8e1e4"
+      },
+      {
+        "id": "act_5362fcc4-e1af-4c74-8b4a-32aba870b6d1",
+        "type": "do",
+        "versions": ["> You ask a passing carter for news."],
+        "active": 0,
+        "createdAt": 1791386218092,
+        "turnId": "turn_c47fd400-a46d-4962-aa4a-36b4bd441fa7"
+      },
+      {
+        "id": "act_1600e163-7209-4a38-b9bf-496282577da8",
+        "type": "continue",
+        "versions": [
+          "The carter's wagon creaks to a halt as you approach, his horse snorting steam in the morning air. A dozen crates of grain sit behind him, their contents enough to feed a small village for weeks. Sweat stains darken his threadbare coat despite the chill.\n\n\"News?\" he laughs bitterly, wiping mud from his hands with a cloth that's seen better years. \"Only news is that tax collectors are shaking down every cart heading north, and bandits have been stripping travelers naked between here and the border.\" He jerks his thumb toward a cluster of crows circling something in the distance."
+        ],
+        "active": 0,
+        "createdAt": 1791386247205,
+        "stats": {
+          "promptTokens": 6672,
+          "cachedTokens": 5548,
+          "generatedTokens": 128,
+          "promptMs": 8277.135,
+          "generationMs": 20739.08
+        },
+        "turnId": "turn_c47fd400-a46d-4962-aa4a-36b4bd441fa7"
+      },
+      {
+        "id": "act_a7120b2f-8467-418b-9f48-c0e34cae425b",
+        "type": "say",
+        "versions": ["> You say \"Fair weather for travelling.\""],
+        "active": 0,
+        "createdAt": 1791386253773,
+        "turnId": "turn_93c31710-f7ef-42d9-bd8b-a4576f6cd6a0"
+      },
+      {
+        "id": "act_97c17067-bd9b-4fde-bc8e-690ee5fda730",
+        "type": "continue",
+        "versions": [
+          "The ferrywoman's lined face twists into something that might pass for a smile, though her eyes remain hard as river stones. She spits into the murky water of the Blackwater River, her gaze fixed on the distant hills where your journey will begin. \"Fair weather?\" she laughs bitterly, gesturing toward the darkening sky where storm clouds gather like mourners at a funeral. \"You call this fair? Half the road to Gull Point is washed out from last week's rains, and the other half's crawling with bandits who'd gut a man for the boots on his feet.\""
+        ],
+        "active": 0,
+        "createdAt": 1791386275078,
+        "stats": {
+          "promptTokens": 6181,
+          "cachedTokens": 5099,
+          "generatedTokens": 124,
+          "promptMs": 7715.27,
+          "generationMs": 13495.898
+        },
+        "turnId": "turn_93c31710-f7ef-42d9-bd8b-a4576f6cd6a0"
+      },
+      {
+        "id": "act_0c5167d2-96c5-4826-aff0-3ee251285b5c",
+        "type": "do",
+        "versions": ["> You climb the low ridge ahead."],
+        "active": 0,
+        "createdAt": 1791386281377,
+        "turnId": "turn_865e0071-db05-4a84-a00e-a046325a4fb6"
+      },
+      {
+        "id": "act_f383167b-2e3c-4dbe-a534-0d0df2870a1f",
+        "type": "continue",
+        "versions": [
+          "Sharp stones tear at your palms as you haul yourself up the muddy slope, each grip sending a cascade of loose rocks clattering down behind you. The morning mist thins as you climb, revealing a wider view of the marshlands stretching eastward toward what you hope is Gull Point.\n\nAt the ridge's crest, you spot the cluster of ramshackle buildings ahead - three collapsed structures surrounding a muddy square where wisps of smoke curl from cooking fires. The acrid stench burns your nostrils as it carries across the distance, mixed with something else that makes your skin crawl. Bodies, you realize with growing dread."
+        ],
+        "active": 0,
+        "createdAt": 1791386310993,
+        "stats": {
+          "promptTokens": 6397,
+          "cachedTokens": 5231,
+          "generatedTokens": 129,
+          "promptMs": 8418.582,
+          "generationMs": 21101.167
+        },
+        "turnId": "turn_865e0071-db05-4a84-a00e-a046325a4fb6"
+      },
+      {
+        "id": "act_61b86e2e-24d5-4086-8e7a-0fc168d4feec",
+        "type": "do",
+        "versions": ["> You wait for the rain to pass."],
+        "active": 0,
+        "createdAt": 1791386317591,
+        "turnId": "turn_3385cd27-04db-47b4-bef2-e5a81ed2a878"
+      },
+      {
+        "id": "act_177e5bf9-b643-4844-8c75-9a6fa0123b4d",
+        "type": "continue",
+        "versions": [
+          "Rain hammers against the bell tower's ancient roof in a steady drumbeat that drowns out all other sounds. Water streams down the stone walls, pooling on the uneven floor where chunks of mortar have crumbled away. Through the narrow windows, you watch lightning split the dark sky in jagged white forks as the storm lashes the water into white-capped fury.\n\nThe ferrywoman huddles beneath her canvas tarp, her lined face grim as she watches the storm turn the channel into a churning torrent of muddy water and debris. The wind howls through the bell tower's broken windows, carrying with it the sharp bite of approaching snow that will make the roads to Gull Point even more treacherous once the storm passes."
+        ],
+        "active": 0,
+        "createdAt": 1791386340955,
+        "stats": {
+          "promptTokens": 6311,
+          "cachedTokens": 5367,
+          "generatedTokens": 151,
+          "promptMs": 6788.175,
+          "generationMs": 16470.125
+        },
+        "turnId": "turn_3385cd27-04db-47b4-bef2-e5a81ed2a878"
+      },
+      {
+        "id": "act_9aeb7ad7-d3cc-4a55-b4c1-b368471617d2",
+        "type": "do",
+        "versions": ["> You sharpen my blade."],
+        "active": 0,
+        "createdAt": 1791386347175,
+        "turnId": "turn_1d12dd11-d1ea-47d7-a410-4e80731058dd"
+      },
+      {
+        "id": "act_d0730c4e-f49d-4003-93f6-9e6b3a891e3a",
+        "type": "continue",
+        "versions": [
+          "The whetstone grinds against the bronze edge of your grandfather's sword with a satisfying shriek, sending bronze sparks scattering into the wind. Each stroke removes the small imperfections that have accumulated during your journey, revealing more of the intricate designs etched into the metal by your grandfather's hand years ago. The bronze takes a high polish as you work, catching the gray light filtering through the morning mist.\n\nThe ferrywoman watches from her position near the dock, her lined face betraying both wariness and curiosity as she observes your careful attention to the blade. She spits into the murky water of the Blackwater River, sending small ripples spreading outward like a stone thrown into still water."
+        ],
+        "active": 0,
+        "createdAt": 1791386365137,
+        "stats": {
+          "promptTokens": 6467,
+          "cachedTokens": 5526,
+          "generatedTokens": 143,
+          "promptMs": 6858.339,
+          "generationMs": 10989.646
+        },
+        "turnId": "turn_1d12dd11-d1ea-47d7-a410-4e80731058dd"
+      },
+      {
+        "id": "act_73710202-c9c8-4c31-877d-297c2257af27",
+        "type": "do",
+        "versions": ["> You press on towards the village."],
+        "active": 0,
+        "createdAt": 1791386371770,
+        "turnId": "turn_0ff9bcbc-4e87-4d78-ba17-d27a63fbedc0"
+      },
+      {
+        "id": "act_e330a1b4-2e98-464f-8eeb-539ccd42b71f",
+        "type": "continue",
+        "versions": [
+          "Sharp stones bite into your boots as you climb the narrow path leading up from the ferry dock. The morning mist thins around you, revealing a wider view of the marshlands stretching eastward toward what you hope is Gull Point. A putrid stench grows stronger as you ascend - rotting flesh mixed with something metallic that makes your stomach clench.\n\nAt the ridge's crest, you spot the village square ahead where three collapsed buildings form a triangle around a muddy expanse. Wisps of smoke curl from cooking fires, but the acrid reek that carries across the distance tells you something is wrong."
+        ],
+        "active": 0,
+        "createdAt": 1791386387984,
+        "stats": {
+          "promptTokens": 6630,
+          "cachedTokens": 5674,
+          "generatedTokens": 124,
+          "promptMs": 6939.304,
+          "generationMs": 9187.007
+        },
+        "turnId": "turn_0ff9bcbc-4e87-4d78-ba17-d27a63fbedc0"
+      },
+      {
+        "id": "act_ae0e0aa7-6952-4bdf-8181-2841aef13195",
+        "type": "do",
+        "versions": ["> You look around."],
+        "active": 0,
+        "createdAt": 1791386394383,
+        "turnId": "turn_5e954f89-3e6c-4a8a-845a-64b05f0bc47f"
+      },
+      {
+        "id": "act_12a3a20e-628b-4d2a-812c-5e51fd89dc4e",
+        "type": "continue",
+        "versions": [
+          "The dock groans under the morning mist as you scan the area for threats. The wooden planks show recent repairs - newer boards replacing ones that have rotted through from years of weather and use. A rope ladder leads down to the muddy shoreline where the ferrywoman's boat sits, tied off to a thick wooden post driven deep into the riverbed.\n\nShe watches you with sharp focus from her position near the dock's edge, her hands never far from the long pole that doubles as both weapon and boat control. Behind her, the abandoned mill rises like a broken finger pointing toward the gray sky."
+        ],
+        "active": 0,
+        "createdAt": 1791386426888,
+        "stats": {
+          "promptTokens": 6224,
+          "cachedTokens": 5228,
+          "generatedTokens": 124,
+          "promptMs": 10562.101,
+          "generationMs": 20815.781
+        },
+        "turnId": "turn_5e954f89-3e6c-4a8a-845a-64b05f0bc47f"
+      },
+      {
+        "id": "act_f9053297-a467-4d80-99e6-0916cc3e0edd",
+        "type": "do",
+        "versions": ["> You follow the path east."],
+        "active": 0,
+        "createdAt": 1791386433102,
+        "turnId": "turn_ebe44edb-6475-40eb-bcd4-8c4802b23e14"
+      },
+      {
+        "id": "act_a4e5da16-5b6b-4d40-b15e-4f4ab818b4fb",
+        "type": "continue",
+        "versions": [
+          "The path curves northeast through the marshland, following the natural contours of higher ground between stagnant pools and stretches of sucking mud. The morning mist thins as you walk, revealing twisted willow trees whose branches drip with moisture. To your left, the Blackwater River cuts a serpentine course through reeds and dead wood, its surface black and glassy in the gray light.\n\nAfter about an hour of walking, the path widens into what was once a proper road. The paving stones are cracked and uneven, but their presence suggests this area was once more civilized. The stench grows stronger as you approach a cluster of ramshackle buildings ahead."
+        ],
+        "active": 0,
+        "createdAt": 1791386455277,
+        "stats": {
+          "promptTokens": 6354,
+          "cachedTokens": 5356,
+          "generatedTokens": 136,
+          "promptMs": 7237.407,
+          "generationMs": 14847.204
+        },
+        "turnId": "turn_ebe44edb-6475-40eb-bcd4-8c4802b23e14"
+      },
+      {
+        "id": "act_8b26ec19-91df-4efb-acf9-fb1ea171424e",
+        "type": "do",
+        "versions": ["> You listen for anything moving."],
+        "active": 0,
+        "createdAt": 1791386461728,
+        "turnId": "turn_be828f4a-dad5-4d42-859e-cf834b3f927a"
+      },
+      {
+        "id": "act_b5450b20-da13-414e-bdde-e0f27503cca3",
+        "type": "continue",
+        "versions": [
+          "The marsh around you settles into an uneasy quiet. The morning mist continues its slow advance across the water's surface, dampening sound and muffling the distant splash of something large disturbing the deeper channels. Your ears strain for any human voice or footstep, but only the occasional cry of a marsh bird pierces the gray air.\n\nBehind you, something heavy drags across the dock planks—the scrape of wood on wood mixed with a wet slithering sound. The ferrywoman remains hunched over her work near the mooring post, her hands busy coiling rope in swift, practiced movements."
+        ],
+        "active": 0,
+        "createdAt": 1791386489307,
+        "stats": {
+          "promptTokens": 6520,
+          "cachedTokens": 5498,
+          "generatedTokens": 122,
+          "promptMs": 7369.309,
+          "generationMs": 20126.723
+        },
+        "turnId": "turn_be828f4a-dad5-4d42-859e-cf834b3f927a"
+      },
+      {
+        "id": "act_173f6c31-5164-47cd-aaad-a2299477acc3",
+        "type": "say",
+        "versions": ["> You say \"Is anyone there?\""],
+        "active": 0,
+        "createdAt": 1791386495905,
+        "turnId": "turn_5895aa65-5f85-464b-9d09-c5256e82bee9"
+      },
+      {
+        "id": "act_cad83577-d345-4a90-ba9f-cc7b3d9e70c6",
+        "type": "continue",
+        "versions": [
+          "The ferrywoman's face goes pale as parchment. She jerks backward, knocking over a bucket that clangs loudly against the dock planks. The approaching men freeze mid-step, their crossbows wavering in their grips.\n\n\"You're one of them,\" she hisses, backing away until she bumps into her boat. \"The dead don't speak here - never have and never will.\" Her hands shake as she grabs a long pole, using it to keep you at a distance. The three men on the riverbank lower their weapons, exchanging nervous glances.\n\n\"Speak again and I'll put you in the river myself,\" the woman snaps, but her voice wavers."
+        ],
+        "active": 0,
+        "createdAt": 1791386519137,
+        "stats": {
+          "promptTokens": 6649,
+          "cachedTokens": 5626,
+          "generatedTokens": 144,
+          "promptMs": 7398.893,
+          "generationMs": 15696.269
+        },
+        "turnId": "turn_5895aa65-5f85-464b-9d09-c5256e82bee9"
+      },
+      {
+        "id": "act_34a9b6ec-7795-4242-920c-89c95f440027",
+        "type": "do",
+        "versions": ["> You check my pack."],
+        "active": 0,
+        "createdAt": 1791386525470,
+        "turnId": "turn_fe91a4c4-0532-4ac4-b6f4-01cf717308cb"
+      },
+      {
+        "id": "act_b5117e0b-960a-4fff-be88-a55f76d315b7",
+        "type": "continue",
+        "versions": [
+          "Your pack lies against the stone archway where you left it, secured with a leather cord that shows signs of recent use by someone else. When you open it, the contents reveal exactly what you feared - someone has stripped away most of your non-essential supplies.\n\nThe bronze water flask remains intact, though now empty and showing tooth marks along its edges where small animals have gnawed at it during the night. Your emergency rations have been picked clean, leaving only a few scraps of salted meat wrapped in rotting cloth. The rope and fishing line you packed are gone, as are the spare boots and extra clothing."
+        ],
+        "active": 0,
+        "createdAt": 1791386545424,
+        "stats": {
+          "promptTokens": 6711,
+          "cachedTokens": 5777,
+          "generatedTokens": 128,
+          "promptMs": 6906.763,
+          "generationMs": 12975.321
+        },
+        "turnId": "turn_fe91a4c4-0532-4ac4-b6f4-01cf717308cb"
+      },
+      {
+        "id": "act_9b053f02-d028-435e-981d-f83208f83922",
+        "type": "do",
+        "versions": ["> You rest a while in the shade."],
+        "active": 0,
+        "createdAt": 1791386552223,
+        "turnId": "turn_5a474e9f-597b-4b68-9fc0-f508313b85fe"
+      },
+      {
+        "id": "act_3701dbbf-02db-4974-8522-1e6c4a8177cb",
+        "type": "continue",
+        "versions": [
+          "Shade spreads across the morning mist as you settle against the stone archway near the dock, its ancient masonry still warm from yesterday's sun. The ferrywoman continues her work with swift, practiced motions, coiling rope and sharpening her boat hooks while keeping one eye on the channel. Around you, the marshland remains eerily quiet except for the occasional splash of something large moving through the deeper water channels.\n\nThe ferrywoman spits into the murky water of the Blackwater River, sending small ripples spreading outward like a stone thrown into still water. \"Storm'll pass by midday,\" she calls without looking up from her work."
+        ],
+        "active": 0,
+        "createdAt": 1791386568649,
+        "stats": {
+          "promptTokens": 6437,
+          "cachedTokens": 5374,
+          "generatedTokens": 132,
+          "promptMs": 7731.074,
+          "generationMs": 8575.337
+        },
+        "turnId": "turn_5a474e9f-597b-4b68-9fc0-f508313b85fe"
+      },
+      {
+        "id": "act_c2128ebe-f919-48a7-8b7e-be6349d8f151",
+        "type": "do",
+        "versions": ["> You drink from my waterskin."],
+        "active": 0,
+        "createdAt": 1791386574917,
+        "turnId": "turn_c5803d0a-024f-41b0-91f3-ea9abd6d168c"
+      },
+      {
+        "id": "act_1fd5f46c-09b9-4ed7-8935-ae37122d9e46",
+        "type": "continue",
+        "versions": [
+          "Cold water rushes down your throat as you lift the bronze waterskin, the liquid tasting of river sediment mixed with old leather and something metallic that makes your tongue tingle with warning. The container feels light in your hands - nearly empty now after the crossing.\n\nThe ferrywoman watches you drink with sharp attention, her lined face betraying both wariness and curiosity as she observes your careful attention to the blade. She spits into the murky water of the Blackwater River, sending small ripples spreading outward like a stone thrown into still water.\n\n\"You're heading to Gull Point, aren't you?\" she calls out, her voice cutting through the morning mist that rises from the channel."
+        ],
+        "active": 0,
+        "createdAt": 1791386605109,
+        "stats": {
+          "promptTokens": 6576,
+          "cachedTokens": 5514,
+          "generatedTokens": 139,
+          "promptMs": 7795.234,
+          "generationMs": 22273.94
+        },
+        "turnId": "turn_c5803d0a-024f-41b0-91f3-ea9abd6d168c"
+      },
+      {
+        "id": "act_a502ed7b-06a2-4530-9d24-a6d5b2ab125e",
+        "type": "do",
+        "versions": ["> You watch the clouds gather."],
+        "active": 0,
+        "createdAt": 1791386611580,
+        "turnId": "turn_4a1b90c9-f052-456f-b4bb-bff5ef578071"
+      },
+      {
+        "id": "act_e5e15e01-62b4-4f66-9631-a6f318e5f54e",
+        "type": "continue",
+        "versions": [
+          "Thick gray clouds roll across the morning sky like funeral shrouds, blocking out what little sunlight penetrates the perpetual gloom of the Marches. The wind shifts direction, carrying with it the sharp bite of approaching rain mixed with something else—the acrid stench of rotting meat drifting from the village beyond the ridge.\n\nThe ferrywoman finishes coiling her rope and straightens up, her lined face grim as she watches the darkening horizon. \"Storm's coming in fast,\" she mutters, more to herself than to you. \"That wind's turning colder than I like. You'd best find shelter before it hits.\""
+        ],
+        "active": 0,
+        "createdAt": 1791386634651,
+        "stats": {
+          "promptTokens": 6847,
+          "cachedTokens": 5660,
+          "generatedTokens": 129,
+          "promptMs": 8750.552,
+          "generationMs": 14204.932
+        },
+        "turnId": "turn_4a1b90c9-f052-456f-b4bb-bff5ef578071"
+      },
+      {
+        "id": "act_e55bef67-0a37-4874-a2ef-cacf0d0086f0",
+        "type": "do",
+        "versions": ["> You walk on until dusk."],
+        "active": 0,
+        "createdAt": 1791386641183,
+        "turnId": "turn_89f0c92c-669f-4543-9d9d-0528cedc0cda"
+      },
+      {
+        "id": "act_ce815bbb-7a56-4947-96f0-1150b0577f21",
+        "type": "continue",
+        "versions": [
+          "The path stretches ahead through the marshland, marked by twisted willow trees whose branches drip with moisture in the gray morning light. Your boots squelch against the muddy earth as you follow the natural contours between stagnant pools and stretches of sucking mire. The acrid stench grows stronger as you approach a cluster of ramshackle buildings ahead.\n\nAs you round a bend in the path, you spot the village square where three collapsed buildings form a triangle around a muddy expanse. Wisps of smoke curl from cooking fires, but the sharp reek of rotting flesh that carries across the distance makes your stomach clench with nausea."
+        ],
+        "active": 0,
+        "createdAt": 1791386671826,
+        "stats": {
+          "promptTokens": 6476,
+          "cachedTokens": 5247,
+          "generatedTokens": 134,
+          "promptMs": 8867.785,
+          "generationMs": 21687.754
+        },
+        "turnId": "turn_89f0c92c-669f-4543-9d9d-0528cedc0cda"
+      },
+      {
+        "id": "act_906054d6-a563-4fd7-9dea-e0f8c18467b9",
+        "type": "say",
+        "versions": ["> You say \"A long road for a short errand.\""],
+        "active": 0,
+        "createdAt": 1791386678350,
+        "turnId": "turn_daaee193-b0fa-43e2-8484-b3551214e00a"
+      },
+      {
+        "id": "act_213d206e-0025-4a47-86ae-3916e24aa1a1",
+        "type": "continue",
+        "versions": [
+          "The ferrywoman's lined face twists into something between amusement and contempt. She spits into the murky water of the Blackwater River, her gaze fixed on the distant hills where your journey will begin. \"Fair weather?\" she laughs bitterly, gesturing toward the darkening sky where storm clouds gather like mourners at a funeral. \"You call this fair? Half the road to Gull Point is washed out from last week's rains, and the other half's crawling with bandits who'd gut a man for the boots on his feet.\"\n\nOne of the three men who have been watching you from the riverbank calls out something in a harsh voice, and the woman's shoulders tense."
+        ],
+        "active": 0,
+        "createdAt": 1791386703240,
+        "stats": {
+          "promptTokens": 6643,
+          "cachedTokens": 5388,
+          "generatedTokens": 142,
+          "promptMs": 9111.19,
+          "generationMs": 15642.086
+        },
+        "turnId": "turn_daaee193-b0fa-43e2-8484-b3551214e00a"
+      }
+    ],
+    "plot": {
+      "aiInstructions": "You are the narrator of an interactive story. Write in second person, present tense. Describe what the player sees, hears and feels. Keep scenes moving. Never decide what the player does or says.",
+      "plotEssentials": "The year is 1142 of the Marches. The king is dead and no heir has been named."
+    },
+    "storyCards": [
+      {
+        "id": "card_01308397-8340-4fd7-b7de-bec80a50cc79",
+        "type": "Faction",
+        "name": "The Ashen Order",
+        "entry": "The Ashen Order wear grey cloaks pinned with a white feather and swear an oath never to lie.",
+        "triggers": ["ashen"]
+      },
+      {
+        "id": "card_17c75bb8-401f-46ba-8e22-6900faf36a0f",
+        "type": "Character",
+        "name": "Ysolde Marr",
+        "entry": "Captain Ysolde Marr commands the watch. She is a giant of a woman with a shaved head and a burned left hand.",
+        "triggers": ["ysolde", "marr", "captain"]
+      },
+      {
+        "id": "card_3b8b4d65-d467-4302-bb9f-c52ea657d723",
+        "type": "Character",
+        "name": "Aldric Marr",
+        "entry": "Aldric Marr is Captain Ysolde Marr's younger brother. She banished him from the watch for theft.",
+        "triggers": ["aldric"]
+      },
+      {
+        "id": "card_accf0373-a99c-4b0e-9f1d-b8cad15c26f4",
+        "type": "Lore",
+        "name": "The Iron Law",
+        "entry": "In the Marches no one may carry iron across running water. Ferrymen search every pack for it.",
+        "triggers": ["iron", "law", "ferry", "water"]
+      },
+      {
+        "id": "card_adce258b-964d-497b-9087-b784bd6061dc",
+        "type": "Location",
+        "name": "Saltspire Keep",
+        "entry": "Saltspire Keep is a ruined keep of white stone on a sea cliff. Its only stair is cut inside the cliff.",
+        "triggers": ["saltspire", "cliff"]
+      },
+      {
+        "id": "card_b381c363-0799-4295-8f34-a4a500fa2eda",
+        "type": "Lore",
+        "name": "The Silent Dead",
+        "entry": "The dead do not speak in the Marches. Necromancy is unknown here and no ghost has ever been seen.",
+        "triggers": ["dead", "ghost", "spirit", "grave"]
+      },
+      {
+        "id": "card_c8e8e7af-0040-4b02-95f9-47d0edc635b9",
+        "type": "Lore",
+        "name": "Two Moons",
+        "entry": "Two moons hang over the Marches: Sella rises first, Harrow second. Both are full at midsummer.",
+        "triggers": ["moon", "moons", "sella", "harrow", "sky"]
+      }
+    ],
+    "memories": [],
+    "entities": [
+      {
+        "id": "ent_4d9438dc-1a47-48df-93d0-1257f2acfae5",
+        "kind": "faction",
+        "name": "The Ashen Order",
+        "aliases": [],
+        "description": "The Ashen Order wear grey cloaks pinned with a white feather and swear an oath never to lie.",
+        "facts": [],
+        "state": {},
+        "relations": [],
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "cardId": "card_01308397-8340-4fd7-b7de-bec80a50cc79",
+        "canon": true
+      },
+      {
+        "id": "ent_11d6d308-dcba-4505-bf21-84145160203d",
+        "kind": "character",
+        "name": "Ysolde Marr",
+        "aliases": [],
+        "description": "Captain Ysolde Marr commands the watch. She is a giant of a woman with a shaved head and a burned left hand.",
+        "facts": [],
+        "state": {},
+        "relations": [],
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "cardId": "card_17c75bb8-401f-46ba-8e22-6900faf36a0f",
+        "canon": true
+      },
+      {
+        "id": "ent_a9eedcb3-e2b7-4ce9-8e5b-83a8b02f1cf2",
+        "kind": "character",
+        "name": "Aldric Marr",
+        "aliases": [],
+        "description": "Aldric Marr is Captain Ysolde Marr's younger brother. She banished him from the watch for theft.",
+        "facts": [],
+        "state": {},
+        "relations": [],
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "cardId": "card_3b8b4d65-d467-4302-bb9f-c52ea657d723",
+        "canon": true
+      },
+      {
+        "id": "ent_7f63407d-0568-4471-8e0c-8df07733b7ac",
+        "kind": "place",
+        "name": "Saltspire Keep",
+        "aliases": [],
+        "description": "Saltspire Keep is a ruined keep of white stone on a sea cliff. Its only stair is cut inside the cliff.",
+        "facts": [],
+        "state": {},
+        "relations": [],
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "cardId": "card_adce258b-964d-497b-9087-b784bd6061dc",
+        "canon": true
+      }
+    ],
+    "scriptState": {
+      "placeholders": []
+    },
+    "placeholders": [],
+    "settings": {
+      "providerId": "local",
+      "modelId": "Wayfarer-2-12B-Q4_K_M.gguf",
+      "template": "chatml",
+      "model": {
+        "contextLength": 8192,
+        "responseLength": 120,
+        "temperature": 1.1,
+        "topK": 300,
+        "topP": 0.85,
+        "presencePenalty": 0.5,
+        "frequencyPenalty": 0.2,
+        "seed": 7
+      },
+      "memory": {
+        "autoSummary": true,
+        "memoryBank": true,
+        "bankSize": 200
+      },
+      "context": {
+        "cacheStableLayout": true,
+        "evictionChunk": 8,
+        "rawOutput": false,
+        "contextWarning": true,
+        "cacheWarming": true,
+        "retryPrefetch": false
+      },
+      "image": {
+        "width": 512,
+        "height": 512,
+        "steps": 24,
+        "cfgScale": 5,
+        "portraits": true
+      },
+      "textStyle": "print"
+    },
+    "createdAt": 1791384483373,
+    "updatedAt": 1791386703624
+  }
+}
