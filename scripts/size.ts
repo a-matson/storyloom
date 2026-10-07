@@ -17,7 +17,9 @@ import { brotliCompressSync } from 'node:zlib';
 // js: 132.77 measured 2026-10-06 (M9-1a: the Entity schema, its Dexie table, projectEntity); user raised 133.0 -> 133.5.
 // js: 133.58 measured 2026-10-06 (M9-W1-1: the Scene schema and its prompt line; main was 133.37); user raised 133.5 -> 134.0.
 // js: 134.22 measured 2026-10-06 (M9-W1-2: structured blocks and fact ranking on the turn path); user raised 134.0 -> 135.0.
-const BUDGET_KB = { js: 135.0, css: 6.5 };
+// 2026-10-07: user set M9 headroom once (js 135.0 -> 140.0, css 6.5 -> 7.0) so M9 items stop asking per PR;
+// report `pnpm size` in the PR body and ask only when OVER. Re-baseline (measured + ~2%) at the start of M10.
+const BUDGET_KB = { js: 140.0, css: 7.0 };
 
 const html = readFileSync('dist/index.html', 'utf8');
 const files = [...html.matchAll(/(?:src|href)="[^"]*?(assets\/[^"]+\.(js|css))"/g)].map(
