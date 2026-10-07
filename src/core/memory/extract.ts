@@ -8,7 +8,7 @@ import { parseJsonReply } from '../text/jsonReply';
 import { EXTRACT_SYSTEM, extractPrompt } from '../text/prompts';
 import { renderTemplate } from '../text/templates';
 import { trackJob } from '../trace';
-import { attributeSpeakers, matchEntity, mergeEntity } from './entities';
+import { attributeSpeakers, matchEntity, mergeEntity, namedInPassage } from './entities';
 import { EXTRACT_JSON_SCHEMA } from './extractJsonSchema';
 import { entitiesOverdue, type MemoryRange } from './memoryBank';
 import { nextScene } from './scene';
@@ -124,6 +124,7 @@ export async function updateEntities(adventure: Adventure, range: MemoryRange, d
   for (const incoming of reply.entities) {
     if (NOT_A_NAME.test(incoming.name)) continue;
     const old = matchEntity(entities, incoming.name);
+    if (!old && !namedInPassage(incoming.name, passage)) continue;
     const merged = mergeEntity(old, incoming, at);
     entities = old ? entities.map((e) => (e === old ? merged : e)) : [...entities, merged];
   }

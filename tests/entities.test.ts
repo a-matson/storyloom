@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { attributeSpeakers, entityNamedIn, matchEntity, mergeEntities, mergeEntity } from '@core/memory/entities';
+import { attributeSpeakers, entityNamedIn, matchEntity, mergeEntities, mergeEntity, namedInPassage } from '@core/memory/entities';
+import { isConfirmed } from '@core/memory/facts';
 import { ENTITY_ENTRY_TOKENS, projectEntity } from '@core/memory/projection';
 import type { Action, Entity, ExtractedEntity } from '@core/model';
 
@@ -143,5 +144,32 @@ describe('projectEntity', () => {
     expect(entry.length).toBeLessThanOrEqual(ENTITY_ENTRY_TOKENS * 4);
     expect(entry.length).toBeGreaterThan(ENTITY_ENTRY_TOKENS * 3);
     expect(entry.endsWith('word')).toBe(true);
+  });
+});
+
+describe('namedInPassage', () => {
+  it('needs the exact name, as whole words, somewhere other than a sentence start', () => {
+    expect(namedInPassage('Tamsin', '[3] The boat rocks and Tamsin grips the oar.')).toBe(true);
+    expect(namedInPassage('Tamsin', "You follow Tamsin's lantern.")).toBe(true);
+    expect(namedInPassage('Tamsin', '"Run," Tamsin says.')).toBe(true);
+    expect(namedInPassage('Something', 'Something moves. You wait. Something large stirs.')).toBe(false);
+    expect(namedInPassage('Cobblestones', 'You walk over the cobblestones.')).toBe(false);
+    expect(namedInPassage('Inn', 'The Innkeeper nods.')).toBe(false);
+    expect(namedInPassage('Tamsin', '[12] Tamsin rows on.')).toBe(false);
+    expect(namedInPassage('Duke Aerick', 'He bows. "Duke Aerick awaits."')).toBe(false);
+    expect(namedInPassage('Duke Aerick', '"Duke Aerick awaits." You bow to Duke Aerick.')).toBe(true);
+    expect(namedInPassage('Brass Owl', 'You enter the tavern.')).toBe(false);
+  });
+});
+
+describe('isConfirmed', () => {
+  it('needs a second sighting, canon, a card, or a player-touched fact', () => {
+    const fresh = mergeEntity(undefined, seen({ facts: ['She rows.'] }), 4);
+    expect(isConfirmed(fresh)).toBe(false);
+    expect(isConfirmed(mergeEntity(fresh, seen(), 10))).toBe(true);
+    expect(isConfirmed({ ...fresh, canon: true })).toBe(true);
+    expect(isConfirmed({ ...fresh, cardId: 'card_1' })).toBe(true);
+    expect(isConfirmed({ ...fresh, facts: [{ id: 'f', text: 'She lies.', fromAction: 4, source: 'player' }] })).toBe(true);
+    expect(isConfirmed({ ...fresh, facts: fresh.facts.map((f) => ({ ...f, pinned: true })) })).toBe(true);
   });
 });

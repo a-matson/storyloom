@@ -101,7 +101,11 @@ describe('buildTrace', () => {
     const handler = createFakeLlama({ wordDelayMs: 0 });
     const provider = new LlamaServerProvider('demo', 'http://demo.invalid', (i, init) => handler(new Request(i, init)));
     const adventure = createBlankAdventure('Test', 'You stand at the gate with Tamsin.');
-    const tamsin = mergeEntity(undefined, { name: 'Tamsin', kind: 'character', aliases: [], description: 'Tamsin rows.', facts: ['She owes a debt.'] }, 0);
+    // Seen in two ranges: one sighting never reaches the prompt.
+    const tamsin = {
+      ...mergeEntity(undefined, { name: 'Tamsin', kind: 'character', aliases: [], description: 'Tamsin rows.', facts: ['She owes a debt.'] }, 0),
+      lastSeen: 1,
+    };
     const absent = mergeEntity(undefined, { name: 'Orrin', kind: 'character', aliases: [], description: 'Orrin sleeps.', facts: [] }, 0);
     adventure.entities = [tamsin, absent];
     adventure.storyCards = [{ id: 'card_gate', type: 'location', name: 'Gate', entry: 'An iron gate.', triggers: ['gate'] }];

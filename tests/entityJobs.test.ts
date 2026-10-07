@@ -1,10 +1,43 @@
 import { describe, expect, it } from 'vitest';
+import { mergeEntity } from '@core/memory/entities';
 import { entitiesOverdue } from '@core/memory/memoryBank';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import type { CompletionRequest } from '@core/ports';
-import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure as adventure } from './fixtures/memoryJobs';
+import type { Adventure } from '@core/model';
+import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure } from './fixtures/memoryJobs';
+
+/** A new entity is kept only when its passage names it, and the fixture's text names nobody the replies do. */
+function adventure(actions: number, text = 'You wave and Mira waves back.'): Adventure {
+  const adv = memoryAdventure(actions);
+  const a = adv.actions[3];
+  if (a) a.versions = [text];
+  return adv;
+}
 
 describe('entity extraction in memory maintenance', () => {
+  it('keeps a new entity only when its passage names it, and merges a known one regardless', async () => {
+    const adv = adventure(12, 'You wave and mira waves back.');
+    adv.entities = [mergeEntity(undefined, { name: 'Mira', kind: 'character', description: '', facts: [] }, 0)];
+    const reply = {
+      importance: 2,
+      entities: [
+        { name: 'Brass Owl', kind: 'place', description: 'Copied from the example.', facts: [] },
+        { name: 'Mira', kind: 'character', description: '', facts: ['She waves.'] },
+      ],
+      speakers: [],
+    };
+    const provider = fakeProvider(
+      async function* (req) {
+        yield { text: req.prompt.includes(ENTITY_PROMPT) ? JSON.stringify(reply) : 'Mira found the map.', done: true };
+      },
+      false,
+      true,
+    );
+    await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
+    expect(adv.entities.map((e) => e.name)).toEqual(['Mira']);
+    expect(adv.entities[0]?.facts.map((f) => f.text)).toEqual(['She waves.']);
+  });
+
   it('makes exactly one entity call per written memory and folds its reply in', async () => {
     const adv = adventure(18);
     const reqs: CompletionRequest[] = [];

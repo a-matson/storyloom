@@ -1,5 +1,5 @@
 import { compileCards, lookbackWindow, matchCards } from '../cards/storyCards';
-import { rankFacts } from '../memory/facts';
+import { isConfirmed, rankFacts } from '../memory/facts';
 import { projectEntity } from '../memory/projection';
 import type { Entity } from '../model/types';
 import { actionStoryText } from '../text/formatting';
@@ -23,7 +23,8 @@ const named = (e: Entity, names: ReadonlySet<string>) => [e.name, ...e.aliases].
  * An entity whose name a hand-written card holds, or whose promoted card still exists, sends facts only.
  */
 export function selectStructured(input: ContextBuildInput, lastActionIndex: number, budget: number, out: RenderedSections): StructuredResult {
-  const { tokenizer, entities, plot } = input;
+  const { tokenizer, plot } = input;
+  const entities = input.entities.filter(isConfirmed);
   let left = budget;
   const put = (kind: SectionKind, text: string) => {
     const tokens = tokenizer.count(text);
