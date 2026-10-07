@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import * as S from '@core/schema';
+import type { Adventure } from '@core/model';
 import { FACTS, FILLERS, isOrig, OPENING, retrievalHit, scenarioJson, scoreProbe, type SeededFact } from '../bench/recall';
+import { sliceHistory, stripAdventure, turnEnds, type RecallHistory } from '../bench/recallHistory';
+import { makeAdventure } from './fixtures/adventure';
 
 const fact: SeededFact = {
   id: 'f',
@@ -54,6 +57,51 @@ describe('the fact table', () => {
     const s = S.Scenario.parse(scenarioJson());
     expect(s.storyCards).toHaveLength(FACTS.filter((f) => f.card).length);
     expect(s.plot.plotEssentials).toContain('1142');
+  });
+});
+
+describe('the recorded history', () => {
+  // Opening, then AI/player alternating: story turns end at actions 4, 6, 8 and 10.
+  const played = (): Adventure => {
+    const a = makeAdventure({ actions: 9, cards: 2, memories: 2, embeddingDim: 2 });
+    return {
+      ...a,
+      actions: a.actions.map((x) => ({ ...x, speakers: [{ paragraph: 0, name: 'Merav' }] })),
+      plot: { ...a.plot, storySummary: 'so far', scene: { present: ['Merav'] } },
+      scriptState: { ...a.scriptState, __summaryAt: 4, __entitiesAt: 6 },
+      entities: [{ id: 'e', kind: 'character', name: 'Merav', aliases: [], description: '', facts: [], state: {}, relations: [], firstSeen: 1, lastSeen: 3 }],
+    };
+  };
+  const history = (a: Adventure): RecallHistory => ({
+    format: 'storyloom-recall-history',
+    version: 1,
+    recordedAt: '',
+    facts: [],
+    turnEnds: turnEnds(a.actions),
+    adventure: stripAdventure(a),
+  });
+
+  it('keeps only creation state', () => {
+    const s = S.Adventure.parse(stripAdventure(played()));
+    expect(s.memories).toEqual([]);
+    expect(s.plot.storySummary ?? s.plot.scene).toBeUndefined();
+    expect(Object.keys(s.scriptState).filter((k) => k.startsWith('__'))).toEqual([]);
+    expect(s.actions.some((x) => x.speakers)).toBe(false);
+    // The two Location cards seed canon entities again; the extracted character is gone.
+    expect(s.entities.map((e) => [e.canon, e.facts.length])).toEqual([
+      [true, 0],
+      [true, 0],
+    ]);
+  });
+
+  it('cuts at a story turn boundary and refuses a depth past the recording', () => {
+    const h = history(played());
+    expect(h.turnEnds).toEqual([4, 6, 8, 10]);
+    const d2 = sliceHistory(h, 2, 11);
+    expect(d2.actions.map((x) => x.type).slice(-2)).toEqual(['do', 'continue']);
+    expect(d2.actions).toHaveLength(6);
+    expect(d2.settings.model.seed).toBe(11);
+    expect(() => sliceHistory(h, 5)).toThrow(/4 story turns/);
   });
 });
 

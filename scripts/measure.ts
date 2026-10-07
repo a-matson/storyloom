@@ -6,7 +6,8 @@
  *   gatev <url>           llama-server checks: template, tokenizer error, warming, layout, evictionChunk, CORS
  *   live <url> [label]    plays 20 scripted turns in the real app; per-turn stats, memories, summary
  *   images <image-url> <url>  See mode and a cover against a real A1111 server
- *   recall <url> [label]  plays an imported scenario, plants 24 facts and probes them at turns 30/60/90; the memory recall baseline
+ *   recall-record <url>   plays the 24-fact scenario to turn 90 once and saves the history (bench/recall-history.json)
+ *   recall <url> [label]  replays the recorded history and generates only the probes at turns 30/60/90 (~75 min); the memory recall baseline
  */
 import { spawnSync } from 'node:child_process';
 
@@ -19,7 +20,14 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
   // `--project=live`, not `--project live`: the flag is variadic and would swallow the file.
   live: { cmd: ['pnpm', 'exec', 'playwright', 'test', '--project=live', 'e2e/live/play.spec.ts'], env: { MEASURE_URL: a, MEASURE_LABEL: b } },
   images: { cmd: ['pnpm', 'exec', 'playwright', 'test', '--project=live', 'e2e/live/images.spec.ts'], env: { MEASURE_IMAGES: a, MEASURE_URL: b } },
-  recall: { cmd: ['pnpm', 'exec', 'playwright', 'test', '--project=live', 'e2e/live/recall.spec.ts'], env: { MEASURE_URL: a, MEASURE_LABEL: b } },
+  'recall-record': {
+    cmd: ['pnpm', 'exec', 'playwright', 'test', '--project=live', 'e2e/live/recall.spec.ts'],
+    env: { MEASURE_URL: a, MEASURE_MODE: 'record' },
+  },
+  recall: {
+    cmd: ['pnpm', 'exec', 'playwright', 'test', '--project=live', 'e2e/live/recall.spec.ts'],
+    env: { MEASURE_URL: a, MEASURE_LABEL: b, MEASURE_MODE: 'replay' },
+  },
 };
 
 const s = scenario === undefined ? undefined : SCENARIOS[scenario];

@@ -89,6 +89,8 @@ export class MemoryScheduler {
     this.waiting = false;
     const cancel = new AbortController();
     this.running = cancel;
+    const entitiesAt = this.host.adventure().scriptState.__entitiesAt;
+    let progressed = false;
     try {
       // Memories are embedded on the story side so they compare with the query vectors in `prepareContext`.
       const { runMemoryMaintenance } = await loadMemoryJobs();
@@ -104,6 +106,7 @@ export class MemoryScheduler {
       )
         this.host.changed();
       this.label(report.speakers);
+      progressed = this.host.adventure().scriptState.__entitiesAt !== entitiesAt;
     } catch (e) {
       // Background work never blocks play; it retries after the next turn.
       if (!cancel.signal.aborted) console.warn('memory maintenance failed', e);
@@ -112,7 +115,9 @@ export class MemoryScheduler {
     }
     if (!cancel.signal.aborted) {
       const next = this.idle;
-      if (this.waiting && next && !next.aborted && (!this.typing || this.overdue())) return this.run(next);
+      // An entity backlog (an import starts with no memories) drains in this idle period, not two memories a turn.
+      const backlog = progressed && entitiesOverdue(this.host.adventure());
+      if ((this.waiting || backlog) && next && !next.aborted && (!this.typing || this.overdue())) return this.run(next);
       return this.portraits(idle);
     }
     // Cut by typing: earlier jobs of this run may have changed the bank, and the rest waits for the input to clear.
