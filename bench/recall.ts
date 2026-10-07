@@ -2,6 +2,8 @@
  * The fact table and scoring for the recall benchmark (`pnpm measure recall <url>`).
  * Lives here, not in `e2e/live/`, so Playwright's `testMatch: 'live/**'` does not pick it up.
  */
+import { newScenario, type Scenario } from '@core/model';
+import { MORE_FACTS } from './recallFacts';
 
 export type FactClass = 'character' | 'place' | 'canon';
 export type PlantMode = 'Do' | 'Say' | 'card' | 'essentials';
@@ -12,8 +14,8 @@ export interface SeededFact {
   class: FactClass;
   /** How the fact enters the story. `card` and `essentials` are planted before turn 1. */
   plant: [mode: PlantMode, text: string];
-  /** Name and triggers for `plant[0] === 'card'`; the card entry is `plant[1]`. */
-  card?: { name: string; triggers: string };
+  /** For `plant[0] === 'card'`; the entry is `plant[1]`. Character/Location/Faction cards seed a canon entity. */
+  card?: { name: string; type: string; triggers: string };
   /** The turn that invites the model to use or contradict the fact. */
   probe: [mode: 'Do' | 'Say', text: string];
   /** The truth, for the helper-model judgement. */
@@ -23,7 +25,8 @@ export interface SeededFact {
   contradict: string[];
 }
 
-export const FACTS: SeededFact[] = [
+/** The v1.0.0 baseline's 12 facts; reported apart as `orig` so that baseline stays comparable. */
+const ORIG: SeededFact[] = [
   {
     id: 'char-scar',
     class: 'character',
@@ -100,7 +103,7 @@ export const FACTS: SeededFact[] = [
     id: 'canon-iron',
     class: 'canon',
     plant: ['card', 'In the Marches no one may carry iron across running water. Ferrymen search every pack for it.'],
-    card: { name: 'The Iron Law', triggers: 'iron,law,ferry,water' },
+    card: { name: 'The Iron Law', type: 'Lore', triggers: 'iron,law,ferry,water' },
     probe: ['Do', 'carry my iron knife onto the ferry'],
     statement: 'In the Marches iron may not be carried across running water.',
     expect: ['iron', 'water'],
@@ -110,7 +113,7 @@ export const FACTS: SeededFact[] = [
     id: 'canon-moons',
     class: 'canon',
     plant: ['card', 'Two moons hang over the Marches: Sella rises first, Harrow second. Both are full at midsummer.'],
-    card: { name: 'Two Moons', triggers: 'moon,moons,sella,harrow,sky' },
+    card: { name: 'Two Moons', type: 'Lore', triggers: 'moon,moons,sella,harrow,sky' },
     probe: ['Do', 'look up at the night sky'],
     statement: 'The Marches has two moons, Sella and Harrow.',
     expect: ['sella', 'harrow', 'two moons', 'both moons'],
@@ -120,7 +123,7 @@ export const FACTS: SeededFact[] = [
     id: 'canon-dead',
     class: 'canon',
     plant: ['card', 'The dead do not speak in the Marches. Necromancy is unknown here and no ghost has ever been seen.'],
-    card: { name: 'The Silent Dead', triggers: 'dead,ghost,spirit,grave' },
+    card: { name: 'The Silent Dead', type: 'Lore', triggers: 'dead,ghost,spirit,grave' },
     probe: ['Do', 'ask the dead of the graveyard for help'],
     statement: 'The dead never speak in the Marches and no ghost has ever been seen.',
     expect: ['no ghost', 'do not speak', 'does not answer', 'silent', 'nothing answers'],
@@ -136,6 +139,27 @@ export const FACTS: SeededFact[] = [
     contradict: ['the queen', 'the new king', 'heir has been named', 'the king orders'],
   },
 ];
+
+export const FACTS: SeededFact[] = [...ORIG, ...MORE_FACTS];
+export const isOrig = (f: SeededFact) => ORIG.includes(f);
+
+/** Fixed, and free of every fact's keywords, so no probe is scored on the opening. */
+export const OPENING =
+  'You come down out of the hills into the Marches at dusk, a letter of passage in your coat and a long way still to go. ' +
+  'A woman waits by a boat at the foot of the road, watching you come.';
+
+/** The bench's scenario: plot essentials and story cards from the `essentials` and `card` plants. */
+export function scenarioJson(): Scenario {
+  const s = newScenario('Recall bench', OPENING);
+  return {
+    ...s,
+    tags: ['fantasy'],
+    plot: { ...s.plot, plotEssentials: FACTS.flatMap((f) => (f.plant[0] === 'essentials' ? [f.plant[1]] : [])).join(' ') },
+    storyCards: FACTS.flatMap((f) =>
+      f.card ? [{ id: `card-${f.id}`, type: f.card.type, name: f.card.name, entry: f.plant[1], triggers: f.card.triggers.split(',') }] : [],
+    ),
+  };
+}
 
 /** Neutral turns between the plants and the probes; cycled to reach the probe depths. */
 export const FILLERS: [mode: 'Do' | 'Say', text: string][] = [
