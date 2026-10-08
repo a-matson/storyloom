@@ -19,6 +19,9 @@ const MEMORY_EXAMPLE =
   'She hands you the key to the loft above the stables.\n---\n' +
   "Memory: You wear your mother's copper ring on your thumb and walked from Dunmere to sell your songs. You paid two pennies for the loft above the stables; the pass is snowed in until spring.\n\n";
 
+/** The example's details that the model copies into memories (5-7 of 16 in memory-keep runs). [measured: 2026-10-08-memory-keep-after] */
+export const MEMORY_EXAMPLE_DETAILS = ['dunmere', 'copper ring', 'two pennies', 'loft above the stables', 'snowed in'];
+
 export function memoryPrompt(passage: string): string {
   return (
     `${MEMORY_EXAMPLE}Summarise the key facts, decisions, discoveries and relationship changes in this passage, ` +

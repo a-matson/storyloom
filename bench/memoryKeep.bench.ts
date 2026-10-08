@@ -5,6 +5,7 @@ import { dueMemoryRanges } from '@core/memory/memoryBank';
 import { memoryText } from '@core/memory/memoryJobs';
 import { actionText } from '@core/model';
 import type { Provider } from '@core/ports';
+import { MEMORY_EXAMPLE_DETAILS } from '@core/text/prompts';
 import { writeMeasurement } from './env';
 import { FACTS } from './recall';
 import { HISTORY_FILE, RecallHistory } from './recallHistory';
@@ -39,6 +40,7 @@ test.skipIf(!url)('memories keep planted facts', { timeout: 900_000 }, async () 
     rows.push({ id: fact.id, memory, kept: fact.expect.some((k) => lower.includes(k)), retried: calls > 1 });
   }
   console.table(rows.map(({ memory: _m, ...r }) => r));
-  console.log(`${rows.filter((r) => r.kept).length}/${rows.length} kept`);
+  const leaked = rows.filter((r) => MEMORY_EXAMPLE_DETAILS.some((d) => r.memory.toLowerCase().includes(d))).length;
+  console.log(`${rows.filter((r) => r.kept).length}/${rows.length} kept, ${leaked} with example details`);
   writeMeasurement(`memory-keep-${LABEL}`, { rows });
 });
