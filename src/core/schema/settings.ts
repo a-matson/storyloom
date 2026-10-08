@@ -23,6 +23,8 @@ export const MemorySettings = z.object({
   memoryBank: z._default(z.boolean(), true),
   /** Max memories kept per adventure (AID tiers: 25/100/200/400/800). */
   bankSize: z._default(z.int().check(z.gt(0)), 200),
+  /** After each turn, one helper call checks the output against canon, pinned facts and the scene. Off until its precision is measured. */
+  contradictionCheck: z._default(z.boolean(), false),
 });
 
 export const ContextSettings = z.object({

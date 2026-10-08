@@ -1,0 +1,328 @@
+[
+  {
+    "probe": "char-scar@30",
+    "output": "The innkeeper's scarred hands pause mid-wipe as he turns toward you, his eyes flickering with recognition. Around the tavern, conversations die away like snuffed candles - every patron knows that when Oriel Vance comes calling, death isn't far behind.\n\n\"Aye, your face is known,\" he says slowly, setting the rag aside. \"But not by its rightful owner, if you catch my meaning.\" He jerks his head toward a corner table where three men in dark cloaks huddle over a bottle of cheap liquor. \"Those gentlemen have been asking questions about cartographers from Hallow Down - specifically ones with... interesting facial markings.\"",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman, Three men from the Iron Guild · Evening, day 1",
+      "Oriel Vance: Oriel has a long scar on the left cheek."
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "char-sword@30",
+    "output": "Dawnsplitter sings as it clears its scabbard, bronze gleaming with a cold light in the torchlight. The sound of your voice saying its name echoes off the stone walls of the ferry landing like a war horn, causing the three men from the Iron Guild to instinctively raise their crossbows.\n\n\"Bronze killer,\" the ferrywoman breathes, her lined face contorting with recognition and something approaching terror. She steps back from you, her pole wavering as she realizes what weapon she's been threatening. \"Your grandfather killed seven men with that blade before they hanged him for it.\"",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman, Three men from the Iron Guild · Evening, day 1",
+      "Oriel Vance: Oriel carries Dawnsplitter, a bronze sword that was a grandfather's."
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "char-name@30",
+    "output": "The ferrywoman's face hardens as she stares at you, her lined features twisting with something between recognition and disgust. One of the three men from the Iron Guild steps closer, his crossbow still loaded and ready. The woman raises her pole defensively.\n\n\"You're asking questions like you don't know,\" she spits into the murky water. \"Oriel Vance, cartographer from Hallow Down. Son of the old fool who mapped roads that weren't supposed to exist.\" She gestures toward the three men watching from the riverbank. \"These dogs are looking for any excuse to take what's in your pack, and they don't need an introduction to know exactly who you are.\"",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman, Three men from the Iron Guild · Evening, day 1",
+      "Oriel Vance: Oriel Vance is a cartographer from Hallow Down."
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "canon-iron@30",
+    "output": "The ferrywoman's eyes narrow as she spots the iron knife strapped to your thigh when you step onto her boat. Her hand moves instinctively toward the club hanging from her belt while she glances nervously at the three men still watching from the riverbank.\n\n\"Didn't think I'd need to search someone twice in one night,\" she mutters, her voice carrying the kind of exhaustion that comes from too many threats and too little sleep. One of the Iron Guild men shouts something from the shore, and she spits into the water before speaking again. \"That blade violates every law this river has, and those bastards back there are starting to notice you more than they should.\"",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman, Three men from the Iron Guild · Evening, day 1",
+      "The Marches: No one may carry iron across running water."
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "canon-moons@30",
+    "output": "The night sky above Millbrook Landing hangs heavy with smog and storm clouds, blotting out most of the stars. What light remains comes from the sickly glow of the moons—Harrow's silver disc just peeking over the horizon, while Sella still hides behind the approaching thunderheads. The wind carries an ominous charge that makes the hairs on your neck stand up.\n\nThe ferrywoman notices you studying the sky and spits into the river again. \"Storm's coming before dawn,\" she mutters, her lined face grim in the flickering torchlight. \"Worse than the one that drowned half the sheep last week.\"",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman, Three men from the Iron Guild · Evening, day 1",
+      "The Marches: Two moons hang over the Marches, Sella and Harrow."
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "canon-crown@30",
+    "output": "The ferrywoman's face darkens as she glances at the three men still watching from the riverbank. \"Nobody rules,\" she spits, her voice rough as sandpaper. \"Not since the old king died without naming an heir.\" She jerks her thumb toward the three men. \"These bastards think they're taking his place, but all they do is bleed honest folk dry for every scrap of coin they can find.\"\n\nOne of the Iron Guild men shouts something in the distance, and she curses under her breath. \"But don't you go thinking that means there's safety in this chaos,\" she adds, her eyes sharp with calculation.",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman, Three men from the Iron Guild · Evening, day 1",
+      "The Marches: The king is dead and no heir has been named."
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "char-sister-2@30",
+    "output": "The ferrywoman's face hardens as she processes your question. She spits into the river before answering, her voice tight with something between pity and contempt. \"Home?\" she scoffs, glancing at the three men who still wait nearby. \"That word doesn't mean much in these parts anymore, Vance.\"\n\nShe adjusts her grip on the boat's mooring line, fingers working nervously. \"Your sister keeps the lighthouse at Gull Point, yes? But Lenna's not the one who's been sending bounty hunters to every ferry crossing and village between here and Hallow Down.\" Her eyes narrow as she studies your reaction.",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman, Three men from the Iron Guild · Evening, day 1",
+      "Oriel Vance: Oriel's sister Lenna keeps the lighthouse at Gull Point."
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "canon-keep-2@30",
+    "output": "The path winds upward through increasingly treacherous terrain as you leave Millbrook Landing behind. Jagged rocks replace muddy soil underfoot, and the air grows thin with altitude. Around you, the landscape shifts from marshy flatland to exposed cliff faces where only the hardiest plants cling to life in cracks and crevices.\n\nSaltspire Keep looms before you like a pale bone rising from the sea. Its walls catch what little light remains as storm clouds gather overhead, making the ancient stone seem alive with malevolent purpose. The single stair carved into the cliff face appears to have been deliberately worn smooth by time and weather - or by countless feet ascending in haste.",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman, Three men from the Iron Guild · Evening, day 1",
+      "Saltspire Keep: Saltspire Keep is a ruined keep of white stone on a sea cliff. Its only stair is cut inside the cliff."
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "canon-captain-2@30",
+    "output": "Captain Ysolde Marr enters the tavern through the back door, her massive frame filling the doorway before she shoulders through. The other patrons immediately straighten, conversations dying as their eyes track her movement toward the bar. Her shaved head gleams with sweat despite the cool evening air, and the burns on her left hand catch the lamplight as she gestures to the tavern keeper for ale.\n\nThe tax collector notices her entrance and shifts uncomfortably in his seat, his earlier bravado evaporating as Marr's presence settles over the room. She accepts a clay mug from the barkeep without paying, her eyes scanning the crowd with a cold assessment that settles on you briefly before moving on.",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman, Three men from the Iron Guild · Evening, day 1",
+      "Ysolde Marr: Captain Ysolde Marr commands the watch. She is a giant of a woman with a shaved head and a burned left hand."
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "canon-brother-2@30",
+    "output": "The ferrywoman's face darkens at the name, her knuckles whitening around the boat pole. \"Aldric Marr,\" she spits into the river, the words carrying venom. \"That thief and coward who thought he could steal from his own sister's strongbox.\"\n\nOne of the three men steps closer, his crossbow never wavering. \"Captain Ysolde Marr doesn't tolerate thieves in her ranks,\" he calls out, his voice carrying the authority of someone who has witnessed the consequences firsthand. \"Brother tried to poison her when she caught him with the silver.\"",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman, Three men from the Iron Guild · Evening, day 1",
+      "Aldric Marr: Aldric Marr is Captain Ysolde Marr's younger brother. She banished him from the watch for theft.",
+      "Ysolde Marr: Captain Ysolde Marr commands the watch. She is a giant of a woman with a shaved head and a burned left hand."
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "char-horses-2@30",
+    "output": "The stablemaster spits into the muddy yard before wiping his hands on a filthy rag. \"Six silver for one of my nags and no questions asked,\" he says, gesturing toward a line of scrawny horses tied to posts that lean like drunken sentries.\n\nHe eyes your worn boots and threadbare coat with practiced calculation. \"Course, for that price you get what's left - last ride nearly gutted her with a rusty knife when she shied at some fool bandits. Still limps on the left fore, but she'll get you where you're going if you don't push too hard.\"",
+    "lines": ["Scene: Millbrook Landing · Present: Ferrywoman, Three men from the Iron Guild · Evening, day 1", "Oriel Vance: Oriel is afraid of horses."],
+    "contradicts": null
+  },
+  {
+    "probe": "canon-order-2@60",
+    "output": "The crowd gathers around the cooking fires with the restless energy of people who know they are being watched. Three figures move differently than the others - their gray cloaks blend into the smoke and mist, but their movements remain precise despite the muddy terrain.\n\nOne approaches you directly, stepping over debris without looking down. A white feather pins his cloak closed at the throat. His face remains hidden beneath the hood, but the way he holds himself suggests a man who has spent years practicing control. When he speaks, his voice carries the measured cadence of one who chooses each word carefully.\n\n\"Oriel Vance,\" he says, using your name without introduction.",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman · Dawn, day 1 · Stormy",
+      "The Ashen Order: The Ashen Order wear grey cloaks pinned with a white feather and swear an oath never to lie."
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "canon-keep-2@60",
+    "output": "Rain lashes the cliff face as you approach Saltspire Keep, its white stone seeming to glow with an unearthly light in the storm. The single staircase carved into the rock face is slick with moisture, its ancient steps worn smooth by centuries of feet. Halfway up, your hand slips on wet stone and you scrape your palm raw against the cliff.\n\nAt the top, the keep's great doors stand partially open, revealing a gaping darkness within. Fresh boot prints in the mud lead toward the entrance—someone else has been here recently. You step inside and immediately smell the acrid smoke of cooking fires and something else—the sharp bite of old blood that seems to cling to the walls.",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman · Dawn, day 1 · Stormy",
+      "Saltspire Keep: Saltspire Keep is a ruined keep of white stone on a sea cliff. Its only stair is cut inside the cliff."
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "canon-captain-2@60",
+    "output": "Captain Ysolde Marr enters the tavern's common room like a storm front—her boots thudding against the floorboards with deliberate weight. Her massive frame fills the doorway, and you notice immediately how she moves: despite her size, every gesture is controlled, economical. She surveys the room in one sweep, her gaze resting on you before moving to the serving girl.\n\nHer shaved head gleams under the oil lamps, and when she speaks, her voice carries the rough timbre of someone who's smoked too much and shouted over wind for years. \"Oriel Vance,\" she says, your name rolling off her tongue like a curse.",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman · Dawn, day 1 · Stormy",
+      "Ysolde Marr: Captain Ysolde Marr commands the watch. She is a giant of a woman with a shaved head and a burned left hand."
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "canon-crown@60",
+    "output": "The ferrywoman spits into the murky water before answering, her gaze fixed on something in the distance beyond your shoulder. \"No one rules the Marches,\" she says, voice heavy with bitter certainty. \"Just whoever can pay taxmen and guild enforcers to look the other way long enough to move goods or people.\" She adjusts the mooring line with rough hands that bear old scars from rope burns and worse.\n\n\"Lord Hakon tried to claim it all last winter with his hired swords, but he's dead now - poison in his wine cup at some feast.\" She spits again, this time with more venom.",
+    "lines": ["Scene: Millbrook Landing · Present: Ferrywoman · Dawn, day 1 · Stormy", "The Marches: The king is dead and no heir has been named."],
+    "contradicts": null
+  },
+  {
+    "probe": "canon-moons@60",
+    "output": "Thick storm clouds race across the moonlit sky in ragged streaks of gray and black, their movement driven by wind that carries the sharp bite of approaching rain. The larger of the two moons - Sella, perhaps - shows as a pale crescent through a brief gap in the cloud cover before being swallowed again by darkness.\n\nThe ferrywoman follows your gaze upward, her lined face betraying something between resignation and dread. \"Storm'll hit hard before morning,\" she mutters, adjusting the mooring lines that creak against their wooden posts. \"River'll run swift and cold tonight - not good for crossing.\"",
+    "lines": ["Scene: Millbrook Landing · Present: Ferrywoman · Dawn, day 1 · Stormy", "The Marches: Two moons hang over the Marches, Sella and Harrow."],
+    "contradicts": null
+  },
+  {
+    "probe": "canon-dead@60",
+    "output": "The ferrywoman's face goes ashen when you approach the graveyard near the dock. Her hands tremble as she points toward the overgrown burial plots where ancient stones lean at impossible angles. \"The dead don't answer questions here, traveler,\" she hisses, her voice faint above the wind and rain.\n\nA crow alights on a broken headstone, its black eyes watching your approach with hungry interest. The ferrywoman grabs your arm with surprising strength. \"These graves are older than the Guild itself. The people buried here had their throats cut for lesser offenses than trespassing.\"",
+    "lines": ["Scene: Millbrook Landing · Present: Ferrywoman · Dawn, day 1 · Stormy", "The Marches: The dead do not speak and no ghost has ever been seen."],
+    "contradicts": null
+  },
+  {
+    "probe": "canon-iron@60",
+    "output": "The ferrywoman's eyes narrow as she spots the iron knife in your pack. She hisses something under her breath in what sounds like the old tongue, then signals to the three men on the riverbank. They start moving toward you with purpose.\n\n\"Didn't I warn you about iron, boy?\" she snarls, her voice carrying a new edge of steel. \"The Guild doesn't take kindly to folk who break their laws.\" She reaches for a club at her belt while the men spread out to flank you.\n\nOne of them - a scarred man with yellow teeth - speaks up from your left.",
+    "lines": ["Scene: Millbrook Landing · Present: Ferrywoman · Dawn, day 1 · Stormy", "The Marches: No one may carry iron across running water."],
+    "contradicts": null
+  },
+  {
+    "probe": "canon-captain-2@90",
+    "output": "Captain Ysolde Marr enters the tavern's common room like a storm front—her boots heavy on the floorboards, her presence commanding immediate attention from everyone present. The shaved head and burned left hand catch the firelight as she surveys the room with sharp assessment, her scarred face bearing fresh scratches from something that got too close in the marshlands.\n\nShe notices you immediately, recognizing the blue heron tattoo that marks you as one of the few survivors from the organization she once commanded. Her remaining eyebrow arches as she spots the ferrywoman in the corner, already retreating further into the shadows.",
+    "lines": [
+      "Scene: near the ferry dock · Present: Ferrywoman, Iron Guild men · Night, day 1 · Rainy",
+      "Ysolde Marr: Captain Ysolde Marr commands the watch. She is a giant of a woman with a shaved head and a burned left hand."
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "canon-brother-2@90",
+    "output": "The ferrywoman's lined face darkens at the question. She spits into the murky water of the Blackwater River, her gaze fixed on the distant horizon where storm clouds gather like funeral shrouds. \"Captain Ysolde's younger brother,\" she says, her voice carrying both disgust and something that might be grief.\n\n\"He was once captain himself, before the Guild took everything from him. Found him with stolen silver in his pockets - coins meant for the bridge repairs that keep the winter floods from washing away this entire settlement.\" She gestures toward the ramshackle buildings on the opposite bank.",
+    "lines": [
+      "Scene: near the ferry dock · Present: Ferrywoman, Iron Guild men · Night, day 1 · Rainy",
+      "Aldric Marr: Aldric Marr is Captain Ysolde Marr's younger brother. She banished him from the watch for theft."
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "canon-crown@90",
+    "output": "The ferrywoman's lined face goes rigid as a corpse when you ask the question. Her hands grip the pole so tightly her knuckles turn white, and she looks around nervously before speaking in a hushed whisper.\n\n\"The dead rule nothing,\" she hisses, her voice scarcely audible above the patter of rain on the dock planks. \"There's no king, no heir, and no peace - just hunger and fear and iron in the water.\" She spits into the murky channel, sending small ripples spreading outward like a stone thrown into still water.\n\nThe three Iron Guild men shift restlessly behind her, their crossbows gleaming with oiled wood as they scan the gray mist.",
+    "lines": [
+      "Scene: near the ferry dock · Present: Ferrywoman, Iron Guild men · Night, day 1 · Rainy",
+      "The Marches: The king is dead and no heir has been named."
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "canon-dead@90",
+    "output": "The wind shifts as you speak, carrying your words toward the cluster of tombstones that marks the village cemetery beyond the dock. Rain patters against the stone markers and pools in the graves where fresh earth still shows signs of recent burial.\n\nSilence answers your call - no whispers rise from the soil, no skeletal hands emerge to guide you. The dead here have been buried without ceremony, their bones already claimed by the earth and the worms that thrive in these marshy grounds. The ferrywoman watches you with growing alarm, her lined face pale as she grips her boat hook tighter.\n\n\"Don't do that,\" she hisses, backing away from the water's edge.",
+    "lines": [
+      "Scene: near the ferry dock · Present: Ferrywoman, Iron Guild men · Night, day 1 · Rainy",
+      "The Marches: The dead do not speak and no ghost has ever been seen."
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "char-sword@90",
+    "output": "Dawnsplitter sings as it clears its scabbard, the bronze blade gleaming dully in the gray morning light. The ferrywoman's face drains of color, her hands freezing mid-motion over her rope work.\n\n\"Bronze,\" she whispers, her voice thick with recognition and fear. \"The king's law forbids old weapons like that—hangs anyone caught with it.\" The Iron Guild men exchange sharp glances, their crossbows wavering as they recognize the bronze sword your grandfather died for.\n\nOne of the men calls out something in a harsh voice, and the woman's shoulders tense.",
+    "lines": [
+      "Scene: near the ferry dock · Present: Ferrywoman, Iron Guild men · Night, day 1 · Rainy",
+      "Oriel Vance: Oriel carries Dawnsplitter, a bronze sword that was a grandfather's."
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "canon-moons@30",
+    "output": "The night sky above Millbrook Landing hangs heavy with smog and storm clouds, blotting out most of the stars. What light remains comes from the sickly glow of the moons—Harrow's silver disc just peeking over the horizon, while Sella still hides behind the approaching thunderheads. The wind carries an ominous charge that makes the hairs on your neck stand up.\n\nThe ferrywoman notices you studying the sky and spits into the river again. \"Storm's coming before dawn,\" she mutters, her lined face grim in the flickering torchlight. \"Worse than the one that drowned half the sheep last week.\"",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman, Three men from the Iron Guild · Evening, day 1",
+      "The Marches: The Marches has a single moon, Sella."
+    ],
+    "contradicts": "The Marches: The Marches has a single moon, Sella."
+  },
+  {
+    "probe": "canon-captain-2@30",
+    "output": "Captain Ysolde Marr enters the tavern through the back door, her massive frame filling the doorway before she shoulders through. The other patrons immediately straighten, conversations dying as their eyes track her movement toward the bar. Her shaved head gleams with sweat despite the cool evening air, and the burns on her left hand catch the lamplight as she gestures to the tavern keeper for ale.\n\nThe tax collector notices her entrance and shifts uncomfortably in his seat, his earlier bravado evaporating as Marr's presence settles over the room. She accepts a clay mug from the barkeep without paying, her eyes scanning the crowd with a cold assessment that settles on you briefly before moving on.",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman, Three men from the Iron Guild · Evening, day 1",
+      "Ysolde Marr: Captain Ysolde Marr is a small, slight woman with long red braids."
+    ],
+    "contradicts": "Ysolde Marr: Captain Ysolde Marr is a small, slight woman with long red braids."
+  },
+  {
+    "probe": "canon-keep-2@60",
+    "output": "Rain lashes the cliff face as you approach Saltspire Keep, its white stone seeming to glow with an unearthly light in the storm. The single staircase carved into the rock face is slick with moisture, its ancient steps worn smooth by centuries of feet. Halfway up, your hand slips on wet stone and you scrape your palm raw against the cliff.\n\nAt the top, the keep's great doors stand partially open, revealing a gaping darkness within. Fresh boot prints in the mud lead toward the entrance—someone else has been here recently. You step inside and immediately smell the acrid smoke of cooking fires and something else—the sharp bite of old blood that seems to cling to the walls.",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman · Dawn, day 1 · Stormy",
+      "Saltspire Keep: Saltspire Keep is a fortress of black basalt in a forest, entered through a great front gate."
+    ],
+    "contradicts": "Saltspire Keep: Saltspire Keep is a fortress of black basalt in a forest, entered through a great front gate."
+  },
+  {
+    "probe": "char-sword@30",
+    "output": "Dawnsplitter sings as it clears its scabbard, bronze gleaming with a cold light in the torchlight. The sound of your voice saying its name echoes off the stone walls of the ferry landing like a war horn, causing the three men from the Iron Guild to instinctively raise their crossbows.\n\n\"Bronze killer,\" the ferrywoman breathes, her lined face contorting with recognition and something approaching terror. She steps back from you, her pole wavering as she realizes what weapon she's been threatening. \"Your grandfather killed seven men with that blade before they hanged him for it.\"",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman, Three men from the Iron Guild · Evening, day 1",
+      "Oriel Vance: Oriel carries Dawnsplitter, a steel axe."
+    ],
+    "contradicts": "Oriel Vance: Oriel carries Dawnsplitter, a steel axe."
+  },
+  {
+    "probe": "char-name@30",
+    "output": "The ferrywoman's face hardens as she stares at you, her lined features twisting with something between recognition and disgust. One of the three men from the Iron Guild steps closer, his crossbow still loaded and ready. The woman raises her pole defensively.\n\n\"You're asking questions like you don't know,\" she spits into the murky water. \"Oriel Vance, cartographer from Hallow Down. Son of the old fool who mapped roads that weren't supposed to exist.\" She gestures toward the three men watching from the riverbank. \"These dogs are looking for any excuse to take what's in your pack, and they don't need an introduction to know exactly who you are.\"",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman, Three men from the Iron Guild · Evening, day 1",
+      "Oriel Vance: Oriel Vance is a blacksmith from Saltmarsh."
+    ],
+    "contradicts": "Oriel Vance: Oriel Vance is a blacksmith from Saltmarsh."
+  },
+  {
+    "probe": "char-sister-2@30",
+    "output": "The ferrywoman's face hardens as she processes your question. She spits into the river before answering, her voice tight with something between pity and contempt. \"Home?\" she scoffs, glancing at the three men who still wait nearby. \"That word doesn't mean much in these parts anymore, Vance.\"\n\nShe adjusts her grip on the boat's mooring line, fingers working nervously. \"Your sister keeps the lighthouse at Gull Point, yes? But Lenna's not the one who's been sending bounty hunters to every ferry crossing and village between here and Hallow Down.\" Her eyes narrow as she studies your reaction.",
+    "lines": ["Scene: Millbrook Landing · Present: Ferrywoman, Three men from the Iron Guild · Evening, day 1", "Oriel Vance: Oriel is an only child."],
+    "contradicts": "Oriel Vance: Oriel is an only child."
+  },
+  {
+    "probe": "canon-crown@30",
+    "output": "The ferrywoman's face darkens as she glances at the three men still watching from the riverbank. \"Nobody rules,\" she spits, her voice rough as sandpaper. \"Not since the old king died without naming an heir.\" She jerks her thumb toward the three men. \"These bastards think they're taking his place, but all they do is bleed honest folk dry for every scrap of coin they can find.\"\n\nOne of the Iron Guild men shouts something in the distance, and she curses under her breath. \"But don't you go thinking that means there's safety in this chaos,\" she adds, her eyes sharp with calculation.",
+    "lines": ["Scene: Millbrook Landing · Present: Ferrywoman, Three men from the Iron Guild · Evening, day 1", "The Marches: Queen Maren rules the Marches."],
+    "contradicts": "The Marches: Queen Maren rules the Marches."
+  },
+  {
+    "probe": "canon-crown@90",
+    "output": "The ferrywoman's lined face goes rigid as a corpse when you ask the question. Her hands grip the pole so tightly her knuckles turn white, and she looks around nervously before speaking in a hushed whisper.\n\n\"The dead rule nothing,\" she hisses, her voice scarcely audible above the patter of rain on the dock planks. \"There's no king, no heir, and no peace - just hunger and fear and iron in the water.\" She spits into the murky channel, sending small ripples spreading outward like a stone thrown into still water.\n\nThe three Iron Guild men shift restlessly behind her, their crossbows gleaming with oiled wood as they scan the gray mist.",
+    "lines": ["Scene: near the ferry dock · Present: Ferrywoman, Iron Guild men · Night, day 1 · Rainy", "The Marches: Queen Maren rules the Marches."],
+    "contradicts": "The Marches: Queen Maren rules the Marches."
+  },
+  {
+    "probe": "canon-brother-2@30",
+    "output": "The ferrywoman's face darkens at the name, her knuckles whitening around the boat pole. \"Aldric Marr,\" she spits into the river, the words carrying venom. \"That thief and coward who thought he could steal from his own sister's strongbox.\"\n\nOne of the three men steps closer, his crossbow never wavering. \"Captain Ysolde Marr doesn't tolerate thieves in her ranks,\" he calls out, his voice carrying the authority of someone who has witnessed the consequences firsthand. \"Brother tried to poison her when she caught him with the silver.\"",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman, Three men from the Iron Guild · Evening, day 1",
+      "Aldric Marr: Aldric Marr has never stolen anything, and his sister loves him.",
+      "Ysolde Marr: Captain Ysolde Marr commands the watch. She is a giant of a woman with a shaved head and a burned left hand."
+    ],
+    "contradicts": "Aldric Marr: Aldric Marr has never stolen anything, and his sister loves him."
+  },
+  {
+    "probe": "char-name@60",
+    "output": "The ferrywoman's lined face goes pale as parchment. She jerks backward, knocking over a bucket that clangs loudly against the dock planks. The approaching men freeze mid-step, their crossbows wavering in their grips.\n\n\"You're one of them,\" she hisses, backing away until she bumps into her boat. \"The dead don't speak here - never have and never will.\" Her hands shake as she grabs a long pole, using it to keep you at a distance. The three men on the riverbank lower their weapons, exchanging nervous glances.\n\n\"Speak again and I'll put you in the river myself,\" the woman snaps, but her voice wavers.",
+    "lines": ["Scene: Millbrook Landing · Present: Ferrywoman · Dawn, day 1 · Stormy", "The Marches: The dead speak to anyone who calls them."],
+    "contradicts": "The Marches: The dead speak to anyone who calls them."
+  },
+  {
+    "probe": "canon-iron@90",
+    "output": "The ferrywoman's face goes ashen when she sees the iron blade at your belt, her hand instinctively moving toward a small horn hanging from her rope line. \"Iron,\" she hisses, backing away until she bumps against the stern of her boat. \"You fool - do you want us all dead?\"\n\nThe approaching men freeze mid-step, their crossbows wavering as they take in the scene. One whispers something to the others in a harsh voice, and the three of them begin backing away from the dock entirely.\n\n\"Guild rules,\" the ferrywoman continues, her voice shaking with fear.",
+    "lines": [
+      "Scene: near the ferry dock · Present: Ferrywoman, Iron Guild men · Night, day 1 · Rainy",
+      "The Marches: Iron is common, and anyone may carry it anywhere."
+    ],
+    "contradicts": "The Marches: Iron is common, and anyone may carry it anywhere."
+  },
+  {
+    "probe": "canon-moons@60",
+    "output": "Thick storm clouds race across the moonlit sky in ragged streaks of gray and black, their movement driven by wind that carries the sharp bite of approaching rain. The larger of the two moons - Sella, perhaps - shows as a pale crescent through a brief gap in the cloud cover before being swallowed again by darkness.\n\nThe ferrywoman follows your gaze upward, her lined face betraying something between resignation and dread. \"Storm'll hit hard before morning,\" she mutters, adjusting the mooring lines that creak against their wooden posts. \"River'll run swift and cold tonight - not good for crossing.\"",
+    "lines": ["Scene: Millbrook Landing · Present: Ferrywoman · Dawn, day 1 · Stormy", "The Marches: The Marches has no moon."],
+    "contradicts": "The Marches: The Marches has no moon."
+  },
+  {
+    "probe": "canon-captain-2@60",
+    "output": "Captain Ysolde Marr enters the tavern's common room like a storm front—her boots thudding against the floorboards with deliberate weight. Her massive frame fills the doorway, and you notice immediately how she moves: despite her size, every gesture is controlled, economical. She surveys the room in one sweep, her gaze resting on you before moving to the serving girl.\n\nHer shaved head gleams under the oil lamps, and when she speaks, her voice carries the rough timbre of someone who's smoked too much and shouted over wind for years. \"Oriel Vance,\" she says, your name rolling off her tongue like a curse.",
+    "lines": [
+      "Scene: Millbrook Landing · Present: Ferrywoman · Dawn, day 1 · Stormy",
+      "Ysolde Marr: Captain Ysolde Marr is a small, slight woman with long red braids."
+    ],
+    "contradicts": "Ysolde Marr: Captain Ysolde Marr is a small, slight woman with long red braids."
+  },
+  {
+    "probe": "char-sister-2@60",
+    "output": "The ferrywoman's lined face hardens as she grips the mooring line tighter, her knuckles white against the wet rope. She spits into the churning water of the Blackwater River before answering, her voice carrying years of bitterness. \"Home?\" she scoffs, the word like a curse. \"You mean Hallow Down? That place is a charnel house now - plague took most of the population last winter, and what's left are too busy dying to be waiting for anyone.\"\n\nHer eyes narrow as she studies you, her gaze fixed on the blue heron tattoo visible beneath your torn sleeve.",
+    "lines": ["Scene: Millbrook Landing · Present: Ferrywoman · Dawn, day 1 · Stormy", "Oriel Vance: Oriel has no tattoos."],
+    "contradicts": "Oriel Vance: Oriel has no tattoos."
+  },
+  {
+    "probe": "char-sword@60",
+    "output": "Dawnsplitter sings as it clears the sheath, bronze ringing like a bell struck by hail in the storm-charged air. The ferrywoman jerks backward, her scarred hands flying to cover her mouth as if trying to stifle a scream that never comes. The three men on the riverbank freeze, their crossbows half-raised.\n\n\"You're him,\" she breathes, voice almost inaudible above the hammering rain. \"Oriel Vance.\" The name hangs between you like a death sentence, and she edges away until her back presses against the ferry post.",
+    "lines": ["Scene: Millbrook Landing · Present: Ferrywoman · Dawn, day 1 · Stormy", "Oriel Vance: Oriel is unarmed and has never owned a sword."],
+    "contradicts": "Oriel Vance: Oriel is unarmed and has never owned a sword."
+  },
+  {
+    "probe": "canon-keep-2@90",
+    "output": "Sharp wind whips across the sea cliff as you reach the base of Saltspire Keep, the ancient stonework carved smooth by centuries of salt spray and storm damage. The white walls rise impossibly steep from the granite outcropping, their surface slick with moisture that makes handholds treacherous. At the keep's eastern face, you spot a narrow ledge carved into the cliff face—possibly the remains of a long-dead stair.\n\nThe Iron Guild men have followed you from Millbrook Landing, their footsteps echoing against the stone as they climb behind you. Their crossbows glint in the pale moonlight that filters through storm clouds.",
+    "lines": [
+      "Scene: near the ferry dock · Present: Ferrywoman, Iron Guild men · Night, day 1 · Rainy",
+      "Saltspire Keep: Saltspire Keep is a fortress of black basalt in a forest, entered through a great front gate."
+    ],
+    "contradicts": "Saltspire Keep: Saltspire Keep is a fortress of black basalt in a forest, entered through a great front gate."
+  },
+  {
+    "probe": "canon-captain-2@90",
+    "output": "Captain Ysolde Marr enters the tavern's common room like a storm front—her boots heavy on the floorboards, her presence commanding immediate attention from everyone present. The shaved head and burned left hand catch the firelight as she surveys the room with sharp assessment, her scarred face bearing fresh scratches from something that got too close in the marshlands.\n\nShe notices you immediately, recognizing the blue heron tattoo that marks you as one of the few survivors from the organization she once commanded. Her remaining eyebrow arches as she spots the ferrywoman in the corner, already retreating further into the shadows.",
+    "lines": [
+      "Scene: near the ferry dock · Present: Ferrywoman, Iron Guild men · Night, day 1 · Rainy",
+      "Ysolde Marr: Captain Ysolde Marr has two unscarred hands and a full head of hair."
+    ],
+    "contradicts": "Ysolde Marr: Captain Ysolde Marr has two unscarred hands and a full head of hair."
+  }
+]

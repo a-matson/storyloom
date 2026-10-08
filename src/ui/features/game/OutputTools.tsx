@@ -3,6 +3,7 @@ import { actionText } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { useSpeech } from '@ui/hooks/useSpeech';
 import { Button } from '@ui/components/ui/button';
+import { Pill } from '@ui/components/ui/pill';
 import { IconLeft, IconRight } from '@ui/components/Icons';
 import { cn } from '@ui/lib/utils';
 
@@ -14,6 +15,8 @@ interface Props {
   onViewContext: () => void;
   onViewTrace: () => void;
   contextSummary?: string | undefined;
+  /** The fact the contradiction check says this output breaks. */
+  contradiction?: string | undefined;
 }
 
 const tool = 'h-7 bg-transparent px-2.5 text-caption';
@@ -70,33 +73,42 @@ function RetryStack({ action, api }: { action: Action; api: GameApi }) {
   );
 }
 
-/** Under the last output: retry stack, edit, erase, context. */
-export function OutputTools({ action, api, speech, onEdit, onViewContext, onViewTrace, contextSummary }: Props) {
+/** Under the last output: the contradiction mark (always shown), then retry stack, edit, erase, context. */
+export function OutputTools({ action, api, speech, onEdit, onViewContext, onViewTrace, contextSummary, contradiction }: Props) {
   const voice = useSpeech();
   return (
-    <div className={cn('mt-1.5 flex items-center gap-2 font-sans text-caption text-muted-foreground', revealOnHover)}>
-      {action.type === 'continue' && action.versions.length > 1 && <RetryStack action={action} api={api} />}
-      {voice.supported && (
-        <Button className={tool} onClick={() => (voice.speaking ? voice.stop() : voice.speak(actionText(action), speech))}>
-          {voice.speaking ? 'Stop' : 'Speak'}
-        </Button>
+    <div className="mt-1.5 flex items-center gap-2 font-sans text-caption text-muted-foreground">
+      {contradiction !== undefined && (
+        <output className="min-w-0">
+          <Pill tone="warning" className="block max-w-[40ch] truncate normal-case tracking-normal" title={contradiction}>
+            May contradict: {contradiction}
+          </Pill>
+        </output>
       )}
-      <Button className={tool} onClick={onEdit}>
-        Edit
-      </Button>
-      <Button className={tool} onClick={() => api.eraseTo(action.id)}>
-        Erase to here
-      </Button>
-      <Button variant="system" className={`${tool} border-border`} onClick={onViewContext}>
-        View context
-      </Button>
-      {action.type === 'continue' && (
-        <Button variant="system" className={`${tool} border-border`} onClick={onViewTrace}>
-          Trace
+      <div className={cn('flex grow items-center gap-2', revealOnHover)}>
+        {action.type === 'continue' && action.versions.length > 1 && <RetryStack action={action} api={api} />}
+        {voice.supported && (
+          <Button className={tool} onClick={() => (voice.speaking ? voice.stop() : voice.speak(actionText(action), speech))}>
+            {voice.speaking ? 'Stop' : 'Speak'}
+          </Button>
+        )}
+        <Button className={tool} onClick={onEdit}>
+          Edit
         </Button>
-      )}
-      <span className="grow" />
-      {contextSummary !== undefined && <span>{contextSummary}</span>}
+        <Button className={tool} onClick={() => api.eraseTo(action.id)}>
+          Erase to here
+        </Button>
+        <Button variant="system" className={`${tool} border-border`} onClick={onViewContext}>
+          View context
+        </Button>
+        {action.type === 'continue' && (
+          <Button variant="system" className={`${tool} border-border`} onClick={onViewTrace}>
+            Trace
+          </Button>
+        )}
+        <span className="grow" />
+        {contextSummary !== undefined && <span>{contextSummary}</span>}
+      </div>
     </div>
   );
 }

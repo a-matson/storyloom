@@ -11,6 +11,7 @@ const pillVariants = cva('inline-flex items-center rounded-full px-[7px] py-0.5 
       story: 'bg-mode-story-bg text-mode-story',
       see: 'bg-mode-see-bg text-mode-see',
       auto: 'bg-mode-say-bg text-verdigris',
+      warning: 'border border-warning text-warning',
     },
   },
   defaultVariants: { tone: 'plain' },

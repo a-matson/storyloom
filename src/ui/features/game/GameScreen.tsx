@@ -81,6 +81,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
             onViewContext={openContext}
             onViewTrace={() => last && setTraceAction(last.id)}
             contextSummary={ctx ? `${ctx.triggeredCards.length} story cards · ${ctx.usedMemories.length} memories used` : undefined}
+            contradiction={state.contradiction?.actionId === last?.id ? state.contradiction?.fact : undefined}
             cast={app.speakerAvatars ? adv.entities : undefined}
           />
           <CommandRow

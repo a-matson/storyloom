@@ -1,5 +1,5 @@
 import { entitiesOverdue, loadMemoryJobs, memoryOverdue } from '@core/memory';
-import type { Adventure, Speaker, TemplateId } from '@core/model';
+import { actionText, type Adventure, type Speaker, type TemplateId } from '@core/model';
 import type { Embedder, Provider } from '@core/ports';
 
 interface Host {
@@ -12,6 +12,8 @@ interface Host {
   annotate: (speakers: ReadonlyMap<string, Speaker[]>) => void;
   /** Image work after the memory jobs; stops starting new renders once `idle` fires. */
   portraits: (idle: AbortSignal) => Promise<void>;
+  /** The contradiction check's verdict on the last output; an edit or retry ends the idle period before it arrives. */
+  flag: (contradiction: { actionId: string; fact: string } | null) => void;
 }
 
 /**
@@ -39,8 +41,31 @@ export class MemoryScheduler {
     if (idle.aborted) return;
     // Not behind the memory run: typing cuts most of those, and a render does not use slot 1.
     this.portraits(idle);
+    void this.checkThenRun(idle);
+  }
+
+  private async checkThenRun(idle: AbortSignal): Promise<void> {
+    await this.check(idle);
+    if (idle.aborted) return;
     if (this.typing && !this.overdue()) this.waiting = true;
-    else void this.run(idle);
+    else await this.run(idle);
+  }
+
+  /** First on slot 1 so the badge comes while the player reads; typing does not cut it (a few seconds), the next turn does. */
+  private async check(idle: AbortSignal): Promise<void> {
+    const adv = this.host.adventure();
+    const last = adv.actions.at(-1);
+    if (!adv.settings.memory.contradictionCheck || (last?.type !== 'continue' && last?.type !== 'start')) return;
+    try {
+      const { checkInputs, checkOutput } = await loadMemoryJobs();
+      const output = actionText(last);
+      const lines = checkInputs(adv, output);
+      if (!lines.length) return;
+      const fact = await checkOutput(output, lines, { ...(await this.host.helperModel()), signal: idle });
+      if (!idle.aborted) this.host.flag(fact === null ? null : { actionId: last.id, fact });
+    } catch (e) {
+      if (!idle.aborted) console.warn('contradiction check failed', e);
+    }
   }
 
   /** The client guess fills the gutter now; the helper's attribution replaces it when its cycle reaches the turn. */

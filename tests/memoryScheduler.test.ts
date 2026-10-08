@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { MemoryScheduler } from '@app/session/memoryScheduler';
 import { entitiesOverdue } from '@core/memory';
+import { mergeEntity } from '@core/memory/entities';
 import type { Adventure } from '@core/model';
 import type { Embedder, Provider } from '@core/ports';
 import { ENTITY_PROMPT, fakeProvider, memoryAdventure } from './fixtures/memoryJobs';
@@ -28,6 +29,7 @@ describe('MemoryScheduler', () => {
       changed: () => {},
       annotate: () => {},
       portraits: () => Promise.resolve(),
+      flag: () => {},
     });
     // Two turns in quick succession: each new idle period starts while the last run still holds slot 1.
     const first = new AbortController();
@@ -41,7 +43,7 @@ describe('MemoryScheduler', () => {
     expect(most).toBe(1);
   });
 
-  const host = (adv: Adventure, provider: Provider) => {
+  const host = (adv: Adventure, provider: Provider, flag: (c: { actionId: string; fact: string } | null) => void = () => {}) => {
     const embedder: Embedder = { id: 'e', dimensions: 2, embed: (t) => Promise.resolve(t.map(() => [1, 0])) };
     return {
       adventure: () => adv,
@@ -50,8 +52,64 @@ describe('MemoryScheduler', () => {
       changed: () => {},
       annotate: () => {},
       portraits: () => Promise.resolve(),
+      flag,
     };
   };
+
+  describe('contradiction check', () => {
+    /** An adventure whose last output names a canon entity, and a helper that logs each call's kind. */
+    function setup(check: boolean) {
+      const adv = memoryAdventure(19); // odd, so the last action is AI output
+      adv.settings.memory = { ...adv.settings.memory, contradictionCheck: check };
+      adv.entities = [
+        { ...mergeEntity(undefined, { name: 'Mira', kind: 'character', description: '', facts: [] }, 0), canon: true, description: 'Mira is bald.' },
+      ];
+      const last = adv.actions.at(-1);
+      if (last) last.versions = ['Mira shakes out her long hair.'];
+      const calls: string[] = [];
+      const provider = fakeProvider(
+        async function* (req) {
+          const kind = req.prompt.includes(CHECK_PROMPT) ? 'check' : req.prompt.includes(ENTITY_PROMPT) ? 'entity' : 'memory';
+          calls.push(kind);
+          const text = { check: '{"contradicts": true, "fact": "Mira is bald."}', entity: '{"importance": 1, "entities": []}', memory: 'Mira found the map.' }[
+            kind
+          ];
+          yield { text, done: true };
+        },
+        false,
+        true,
+      );
+      const flags: ({ actionId: string; fact: string } | null)[] = [];
+      const scheduler = new MemoryScheduler(host(adv, provider, (c) => flags.push(c)));
+      return { adv, calls, flags, scheduler };
+    }
+    const CHECK_PROMPT = 'Established facts:';
+
+    it('makes no check call when the setting is off', async () => {
+      const { adv, calls, scheduler } = setup(false);
+      scheduler.start(new AbortController().signal);
+      await vi.waitFor(() => expect(adv.memories.length).toBeGreaterThan(0));
+      expect(calls).not.toContain('check');
+    });
+
+    it('checks the last output before maintenance and flags it', async () => {
+      const { adv, calls, flags, scheduler } = setup(true);
+      scheduler.start(new AbortController().signal);
+      await vi.waitFor(() => expect(adv.memories.length).toBeGreaterThan(0));
+      expect(calls[0]).toBe('check');
+      expect(flags).toEqual([{ actionId: adv.actions.at(-1)?.id, fact: 'Mira: Mira is bald.' }]);
+    });
+
+    it('skips the check and the rest once the idle period ended', async () => {
+      const { calls, flags, scheduler } = setup(true);
+      const idle = new AbortController();
+      idle.abort();
+      scheduler.start(idle.signal);
+      await new Promise((r) => setTimeout(r, 20));
+      expect(calls).toEqual([]);
+      expect(flags).toEqual([]);
+    });
+  });
 
   // An import starts with no memories, so one idle run writes them all; the entity calls must not wait a turn per batch.
   it('drains an entity backlog within one idle period', async () => {

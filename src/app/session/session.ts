@@ -8,7 +8,7 @@ import { dropOrphanImages, regenerateImage, seeImage } from './images';
 import { MemoryScheduler } from './memoryScheduler';
 import { SaveQueue } from './saveQueue';
 import { sessionScripts } from './scripts';
-import type { GameSnapshot, Prefetched, SessionServices } from './types';
+import { OPENED, type GameSnapshot, type Prefetched, type SessionServices } from './types';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -51,6 +51,7 @@ export class GameSession {
     changed: () => this.changed(),
     annotate: (s) => this.log.annotate(s),
     portraits: async (idle) => (await import('./portraits')).queuePortraits(this, idle),
+    flag: (contradiction) => this.emit({ contradiction }),
   });
   private readonly idleWork = new IdleWork({
     adventure: () => this.adv,
@@ -70,7 +71,7 @@ export class GameSession {
     this.log = new ActionLog(adventure.actions);
     this.app = app;
     this.svc = services;
-    this.snapshot = this.build({ busy: false, streaming: '', context: null, error: null, notice: null, prefetchReady: false, pendingImages: [], warm: 'idle' });
+    this.snapshot = this.build(OPENED);
     this.scripts = sessionScripts(services, adventure, (e) => this.emit({ notice: `Scenario scripts are off: ${message(e)}` }));
     // Until these resolve, turns rank memories by recency only and the context length is not clamped to n_ctx.
     this.resolveEmbedder().catch((e: unknown) => console.warn('no embedder; memories rank by recency', e));
@@ -92,9 +93,7 @@ export class GameSession {
     for (const fn of this.listeners) fn();
   }
 
-  setApp(app: AppSettings): void {
-    this.app = app;
-  }
+  readonly setApp = (app: AppSettings): void => void (this.app = app);
 
   private deps(): TurnDeps {
     const provider = this.svc.providerFor(this.app, this.adv.settings.providerId);
@@ -205,7 +204,7 @@ export class GameSession {
   /** Any player action cancels background work. */
   private beginAction(): void {
     this.idleWork.stop();
-    this.emit({ warm: 'idle', error: null });
+    this.emit({ warm: 'idle', error: null, contradiction: null });
   }
   private dropPrefetch(): void {
     this.prefetched = null;
@@ -269,7 +268,8 @@ export class GameSession {
     // Editing the log makes a prefetched alternative stale unless it still targets the last action.
     if (this.prefetched && this.prefetched.actionId !== this.log.last?.id) this.dropPrefetch();
     this.idleWork.afterEdit();
-    this.emit({ warm: 'idle' });
+    // Actions are immutable: a retry version, edit or erase replaces the last one.
+    this.emit({ warm: 'idle', ...(this.log.last !== before.at(-1) && { contradiction: null }) });
     this.save();
   }
 

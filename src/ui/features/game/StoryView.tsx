@@ -15,11 +15,25 @@ interface Props {
   onViewContext: () => void;
   onViewTrace: () => void;
   contextSummary?: string | undefined;
+  contradiction?: string | undefined;
   cast?: readonly Entity[] | undefined;
 }
 
 /** The story column: player actions carry a mode pill, AI outputs are plain prose, the last output gets the tools. */
-export function StoryView({ actions, adventureId, streaming, busy, pendingImages, api, speech, onViewContext, onViewTrace, contextSummary, cast }: Props) {
+export function StoryView({
+  actions,
+  adventureId,
+  streaming,
+  busy,
+  pendingImages,
+  api,
+  speech,
+  onViewContext,
+  onViewTrace,
+  contextSummary,
+  contradiction,
+  cast,
+}: Props) {
   const endRef = useRef<HTMLDivElement>(null);
   // Follow the newest text: the compiler re-renders this view only when the story, stream or turn state changes.
   useEffect(() => {
@@ -44,6 +58,7 @@ export function StoryView({ actions, adventureId, streaming, busy, pendingImages
             onViewContext={onViewContext}
             onViewTrace={onViewTrace}
             contextSummary={contextSummary}
+            contradiction={i === lastIdx ? contradiction : undefined}
             cast={cast}
           />
         ))}
