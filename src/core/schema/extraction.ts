@@ -25,8 +25,11 @@ export const ExtractedEntity = z.object({
  */
 export const ExtractionJson = z.object({
   importance: z.int().check(z.gte(1), z.lte(5)),
-  /** Story time the passage states has passed; absent means none. A part is a sixth of a day. */
-  timeDelta: z.optional(z.object({ days: z.optional(z.int()), parts: z.optional(z.int()) })),
+  /**
+   * Story time the passage states has passed; zeros mean none. A part is a sixth of a day. Required
+   * so the grammar forces two numbers: optional, the 12B left it out every time. [provisional]
+   */
+  timeDelta: z.object({ days: z.int().check(z.gte(0)), parts: z.int().check(z.gte(0)) }),
   /** Where the passage ends. `timeOfDay` only anchors a scene that has no clock yet. */
   scene: z.optional(
     z.object({

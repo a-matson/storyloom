@@ -18,9 +18,10 @@ import type { MaintenanceDeps } from './memoryJobs';
 type ExtractDeps = Pick<MaintenanceDeps, 'provider' | 'template' | 'cancel'>;
 
 // Entities are checked one by one, so a bad one (a lowercase name without the grammar) costs only itself.
-const Envelope = z.looseObject({ entities: z.array(z.unknown()) });
+const Envelope = z.looseObject({ entities: z.array(z.unknown()), timeDelta: z.optional(z.looseObject({})) });
 
 /**
+ * A missing `timeDelta` or half of one (no grammar, or a cut) means no time passed.
  * A reply cut at maxTokens loses `speakers` after repair (the entities before it are whole), and
  * repair closes its last entity mid-fact, so that one is dropped.
  */
@@ -33,7 +34,8 @@ const accepter =
       const one = ExtractedEntity.safeParse(e);
       return one.success ? [one.data] : [];
     });
-    const r = Schema.safeParse({ speakers: [], ...loose.data, entities });
+    const timeDelta = { days: 0, parts: 0, ...loose.data.timeDelta };
+    const r = Schema.safeParse({ speakers: [], ...loose.data, timeDelta, entities });
     return r.success ? r.data : null;
   };
 

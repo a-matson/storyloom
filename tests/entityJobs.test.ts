@@ -164,6 +164,26 @@ describe('entity extraction in memory maintenance', () => {
     expect(adv.plot.scene).toEqual({ location: 'the mill', present: ['Mira'], time: { day: 1, part: 'night' } });
   });
 
+  it('requires both halves of timeDelta in the grammar, and reads a missing half as zero', async () => {
+    const adv = adventure(12);
+    adv.plot = { ...adv.plot, scene: { present: [], time: { day: 1, part: 'night' } } };
+    const reqs: CompletionRequest[] = [];
+    const provider = fakeProvider(
+      async function* (req) {
+        reqs.push(req);
+        yield { text: req.prompt.includes(ENTITY_PROMPT) ? '{"importance": 2, "timeDelta": {"days": 1}, "entities": []}' : 'Mira found the map.', done: true };
+      },
+      false,
+      true,
+    );
+    await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
+    expect(adv.plot.scene?.time).toEqual({ day: 2, part: 'night' });
+    expect(reqs.find((r) => r.jsonSchema)?.jsonSchema).toMatchObject({
+      required: expect.arrayContaining(['timeDelta']),
+      properties: { timeDelta: { required: ['days', 'parts'] } },
+    });
+  });
+
   it('skips the entity call once the idle signal fires', async () => {
     const adv = adventure(12);
     const { deps, calls } = fakeDeps(adv, { abortAfter: 1 });
