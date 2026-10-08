@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import { actionText } from '@core/model';
 import type { CompletionRequest, Provider } from '@core/ports';
+import { memoryPrompt } from '@core/text/prompts';
 import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure as adventure } from './fixtures/memoryJobs';
 
 describe('memory maintenance', () => {
@@ -110,7 +111,7 @@ describe('memory maintenance', () => {
     const report = await runMemoryMaintenance(adv, deps);
     expect(report).toMatchObject({ memoriesWritten: 0, memoriesRejected: 1 });
     expect(warn).toHaveBeenCalledOnce();
-    expect(reqs[0]).toMatchObject({ maxTokens: 90, stop: expect.arrayContaining(['\n>', '<|im_start|>']) });
+    expect(reqs[0]).toMatchObject({ maxTokens: 120, stop: expect.arrayContaining(['\n>', '<|im_start|>']) });
     expect(await runMemoryMaintenance(adv, deps)).toMatchObject({ memoriesWritten: 1, memoriesRejected: 0 });
     expect(adv.memories[0]?.text).toBe('Mira found the map.');
     warn.mockRestore();
@@ -128,7 +129,14 @@ describe('memory maintenance', () => {
     expect(adv.plot.storySummary).toBe('Mira owes the ferryman.');
   });
 
-  it('constrains memories to 3 and the summary to 8 sentences when the backend has grammar', async () => {
+  it('asks the memory to keep what the player states about themselves, as its example does', () => {
+    const prompt = memoryPrompt('> You show the guard the scar on your cheek.');
+    expect(prompt).toContain('anything the player states about themselves (name, body, belongings, past)');
+    expect(prompt).toContain("Memory: You wear your mother's copper ring on your thumb");
+    expect(prompt).toContain('never copy its names or events');
+  });
+
+  it('constrains memories to 4 and the summary to 8 sentences when the backend has grammar', async () => {
     const adv = adventure(15);
     adv.settings.memory.autoSummary = true;
     const reqs: CompletionRequest[] = [];
@@ -137,9 +145,9 @@ describe('memory maintenance', () => {
       yield { text: 'Mira found the map.', done: true };
     };
     await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider: fakeProvider(answer, true) });
-    expect(reqs[0]?.prompt).toContain('Memory: You paid the ferryman');
+    expect(reqs[0]?.prompt).toContain('Memory: You wear');
     expect(reqs[0]?.grammar).toMatchInlineSnapshot(`
-      "root ::= sentence{1,3}
+      "root ::= sentence{1,4}
       sentence ::= [^.!?"“”\\n> ] [^.!?"“”\\n>]* [.!?] " "?
       "
     `);

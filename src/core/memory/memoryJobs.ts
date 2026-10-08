@@ -1,4 +1,4 @@
-import type { Adventure, Memory, Speaker } from '../model/types';
+import type { Action, Adventure, Memory, Speaker } from '../model/types';
 import { actionText } from '../model/types';
 import { createMemory, currentRange, dueMemoryRanges, evictToSize, isPlayerAction, MEMORY_SPAN, summaryDue, type MemoryRange } from './memoryBank';
 import { MEMORY_SYSTEM, SUMMARY_SYSTEM, memoryPrompt, sentenceGrammar, summaryPrompt } from '../text/prompts';
@@ -52,6 +52,9 @@ export interface MaintenanceReport {
   summaryUpdated: boolean;
 }
 
+/** A memory's text needs no embedder. */
+type TextDeps = Omit<MaintenanceDeps, 'embedder'>;
+
 /** Stale memories rewritten per idle run, so a big edit does not hold slot 1. [provisional] */
 const REGENERATE_BATCH = 2;
 
@@ -86,18 +89,18 @@ export function isMemoryLike(text: string): boolean {
 }
 
 /** Grammar for at most `max` sentences when the backend supports one; the trim and validator cover the rest. */
-async function sentencesOnly(deps: MaintenanceDeps, max: number): Promise<string | undefined> {
+async function sentencesOnly(deps: TextDeps, max: number): Promise<string | undefined> {
   return (await deps.provider.capabilities()).grammar ? sentenceGrammar(max) : undefined;
 }
 
-async function summarise(passage: string, deps: MaintenanceDeps): Promise<string> {
+async function summarise(passage: string, deps: TextDeps): Promise<string> {
   const prompt = renderTemplate(deps.template, MEMORY_SYSTEM, memoryPrompt(passage));
-  // A memory is 1-3 sentences; the extra stops end a reply that drifts into the next turn.
+  // A memory is 1-4 sentences, so a player-stated trait fits beside the events; the extra stops end a reply that drifts into the next turn.
   const stop = [...new Set([...prompt.stop, '\n>', '<|im_start|>'])];
-  const grammar = await sentencesOnly(deps, 3);
+  const grammar = await sentencesOnly(deps, 4);
   const { text, stats } = await trackJob('memory', () =>
     collect(
-      deps.provider.complete({ prompt: prompt.prompt, maxTokens: 90, temperature: 0.3, topP: 0.9, stop, cachePrompt: false, slotId: 1, grammar }, deps.cancel),
+      deps.provider.complete({ prompt: prompt.prompt, maxTokens: 120, temperature: 0.3, topP: 0.9, stop, cachePrompt: false, slotId: 1, grammar }, deps.cancel),
     ),
   );
   if (deps.cancel?.aborted) return '';
@@ -105,27 +108,29 @@ async function summarise(passage: string, deps: MaintenanceDeps): Promise<string
 }
 
 /**
- * Summarise and embed one range; null when the passage or the model's answer is empty, or the answer
+ * A memory's text for one slice; '' when the passage or the model's answer is empty, or the answer
  * is still a story continuation after one retry on the passage cut back to its last AI output.
  */
-async function writeMemory(adventure: Adventure, range: MemoryRange, deps: MaintenanceDeps, report: MaintenanceReport): Promise<Memory | null> {
-  const slice = adventure.actions.slice(range.fromAction, range.toAction);
+export async function memoryText(slice: Action[], deps: TextDeps, report: Pick<MaintenanceReport, 'memoriesRejected'>): Promise<string> {
   const passage = joinStory(slice);
-  if (!passage.trim()) return null;
-  let memoryText = await summarise(passage, deps);
-  if (memoryText && !isMemoryLike(memoryText)) {
-    if (deps.signal?.aborted) return null;
-    const lastAi = slice.findLastIndex((a) => !isPlayerAction(a));
-    memoryText = await summarise(joinStory(slice.slice(0, lastAi + 1)) || passage, deps);
-    if (memoryText && !isMemoryLike(memoryText)) {
-      console.warn(`memory for actions ${range.fromAction}-${range.toAction} rejected twice:`, memoryText);
-      report.memoriesRejected += 1;
-      return null;
-    }
-  }
-  if (!memoryText) return null;
-  const [embedding] = await deps.embedder.embed([memoryText]);
-  return createMemory(memoryText, adventure.actions, range, embedding);
+  if (!passage.trim()) return '';
+  const text = await summarise(passage, deps);
+  if (!text || isMemoryLike(text)) return text;
+  if (deps.signal?.aborted) return '';
+  const lastAi = slice.findLastIndex((a) => !isPlayerAction(a));
+  const retry = await summarise(joinStory(slice.slice(0, lastAi + 1)) || passage, deps);
+  if (!retry || isMemoryLike(retry)) return retry;
+  console.warn('memory rejected twice:', retry);
+  report.memoriesRejected += 1;
+  return '';
+}
+
+/** Summarise and embed one range; null when there is no memory text for it. */
+async function writeMemory(adventure: Adventure, range: MemoryRange, deps: MaintenanceDeps, report: MaintenanceReport): Promise<Memory | null> {
+  const text = await memoryText(adventure.actions.slice(range.fromAction, range.toAction), deps, report);
+  if (!text) return null;
+  const [embedding] = await deps.embedder.embed([text]);
+  return createMemory(text, adventure.actions, range, embedding);
 }
 
 /** Drop stale memories whose actions were erased (forgotten ones too); rewrite a few of the rest in place. */
