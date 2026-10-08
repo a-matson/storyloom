@@ -11,6 +11,8 @@ export type SectionKind =
   | 'storySummary'
   | 'memories'
   | 'authorsNote'
+  /** One retry's "keep to this" line; never stored. */
+  | 'retryNote'
   | 'scene'
   | 'facts'
   | 'entityCards'
@@ -74,6 +76,8 @@ export interface ContextBuildInput {
   frontMemory?: string | undefined;
   /** Scripting: `state.memory.context` / `.authorsNote` take precedence over the UI values. */
   overrides?: { plotEssentials?: string | undefined; authorsNote?: string | undefined };
+  /** Retry with a note: the fact the retried output broke, for this one generation. */
+  retryNote?: string | undefined;
   settings: ContextBuildSettings;
   tokenizer: Tokenizer;
 }

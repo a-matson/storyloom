@@ -93,6 +93,7 @@ const STABLE_ORDER: SectionKind[] = [
   'facts',
   'scene',
   'authorsNote',
+  'retryNote',
   'lastAction',
   'frontMemory',
 ];
@@ -106,6 +107,7 @@ const AID_ORDER: SectionKind[] = [
   'facts',
   'scene',
   'authorsNote',
+  'retryNote',
   'lastAction',
   'frontMemory',
 ];

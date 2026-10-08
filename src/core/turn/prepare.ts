@@ -101,10 +101,15 @@ export async function prepareContext(
   actions: Action[],
   deps: TurnDeps,
   scriptLogs?: string[],
+  retryNote?: string,
 ): Promise<PreparedContext | { stopped: string }> {
   const last = actions.at(-1);
   const { rankedMemories, factHits } = await rankForQuery(adventure, last ? actionText(last) : '', deps.embedder);
-  const result = await buildExact({ ...contextInput(adventure, actions, rankedMemories, deps, adventure.settings.context.cacheStableLayout), factHits });
+  const result = await buildExact({
+    ...contextInput(adventure, actions, rankedMemories, deps, adventure.settings.context.cacheStableLayout),
+    factHits,
+    retryNote,
+  });
 
   const fullText = `${result.system ? `${result.system}\n\n` : ''}${result.body}`;
   const hook = await runHook(

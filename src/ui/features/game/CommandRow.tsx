@@ -91,7 +91,7 @@ export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retry
           </Button>
           <Button
             size="lg"
-            onClick={api.retry}
+            onClick={() => api.retry()}
             disabled={busy || !canRetry}
             title={retryReady ? 'An alternative is ready — retry is instant' : undefined}
             className={retryReady ? 'border-verdigris hover:border-verdigris' : undefined}

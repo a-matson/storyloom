@@ -29,6 +29,7 @@ export function renderScene(scene: Scene | undefined): string {
 export function renderSection(kind: SectionKind, content: string): string {
   // Bracketed asides read as instructions, not narration.
   if (kind === 'authorsNote') return `[Author's note: ${content}]`;
+  if (kind === 'retryNote') return `[Note: keep to this: ${content}]`;
   if (kind === 'scene') return `[Scene: ${content}]`;
   const header = (HEADERS as Partial<Record<SectionKind, string>>)[kind];
   return header ? `${header}\n${content}` : content;
