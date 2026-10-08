@@ -174,7 +174,7 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
       adventure.memories = [...adventure.memories, memory];
       report.memoriesWritten += 1;
     }
-    // The one combined helper call per memory cycle; a bad reply only costs the entities.
+    // The one combined helper call per two memories; a bad reply only costs the entities.
     ({ touched: report.entitiesTouched, speakers: report.speakers, sceneUpdated: report.sceneUpdated } = await catchUpEntities(adventure, deps));
     await reembed(adventure, deps);
     const evicted = evictToSize(adventure.memories, settings.bankSize);

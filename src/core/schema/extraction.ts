@@ -4,6 +4,9 @@ import { EntityKind, Relation } from './entity';
 
 // Not re-exported from `./index`: only the lazy memory jobs parse these, so they stay off the start-up bundle.
 
+/** Five entities of two facts fit the call's 300 tokens. [provisional] */
+export const MAX_ENTITIES = 5;
+
 /** One entity as the helper model reports it. */
 export const ExtractedEntity = z.object({
   // The grammar then cannot write "the path": prompting alone did not stop common nouns filling the cap.
@@ -13,7 +16,7 @@ export const ExtractedEntity = z.object({
   aliases: z.optional(z.array(z.string())),
   // Required and capped so the grammar keeps a reply short and every projected card has an entry. [provisional]
   description: z.string(),
-  facts: z.array(z.string()).check(z.maxLength(3)),
+  facts: z.array(z.string()).check(z.maxLength(2)),
   state: z.optional(z.record(z.string(), z.string())),
   relations: z.optional(z.array(Relation)),
 });
@@ -39,7 +42,7 @@ export const ExtractionJson = z.object({
       weather: z.optional(z.string()),
     }),
   ),
-  entities: z.array(ExtractedEntity).check(z.maxLength(8)),
+  entities: z.array(ExtractedEntity).check(z.maxLength(MAX_ENTITIES)),
   /** Who speaks in which numbered action. */
   speakers: z.array(z.object({ action: z.number(), name: z.string() })),
   /** Open threads the passage starts or advances. */

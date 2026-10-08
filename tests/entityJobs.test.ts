@@ -3,6 +3,7 @@ import { mergeEntity } from '@core/memory/entities';
 import { entitiesOverdue } from '@core/memory/memoryBank';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import type { CompletionRequest } from '@core/ports';
+import { MAX_ENTITIES } from '@core/schema/extraction';
 import type { Adventure } from '@core/model';
 import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure } from './fixtures/memoryJobs';
 
@@ -16,7 +17,7 @@ function adventure(actions: number, text = 'You wave and Mira waves back.'): Adv
 
 describe('entity extraction in memory maintenance', () => {
   it('keeps a new entity only when its passage names it, and merges a known one regardless', async () => {
-    const adv = adventure(12, 'You wave and mira waves back.');
+    const adv = adventure(18, 'You wave and mira waves back.');
     adv.entities = [mergeEntity(undefined, { name: 'Mira', kind: 'character', description: '', facts: [] }, 0)];
     const reply = {
       importance: 2,
@@ -38,8 +39,8 @@ describe('entity extraction in memory maintenance', () => {
     expect(adv.entities[0]?.facts.map((f) => f.text)).toEqual(['She waves.']);
   });
 
-  it('makes exactly one entity call per written memory and folds its reply in', async () => {
-    const adv = adventure(18);
+  it('makes one entity call per two written memories over both ranges and folds its reply in', async () => {
+    const adv = adventure(30);
     const reqs: CompletionRequest[] = [];
     const reply = {
       importance: 3,
@@ -59,35 +60,40 @@ describe('entity extraction in memory maintenance', () => {
       true,
     );
     const report = await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
+    expect(report).toMatchObject({ memoriesWritten: 4, entitiesTouched: 1 });
+    expect(adv.scriptState.__entitiesAt).toBe(adv.memories[1]?.toAction);
+    await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
     const entityReqs = reqs.filter((r) => r.prompt.includes(ENTITY_PROMPT));
-    expect(report).toMatchObject({ memoriesWritten: 2, entitiesTouched: 2 });
     expect(entityReqs).toHaveLength(2);
     expect(entityReqs[0]).toMatchObject({
-      maxTokens: 500,
+      maxTokens: 300,
       temperature: 0.2,
       slotId: 1,
       cachePrompt: false,
       jsonSchema: expect.objectContaining({ type: 'object' }),
     });
     expect(entityReqs[0]?.prompt).toContain('[0] ');
+    expect(entityReqs[0]?.prompt).toContain('[11] ');
+    expect(entityReqs[0]?.prompt).not.toContain('[12] ');
     expect(entityReqs[1]?.prompt).toContain('use these exact names when the passage means them): Mira');
+    expect(adv.scriptState.__entitiesAt).toBe(adv.memories[3]?.toAction);
     expect(adv.entities).toHaveLength(1);
-    expect(adv.entities[0]).toMatchObject({ name: 'Mira', aliases: ['the courier'], firstSeen: 5, lastSeen: 11 });
+    expect(adv.entities[0]).toMatchObject({ name: 'Mira', aliases: ['the courier'], firstSeen: 11, lastSeen: 23 });
     expect(adv.entities[0]?.facts).toHaveLength(1);
   });
 
   it('keeps the memory and the entities when the entity reply is malformed', async () => {
-    const adv = adventure(12);
+    const adv = adventure(18);
     const provider = fakeProvider(async function* (req) {
       yield { text: req.prompt.includes(ENTITY_PROMPT) ? '"entities": [{"name": ' : 'Mira found the map.', done: true };
     });
     const report = await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
-    expect(report).toMatchObject({ memoriesWritten: 1, entitiesTouched: 0 });
+    expect(report).toMatchObject({ memoriesWritten: 2, entitiesTouched: 0 });
     expect(adv.entities).toEqual([]);
   });
 
   it('keeps the whole entities of a reply cut at maxTokens and drops the cut one', async () => {
-    const adv = adventure(12);
+    const adv = adventure(18);
     const cut =
       '{"importance": 2, "entities": [{"name": "Mira", "kind": "character", "description": "A courier.", "facts": []}, {"name": "Odo", "kind": "character", "description": "A captain.", "facts": ["He i';
     const provider = fakeProvider(async function* (req) {
@@ -121,7 +127,7 @@ describe('entity extraction in memory maintenance', () => {
   });
 
   it("reports the helper's speakers as paragraph labels for the log", async () => {
-    const adv = adventure(12);
+    const adv = adventure(18);
     const said = adv.actions[1];
     if (said) said.versions = ['"Hold the rope," she says.'];
     const reply = {
@@ -141,7 +147,7 @@ describe('entity extraction in memory maintenance', () => {
   });
 
   it('moves the scene from the same call: the first reply starts the clock, the next one advances it', async () => {
-    const adv = adventure(18);
+    const adv = adventure(30);
     const reqs: CompletionRequest[] = [];
     const reply = {
       importance: 2,
@@ -158,14 +164,14 @@ describe('entity extraction in memory maintenance', () => {
       false,
       true,
     );
-    const report = await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
+    expect(await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider })).toMatchObject({ sceneUpdated: true });
+    expect(await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider })).toMatchObject({ sceneUpdated: true });
     expect(reqs.filter((r) => r.prompt.includes(ENTITY_PROMPT))).toHaveLength(2);
-    expect(report.sceneUpdated).toBe(true);
     expect(adv.plot.scene).toEqual({ location: 'the mill', present: ['Mira'], time: { day: 1, part: 'night' } });
   });
 
   it('requires both halves of timeDelta in the grammar, and reads a missing half as zero', async () => {
-    const adv = adventure(12);
+    const adv = adventure(18);
     adv.plot = { ...adv.plot, scene: { present: [], time: { day: 1, part: 'night' } } };
     const reqs: CompletionRequest[] = [];
     const provider = fakeProvider(
@@ -184,11 +190,23 @@ describe('entity extraction in memory maintenance', () => {
     });
   });
 
-  it('skips the entity call once the idle signal fires', async () => {
+  it('waits for a second memory before the entity call', async () => {
     const adv = adventure(12);
-    const { deps, calls } = fakeDeps(adv, { abortAfter: 1 });
+    const { deps, calls } = fakeDeps(adv);
     expect(await runMemoryMaintenance(adv, deps)).toMatchObject({ memoriesWritten: 1, entitiesTouched: 0 });
     expect(calls.filter((c) => c.includes(ENTITY_PROMPT))).toHaveLength(0);
+    expect(adv.scriptState.__entitiesAt).toBeUndefined();
+  });
+
+  it(`keeps the first ${MAX_ENTITIES} entities of a longer reply`, async () => {
+    const names = ['Ana', 'Bo', 'Cy', 'Di', 'Ed', 'Fay'];
+    const adv = adventure(18, `You wave at ${names.join(', ')}.`);
+    const reply = { importance: 1, entities: names.map((name) => ({ name, kind: 'character', description: '', facts: [] })), speakers: [] };
+    const provider = fakeProvider(async function* (req) {
+      yield { text: req.prompt.includes(ENTITY_PROMPT) ? JSON.stringify(reply).slice(1) : 'Mira found the map.', done: true };
+    });
+    await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
+    expect(adv.entities.map((e) => e.name)).toEqual(names.slice(0, MAX_ENTITIES));
   });
 
   it('runs an overdue backlog after the idle signal fires, so fast play cannot starve it', async () => {

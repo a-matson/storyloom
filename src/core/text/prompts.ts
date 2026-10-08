@@ -46,7 +46,7 @@ export function extractPrompt(passage: string, knownNames: string[]): string {
     'Only things with a proper name; skip common nouns like "the path" or "wolves". An unnamed role ("the ferrywoman") is an alias of the named person it refers to.' +
     `\n\n---\n${passage}\n---\n\n` +
     (knownNames.length ? `Already recorded (use these exact names when the passage means them): ${knownNames.join(', ')}.\n` : '') +
-    'Give each entity a one-sentence description and 0–3 facts: short sentences about what lasts (who or what it is, what it owns, injuries, loyalties), not single actions or dialogue, and nothing the passage does not state. ' +
+    'Give each entity a one-sentence description and 0–2 facts: short sentences about what lasts (who or what it is, what it owns, injuries, loyalties), not single actions or dialogue, and nothing the passage does not state. ' +
     'The player is "you", not an entity. importance is 1 (routine) to 5 (story-changing). speakers names who talks in each numbered paragraph. ' +
     'timeDelta is the time the passage says has passed, in whole days and parts (a part is a sixth of a day: dawn, morning, midday, afternoon, evening, night): always give it, 0 and 0 when the passage does not say time passed. ' +
     'scene is where the passage ends: the place, the named characters there, and the time of day and weather only when the passage states them. ' +
