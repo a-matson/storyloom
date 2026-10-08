@@ -22,6 +22,11 @@ const onRender: ProfilerOnRenderCallback = (_id, _phase, actualMs) => {
 const measure = import.meta.env['VITE_MEASURE_RENDERS'] === '1';
 if (measure) Object.assign(window, { __renders: renders });
 
+// Dev never registers: HMR and the dev-server e2e stay SW-free.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch((e: unknown) => console.warn('service worker registration failed', e));
+}
+
 createRoot(root).render(
   <StrictMode>
     {measure ? (

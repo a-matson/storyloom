@@ -84,6 +84,9 @@ continues without input, `Ctrl+R` retries, `Ctrl+Z` undoes. The sidebar (`Ctrl+.
 plot components, story cards and settings; **View context** shows exactly what was sent to
 the model.
 
+Install it from the address bar or the **Install** button; the app then opens offline
+(stories are local; turns still need the server).
+
 **The hosted demo**, <https://a-matson.github.io/storyloom/>, is the same app without the
 download, and it still talks to _your_ local server — nothing is sent anywhere else. Chrome
 will ask for permission the first time a public page reaches a server on your machine; allow

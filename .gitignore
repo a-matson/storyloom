@@ -13,6 +13,7 @@ coverage/
 test-results/
 playwright-report/
 dist-measure/
+dist-prod/
 .stryker-tmp/
 
 # User-supplied embedding model + ONNX runtime files (local only, never committed)
