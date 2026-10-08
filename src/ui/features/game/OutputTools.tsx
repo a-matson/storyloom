@@ -85,6 +85,11 @@ export function OutputTools({ action, api, speech, onEdit, onViewContext, onView
           </Pill>
         </output>
       )}
+      {contradiction !== undefined && (
+        <Button className={tool} onClick={() => api.retry(contradiction)}>
+          Retry with note
+        </Button>
+      )}
       <div className={cn('flex grow items-center gap-2', revealOnHover)}>
         {action.type === 'continue' && action.versions.length > 1 && <RetryStack action={action} api={api} />}
         {voice.supported && (

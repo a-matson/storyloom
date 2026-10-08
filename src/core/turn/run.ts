@@ -76,8 +76,9 @@ export function runTurn(
 /**
  * Retry: regenerate the last AI output as a new retry alternative, using the
  * log as it was before that output. Vary the seed so alternatives differ.
+ * `note` (the fact the output broke) rides in this one prompt only.
  */
-export function retryLast(adventure: Adventure, log: ActionLog, deps: TurnDeps, signal?: AbortSignal): AsyncGenerator<TurnEvent> {
+export function retryLast(adventure: Adventure, log: ActionLog, deps: TurnDeps, signal?: AbortSignal, note?: string): AsyncGenerator<TurnEvent> {
   const run = startRun('retry');
   const { turnId } = run;
   return traced(
@@ -91,7 +92,7 @@ export function retryLast(adventure: Adventure, log: ActionLog, deps: TurnDeps, 
         return;
       }
       run.actionId = last.id;
-      const prepared = await prepareContext(adventure, log.actions.slice(0, -1), deps, run.scriptLogs);
+      const prepared = await prepareContext(adventure, log.actions.slice(0, -1), deps, run.scriptLogs, note);
       if ('stopped' in prepared) {
         yield { type: 'stopped', turnId, reason: prepared.stopped };
         return;

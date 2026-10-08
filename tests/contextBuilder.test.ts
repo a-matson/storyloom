@@ -78,6 +78,18 @@ describe('required elements', () => {
     expect(r.sections.find((s) => s.kind === 'plotEssentials')?.text).toBe('SCRIPT');
     expect(r.sections.find((s) => s.kind === 'authorsNote')?.text).toBe("[Author's note: SCRIPT-AN]");
   });
+
+  it("a retry note renders right after the Author's note and counts as required", () => {
+    const input = base({ actions: [act('start', 'Go.'), act('do', '> You look.')], plot: { authorsNote: 'AN' } });
+    const plain = buildContext(input);
+    const r = buildContext({ ...input, retryNote: 'Lena: is a blacksmith' });
+    const kinds = r.sections.map((s) => s.kind);
+    expect(kinds.slice(kinds.indexOf('authorsNote'), kinds.indexOf('authorsNote') + 3)).toEqual(['authorsNote', 'retryNote', 'lastAction']);
+    const note = r.sections.find((s) => s.kind === 'retryNote')!;
+    expect(note.text).toBe('[Note: keep to this: Lena: is a blacksmith]');
+    expect(note.cacheable).toBe(false);
+    expect(r.budget.requiredUsed).toBe(plain.budget.requiredUsed + note.tokens);
+  });
 });
 
 describe('dynamic elements', () => {

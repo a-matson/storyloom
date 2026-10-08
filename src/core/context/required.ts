@@ -1,11 +1,11 @@
-import type { Action, PlotComponents } from '../model/types';
+import type { Action } from '../model/types';
 import { actionStoryText } from '../text/formatting';
 import { trimHeadToTokens, trimToTokens, type Tokenizer } from '../text/tokenizer';
 import { renderSection } from './render';
 import type { ContextBuildInput, RenderedSections, SectionKind } from './types';
 
-// When the cap is hit, lower-priority elements go first: the author's note matters most.
-const REQUIRED_PRIORITY: SectionKind[] = ['authorsNote', 'plotEssentials', 'instructions', 'storySummary'];
+// When the cap is hit, lower-priority elements go first: a retry note is its retry's whole point, then the author's note.
+const REQUIRED_PRIORITY: SectionKind[] = ['retryNote', 'authorsNote', 'plotEssentials', 'instructions', 'storySummary'];
 
 /** Index of the most recent action that contributes story text (skips `see`). */
 export function findLastActionIndex(actions: Action[]): number {
@@ -23,8 +23,9 @@ export interface RequiredResult {
   requiredUsed: number;
 }
 
-function plotValues(plot: PlotComponents, overrides: ContextBuildInput['overrides']): Partial<Record<SectionKind, string>> {
+function plotValues({ plot, overrides, retryNote }: ContextBuildInput): Partial<Record<SectionKind, string>> {
   return {
+    retryNote: (retryNote ?? '').trim(),
     authorsNote: (overrides?.authorsNote || plot.authorsNote || '').trim(),
     plotEssentials: (overrides?.plotEssentials || plot.plotEssentials || '').trim(),
     instructions: (plot.aiInstructions ?? '').trim(),
@@ -54,7 +55,7 @@ export function selectRequired(
     warnings.push('Last action exceeded the required budget and was trimmed from the start.');
   }
 
-  const values = plotValues(input.plot, input.overrides);
+  const values = plotValues(input);
   const plotUsed = fitPlot(values, requiredCap - lastTokens - frontTokens, tokenizer, out, warnings, dropped);
   return {
     lastActionIndex,
