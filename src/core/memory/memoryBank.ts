@@ -96,7 +96,8 @@ export function memoryOverdue(actionCount: number, existing: Pick<Memory, 'toAct
 /**
  * Memories waiting for the combined entity call before it runs regardless of typing or the next
  * turn. Without it a fast player starves it: each idle gap goes to the next memory, and typing cuts
- * the entity call after it (no entities in a 90-turn run with a 6 s read gap). [provisional]
+ * the entity call after it (no entities in a 90-turn run with a 6 s read gap). The same 2 as
+ * `ENTITY_BATCH`, so a full batch is always overdue. [provisional]
  */
 export const ENTITY_OVERDUE = 2;
 
