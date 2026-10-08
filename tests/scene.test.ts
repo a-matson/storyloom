@@ -3,7 +3,13 @@ import { renderScene } from '@core/context/render';
 import { advanceTime, nextScene } from '@core/memory/scene';
 import type { ExtractionJson, Scene } from '@core/model/types';
 
-const reply = (over: Partial<ExtractionJson> = {}): ExtractionJson => ({ importance: 2, entities: [], speakers: [], ...over });
+const reply = (over: Partial<ExtractionJson> = {}): ExtractionJson => ({
+  importance: 2,
+  timeDelta: { days: 0, parts: 0 },
+  entities: [],
+  speakers: [],
+  ...over,
+});
 const isName = (n: string) => n !== '' && n.toLowerCase() !== 'you';
 const night3: Scene = { location: 'the mill', present: ['Lena'], time: { day: 3, part: 'night' } };
 
@@ -14,6 +20,8 @@ describe('the in-story clock', () => {
     expect(advanceTime({ day: 1, part: 'morning' }, { days: 2 })).toEqual({ day: 3, part: 'morning' });
     expect(advanceTime({ day: 1, part: 'dawn' }, { days: 1, parts: 13 })).toEqual({ day: 4, part: 'morning' });
     expect(advanceTime({ day: 1, part: 'dawn' }, { parts: -3 })).toEqual({ day: 1, part: 'dawn' });
+    const t = { day: 2, part: 'evening' } as const;
+    expect(advanceTime(t, { days: 0, parts: 0 })).toBe(t);
   });
 
   it('does not move without a stated delta, even when the passage names a time of day', () => {
@@ -23,13 +31,17 @@ describe('the in-story clock', () => {
 
   it('starts the clock on day 1 from a stated time of day', () => {
     expect(nextScene(undefined, reply({ scene: { timeOfDay: 'evening' } }), isName)?.time).toEqual({ day: 1, part: 'evening' });
-    expect(nextScene(undefined, reply({ timeDelta: { days: 2 } }), isName)).toBeUndefined();
+    expect(nextScene(undefined, reply({ timeDelta: { days: 2, parts: 0 } }), isName)).toBeUndefined();
   });
 });
 
 describe('nextScene', () => {
   it('moves to a named place with the cast the reply names, dropping the player', () => {
-    const next = nextScene(night3, reply({ timeDelta: { parts: 1 }, scene: { location: "Blackmore's study", present: ['Morrow', 'You', ' '] } }), isName);
+    const next = nextScene(
+      night3,
+      reply({ timeDelta: { days: 0, parts: 1 }, scene: { location: "Blackmore's study", present: ['Morrow', 'You', ' '] } }),
+      isName,
+    );
     expect(next).toEqual({ location: "Blackmore's study", present: ['Morrow'], time: { day: 4, part: 'dawn' } });
   });
 

@@ -33,7 +33,7 @@ export const EXTRACT_SYSTEM = 'You keep a record of the people, places, items an
 const EXTRACT_EXAMPLE =
   'Example (from a different story; never copy its names):\n---\n[4] At midnight, in her workshop, the clockmaker, Ysolde Brenn, sets the Brass Owl on her bench. "The Guild of Hours wants it back by dawn," she says.\n' +
   '[5] > You ask what it does.\n[6] Ysolde winds the owl. Its eyes open, and it recites the vault code of the Copper Exchange.\n---\n' +
-  '{"importance": 3, "scene": {"location": "Ysolde\'s workshop", "present": ["Ysolde Brenn"], "timeOfDay": "night"}, "entities": [{"name": "Ysolde Brenn", "kind": "character", "aliases": ["the clockmaker"], "description": "A clockmaker with a workshop.", ' +
+  '{"importance": 3, "timeDelta": {"days": 0, "parts": 0}, "scene": {"location": "Ysolde\'s workshop", "present": ["Ysolde Brenn"], "timeOfDay": "night"}, "entities": [{"name": "Ysolde Brenn", "kind": "character", "aliases": ["the clockmaker"], "description": "A clockmaker with a workshop.", ' +
   '"facts": ["She has the Brass Owl."], "state": {"location": "her workshop"}}, ' +
   '{"name": "Brass Owl", "kind": "item", "description": "A clockwork owl that recites the vault code of the Copper Exchange.", "facts": ["The Guild of Hours wants it back by dawn."]}, ' +
   '{"name": "Guild of Hours", "kind": "faction", "description": "A guild that claims the Brass Owl.", "facts": []}, ' +
@@ -48,7 +48,7 @@ export function extractPrompt(passage: string, knownNames: string[]): string {
     (knownNames.length ? `Already recorded (use these exact names when the passage means them): ${knownNames.join(', ')}.\n` : '') +
     'Give each entity a one-sentence description and 0–3 facts: short sentences about what lasts (who or what it is, what it owns, injuries, loyalties), not single actions or dialogue, and nothing the passage does not state. ' +
     'The player is "you", not an entity. importance is 1 (routine) to 5 (story-changing). speakers names who talks in each numbered paragraph. ' +
-    'timeDelta is the time the passage says has passed, in whole days and parts (a part is a sixth of a day: dawn, morning, midday, afternoon, evening, night); leave it out when the passage does not say. ' +
+    'timeDelta is the time the passage says has passed, in whole days and parts (a part is a sixth of a day: dawn, morning, midday, afternoon, evening, night): always give it, 0 and 0 when the passage does not say time passed. ' +
     'scene is where the passage ends: the place, the named characters there, and the time of day and weather only when the passage states them. ' +
     'Return {"importance": number, "timeDelta": {"days": number, "parts": number}, "scene": {...}, "entities": [...], "speakers": [...], "threads": string[]}.'
   );

@@ -5,7 +5,7 @@ const PARTS: DayPart[] = ['dawn', 'morning', 'midday', 'afternoon', 'evening', '
 type Time = NonNullable<Scene['time']>;
 
 /** Move the clock by a stated delta; parts wrap through the day and carry into `day`. */
-export function advanceTime(time: Time, delta: ExtractionJson['timeDelta']): Time {
+export function advanceTime(time: Time, delta: Partial<ExtractionJson['timeDelta']>): Time {
   const days = Math.max(0, delta?.days ?? 0);
   const parts = Math.max(0, delta?.parts ?? 0);
   if (!days && !parts) return time;
