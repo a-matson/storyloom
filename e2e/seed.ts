@@ -9,12 +9,16 @@ export async function openSeededAdventure(
   page: Page,
   count: number,
   imageServer?: string,
-  opts: { opening?: string; speakerAvatars?: boolean; contextScript?: string; scene?: Scene; entities?: Partial<Entity>[] } = {},
+  opts: { opening?: string; speakerAvatars?: boolean; contextScript?: string; scene?: Scene; entities?: Partial<Entity>[]; utility?: string } = {},
 ): Promise<void> {
   await page.goto('/');
   await page.getByRole('button', { name: /^Demo \(no GPU\)/ }).click();
   await page.getByRole('button', { name: 'Test connection' }).click();
   await expect(page.getByText('Connected')).toBeVisible();
+  if (opts.utility !== undefined) {
+    await page.getByRole('switch', { name: 'Use a utility model' }).click();
+    await page.getByRole('textbox', { name: 'Utility server URL' }).fill(opts.utility);
+  }
   if (imageServer !== undefined) {
     await page.getByRole('switch', { name: 'Use an image server' }).click();
     await page.getByRole('textbox', { name: 'Image server URL' }).fill(imageServer);

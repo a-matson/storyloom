@@ -54,6 +54,18 @@ export function extractPrompt(passage: string, knownNames: string[]): string {
   );
 }
 
+export const CHECK_SYSTEM = 'You check an interactive story for continuity errors. Reply with JSON only.';
+
+export function checkPrompt(output: string, lines: readonly string[]): string {
+  return (
+    `Established facts:\n${lines.map((l) => `- ${l}`).join('\n')}\n\nNew passage:\n---\n${output}\n---\n\n` +
+    'Does the new passage state something that cannot be true if one of the facts is true? ' +
+    'Moving to another place, time passing, new people and details the facts do not mention are not contradictions; ' +
+    'only a direct clash is (long braids on a shaved head, one moon where there are two). ' +
+    'Return {"contradicts": boolean, "fact": string}: fact is the fact it breaks, copied exactly, or "" when it breaks none.'
+  );
+}
+
 export const SUMMARY_SYSTEM =
   'You maintain a running summary of an interactive story. Keep it information-dense and chronological, ' +
   'under 250 words, dropping details that no longer matter. Output only the summary.';

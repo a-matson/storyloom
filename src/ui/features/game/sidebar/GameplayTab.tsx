@@ -80,6 +80,13 @@ function MemorySystem({ s, update }: { s: Settings; update: Update }) {
       </Setting>
       <SettingSwitch id="auto-summary" label="Auto summarization" checked={s.memory.autoSummary} onChange={(on) => memory({ autoSummary: on })} />
       <SettingSwitch id="memory-bank" label="Memory bank" checked={s.memory.memoryBank} onChange={(on) => memory({ memoryBank: on })} />
+      <SettingSwitch
+        id="contradiction-check"
+        label="Check each turn for contradictions"
+        title="One extra helper call after each turn (a few seconds on slot 1) checks the output against canon, pinned facts and the scene"
+        checked={s.memory.contradictionCheck ?? false}
+        onChange={(on) => memory({ contradictionCheck: on })}
+      />
       <Setting label="Bank size" htmlFor="bank">
         <NumberInput
           id="bank"

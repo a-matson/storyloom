@@ -5,7 +5,8 @@
  *   latency <url> [turns] TTFT, cache hit %, tok/s against a live backend (cold vs cached prefix)
  *   gatev <url>           llama-server checks: template, tokenizer error, warming, layout, evictionChunk, CORS
  *   clock <url> [label]   does the helper call report stated time? 5 fixed passages through extractFromPassage
- *   live <url> [label]    plays 20 scripted turns in the real app; per-turn stats, memories, summary
+ *   contradiction <url> [label]  precision/recall of the contradiction check on 40 hand-labelled outputs
+ *   live <url> [label]   plays 20 scripted turns in the real app; per-turn stats, memories, summary
  *   images <image-url> <url>  See mode and a cover against a real A1111 server
  *   recall-record <url>   plays the 24-fact scenario to turn 90 once and saves the history (bench/recall-history.json)
  *   recall <url> [label]  replays the recorded history and generates only the probes at turns 30/60/90 (~75 min); the memory recall baseline
@@ -19,6 +20,10 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
   latency: { cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/latency'], env: { MEASURE_URL: a, MEASURE_TURNS: b } },
   gatev: { cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/gatev'], env: { MEASURE_URL: a } },
   clock: { cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/clock'], env: { MEASURE_URL: a, MEASURE_LABEL: b } },
+  contradiction: {
+    cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/contradiction'],
+    env: { MEASURE_URL: a, MEASURE_LABEL: b },
+  },
   // `--project=live`, not `--project live`: the flag is variadic and would swallow the file.
   live: { cmd: ['pnpm', 'exec', 'playwright', 'test', '--project=live', 'e2e/live/play.spec.ts'], env: { MEASURE_URL: a, MEASURE_LABEL: b } },
   images: { cmd: ['pnpm', 'exec', 'playwright', 'test', '--project=live', 'e2e/live/images.spec.ts'], env: { MEASURE_IMAGES: a, MEASURE_URL: b } },

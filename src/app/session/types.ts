@@ -20,7 +20,22 @@ export interface GameSnapshot {
   pendingImages: readonly string[];
   /** KV-cache warm-up state for the next turn. */
   warm: 'idle' | 'warming' | 'warm';
+  /** The contradiction check flagged the last output; cleared when that output changes. Not persisted. */
+  contradiction: { actionId: string; fact: string } | null;
 }
+
+/** Session state of a freshly opened adventure. */
+export const OPENED: Omit<GameSnapshot, 'adventure' | 'actions' | 'canUndo' | 'canRedo'> = {
+  busy: false,
+  streaming: '',
+  context: null,
+  error: null,
+  notice: null,
+  prefetchReady: false,
+  pendingImages: [],
+  warm: 'idle',
+  contradiction: null,
+};
 
 export interface SessionServices {
   providerFor: (app: AppSettings, id: string) => Provider;

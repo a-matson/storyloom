@@ -23,6 +23,8 @@ interface Props {
   onViewContext: () => void;
   onViewTrace: () => void;
   contextSummary?: string | undefined;
+  /** For the last output: the fact the contradiction check says it breaks. */
+  contradiction?: string | undefined;
   /** The adventure's entities when speaker portraits are on. */
   cast?: readonly Entity[] | undefined;
 }
@@ -76,7 +78,7 @@ export function ActionBlock(props: Props) {
   return <TextBlock {...props} />;
 }
 
-function TextBlock({ action, adventureId, isLast, busy, api, speech, onViewContext, onViewTrace, contextSummary, cast }: Props) {
+function TextBlock({ action, adventureId, isLast, busy, api, speech, onViewContext, onViewTrace, contextSummary, contradiction, cast }: Props) {
   const [editing, setEditing] = useState(false);
   // Bumped when an edit ends: the paragraph remounts, so React never reconciles DOM the player rewrote.
   const [rev, setRev] = useState(0);
@@ -150,6 +152,7 @@ function TextBlock({ action, adventureId, isLast, busy, api, speech, onViewConte
             onViewContext={onViewContext}
             onViewTrace={onViewTrace}
             contextSummary={contextSummary}
+            contradiction={contradiction}
           />
         )}
       </div>
