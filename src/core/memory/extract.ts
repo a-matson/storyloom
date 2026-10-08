@@ -53,7 +53,7 @@ export async function extractFromPassage(passage: string, knownNames: string[], 
       deps.provider.complete(
         {
           prompt: rendered.prompt,
-          maxTokens: 300,
+          maxTokens: 300, // fits MAX_ENTITIES [measured: 2026-10-08-recall-wave2-run1.json]
           temperature: 0.2,
           topP: 0.9,
           stop: rendered.stop,
@@ -71,7 +71,8 @@ export async function extractFromPassage(passage: string, knownNames: string[], 
 
 /**
  * Memories read by one call: each call costs ~26 s on slot 1, so two ranges share it. Fewer due
- * memories wait, so a session's last memory is extracted in the next one. [provisional]
+ * memories wait, so a session's last memory is extracted in the next one.
+ * [measured: 2026-10-08-recall-wave2-run1.json]
  */
 const ENTITY_BATCH = 2;
 

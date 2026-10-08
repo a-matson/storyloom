@@ -29,6 +29,7 @@ export function buildContext(input: ContextBuildInput): ContextBuildResult {
   const req = selectRequired(input, requiredCap, out, warnings, droppedSections);
   const afterRequired = Math.max(0, total - req.requiredUsed);
   // Taken before cards and history so the scene is never starved; the cap is a ceiling, not a reservation.
+  // 0.1 is more than needed (max 250 of ~819 used). [measured: 2026-10-08-recall-wave2-run1.json]
   const structuredCap = Math.min(afterRequired, Math.floor(total * (settings.structuredShare ?? 0.1)));
   const structured = selectStructured(input, req.lastActionIndex, structuredCap, out);
   const dynamicAvailable = afterRequired - structured.structuredUsed;
