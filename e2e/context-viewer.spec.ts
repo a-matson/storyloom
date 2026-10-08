@@ -116,7 +116,15 @@ async function takeTurnAndViewContext(page: Page) {
 
 test('a present entity sends its facts and card under the structured cap', async ({ page }) => {
   await openSeededAdventure(page, 3, undefined, { scene: { location: 'the Old Well', present: ['Merav'] } });
-  const dialog = await takeTurnAndViewContext(page);
+  // Off by default: the scene line goes, facts and cards do not.
+  let dialog = await takeTurnAndViewContext(page);
+  await dialog.getByRole('button', { name: 'Raw prompt' }).click();
+  await expect(dialog.getByText(/\[Scene: the Old Well/)).toBeVisible();
+  await expect(dialog.getByText(/Established facts:|Known entities:/)).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await page.getByRole('tab', { name: 'Gameplay' }).click();
+  await page.getByRole('switch', { name: 'Send entity facts and cards' }).click();
+  dialog = await takeTurnAndViewContext(page);
   await expect(dialog.getByTestId('structured-budget')).toContainText(/\d+ \/ \d+/);
   await dialog.getByRole('button', { name: 'Raw prompt' }).click();
   await expect(dialog.getByText(/Established facts:\s+Merav: She keeps the needle map\.\s+Merav: She distrusts the caravan\./)).toBeVisible();

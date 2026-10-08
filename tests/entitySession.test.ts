@@ -20,6 +20,7 @@ const gate: Entity = {
 function withGate(...more: Entity[]) {
   const adventure = createBlankAdventure('Test', 'You stand at the gate.');
   adventure.entities = [gate, ...more];
+  adventure.settings.memory.entityFacts = true;
   return setup({ adventure });
 }
 

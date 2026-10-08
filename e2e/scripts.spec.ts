@@ -92,6 +92,8 @@ test('a Context script that rewrites the prompt is flagged as uncached', async (
 
 test('a Context script reads the entities, and the trace counts the ones in the prompt', async ({ page }) => {
   await openSeededAdventure(page, 3, undefined, { contextScript: "log('entities ' + state.entities.map((e) => e.name).join(', ')); null" });
+  await page.getByRole('tab', { name: 'Gameplay' }).click();
+  await page.getByRole('switch', { name: 'Send entity facts and cards' }).click();
   await page.getByRole('textbox', { name: 'Take a turn' }).fill('ask Merav for the map');
   await page.getByRole('button', { name: 'Send' }).click();
   await page.getByRole('button', { name: 'Trace' }).last().click();
