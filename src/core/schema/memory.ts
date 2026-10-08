@@ -16,4 +16,6 @@ export const Memory = z.object({
   stale: z.optional(z.boolean()),
   /** Evicted from the bank but kept, so its range is not summarised again. */
   forgotten: z.optional(z.boolean()),
+  /** The player's: never evicted, ranked first. */
+  pinned: z.optional(z.boolean()),
 });

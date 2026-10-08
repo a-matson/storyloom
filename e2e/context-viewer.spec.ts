@@ -44,7 +44,8 @@ async function seedMemories(page: Page): Promise<void> {
   });
 }
 
-test('the Memories tab shows the bank and marks edited ranges stale', async ({ page }) => {
+/** A 14-action import with the two seeded memories, opened in the game. */
+async function openSaltRoad(page: Page): Promise<void> {
   await connectDemo(page);
   const actions = Array.from({ length: 14 }, (_, i) => (i % 2 ? { text: `> You walk on ${i}.`, type: 'do' } : { text: `The road bends ${i}.` }));
   const chooser = page.waitForEvent('filechooser');
@@ -54,14 +55,18 @@ test('the Memories tab shows the bank and marks edited ranges stale', async ({ p
   await expect(page.getByRole('button', { name: 'Continue Salt Road 14 actions' })).toBeVisible();
   await seedMemories(page);
   await page.getByRole('button', { name: 'Continue Salt Road 14 actions' }).click();
+}
 
-  const openMemories = async () => {
-    await page.getByRole('button', { name: 'View context' }).last().click();
-    const dialog = page.getByRole('dialog', { name: 'Context sent to the model' });
-    await dialog.getByRole('button', { name: 'Memories' }).click();
-    return dialog;
-  };
-  let dialog = await openMemories();
+async function openMemories(page: Page) {
+  await page.getByRole('button', { name: 'View context' }).last().click();
+  const dialog = page.getByRole('dialog', { name: 'Context sent to the model' });
+  await dialog.getByRole('button', { name: 'Memories' }).click();
+  return dialog;
+}
+
+test('the Memories tab shows the bank and marks edited ranges stale', async ({ page }) => {
+  await openSaltRoad(page);
+  let dialog = await openMemories(page);
   await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 2 · stale 0 · forgotten 0');
   await expect(dialog.getByText('actions 7–12')).toBeVisible();
   await page.keyboard.press('Escape');
@@ -74,9 +79,32 @@ test('the Memories tab shows the bank and marks edited ranges stale', async ({ p
   await page.getByRole('textbox', { name: 'Take a turn' }).click();
   await expect(page.getByText('The road bends 2. A gull cries.')).toBeVisible();
 
-  dialog = await openMemories();
+  dialog = await openMemories(page);
   await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 1 · stale 1 · forgotten 0');
   await expect(dialog.getByText('stale', { exact: true })).toBeVisible();
+});
+
+test('a memory can be pinned, edited, forgotten and restored', async ({ page }) => {
+  await openSaltRoad(page);
+  let dialog = await openMemories(page);
+  await dialog.getByRole('button', { name: 'Pin memory, actions 1–6' }).click();
+  await expect(dialog.getByRole('button', { name: 'Pin memory, actions 1–6' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(dialog.getByText('pinned', { exact: true })).toBeVisible();
+
+  await dialog.getByRole('button', { name: 'Edit memory, actions 7–12' }).click();
+  await dialog.getByRole('textbox', { name: 'Edit memory, actions 7–12' }).fill('The gulls followed the cart.');
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(dialog.getByText('The gulls followed the cart.')).toBeVisible();
+
+  await dialog.getByRole('button', { name: 'Forget memory, actions 7–12' }).click();
+  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 1 · stale 0 · forgotten 1');
+  await dialog.getByRole('button', { name: 'Restore memory, actions 7–12' }).click();
+  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 2 · stale 0 · forgotten 0');
+
+  await page.reload();
+  dialog = await openMemories(page);
+  await expect(dialog.getByText('pinned', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('The gulls followed the cart.')).toBeVisible();
 });
 
 async function takeTurnAndViewContext(page: Page) {

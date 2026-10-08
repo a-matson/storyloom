@@ -142,6 +142,28 @@ describe('retrieval and eviction', () => {
     const out = markStale([mem('a', 0), mem('b', 6)], new Set(['a6']));
     expect(out.map((m) => !!m.stale)).toEqual([false, true]);
   });
+
+  it('never evicts a pinned memory, even the least-used and oldest', () => {
+    const pinned = { ...mem('pinned', 0, 0, 0), pinned: true };
+    const out = evictToSize([pinned, mem('b', 6, 1, 1), mem('c', 12, 2, 2)], 1);
+    expect(out.forgotten).toBe(2);
+    expect(out.memories.find((m) => m.id === 'pinned')?.forgotten).toBeUndefined();
+    // a bank of only pinned memories may exceed bankSize
+    expect(evictToSize([pinned, { ...mem('p2', 6), pinned: true }], 1).forgotten).toBe(0);
+  });
+
+  it('ranks an active pinned memory first, with or without lexical hits', () => {
+    const pinned = { ...mem('pinned', 0, 0, 0, [0, 1]), pinned: true };
+    const close = mem('close', 6, 0, 1, [1, 0]);
+    expect(rankMemories([close, pinned], [1, 0]).map((r) => r.memory.id)).toEqual(['pinned', 'close']);
+    expect(rankMemories([close, pinned], [1, 0], 1, ['close']).map((r) => r.memory.id)).toEqual(['pinned']);
+  });
+
+  it('does not rank a pinned memory that is forgotten or stale', () => {
+    const a = mem('a', 12, 0, 2, [1, 0]);
+    const ranked = rankMemories([{ ...mem('f', 0), pinned: true, forgotten: true }, { ...mem('s', 6), pinned: true, stale: true }, a], [1, 0], Infinity, []);
+    expect(ranked.map((r) => r.memory.id)).toEqual(['a']);
+  });
 });
 
 describe('embedder changes', () => {

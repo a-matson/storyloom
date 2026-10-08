@@ -19,7 +19,7 @@ import { mmr, rrf, RRF_K } from './fusion';
  *
  * Eviction: when the bank is full, the least-used memory (then the oldest) is
  * forgotten: flagged and kept, so its range is not summarised again. Frequently-used
- * old memories can live forever. Edits mark memories stale; the idle job rewrites them.
+ * old memories can live forever; pinned ones always do, and lead the ranking. Edits mark memories stale; the idle job rewrites them.
  */
 
 /** [AID-doc] */
@@ -152,14 +152,20 @@ const vectorSim = (a: Memory, b: Memory): number => (a.embedding && a.embedding.
  */
 export function rankMemories(memories: Memory[], query: number[] | undefined, limit = Infinity, lexical?: readonly string[]): RankedMemory[] {
   const ranked = rankByCosine(memories, query);
-  if (!lexical) return ranked.slice(0, limit);
+  if (!lexical) return pinnedFirst(ranked).slice(0, limit);
   const byId = new Map(ranked.map((r) => [r.memory.id, r.memory]));
   const fused = rrf([ranked.map((r) => r.memory.id), lexical]).flatMap(([id, score]) => {
     const memory = byId.get(id);
     return memory ? [{ item: memory, score: (score * (RRF_K + 1)) / 2 }] : [];
   });
-  return [...mmr(fused.slice(0, MMR_POOL), vectorSim), ...fused.slice(MMR_POOL)].slice(0, limit).map(({ item, score }) => ({ memory: item, score }));
+  return pinnedFirst([...mmr(fused.slice(0, MMR_POOL), vectorSim), ...fused.slice(MMR_POOL)].map(({ item, score }) => ({ memory: item, score }))).slice(
+    0,
+    limit,
+  );
 }
+
+/** The player's pinned memories lead, in their ranked order. */
+const pinnedFirst = (ranked: RankedMemory[]): RankedMemory[] => [...ranked.filter((r) => r.memory.pinned), ...ranked.filter((r) => !r.memory.pinned)];
 
 function rankByCosine(memories: Memory[], query: number[] | undefined): RankedMemory[] {
   const ranked: RankedMemory[] = [];
@@ -178,7 +184,10 @@ function rankByCosine(memories: Memory[], query: number[] | undefined): RankedMe
  */
 export function evictToSize(memories: Memory[], bankSize: number): { memories: Memory[]; forgotten: number } {
   const active = memories.filter(isActive);
-  const losers = active.toSorted((a, b) => a.useCount - b.useCount || a.createdAt - b.createdAt).slice(0, Math.max(0, active.length - bankSize));
+  const losers = active
+    .filter((m) => !m.pinned)
+    .toSorted((a, b) => a.useCount - b.useCount || a.createdAt - b.createdAt)
+    .slice(0, Math.max(0, active.length - bankSize));
   const ids = new Set(losers.map((m) => m.id));
   const flagged = memories.map((m) => (ids.has(m.id) ? { ...m, forgotten: true } : m));
   const dropped = new Set(
