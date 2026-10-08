@@ -27,7 +27,6 @@ export const ExtractedEntity = z.object({
  * long one, and the trailing `speakers` may be lost to a cut (see `extract.ts`).
  */
 export const ExtractionJson = z.object({
-  importance: z.int().check(z.gte(1), z.lte(5)),
   /**
    * Story time the passage states has passed; zeros mean none. A part is a sixth of a day. Required
    * so the grammar forces two numbers: optional, the 12B left it out every time. [provisional]
@@ -45,6 +44,4 @@ export const ExtractionJson = z.object({
   entities: z.array(ExtractedEntity).check(z.maxLength(MAX_ENTITIES)),
   /** Who speaks in which numbered action. */
   speakers: z.array(z.object({ action: z.number(), name: z.string() })),
-  /** Open threads the passage starts or advances. */
-  threads: z.optional(z.array(z.string())),
 });
