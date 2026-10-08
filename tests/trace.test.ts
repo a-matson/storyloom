@@ -101,6 +101,7 @@ describe('buildTrace', () => {
     const handler = createFakeLlama({ wordDelayMs: 0 });
     const provider = new LlamaServerProvider('demo', 'http://demo.invalid', (i, init) => handler(new Request(i, init)));
     const adventure = createBlankAdventure('Test', 'You stand at the gate with Tamsin.');
+    adventure.settings.memory.entityFacts = true;
     // Seen in two ranges: one sighting never reaches the prompt.
     const tamsin = {
       ...mergeEntity(undefined, { name: 'Tamsin', kind: 'character', aliases: [], description: 'Tamsin rows.', facts: ['She owes a debt.'] }, 0),

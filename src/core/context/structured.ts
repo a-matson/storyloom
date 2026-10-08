@@ -54,17 +54,15 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
   const here = entities.filter((e) => named(e, present));
   const byId = new Map(entities.map((e) => [e.id, e]));
   const mentioned = matchCards(compileCards(entities.map(projectEntity)), recent.map(actionStoryText)).flatMap((m) => byId.get(m.card.id) ?? []);
-  const facts = fill(
-    'facts',
-    rankFacts(entities, new Set(here.map((e) => e.id)), new Set(mentioned.map((e) => e.id)), input.factHits),
-    (r) => `${r.entity.name}: ${r.fact.text}`,
-    '\n',
-  );
+  const only = input.settings.pinnedFactsOnly ?? false;
+  const ranked = rankFacts(entities, new Set(here.map((e) => e.id)), new Set(mentioned.map((e) => e.id)), input.factHits);
+  // The player's own facts (Correct, pins) and canon conflicts go in even with entity facts off.
+  const facts = fill('facts', only ? ranked.filter((r) => r.fact.pinned || r.fact.conflict) : ranked, (r) => `${r.entity.name}: ${r.fact.text}`, '\n');
 
   const cardNames = new Set(input.storyCards.flatMap((c) => [c.id, c.name.trim().toLowerCase()]));
   const carded = (e: Entity) => (e.cardId && cardNames.has(e.cardId)) || cardNames.has(e.name.trim().toLowerCase());
   const candidates = [...new Set([...here, ...mentioned])].filter((e) => !carded(e));
-  const cards = fill('entityCards', candidates, (e) => projectEntity(e).entry, '\n\n');
+  const cards = only ? [] : fill('entityCards', candidates, (e) => projectEntity(e).entry, '\n\n');
 
   return {
     structuredBudget: budget,

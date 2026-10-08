@@ -88,4 +88,11 @@ describe('structured elements', () => {
     expect(r.sections.find((s) => s.kind === 'facts')?.text).toBe('Established facts:\nOrrin: He fears water.');
     expect(r.usedEntityIds).toEqual([orrin.id]);
   });
+
+  it('with entity facts off, sends the scene and only pinned facts, no cards', () => {
+    const pinned = { ...orrin, facts: [...orrin.facts, { id: 'f-pin', text: 'He is bald.', fromAction: 2, source: 'player' as const, pinned: true }] };
+    const r = buildContext({ ...input(2000), entities: [lena, pinned], settings: { ...settings(2000), pinnedFactsOnly: true } });
+    expect(structured(r).map((s) => s.kind)).toEqual(['facts', 'scene']);
+    expect(r.sections.find((s) => s.kind === 'facts')?.text).toBe('Established facts:\nOrrin: He is bald.');
+  });
 });

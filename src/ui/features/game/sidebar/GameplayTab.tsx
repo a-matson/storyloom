@@ -87,6 +87,13 @@ function MemorySystem({ s, update }: { s: Settings; update: Update }) {
         checked={s.memory.contradictionCheck ?? false}
         onChange={(on) => memory({ contradictionCheck: on })}
       />
+      <SettingSwitch
+        id="entity-facts"
+        label="Send entity facts and cards"
+        title="Established facts and Known entities blocks under the structured cap; the scene line is sent either way"
+        checked={s.memory.entityFacts}
+        onChange={(on) => memory({ entityFacts: on })}
+      />
       <Setting label="Bank size" htmlFor="bank">
         <NumberInput
           id="bank"

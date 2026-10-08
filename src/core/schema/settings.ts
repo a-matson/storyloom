@@ -25,6 +25,8 @@ export const MemorySettings = z.object({
   bankSize: z._default(z.int().check(z.gt(0)), 200),
   /** After each turn, one helper call checks the output against canon, pinned facts and the scene. Off until its precision is measured. */
   contradictionCheck: z._default(z.boolean(), false),
+  /** Send entity facts and cards in the prompt. Off: no recall gain in the wave-2 bench. [measured: 2026-10-08-recall-wave2-run1.json] */
+  entityFacts: z._default(z.boolean(), false),
 });
 
 export const ContextSettings = z.object({

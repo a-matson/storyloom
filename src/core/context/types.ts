@@ -60,6 +60,8 @@ export interface ContextBuildSettings {
   requiredShare?: number;
   /** Cap on scene + facts + entity cards, as a share of `contextLength`. Default 0.1. [provisional] */
   structuredShare?: number;
+  /** Send only pinned and conflicting facts, no entity cards; the scene line is unaffected. */
+  pinnedFactsOnly?: boolean;
 }
 
 export interface ContextBuildInput {

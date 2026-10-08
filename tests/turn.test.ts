@@ -246,6 +246,7 @@ describe('turn traces', () => {
       lastSeen: 1,
     };
     adventure.entities = [entity];
+    adventure.settings.memory.entityFacts = true;
     const prepared = await prepareContext(adventure, log.actions, deps);
     if ('stopped' in prepared) throw new Error('context build stopped');
     expect(prepared.result.triggeredCards).toEqual([]);

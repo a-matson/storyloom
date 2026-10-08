@@ -33,6 +33,7 @@ function contextInput(adventure: Adventure, actions: Action[], rankedMemories: R
       memoryBankEnabled: adventure.settings.memory.memoryBank,
       cacheStableLayout,
       evictionChunk: adventure.settings.context.evictionChunk,
+      pinnedFactsOnly: !adventure.settings.memory.entityFacts,
     },
     tokenizer: deps.tokenizer,
   };
