@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { mergeEntity } from '@core/memory/entities';
+import { extractFromPassage } from '@core/memory/extract';
+import { EXTRACT_JSON_SCHEMA } from '@core/memory/extractJsonSchema';
+import { extractPrompt } from '@core/text/prompts';
 import { entitiesOverdue } from '@core/memory/memoryBank';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import type { CompletionRequest } from '@core/ports';
@@ -20,7 +23,6 @@ describe('entity extraction in memory maintenance', () => {
     const adv = adventure(18, 'You wave and mira waves back.');
     adv.entities = [mergeEntity(undefined, { name: 'Mira', kind: 'character', description: '', facts: [] }, 0)];
     const reply = {
-      importance: 2,
       entities: [
         { name: 'Brass Owl', kind: 'place', description: 'Copied from the example.', facts: [] },
         { name: 'Mira', kind: 'character', description: '', facts: ['She waves.'] },
@@ -43,7 +45,6 @@ describe('entity extraction in memory maintenance', () => {
     const adv = adventure(30);
     const reqs: CompletionRequest[] = [];
     const reply = {
-      importance: 3,
       entities: [
         { name: 'Mira', kind: 'character', aliases: ['the courier'], description: 'A courier.', facts: ['She found the map.'] },
         { name: 'the map', kind: 'item', description: 'A common noun, not a name.', facts: [] },
@@ -131,7 +132,6 @@ describe('entity extraction in memory maintenance', () => {
     const said = adv.actions[1];
     if (said) said.versions = ['"Hold the rope," she says.'];
     const reply = {
-      importance: 2,
       entities: [{ name: 'Mira', kind: 'character', description: 'A courier.', facts: [] }],
       speakers: [{ action: 1, name: 'Mira' }],
     };
@@ -150,7 +150,6 @@ describe('entity extraction in memory maintenance', () => {
     const adv = adventure(30);
     const reqs: CompletionRequest[] = [];
     const reply = {
-      importance: 2,
       timeDelta: { parts: 1 },
       scene: { location: 'the mill', present: ['Mira'], timeOfDay: 'evening' },
       entities: [],
@@ -190,6 +189,20 @@ describe('entity extraction in memory maintenance', () => {
     });
   });
 
+  it('neither asks for nor keeps the fields the schema dropped', async () => {
+    expect(extractPrompt('[0] Mira waves.', [])).not.toMatch(/importance|threads/);
+    expect(EXTRACT_JSON_SCHEMA.required).toEqual(['timeDelta', 'entities', 'speakers']);
+    const stray =
+      '{"importance": 4, "timeDelta": {"days": 0, "parts": 0}, "entities": [{"name": "Mira", "kind": "character", "description": "A courier.", "facts": []}], "speakers": [], "threads": ["x"]}';
+    const provider = fakeProvider(async function* () {
+      yield { text: stray.slice(1), done: true };
+    });
+    const r = await extractFromPassage('[0] Mira waves.', [], { ...fakeDeps(adventure(1)).deps, provider });
+    expect(r?.entities.map((e) => e.name)).toEqual(['Mira']);
+    expect(r).not.toHaveProperty('importance');
+    expect(r).not.toHaveProperty('threads');
+  });
+
   it('waits for a second memory before the entity call', async () => {
     const adv = adventure(12);
     const { deps, calls } = fakeDeps(adv);
@@ -201,7 +214,7 @@ describe('entity extraction in memory maintenance', () => {
   it(`keeps the first ${MAX_ENTITIES} entities of a longer reply`, async () => {
     const names = ['Ana', 'Bo', 'Cy', 'Di', 'Ed', 'Fay'];
     const adv = adventure(18, `You wave at ${names.join(', ')}.`);
-    const reply = { importance: 1, entities: names.map((name) => ({ name, kind: 'character', description: '', facts: [] })), speakers: [] };
+    const reply = { entities: names.map((name) => ({ name, kind: 'character', description: '', facts: [] })), speakers: [] };
     const provider = fakeProvider(async function* (req) {
       yield { text: req.prompt.includes(ENTITY_PROMPT) ? JSON.stringify(reply).slice(1) : 'Mira found the map.', done: true };
     });

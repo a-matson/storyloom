@@ -4,7 +4,6 @@ import { advanceTime, nextScene } from '@core/memory/scene';
 import type { ExtractionJson, Scene } from '@core/model/types';
 
 const reply = (over: Partial<ExtractionJson> = {}): ExtractionJson => ({
-  importance: 2,
   timeDelta: { days: 0, parts: 0 },
   entities: [],
   speakers: [],

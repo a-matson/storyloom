@@ -42,7 +42,7 @@ const accepter =
   };
 
 /**
- * The combined helper call: entities, speakers, importance, time and threads for one passage
+ * The combined helper call: entities, speakers, time and scene for one passage
  * whose paragraphs are numbered by action index. Null when the reply is unusable or cut.
  */
 export async function extractFromPassage(passage: string, knownNames: string[], deps: ExtractDeps): Promise<ExtractionJson | null> {
