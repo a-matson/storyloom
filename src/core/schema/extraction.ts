@@ -4,7 +4,7 @@ import { EntityKind, Relation } from './entity';
 
 // Not re-exported from `./index`: only the lazy memory jobs parse these, so they stay off the start-up bundle.
 
-/** Five entities of two facts fit the call's 300 tokens. [provisional] */
+/** Five entities of two facts fit the call's 300 tokens. [measured: 2026-10-08-recall-wave2-run1.json] */
 export const MAX_ENTITIES = 5;
 
 /** One entity as the helper model reports it. */
