@@ -5,6 +5,7 @@
  *   latency <url> [turns] TTFT, cache hit %, tok/s against a live backend (cold vs cached prefix)
  *   gatev <url>           llama-server checks: template, tokenizer error, warming, layout, evictionChunk, CORS
  *   clock <url> [label]   does the helper call report stated time? 5 fixed passages through extractFromPassage
+ *   memory-keep <url> [label]  does the memory for each planted Do/Say keep the fact? (recorded history, ~16 calls)
  *   contradiction <url> [label]  precision/recall of the contradiction check on 40 hand-labelled outputs
  *   live <url> [label]   plays 20 scripted turns in the real app; per-turn stats, memories, summary
  *   images <image-url> <url>  See mode and a cover against a real A1111 server
@@ -20,6 +21,10 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
   latency: { cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/latency'], env: { MEASURE_URL: a, MEASURE_TURNS: b } },
   gatev: { cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/gatev'], env: { MEASURE_URL: a } },
   clock: { cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/clock'], env: { MEASURE_URL: a, MEASURE_LABEL: b } },
+  'memory-keep': {
+    cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/memoryKeep'],
+    env: { MEASURE_URL: a, MEASURE_LABEL: b },
+  },
   contradiction: {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/contradiction'],
     env: { MEASURE_URL: a, MEASURE_LABEL: b },

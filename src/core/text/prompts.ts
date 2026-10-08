@@ -6,17 +6,24 @@
  */
 
 export const MEMORY_SYSTEM =
-  'You compress story passages into dense factual memories. Output only the memory: 1–3 sentences, past tense, ' +
+  'You compress story passages into dense factual memories. Output only the memory: 1–4 sentences, past tense, ' +
   'proper names kept, no prose flourishes, no commentary, no headings.';
 
-/** One original passage -> memory pair, so the model sees a summary rather than a continuation. [provisional] */
+/**
+ * One original passage -> memory pair, so the model sees a summary rather than a continuation. Its player
+ * line states a trait the memory keeps. A ferry example was copied verbatim into ferry stories. [provisional]
+ */
 const MEMORY_EXAMPLE =
-  'Example (from a different story):\n---\nThe ferryman names his price: a silver coin. "Or you swim," he says.\n> You give him the coin.\n' +
-  'He pockets it and poles you across to Saltmarsh, where Captain Odo is waiting on the jetty.\n---\n' +
-  'Memory: You paid the ferryman a silver coin to cross to Saltmarsh. Captain Odo was waiting there.\n\n';
+  'Example (from a different story; never copy its names or events):\n---\nThe innkeeper eyes your pack. "Two pennies a night. The pass is snowed in till spring."\n' +
+  "> You pay, turning the copper ring on your thumb, your mother's last gift, and say you walked from Dunmere to sell your songs.\n" +
+  'She hands you the key to the loft above the stables.\n---\n' +
+  "Memory: You wear your mother's copper ring on your thumb and walked from Dunmere to sell your songs. You paid two pennies for the loft above the stables; the pass is snowed in until spring.\n\n";
 
 export function memoryPrompt(passage: string): string {
-  return `${MEMORY_EXAMPLE}Summarise the key facts, decisions, discoveries and relationship changes in this passage.\n\n---\n${passage}\n---\n\nMemory:`;
+  return (
+    `${MEMORY_EXAMPLE}Summarise the key facts, decisions, discoveries and relationship changes in this passage, ` +
+    `and anything the player states about themselves (name, body, belongings, past).\n\n---\n${passage}\n---\n\nMemory:`
+  );
 }
 
 /**
