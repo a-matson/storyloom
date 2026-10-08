@@ -16,6 +16,8 @@ export const ModelSettings = z.object({
   minP: z.optional(z.number()),
   repetitionPenalty: z.optional(z.number()),
   seed: z.optional(z.number()),
+  /** AID's "Dynamic" without weight swaps: each turn takes the next model preset's samplers instead of these. */
+  dynamic: z._default(z.boolean(), false),
 });
 
 export const MemorySettings = z.object({

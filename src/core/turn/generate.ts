@@ -1,5 +1,6 @@
 import type { Adventure } from '../model/types';
 import type { CompletionRequest, CompletionStats } from '../ports/provider';
+import { MODEL_PRESETS } from '../text/modelPresets';
 import { sentenceEndAfter, trimUnfinishedSentence } from '../text/formatting';
 import { runHook } from './hooks';
 import type { Generated, PreparedContext, TurnDeps, TurnEvent } from './types';
@@ -20,7 +21,11 @@ export function buildRequest(
   prepared: Pick<PreparedContext, 'prompt' | 'stop'>,
   opts: { slotId?: number; seed?: number } = {},
 ): CompletionRequest {
-  const s = adventure.settings.model;
+  const model = adventure.settings.model;
+  // Samplers are not in the prompt, so rotating them leaves the KV cache prefix intact.
+  // ponytail: rotates every preset whatever model is loaded; narrow to its family if one runs too hot.
+  const preset = model.dynamic ? MODEL_PRESETS[adventure.actions.length % MODEL_PRESETS.length]?.settings : undefined;
+  const s = { ...model, ...preset };
   return {
     prompt: prepared.prompt,
     maxTokens: s.responseLength + SOFT_STOP_MARGIN,

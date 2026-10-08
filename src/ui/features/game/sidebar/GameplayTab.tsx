@@ -55,6 +55,13 @@ function StoryGenerator({ s, update }: { s: Settings; update: Update }) {
           ))}
         </Select>
       </Setting>
+      <SettingSwitch
+        id="dynamic-samplers"
+        label="Dynamic samplers"
+        title="Each turn uses the next preset's samplers instead of Model settings, against sameness in long stories; the prompt and cache are unaffected"
+        checked={s.model.dynamic}
+        onChange={(on) => update({ model: { ...s.model, dynamic: on } })}
+      />
       <p className="text-caption text-muted-foreground">Model: {s.modelId ?? 'as loaded in the backend'}. Change backends in Settings.</p>
     </Section>
   );

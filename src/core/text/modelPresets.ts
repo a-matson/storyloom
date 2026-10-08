@@ -16,7 +16,7 @@ export interface ModelPreset {
   /** Substring to recognise the model from a GGUF file name. */
   match: RegExp;
   /** Samplers only: context and response length are budgets, not model traits. */
-  settings: Omit<ModelSettings, 'contextLength' | 'responseLength'>;
+  settings: Omit<ModelSettings, 'contextLength' | 'responseLength' | 'dynamic'>;
   notes: string;
 }
 
