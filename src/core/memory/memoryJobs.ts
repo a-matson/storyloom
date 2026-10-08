@@ -1,7 +1,7 @@
 import type { Action, Adventure, Memory, Speaker } from '../model/types';
 import { actionText } from '../model/types';
 import { createMemory, currentRange, dueMemoryRanges, evictToSize, isPlayerAction, MEMORY_SPAN, summaryDue, type MemoryRange } from './memoryBank';
-import { MEMORY_SYSTEM, SUMMARY_SYSTEM, memoryPrompt, sentenceGrammar, summaryPrompt } from '../text/prompts';
+import { MEMORY_EXAMPLE_DETAILS, MEMORY_SYSTEM, SUMMARY_SYSTEM, memoryPrompt, sentenceGrammar, summaryPrompt } from '../text/prompts';
 import { renderTemplate } from '../text/templates';
 import { collect, type Provider } from '../ports/provider';
 import type { Embedder } from '../ports/embedder';
@@ -104,7 +104,18 @@ async function summarise(passage: string, deps: TextDeps): Promise<string> {
     ),
   );
   if (deps.cancel?.aborted) return '';
-  return trimUnfinishedSentence(text, stats?.stopReason).trim();
+  return dropExampleDetails(trimUnfinishedSentence(text, stats?.stopReason).trim(), passage);
+}
+
+/** Drops each sentence naming a detail of the worked example that the passage does not; the prompt's "never copy" line alone did not stop it. */
+function dropExampleDetails(memory: string, passage: string): string {
+  const lower = passage.toLowerCase();
+  const leaked = MEMORY_EXAMPLE_DETAILS.filter((d) => !lower.includes(d));
+  const sentences = [...new Intl.Segmenter('en', { granularity: 'sentence' }).segment(memory)].map((s) => s.segment);
+  return sentences
+    .filter((s) => !leaked.some((d) => s.toLowerCase().includes(d)))
+    .join('')
+    .trim();
 }
 
 /**
