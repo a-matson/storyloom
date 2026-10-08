@@ -13,7 +13,7 @@ export default defineConfig({
   expect: { toHaveScreenshot: { maxDiffPixels: 0, animations: 'disabled' } },
   use: { baseURL: `http://localhost:${port}`, trace: 'retain-on-failure' },
   projects: [
-    { name: 'chromium', testIgnore: 'live/**', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } } },
+    { name: 'chromium', testIgnore: ['live/**', 'prod/**'], use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } } },
     // Real-model runs (`pnpm measure live <url>`); skipped without MEASURE_URL.
     // Actions get a timeout: without one a hung click waits for the hour-long test timeout.
     { name: 'live', testMatch: 'live/**', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 }, actionTimeout: 60_000 } },
