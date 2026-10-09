@@ -149,28 +149,27 @@ describe('MemoryScheduler', () => {
       expect(calls[0]).toBe('introduce');
     });
 
-    it('is cut by the next turn', async () => {
-      const { adv, calls, scheduler } = setup();
+    it('outlives the next turn, which starts no second call beside it', async () => {
+      const { adv, calls, release, scheduler } = setup();
       const idle = new AbortController();
       scheduler.start(idle.signal);
       await vi.waitFor(() => expect(calls).toEqual(['introduce']));
       idle.abort();
+      scheduler.start(new AbortController().signal);
       await new Promise((r) => setTimeout(r, 20));
-      expect(adv.entities).toEqual([]);
       expect(calls).toEqual(['introduce']);
+      release();
+      await vi.waitFor(() => expect(adv.entities.map((e) => e.name)).toEqual(['Tamsin']));
+      // The re-run finds the same turn already read: no second call.
+      await vi.waitFor(() => expect(calls).toContain('memory'));
+      expect(calls.filter((c) => c === 'introduce')).toHaveLength(1);
     });
 
-    it('reads the opening on open, until the first action stops it', async () => {
-      const { adv, calls, release, scheduler } = setup();
+    it('reads the opening on open', async () => {
+      const { adv, release, scheduler } = setup();
       adv.scriptState = { ...adv.scriptState, __introducedAt: undefined };
-      const first = new AbortController();
-      scheduler.open(first.signal);
-      await vi.waitFor(() => expect(calls).toEqual(['introduce']));
-      first.abort();
+      scheduler.open();
       release();
-      await new Promise((r) => setTimeout(r, 20));
-      expect(adv.entities).toEqual([]);
-      scheduler.open(new AbortController().signal);
       await vi.waitFor(() => expect(adv.entities.map((e) => e.name)).toEqual(['Tamsin']));
     });
   });

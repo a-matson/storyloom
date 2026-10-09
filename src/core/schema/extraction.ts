@@ -31,6 +31,21 @@ export const ExtractedEntity = z.object({
   relations: z.optional(z.array(Relation)),
 });
 
+/** New names one introduction reply covers; a turn rarely brings more. [provisional] */
+export const MAX_INTRODUCED = 3;
+
+/**
+ * The introduction call's reply: only what a new card needs. The full reply (scene, speakers, facts)
+ * took ~28 s on slot 1, longer than a player reads, so the next turn cut it. [measured: 2026-10-09-live-play-m11-2-read30.json]
+ */
+export const IntroducedEntity = z.object({
+  name: ExtractedEntity.shape.name,
+  kind: EntityKind,
+  description: sentence(100),
+  appearance: z.optional(sentence(100)),
+});
+export const IntroductionJson = z.object({ entities: z.array(IntroducedEntity).check(z.maxLength(MAX_INTRODUCED)) });
+
 /**
  * The combined helper call's reply (also sent as llama-server `json_schema`, which keeps this key
  * order). Short fields come first so a reply cut at `maxTokens` still has them; `entities` is the

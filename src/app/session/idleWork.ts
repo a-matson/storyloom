@@ -92,13 +92,6 @@ export class IdleWork {
     return ac.signal;
   }
 
-  /** A signal for work that is not warming (the opening's introduction call); the next action or edit aborts it like idle work. */
-  hold(): AbortSignal {
-    this.stop();
-    this.abort = new AbortController();
-    return this.abort.signal;
-  }
-
   /** An edit changed the prompt: stop, then re-warm once edits stop so the next turn does not prefill cold. */
   afterEdit(): void {
     this.stop();

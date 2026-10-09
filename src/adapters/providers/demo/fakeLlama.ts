@@ -98,7 +98,8 @@ export function createFakeLlama(opts: FakeLlamaOptions = {}): (req: Request) => 
     opts.onPrompt?.(prompt, body);
     if (body.n_predict === 0) return json({ content: '', stop: true, tokens_evaluated: Math.ceil(prompt.length / 4), tokens_cached: 0 });
     // Entity calls find nobody, and leave the rotation alone: the opening's call would shift every story line.
-    if (prompt.includes('List every named character')) return oneShot({ content: '{"scene": {}, "entities": [], "speakers": []}', stop: true });
+    if (prompt.includes('List every named character') || prompt.includes('New here:'))
+      return oneShot({ content: '{"scene": {}, "entities": [], "speakers": []}', stop: true });
     if (body.json_schema !== undefined) return card(prompt, rotate(NAMES, n++));
     if (/Memory:\s*$|Write the updated summary:\s*$/.test(prompt)) {
       return oneShot({ content: MEMORY, stop: true, stop_type: 'eos', tokens_evaluated: 200, tokens_predicted: 20 });

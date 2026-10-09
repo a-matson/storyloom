@@ -2,7 +2,8 @@ import type { Adventure } from '../model/types';
 import { actionText } from '../model/types';
 import { hashPrompt } from '../trace';
 import { namedInPassage } from './entities';
-import { NOT_A_NAME, updateEntities, type EntityUpdate, type ExtractDeps } from './extract';
+import { MAX_INTRODUCED } from '../schema/extraction';
+import { foldEntities, introduceFromPassage, NOT_A_NAME, passageOf, type EntityUpdate, type ExtractDeps } from './extract';
 import { MEMORY_SPAN } from './memoryBank';
 
 /** Capitalised runs; a leading stop word is dropped from the run ("Then Mira" → "Mira"). */
@@ -13,9 +14,6 @@ const STOP = new Set('you the an it they we he she but and then when day night d
 
 /** Actions an introduction reads at least: the last AI output and the player line before it. [provisional] */
 const INTRODUCE_SPAN = 2;
-
-/** A two-action passage names few entities; the batch call's 300 cut replies that carried appearances. [provisional] */
-const INTRODUCE_TOKENS = 450;
 
 /** Names in `text` not yet recorded: capitalised mid-sentence (or there once), not `known` (names and aliases). */
 export function candidateNames(text: string, known: readonly string[]): string[] {
@@ -51,8 +49,13 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps): Promis
   const range = { fromAction: Math.max(0, n - MEMORY_SPAN, Math.min(at ?? 0, n - INTRODUCE_SPAN)), toAction: n };
   const known = adventure.entities.flatMap((e) => [e.name, ...e.aliases]);
   const names = [...new Set(adventure.actions.slice(range.fromAction).flatMap((a) => candidateNames(actionText(a), known)))];
-  const r = names.length ? await updateEntities(adventure, range, deps, { maxTokens: INTRODUCE_TOKENS, newNames: names }) : none();
+  const passage = passageOf(adventure, range);
+  // ponytail: names past the grammar's cap wait for the batch call; raise MAX_INTRODUCED if openings name more.
+  const reply = names.length ? await introduceFromPassage(passage, names.slice(0, MAX_INTRODUCED), deps) : null;
   if (deps.cancel?.aborted) return none();
   adventure.scriptState = { ...adventure.scriptState, __introducedAt: n, __introducedHash: hash };
-  return r;
+  if (!reply) return none();
+  // No speakers: the short reply leaves them to the client guess and the batch call.
+  const cards = reply.map((e) => Object.assign(e, { facts: [] }));
+  return { touched: foldEntities(adventure, cards, passage, n - 1), speakers: new Map() };
 }
