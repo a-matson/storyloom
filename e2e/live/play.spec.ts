@@ -3,7 +3,7 @@ import { z } from 'zod/mini';
 import type { Entity } from '@core/model';
 import * as S from '@core/schema';
 import { OUT_DIR, writeMeasurement } from '../../bench/env';
-import { watchIntroductions } from './introductions';
+import { watchIntroductions } from '../../bench/introductions';
 
 // `pnpm measure live <url>`: plays the real app against a real llama-server; never runs in CI.
 const URL = process.env['MEASURE_URL'];
