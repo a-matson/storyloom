@@ -18,10 +18,9 @@ import type { MaintenanceDeps } from './memoryJobs';
 type ExtractDeps = Pick<MaintenanceDeps, 'provider' | 'template' | 'cancel'>;
 
 // Entities are checked one by one, so a bad one (a lowercase name without the grammar) costs only itself.
-const Envelope = z.looseObject({ entities: z.array(z.unknown()), timeDelta: z.optional(z.looseObject({})) });
+const Envelope = z.looseObject({ entities: z.array(z.unknown()) });
 
 /**
- * A missing `timeDelta` or half of one (no grammar, or a cut) means no time passed.
  * A reply cut at maxTokens loses `speakers` after repair (the entities before it are whole), and
  * repair closes its last entity mid-fact, so that one is dropped. Without the grammar a reply may
  * list more than `MAX_ENTITIES`; the first ones are kept.
@@ -36,18 +35,17 @@ const accepter =
       const one = ExtractedEntity.safeParse(e);
       return one.success ? [one.data] : [];
     });
-    const timeDelta = { days: 0, parts: 0, ...loose.data.timeDelta };
-    const r = Schema.safeParse({ speakers: [], ...loose.data, timeDelta, entities });
+    const r = Schema.safeParse({ scene: {}, speakers: [], ...loose.data, entities });
     return r.success ? r.data : null;
   };
 
 /**
- * The combined helper call: entities, speakers, time and scene for one passage
+ * The combined helper call: entities, speakers and scene for one passage
  * whose paragraphs are numbered by action index. Null when the reply is unusable or cut.
  */
 export async function extractFromPassage(passage: string, knownNames: string[], deps: ExtractDeps): Promise<ExtractionJson | null> {
   const caps = await deps.provider.capabilities();
-  const rendered = renderTemplate(deps.template, EXTRACT_SYSTEM, extractPrompt(passage, knownNames), caps.jsonSchema ? '' : '{');
+  const rendered = renderTemplate(deps.template, EXTRACT_SYSTEM, extractPrompt(passage, knownNames, caps.jsonSchema), caps.jsonSchema ? '' : '{');
   const { text, stats } = await trackJob('entity', () =>
     collect(
       deps.provider.complete(
@@ -93,7 +91,7 @@ export async function catchUpEntities(adventure: Adventure, deps: MaintenanceDep
   if (!first || !last || (deps.signal?.aborted && !entitiesOverdue(adventure))) return none;
   const r = await updateEntities(adventure, { fromAction: first.fromAction, toAction: last.toAction }, deps);
   if (deps.cancel?.aborted) return none;
-  // Here, not in `updateEntities`: "Update from story" re-reads old ranges and would add their time again.
+  // Here, not in `updateEntities`: "Update from story" re-reads old ranges and would move the scene back to them.
   const scene = r.reply && nextScene(adventure.plot.scene, r.reply, (n) => n !== '' && !NOT_A_NAME.test(n));
   const sceneUpdated = !!scene && scene !== adventure.plot.scene;
   if (scene && sceneUpdated) adventure.plot = { ...adventure.plot, scene };

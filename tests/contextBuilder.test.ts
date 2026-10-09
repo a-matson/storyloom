@@ -190,7 +190,7 @@ describe('ordering', () => {
     ...Array.from({ length: 40 }, (_, i) => act('continue', `Amanda ${i} ${long(15)}`)),
     act('do', '> You wave at Amanda.'),
   ];
-  const scene = { location: 'the mill', present: ['Amanda'], time: { day: 2, part: 'night' as const } };
+  const scene = { location: 'the mill', present: ['Amanda'], weather: 'rain' };
   const plot = { aiInstructions: 'SYS', plotEssentials: 'ESS', storySummary: 'SUM', authorsNote: 'AN', scene };
   const cards = [card('Amanda', ['Amanda'], 'Amanda is your daughter.')];
   const memories = [{ memory: mem('Old memory', 0, 6), score: 1 }];
@@ -233,7 +233,7 @@ describe('ordering', () => {
       'lastAction',
     ]);
     expect(r.sections.filter((s) => s.cacheable).map((s) => s.kind)).toEqual(['instructions', 'plotEssentials', 'history']);
-    expect(r.sections.find((s) => s.kind === 'scene')?.text).toBe('[Scene: the mill · Present: Amanda · Night, day 2]');
+    expect(r.sections.find((s) => s.kind === 'scene')?.text).toBe('[Scene: the mill · Present: Amanda · Rain]');
     expect(r.body.startsWith('ESS\n\nRecent Story:\n')).toBe(true);
   });
 

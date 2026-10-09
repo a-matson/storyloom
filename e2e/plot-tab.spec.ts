@@ -7,27 +7,24 @@ test('there is no Scene section before the memory jobs write a scene', async ({ 
   await expect(page.getByText('Scene', { exact: true })).toHaveCount(0);
 });
 
+// The seeded `time` is an old save's clock: it stays in the data but never reaches the prompt.
 test('a seeded scene shows in the Plot tab and an edit persists', async ({ page }) => {
   await openSeededAdventure(page, 3, undefined, { scene: { location: 'the Old Well', present: ['Merav'], time: { day: 2, part: 'evening' } } });
   await page.getByText('Scene', { exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Scene location' })).toHaveValue('the Old Well');
   await expect(page.getByRole('textbox', { name: 'Present' })).toHaveValue('Merav');
-  await expect(page.getByLabel('Time of day')).toHaveValue('evening');
-  await page.getByLabel('Time of day').selectOption('night');
   await page.getByRole('textbox', { name: 'Weather' }).fill('dust storm');
 
   await page.reload();
   await page.getByText('Scene', { exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Weather' })).toHaveValue('dust storm');
-  await expect(page.getByLabel('Time of day')).toHaveValue('night');
-  await expect(page.getByRole('spinbutton', { name: 'Day' })).toHaveValue('2');
 
   await page.getByRole('textbox', { name: 'Take a turn' }).fill('drink from the well');
   await page.getByRole('button', { name: 'Send' }).click();
   await page.getByRole('button', { name: 'View context' }).last().click();
   const context = page.getByRole('dialog', { name: 'Context sent to the model' });
   await context.getByRole('button', { name: 'Raw prompt' }).click();
-  await expect(context.getByText('[Scene: the Old Well · Present: Merav · Night, day 2 · Dust storm]')).toBeVisible();
+  await expect(context.getByText('[Scene: the Old Well · Present: Merav · Dust storm]')).toBeVisible();
 });
 
 test('an edited Story Summary persists and shows when it refreshes', async ({ page }) => {

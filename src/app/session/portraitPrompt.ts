@@ -23,10 +23,11 @@ export function portraitStyle(tags: readonly string[]): string {
   return GENRE_STYLE.find(([re]) => tags.some((t) => re.test(t)))?.[1] ?? NEUTRAL_STYLE;
 }
 
-export function portraitPrompt(e: Pick<Entity, 'description' | 'facts'>, style: string): string {
+/** Looks first: SD 1.5 weighs the start of a prompt most. */
+export function portraitPrompt(e: Pick<Entity, 'description' | 'appearance' | 'facts'>, style: string): string {
   const looks = e.facts
     .map((f) => f.text.trim())
     .filter((t) => APPEARANCE.test(t))
-    .slice(0, 3);
-  return ['portrait, head and shoulders', e.description.trim(), ...looks, style.trim()].filter(Boolean).join(', ');
+    .slice(0, 2);
+  return ['portrait, head and shoulders', e.appearance?.trim(), e.description.trim(), ...looks, style.trim()].filter(Boolean).join(', ');
 }

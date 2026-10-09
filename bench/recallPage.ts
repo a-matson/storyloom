@@ -123,7 +123,14 @@ export function costAndState(r: Rows) {
     entities: z
       .array(S.Entity)
       .parse(r.entities)
-      .map(({ kind, name, canon, facts, state }) => ({ kind, name, canon, state, facts: facts.map((f) => (f.conflict ? `CONFLICT ${f.text}` : f.text)) })),
+      .map(({ kind, name, canon, appearance, facts, state }) => ({
+        kind,
+        name,
+        canon,
+        appearance,
+        state,
+        facts: facts.map((f) => (f.conflict ? `CONFLICT ${f.text}` : f.text)),
+      })),
     scene: (r.adventure['plot'] as { scene?: unknown } | undefined)?.scene,
   };
 }
