@@ -49,6 +49,24 @@ describe('entity merge rules', () => {
     expect(next.facts).toHaveLength(3);
   });
 
+  it('sets the appearance when empty and lets a fuller one replace it, keeping the old as a fact', () => {
+    const first = mergeEntity(undefined, seen({ appearance: 'Grey hair.' }), 1);
+    expect(first.appearance).toBe('Grey hair.');
+    expect(mergeEntity(first, seen({ appearance: 'Tall.' }), 2).appearance).toBe('Grey hair.');
+    expect(mergeEntity(first, seen(), 2).appearance).toBe('Grey hair.');
+    const next = mergeEntity(first, seen({ appearance: 'Grey hair and a patched blue coat.' }), 5);
+    expect(next.appearance).toBe('Grey hair and a patched blue coat.');
+    expect(next.facts.map((f) => f.text)).toEqual(['looked: Grey hair.']);
+    expect(mergeEntity(undefined, seen(), 1)).not.toHaveProperty('appearance');
+  });
+
+  it('never replaces a canon appearance, but fills a missing one', () => {
+    const canon: Entity = { ...mergeEntity(undefined, seen(), 1), canon: true };
+    const filled = mergeEntity(canon, seen({ appearance: 'Grey hair.' }), 2);
+    expect(filled.appearance).toBe('Grey hair.');
+    expect(mergeEntity(filled, seen({ appearance: 'Grey hair and a patched blue coat.' }), 3).appearance).toBe('Grey hair.');
+  });
+
   it('matches a name or alias case-insensitively', () => {
     const e = mergeEntity(undefined, seen({ aliases: ['the Ferrywoman'] }), 1);
     expect(matchEntity([e], '  THE ferrywoman ')).toBe(e);

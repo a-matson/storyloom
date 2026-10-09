@@ -39,28 +39,30 @@ export function sentenceGrammar(max: number): string {
 
 export const EXTRACT_SYSTEM = 'You keep a record of the people, places, items and factions in an interactive story. Reply with JSON only.';
 
-/** One original passage -> record pair, so the model sees facts rather than a retelling. [provisional] */
-const EXTRACT_EXAMPLE =
-  'Example (from a different story; never copy its names):\n---\n[4] At midnight, in her workshop, the clockmaker, Ysolde Brenn, sets the Brass Owl on her bench. "The Guild of Hours wants it back by dawn," she says.\n' +
-  '[5] > You ask what it does.\n[6] Ysolde winds the owl. Its eyes open, and it recites the vault code of the Copper Exchange.\n---\n' +
-  '{"timeDelta": {"days": 0, "parts": 0}, "scene": {"location": "Ysolde\'s workshop", "present": ["Ysolde Brenn"], "timeOfDay": "night"}, "entities": [{"name": "Ysolde Brenn", "kind": "character", "aliases": ["the clockmaker"], "description": "A clockmaker with a workshop.", ' +
-  '"facts": ["She has the Brass Owl."], "state": {"location": "her workshop"}}, ' +
-  '{"name": "Brass Owl", "kind": "item", "description": "A clockwork owl that recites the vault code of the Copper Exchange.", "facts": ["The Guild of Hours wants it back by dawn."]}, ' +
-  '{"name": "Guild of Hours", "kind": "faction", "description": "A guild that claims the Brass Owl.", "facts": []}, ' +
-  '{"name": "Copper Exchange", "kind": "place", "description": "A place with a vault.", "facts": []}], ' +
-  '"speakers": [{"action": 4, "name": "Ysolde Brenn"}]}\n\n';
+/**
+ * The reply's shape when no grammar carries it. Placeholders, not a worked example: the 12B copied
+ * the example's names into the record (#116). [provisional]
+ */
+const EXTRACT_SKELETON =
+  'Return JSON in this shape (<...> are placeholders):\n' +
+  '{"scene": {"location": "<place>", "present": ["<Name>"], "weather": "<weather>"},\n' +
+  ' "entities": [{"name": "<Name>", "kind": "character", "aliases": ["<role>"], "description": "<one sentence>",\n' +
+  '   "appearance": "<one sentence>", "facts": ["<fact>"], "state": {"<key>": "<value>"}},\n' +
+  '  {"name": "<Name>", "kind": "place", "description": "<one sentence>", "facts": []}],\n' +
+  ' "speakers": [{"action": <number>, "name": "<Name>"}]}';
 
-export function extractPrompt(passage: string, knownNames: string[]): string {
+/** `grammar`: the reply is constrained by `EXTRACT_JSON_SCHEMA`, which already carries the shape. */
+export function extractPrompt(passage: string, knownNames: string[], grammar: boolean): string {
   return (
-    `${EXTRACT_EXAMPLE}List every named character, place, item and faction in this passage, with what it tells about each. ` +
+    'List every named character, place, item and faction in this passage, with what it tells about each. ' +
     'Only things with a proper name; skip common nouns like "the path" or "wolves". An unnamed role ("the ferrywoman") is an alias of the named person it refers to.' +
     `\n\n---\n${passage}\n---\n\n` +
     (knownNames.length ? `Already recorded (use these exact names when the passage means them): ${knownNames.join(', ')}.\n` : '') +
     'Give each entity a one-sentence description and 0–2 facts: short sentences about what lasts (who or what it is, what it owns, injuries, loyalties), not single actions or dialogue, and nothing the passage does not state. ' +
+    'appearance is only for characters: one sentence of what they look like, only what the passage shows (hair, build, clothes, marks). Leave it out for places, items and factions, and for a character the passage does not describe. ' +
     'The player is "you", not an entity. speakers names who talks in each numbered paragraph. ' +
-    'timeDelta is the time the passage says has passed, in whole days and parts (a part is a sixth of a day: dawn, morning, midday, afternoon, evening, night): always give it, 0 and 0 when the passage does not say time passed. ' +
-    'scene is where the passage ends: the place, the named characters there, and the time of day and weather only when the passage states them. ' +
-    'Return {"timeDelta": {"days": number, "parts": number}, "scene": {...}, "entities": [...], "speakers": [...]}.'
+    'scene is where the passage ends: the place, the named characters there, and the weather only when the passage states it.\n' +
+    (grammar ? 'Return {"scene": {...}, "entities": [...], "speakers": [...]}.' : EXTRACT_SKELETON)
   );
 }
 

@@ -151,10 +151,19 @@ export function mergeEntity(existing: Entity | undefined, incoming: ExtractedEnt
     relations.push(r);
   }
 
+  // A fuller description of the looks wins over a sparse one; canon looks are the player's.
+  const looks = incoming.appearance?.trim() ?? '';
+  let appearance = base.appearance;
+  if (!appearance || (!base.canon && looks.length > appearance.length)) {
+    if (appearance && looks) addFact(`looked: ${appearance}`);
+    appearance = looks || appearance;
+  }
+
   return {
     ...base,
     aliases,
     description: base.canon ? base.description : base.description || (incoming.description ?? '').trim(),
+    ...(appearance && { appearance }),
     facts,
     state,
     relations,

@@ -25,6 +25,8 @@ export const Entity = z.object({
   name: z.string(),
   aliases: z.array(z.string()),
   description: z.string(),
+  /** What they look like, for the portrait prompt; merged like `description`. */
+  appearance: z.optional(z.string()),
   facts: z.array(EntityFact),
   /** Current values (location, condition, ...); an overwrite keeps the old value as a fact. */
   state: z.record(z.string(), z.string()),

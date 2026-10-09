@@ -25,7 +25,7 @@ function entity(name: string, description: string, facts: string[], state: Recor
 }
 
 const actions = [act('start', 'The mill.'), ...Array.from({ length: 30 }, (_, i) => act('continue', `${i} ${long(20)}`)), act('do', '> You call for Orrin.')];
-const scene = { location: 'the mill', present: ['Lena'], time: { day: 2, part: 'night' as const } };
+const scene = { location: 'the mill', present: ['Lena'], weather: 'cold rain at night' };
 const lena = entity('Lena', 'Lena keeps the mill.', ['She has blue eyes.', 'She owes Orrin money.'], { location: 'the loft' });
 const orrin = entity('Orrin', 'Orrin is a ferryman.', ['He fears water.']);
 const tamsin = entity('Tamsin', 'Tamsin is far away.', ['She left.']);

@@ -146,15 +146,10 @@ describe('entity extraction in memory maintenance', () => {
     expect([...report.speakers]).toEqual([[said?.id, [{ paragraph: 0, name: 'Mira' }]]]);
   });
 
-  it('moves the scene from the same call: the first reply starts the clock, the next one advances it', async () => {
-    const adv = adventure(30);
+  it('moves the scene from the same call, with no clock', async () => {
+    const adv = adventure(18);
     const reqs: CompletionRequest[] = [];
-    const reply = {
-      timeDelta: { parts: 1 },
-      scene: { location: 'the mill', present: ['Mira'], timeOfDay: 'evening' },
-      entities: [],
-      speakers: [],
-    };
+    const reply = { scene: { location: 'the mill', present: ['Mira'] }, entities: [], speakers: [] };
     const provider = fakeProvider(
       async function* (req) {
         reqs.push(req);
@@ -164,34 +159,44 @@ describe('entity extraction in memory maintenance', () => {
       true,
     );
     expect(await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider })).toMatchObject({ sceneUpdated: true });
-    expect(await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider })).toMatchObject({ sceneUpdated: true });
-    expect(reqs.filter((r) => r.prompt.includes(ENTITY_PROMPT))).toHaveLength(2);
-    expect(adv.plot.scene).toEqual({ location: 'the mill', present: ['Mira'], time: { day: 1, part: 'night' } });
+    expect(adv.plot.scene).toEqual({ location: 'the mill', present: ['Mira'] });
+    const schema = reqs.find((r) => r.jsonSchema)?.jsonSchema;
+    expect(JSON.stringify(schema)).not.toMatch(/timeDelta|timeOfDay/);
   });
 
-  it('requires both halves of timeDelta in the grammar, and reads a missing half as zero', async () => {
-    const adv = adventure(18);
-    adv.plot = { ...adv.plot, scene: { present: [], time: { day: 1, part: 'night' } } };
-    const reqs: CompletionRequest[] = [];
+  it('stores the appearance a reply gives, and leaves it unset when the reply has none', async () => {
+    const reply =
+      '{"entities": [{"name": "Mira", "kind": "character", "description": "A courier.", "appearance": "Short, with a shaved head.", "facts": []}, ' +
+      '{"name": "Tobin", "kind": "character", "description": "A miller.", "facts": []}], "speakers": []}';
+    const adv = adventure(18, 'You wave and Mira and Tobin wave back.');
     const provider = fakeProvider(
       async function* (req) {
-        reqs.push(req);
-        yield { text: req.prompt.includes(ENTITY_PROMPT) ? '{"importance": 2, "timeDelta": {"days": 1}, "entities": []}' : 'Mira found the map.', done: true };
+        yield { text: req.prompt.includes(ENTITY_PROMPT) ? reply : 'Mira found the map.', done: true };
       },
       false,
       true,
     );
     await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
-    expect(adv.plot.scene?.time).toEqual({ day: 2, part: 'night' });
-    expect(reqs.find((r) => r.jsonSchema)?.jsonSchema).toMatchObject({
-      required: expect.arrayContaining(['timeDelta']),
-      properties: { timeDelta: { required: ['days', 'parts'] } },
-    });
+    expect(adv.entities.map((e) => [e.name, e.appearance])).toEqual([
+      ['Mira', 'Short, with a shaved head.'],
+      ['Tobin', undefined],
+    ]);
+  });
+
+  it('shows a worked example only when no grammar carries the shape', () => {
+    expect(extractPrompt('[0] Mira waves.', [], true)).not.toMatch(/<Name>|Ysolde/);
+    expect(extractPrompt('[0] Mira waves.', [], false)).toMatch(/"appearance": "<one sentence>"/);
+    expect(extractPrompt('[0] Mira waves.', [], false)).not.toMatch(/Ysolde|Brass Owl|timeDelta/);
   });
 
   it('neither asks for nor keeps the fields the schema dropped', async () => {
-    expect(extractPrompt('[0] Mira waves.', [])).not.toMatch(/importance|threads/);
-    expect(EXTRACT_JSON_SCHEMA.required).toEqual(['timeDelta', 'entities', 'speakers']);
+    expect(extractPrompt('[0] Mira waves.', [], false)).not.toMatch(/importance|threads|timeDelta|time of day/);
+    expect(EXTRACT_JSON_SCHEMA.required).toEqual(['scene', 'entities', 'speakers']);
+    // Required, every entity wrote looks and the reply hit the token cap.
+    expect(EXTRACT_JSON_SCHEMA).toMatchObject({ properties: { entities: { items: { required: expect.not.arrayContaining(['appearance']) } } } });
+    // Uncapped, one description ran past the whole reply.
+    expect(EXTRACT_JSON_SCHEMA).toMatchObject({ properties: { entities: { items: { properties: { description: { maxLength: 120 } } } } } });
+    // `timeDelta` is what a reply from before the clock was dropped still carries.
     const stray =
       '{"importance": 4, "timeDelta": {"days": 0, "parts": 0}, "entities": [{"name": "Mira", "kind": "character", "description": "A courier.", "facts": []}], "speakers": [], "threads": ["x"]}';
     const provider = fakeProvider(async function* () {

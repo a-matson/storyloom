@@ -41,9 +41,15 @@ function withImages(txt2img: ImageProvider['txt2img'] | null, ...entities: Entit
 const portraitOf = (s: ReturnType<typeof setup>['session'], id: string) => s.getSnapshot().adventure.entities.find((e) => e.id === id)?.portraitId;
 
 describe('portraitPrompt', () => {
-  it('carries the description, at most three appearance facts and the style', () => {
+  it('carries the description, at most two appearance facts and the style', () => {
     expect(portraitPrompt(lena, 'oil painting')).toBe(
-      'portrait, head and shoulders, A ferrywoman., She has grey hair., She wears a patched coat., A scar runs over her chin., oil painting',
+      'portrait, head and shoulders, A ferrywoman., She has grey hair., She wears a patched coat., oil painting',
+    );
+  });
+
+  it('opens with the appearance when there is one', () => {
+    expect(portraitPrompt({ ...lena, appearance: 'A wiry woman with cropped grey hair.' }, 'oil painting')).toMatch(
+      /^portrait, head and shoulders, A wiry woman with cropped grey hair\., A ferrywoman\.,/,
     );
   });
 

@@ -56,6 +56,10 @@ export function EntityDrawer({ entity: e, adventure, api, onClose }: Props) {
           <SectionLabel>Description</SectionLabel>
         </label>
         <Textarea id={`${id}-desc`} defaultValue={e.description} onBlur={(ev) => update({ description: ev.target.value.trim() })} />
+        <label htmlFor={`${id}-looks`}>
+          <SectionLabel>Looks</SectionLabel>
+        </label>
+        <Input id={`${id}-looks`} defaultValue={e.appearance ?? ''} onBlur={(ev) => update({ appearance: ev.target.value.trim() })} />
         <label htmlFor={`${id}-aliases`}>
           <SectionLabel>Also called (comma-separated)</SectionLabel>
         </label>

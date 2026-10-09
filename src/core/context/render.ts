@@ -13,15 +13,10 @@ export const HEADERS = {
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** `Blackmore's study · Present: Lena, Morrow · Night, day 3 · Rain`, leaving out what is unknown. */
+/** `Blackmore's study · Present: Lena, Morrow · Rain`, leaving out what is unknown. An old saved `time` is not sent. */
 export function renderScene(scene: Scene | undefined): string {
   if (!scene) return '';
-  return [
-    scene.location?.trim(),
-    scene.present.length ? `Present: ${scene.present.join(', ')}` : '',
-    scene.time ? `${cap(scene.time.part)}, day ${scene.time.day}` : '',
-    scene.weather?.trim() ? cap(scene.weather.trim()) : '',
-  ]
+  return [scene.location?.trim(), scene.present.length ? `Present: ${scene.present.join(', ')}` : '', scene.weather?.trim() ? cap(scene.weather.trim()) : '']
     .filter(Boolean)
     .join(' · ');
 }

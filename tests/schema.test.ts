@@ -55,6 +55,12 @@ describe('schemas', () => {
     expect(parsed.scriptState['custom']).toEqual({ n: 1 });
   });
 
+  it('parse an adventure saved with the dropped clock and entities without an appearance', () => {
+    const adv = makeAdventure({ actions: 1 });
+    const old = { ...adv, plot: { ...adv.plot, scene: { present: [], time: { day: 2, part: 'evening' } } } };
+    expect(S.Adventure.parse(old).plot.scene?.time).toEqual({ day: 2, part: 'evening' });
+  });
+
   it('parse a trace saved before scripts could touch the cache', () => {
     expect(S.TurnTrace.parse(makeTrace()).scriptCache).toBeUndefined();
     expect(S.TurnTrace.parse(makeTrace({ scriptCache: 'rewritten' })).scriptCache).toBe('rewritten');

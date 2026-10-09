@@ -20,7 +20,6 @@ export type TurnErrorKind = z.output<typeof S.TurnErrorKind>;
 export type JobKind = z.output<typeof S.JobKind>;
 export type PlotComponents = z.output<typeof S.PlotComponents>;
 export type Scene = z.output<typeof S.Scene>;
-export type DayPart = z.output<typeof S.DayPart>;
 export type StoryCard = z.output<typeof S.StoryCard>;
 export type Memory = z.output<typeof S.Memory>;
 export type Entity = z.output<typeof S.Entity>;
