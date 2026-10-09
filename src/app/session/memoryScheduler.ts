@@ -44,14 +44,14 @@ export class MemoryScheduler {
     void this.checkThenRun(idle);
   }
 
-  /** The adventure opened: cards for the opening's cast before the first turn, which cuts the call through `idle`. */
-  open(idle: AbortSignal): void {
-    void this.introduce(idle);
+  /** The adventure opened: cards for the opening's cast. */
+  open(): void {
+    void this.introduce();
   }
 
   private async checkThenRun(idle: AbortSignal): Promise<void> {
     await this.check(idle);
-    await this.introduce(idle);
+    await this.introduce();
     if (idle.aborted) return;
     if (this.typing && !this.overdue()) this.waiting = true;
     else await this.run(idle);
@@ -74,19 +74,36 @@ export class MemoryScheduler {
     }
   }
 
-  /** A card for each character the turn names first, before the next turn; like the check, only the next turn cuts it. */
-  private async introduce(idle: AbortSignal): Promise<void> {
+  /**
+   * A card for each name the turn brings. Nothing cuts it: a call takes ~16 s on slot 1, longer than
+   * a player reads, and a cut call never made a card. It may overlap the next turn's start.
+   * [measured: 2026-10-09-live-play-m11-2c.json] One at a time; turns that end meanwhile share one re-run.
+   */
+  private introducing: Promise<void> | null = null;
+  private introduceAgain = false;
+  private introduce(): Promise<void> {
+    if (this.introducing) {
+      this.introduceAgain = true;
+      return this.introducing;
+    }
+    this.introducing = (async () => {
+      do {
+        this.introduceAgain = false;
+        await this.introduceOnce();
+      } while (this.introduceAgain);
+    })().finally(() => (this.introducing = null));
+    return this.introducing;
+  }
+  private async introduceOnce(): Promise<void> {
     if (!this.host.adventure().settings.memory.introductions) return;
     try {
       const { introduce } = await loadMemoryJobs();
-      const r = await introduce(this.host.adventure(), { ...(await this.host.helperModel()), cancel: idle });
-      if (idle.aborted) return;
-      this.label(r.speakers);
+      const r = await introduce(this.host.adventure(), await this.host.helperModel());
       if (!r.touched) return;
       this.host.changed();
-      this.portraits(idle);
+      if (this.idle && !this.idle.aborted) this.portraits(this.idle);
     } catch (e) {
-      if (!idle.aborted) console.warn('introduction call failed', e);
+      console.warn('introduction call failed', e);
     }
   }
 

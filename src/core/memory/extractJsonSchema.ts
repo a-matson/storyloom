@@ -1,6 +1,10 @@
 import { z } from 'zod/mini';
-import { ExtractionJson } from '../schema/extraction';
+import { ExtractionJson, IntroductionJson } from '../schema/extraction';
 
-// llama-server compiles this into a grammar; the `$schema` dialect marker is noise to it.
-const { $schema: _dialect, ...schema } = z.toJSONSchema(ExtractionJson);
-export const EXTRACT_JSON_SCHEMA = schema;
+// llama-server compiles these into grammars; the `$schema` dialect marker is noise to it.
+const grammar = (s: z.ZodMiniType) => {
+  const { $schema: _dialect, ...schema } = z.toJSONSchema(s);
+  return schema;
+};
+export const EXTRACT_JSON_SCHEMA = grammar(ExtractionJson);
+export const INTRODUCE_JSON_SCHEMA = grammar(IntroductionJson);

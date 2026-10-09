@@ -59,12 +59,20 @@ describe('introduce', () => {
     );
     await introduce(adv, deps);
     expect(reqs).toHaveLength(2);
-    expect(reqs[1]?.prompt).toContain(ENTITY_PROMPT);
+    expect(reqs[1]?.prompt).toContain('New here: Old Brannoch.');
+    expect(reqs[1]?.prompt).not.toContain(ENTITY_PROMPT);
     expect(reqs[1]?.prompt).toContain(`[${n}] `);
     expect(reqs[1]?.prompt).toContain(`[${n + 1}] `);
     expect(reqs[1]?.prompt).not.toContain(`[${n - 1}]`);
-    expect(reqs[1]?.prompt).toContain('Old Brannoch');
-    expect(reqs[1]?.maxTokens).toBeGreaterThan(300);
+  });
+
+  it('asks a short reply: new cards only, no facts, speakers or scene', async () => {
+    const { adv, reqs, deps } = setup('You meet Tamsin at the ferry.');
+    await introduce(adv, deps);
+    expect(reqs[0]?.maxTokens).toBeLessThanOrEqual(200);
+    expect(JSON.stringify(reqs[0]?.jsonSchema)).not.toMatch(/speakers|scene|facts/);
+    // The fixture reply carries facts the short shape drops.
+    expect(adv.entities[0]?.facts).toEqual([]);
   });
 
   it('makes no call without a new name, nor twice for the same text, and re-runs for a retried one', async () => {
