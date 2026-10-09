@@ -101,6 +101,13 @@ function MemorySystem({ s, update }: { s: Settings; update: Update }) {
         checked={s.memory.entityFacts}
         onChange={(on) => memory({ entityFacts: on })}
       />
+      <SettingSwitch
+        id="introductions"
+        label="Create character cards as they are introduced"
+        title="One short helper call on slot 1 after a turn that names someone new"
+        checked={s.memory.introductions}
+        onChange={(on) => memory({ introductions: on })}
+      />
       <Setting label="Bank size" htmlFor="bank">
         <NumberInput
           id="bank"

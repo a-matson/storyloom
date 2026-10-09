@@ -15,7 +15,13 @@ import { nextScene } from './scene';
 import type { MaintenanceDeps } from './memoryJobs';
 
 /** The call needs no embedder, so the player's "Update from story" works without one. */
-type ExtractDeps = Pick<MaintenanceDeps, 'provider' | 'template' | 'cancel'>;
+export type ExtractDeps = Pick<MaintenanceDeps, 'provider' | 'template' | 'cancel'>;
+
+/** The introduction call's longer reply and the names it must cover; the batch call uses neither. */
+export interface ExtractOptions {
+  maxTokens?: number;
+  newNames?: readonly string[];
+}
 
 // Entities are checked one by one, so a bad one (a lowercase name without the grammar) costs only itself.
 const Envelope = z.looseObject({ entities: z.array(z.unknown()) });
@@ -43,15 +49,20 @@ const accepter =
  * The combined helper call: entities, speakers and scene for one passage
  * whose paragraphs are numbered by action index. Null when the reply is unusable or cut.
  */
-export async function extractFromPassage(passage: string, knownNames: string[], deps: ExtractDeps): Promise<ExtractionJson | null> {
+export async function extractFromPassage(passage: string, knownNames: string[], deps: ExtractDeps, opts: ExtractOptions = {}): Promise<ExtractionJson | null> {
   const caps = await deps.provider.capabilities();
-  const rendered = renderTemplate(deps.template, EXTRACT_SYSTEM, extractPrompt(passage, knownNames, caps.jsonSchema), caps.jsonSchema ? '' : '{');
+  const rendered = renderTemplate(
+    deps.template,
+    EXTRACT_SYSTEM,
+    extractPrompt(passage, knownNames, caps.jsonSchema, opts.newNames),
+    caps.jsonSchema ? '' : '{',
+  );
   const { text, stats } = await trackJob('entity', () =>
     collect(
       deps.provider.complete(
         {
           prompt: rendered.prompt,
-          maxTokens: 300, // fits MAX_ENTITIES [measured: 2026-10-08-recall-wave2-run1.json]
+          maxTokens: opts.maxTokens ?? 300, // fits MAX_ENTITIES [measured: 2026-10-08-recall-wave2-run1.json]
           temperature: 0.2,
           topP: 0.9,
           stop: rendered.stop,
@@ -75,7 +86,7 @@ export async function extractFromPassage(passage: string, knownNames: string[], 
 const ENTITY_BATCH = 2;
 
 /** The player, and a role the grammar let through by capitalising its article ("The creature"). */
-const NOT_A_NAME = /^\s*you\s*$|^(the|a|an) \p{Ll}/iu;
+export const NOT_A_NAME = /^\s*you\s*$|^(the|a|an) \p{Ll}/iu;
 
 /**
  * One combined call over the oldest `ENTITY_BATCH` memories not yet extracted, as one passage.
@@ -108,8 +119,11 @@ export interface EntityUpdate {
   reply?: ExtractionJson;
 }
 
+/** An appearance that says there is none: the 12B fills the field anyway ("Not described in the passage"). [measured: 2026-10-09-live-play-m11-2.json] */
+const NO_LOOKS = /\bnot (?:described|mentioned|stated|shown|given|specified)\b|^(?:unknown|none(?: specified| given)?|n\/a)\.?$/i;
+
 /** Extract from the range's actions and fold the result into `adventure.entities`. */
-export async function updateEntities(adventure: Adventure, range: MemoryRange, deps: ExtractDeps): Promise<EntityUpdate> {
+export async function updateEntities(adventure: Adventure, range: MemoryRange, deps: ExtractDeps, opts: ExtractOptions = {}): Promise<EntityUpdate> {
   const passage = adventure.actions
     .slice(range.fromAction, range.toAction)
     .map((a, i) => [range.fromAction + i, actionStoryText(a)] as const)
@@ -118,15 +132,15 @@ export async function updateEntities(adventure: Adventure, range: MemoryRange, d
     .join('\n');
   if (!passage) return { touched: 0, speakers: new Map() };
   const known = adventure.entities.map((e) => e.name);
-  const reply = await extractFromPassage(passage, known, deps);
+  const reply = await extractFromPassage(passage, known, deps, opts);
   if (!reply) return { touched: 0, speakers: new Map() };
   const at = range.toAction - 1;
   let entities = adventure.entities;
-  for (const incoming of reply.entities) {
-    if (NOT_A_NAME.test(incoming.name)) continue;
-    const old = matchEntity(entities, incoming.name);
-    if (!old && !namedInPassage(incoming.name, passage)) continue;
-    const merged = mergeEntity(old, incoming, at);
+  for (const { appearance, ...rest } of reply.entities) {
+    if (NOT_A_NAME.test(rest.name)) continue;
+    const old = matchEntity(entities, rest.name);
+    if (!old && !namedInPassage(rest.name, passage)) continue;
+    const merged = mergeEntity(old, appearance && !NO_LOOKS.test(appearance) ? { ...rest, appearance } : rest, at);
     entities = old ? entities.map((e) => (e === old ? merged : e)) : [...entities, merged];
   }
   const touched = entities.filter((e, i) => e !== adventure.entities[i]).length;

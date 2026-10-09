@@ -44,8 +44,14 @@ export class MemoryScheduler {
     void this.checkThenRun(idle);
   }
 
+  /** The adventure opened: cards for the opening's cast before the first turn, which cuts the call through `idle`. */
+  open(idle: AbortSignal): void {
+    void this.introduce(idle);
+  }
+
   private async checkThenRun(idle: AbortSignal): Promise<void> {
     await this.check(idle);
+    await this.introduce(idle);
     if (idle.aborted) return;
     if (this.typing && !this.overdue()) this.waiting = true;
     else await this.run(idle);
@@ -65,6 +71,22 @@ export class MemoryScheduler {
       if (!idle.aborted) this.host.flag(fact === null ? null : { actionId: last.id, fact });
     } catch (e) {
       if (!idle.aborted) console.warn('contradiction check failed', e);
+    }
+  }
+
+  /** A card for each character the turn names first, before the next turn; like the check, only the next turn cuts it. */
+  private async introduce(idle: AbortSignal): Promise<void> {
+    if (!this.host.adventure().settings.memory.introductions) return;
+    try {
+      const { introduce } = await loadMemoryJobs();
+      const r = await introduce(this.host.adventure(), { ...(await this.host.helperModel()), cancel: idle });
+      if (idle.aborted) return;
+      this.label(r.speakers);
+      if (!r.touched) return;
+      this.host.changed();
+      this.portraits(idle);
+    } catch (e) {
+      if (!idle.aborted) console.warn('introduction call failed', e);
     }
   }
 

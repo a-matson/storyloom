@@ -30,7 +30,7 @@ export function EntityList({ adventure, api, world }: { adventure: Adventure; ap
       )}
       {shown.length === 0 && (
         <p className="text-caption text-muted-foreground">
-          Nothing yet. {world ? 'Places, items and factions' : 'Characters'} appear here as the story names them, a few turns after they come up.
+          Nothing yet. {world ? 'Places, items and factions' : 'Characters'} appear here as the story introduces them.
         </p>
       )}
       {shown.map((e) => (

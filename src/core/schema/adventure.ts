@@ -55,6 +55,9 @@ export const ScriptState = z.looseObject({
   __summaryAt: z.optional(z.number()),
   /** `toAction` of the newest memory whose entities were extracted (memory jobs). */
   __entitiesAt: z.optional(z.number()),
+  /** Action count, and a hash of the last action's text, at the last introduction call (memory jobs). */
+  __introducedAt: z.optional(z.number()),
+  __introducedHash: z.optional(z.string()),
 });
 
 export const CardGeneratorSettings = z.object({

@@ -111,6 +111,70 @@ describe('MemoryScheduler', () => {
     });
   });
 
+  describe('introductions', () => {
+    /** The last output names a new character; the helper answers the introduction call with her card. */
+    function setup() {
+      const adv = memoryAdventure(19);
+      adv.settings.memory = { ...adv.settings.memory, introductions: true };
+      adv.scriptState = { ...adv.scriptState, __introducedAt: 0 };
+      const last = adv.actions.at(-1);
+      if (last) last.versions = ['You meet Tamsin at the ferry.'];
+      const calls: string[] = [];
+      let release = () => {};
+      const held = new Promise<void>((r) => (release = r));
+      const provider = fakeProvider(
+        async function* (req, signal) {
+          const kind = req.prompt.includes('New here:') ? 'introduce' : req.prompt.includes(ENTITY_PROMPT) ? 'entity' : 'memory';
+          calls.push(kind);
+          if (kind === 'introduce') await Promise.race([held, new Promise((r) => signal?.addEventListener('abort', r))]);
+          if (signal?.aborted) return;
+          const card = { scene: {}, entities: [{ name: 'Tamsin', kind: 'character', description: 'A ferrywoman.', facts: [] }], speakers: [] };
+          yield { text: kind === 'memory' ? 'Mira found the map.' : JSON.stringify(kind === 'introduce' ? card : { entities: [] }), done: true };
+        },
+        false,
+        true,
+      );
+      return { adv, calls, release, scheduler: new MemoryScheduler(host(adv, provider)) };
+    }
+
+    it('runs before the memory run, and typing does not cut it', async () => {
+      const { adv, calls, release, scheduler } = setup();
+      scheduler.start(new AbortController().signal);
+      await vi.waitFor(() => expect(calls).toEqual(['introduce']));
+      scheduler.setTyping(true);
+      release();
+      await vi.waitFor(() => expect(adv.entities.map((e) => e.name)).toEqual(['Tamsin']));
+      scheduler.setTyping(false);
+      await vi.waitFor(() => expect(calls).toContain('memory'));
+      expect(calls[0]).toBe('introduce');
+    });
+
+    it('is cut by the next turn', async () => {
+      const { adv, calls, scheduler } = setup();
+      const idle = new AbortController();
+      scheduler.start(idle.signal);
+      await vi.waitFor(() => expect(calls).toEqual(['introduce']));
+      idle.abort();
+      await new Promise((r) => setTimeout(r, 20));
+      expect(adv.entities).toEqual([]);
+      expect(calls).toEqual(['introduce']);
+    });
+
+    it('reads the opening on open, until the first action stops it', async () => {
+      const { adv, calls, release, scheduler } = setup();
+      adv.scriptState = { ...adv.scriptState, __introducedAt: undefined };
+      const first = new AbortController();
+      scheduler.open(first.signal);
+      await vi.waitFor(() => expect(calls).toEqual(['introduce']));
+      first.abort();
+      release();
+      await new Promise((r) => setTimeout(r, 20));
+      expect(adv.entities).toEqual([]);
+      scheduler.open(new AbortController().signal);
+      await vi.waitFor(() => expect(adv.entities.map((e) => e.name)).toEqual(['Tamsin']));
+    });
+  });
+
   // An import starts with no memories, so one idle run writes them all; the entity calls must not wait a turn per batch.
   it('drains an entity backlog within one idle period', async () => {
     const adv = memoryAdventure(80);
