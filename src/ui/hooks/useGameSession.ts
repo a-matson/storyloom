@@ -20,13 +20,13 @@ export function useGameSession(initial: Adventure, app: AppSettings): [GameSnaps
       window.removeEventListener('pagehide', session.persistNow);
     };
   }, [session]);
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    session.open();
+    return () => {
       // Unmounted: no UI left to show a save error in.
       session.close().catch((e: unknown) => console.error('Could not save adventure on close:', e));
-    },
-    [session],
-  );
+    };
+  }, [session]);
   return [snapshot, session];
 }
 

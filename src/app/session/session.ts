@@ -80,6 +80,9 @@ export class GameSession {
       .then((h) => (this.contextSize = h.contextSize));
   }
 
+  /** The adventure is on screen: background work that needs no turn. `close` (or the first action) stops it. */
+  readonly open = (): void => this.memory.open(this.idleWork.hold());
+
   // ---- store ---------------------------------------------------------------
   readonly subscribe = (fn: () => void): (() => void) => (this.listeners.add(fn), () => this.listeners.delete(fn));
   readonly getSnapshot = (): GameSnapshot => this.snapshot;

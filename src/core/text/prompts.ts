@@ -52,7 +52,7 @@ const EXTRACT_SKELETON =
   ' "speakers": [{"action": <number>, "name": "<Name>"}]}';
 
 /** `grammar`: the reply is constrained by `EXTRACT_JSON_SCHEMA`, which already carries the shape. */
-export function extractPrompt(passage: string, knownNames: string[], grammar: boolean): string {
+export function extractPrompt(passage: string, knownNames: string[], grammar: boolean, newNames: readonly string[] = []): string {
   return (
     'List every named character, place, item and faction in this passage, with what it tells about each. ' +
     'Only things with a proper name; skip common nouns like "the path" or "wolves". An unnamed role ("the ferrywoman") is an alias of the named person it refers to.' +
@@ -62,6 +62,8 @@ export function extractPrompt(passage: string, knownNames: string[], grammar: bo
     'appearance is only for characters: one sentence of what they look like, only what the passage shows (hair, build, clothes, marks). Leave it out for places, items and factions, and for a character the passage does not describe. ' +
     'The player is "you", not an entity. speakers names who talks in each numbered paragraph. ' +
     'scene is where the passage ends: the place, the named characters there, and the weather only when the passage states it.\n' +
+    // A nudge, not grammar: a required appearance made every entity write one and cut the reply.
+    (newNames.length ? `New here: ${newNames.join(', ')}. List each one; give appearance for each of them who is a character the passage describes.\n` : '') +
     (grammar ? 'Return {"scene": {...}, "entities": [...], "speakers": [...]}.' : EXTRACT_SKELETON)
   );
 }

@@ -3,6 +3,7 @@ import { z } from 'zod/mini';
 import type { Entity } from '@core/model';
 import * as S from '@core/schema';
 import { OUT_DIR, writeMeasurement } from '../../bench/env';
+import { watchIntroductions } from './introductions';
 
 // `pnpm measure live <url>`: plays the real app against a real llama-server; never runs in CI.
 const URL = process.env['MEASURE_URL'];
@@ -13,7 +14,7 @@ const IMAGES = process.env['MEASURE_IMAGES'];
 test.skip(!URL, 'needs MEASURE_URL (a running llama-server)');
 
 // A player reads the output before typing; idle memory jobs run in this gap. [provisional]
-const READ_MS = 6000;
+const READ_MS = Number(process.env['MEASURE_READ_MS'] ?? 6000);
 // Then types key by key, so typing-aware deferral of memory jobs is exercised. [provisional]
 const TYPE_MS = 4000;
 const TURN_MS = 180_000;
@@ -184,6 +185,7 @@ test('scripted live play', async ({ page }) => {
     renders.push({ failed: r.failure()?.errorText ?? 'failed' });
     rendering--;
   });
+  const introductions = await watchIntroductions(page, UTILITY ?? URL ?? '');
   const portraitLog: string[] = [];
   page.on('console', (m) => void (/portrait/i.test(m.text()) && portraitLog.push(m.text())));
   await page.getByRole('button', { name: 'Continue' }).click();
@@ -191,6 +193,7 @@ test('scripted live play', async ({ page }) => {
   await expect(page).toHaveURL(/#\/adventure\//);
 
   for (const [i, [mode, text]] of TURNS.entries()) {
+    introductions.turn = i;
     await page.getByRole('button', { name: mode, exact: true }).click();
     await page.getByRole('textbox', { name: 'Take a turn' }).pressSequentially(text, { delay: TYPE_MS / text.length });
     await generated(page, () => send(page).click());
@@ -255,13 +258,11 @@ test('scripted live play', async ({ page }) => {
       .array(z.omit(S.Memory, { embedding: true }))
       .parse(db.memories)
       .map(({ fromAction, toAction, text: t, stale, forgotten }) => ({ fromAction, toAction, text: t, stale, forgotten })),
-    entities: entities.map(({ kind, name, aliases, description, facts, state }) => ({
-      kind,
-      name,
-      aliases,
-      description,
+    introductions: introductions.calls,
+    // Ids, timestamps and portraits are noise here; `firstSeen` checks a card came the turn after its name.
+    entities: entities.map(({ id: _i, portraitId: _p, relations: _r, lastSeen: _l, facts, ...e }) => ({
+      ...e,
       facts: facts.map((f) => f.text),
-      state,
     })),
     entityPrompt,
     ...(IMAGES && { images: IMAGES, renders, portraitLog, portraits: await portraits(page, entities) }),

@@ -74,6 +74,36 @@ test("dialogue gets the speaker's portrait after a turn", async ({ page }) => {
   expect(violations).toEqual([]);
 });
 
+test('a character the opening names has a card before the first turn', async ({ page }) => {
+  const utility = 'http://localhost:9996';
+  let introductions = 0;
+  await page.route(`${utility}/**`, async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/health') return route.fulfill({ json: { status: 'ok' } });
+    if (path === '/props') return route.fulfill({ json: { model_path: '/models/qwen-3b.gguf', total_slots: 1 } });
+    if (path !== '/completion') return route.fulfill({ status: 404, json: {} });
+    const { prompt } = route.request().postDataJSON() as { prompt: string };
+    const card = {
+      scene: {},
+      entities: [{ name: 'Tamsin', kind: 'character', description: 'A ferrywoman.', appearance: 'Grey braid.', facts: [] }],
+      speakers: [],
+    };
+    const content = prompt.includes('New here: Tamsin') && ++introductions ? JSON.stringify(card) : 'Merav found the map.';
+    return route.fulfill({ contentType: 'text/event-stream', body: `data: ${JSON.stringify({ content, stop: true })}\n\n` });
+  });
+  await openSeededAdventure(page, 3, undefined, { opening: 'The ferry waits.\n\n"Hold the lamp," Tamsin says.', utility: `${utility}/` });
+
+  await expect(page.getByRole('button', { name: 'Characters · 2' })).toBeVisible();
+  await page.getByRole('button', { name: 'Characters · 2' }).click();
+  await expect(page.getByRole('button', { name: 'Open Tamsin' })).toBeVisible();
+
+  // The turn names only Merav, who has a card: no second call.
+  await page.getByRole('textbox', { name: 'Take a turn' }).fill('wait');
+  await page.getByRole('button', { name: 'Send' }).click();
+  await expect(page.getByRole('button', { name: 'Retry', exact: true })).toBeEnabled();
+  expect(introductions).toBe(1);
+});
+
 test('a canon conflict is shown on the fact and resolved from the drawer', async ({ page }) => {
   const fact = (id: string, value: string) => ({
     id,
