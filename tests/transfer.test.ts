@@ -71,6 +71,23 @@ describe('adventure JSON', () => {
     expect(mira).not.toHaveProperty('cardId');
   });
 
+  it('repoints the characters a See image is tagged with', () => {
+    const a = createBlankAdventure('T', 'You wake.');
+    const base = { kind: 'character' as const, aliases: [], description: '', facts: [], state: {}, relations: [], firstSeen: 0, lastSeen: 0 };
+    a.entities = [{ ...base, id: 'ent_1', name: 'Lena' }];
+    a.actions.push({
+      id: 'act_see',
+      type: 'see',
+      versions: [''],
+      active: 0,
+      createdAt: 1,
+      image: { prompt: 'a woman', brief: 'Lena', entityIds: ['ent_1', 'ent_gone'] },
+    });
+    const { adventure: b } = importAdventureJson(exportAdventureJson(a));
+    expect(b.actions.at(-1)?.image?.entityIds).toEqual([b.entities[0]?.id, 'ent_gone']);
+    expect(b.actions.at(-1)?.image?.brief).toBe('Lena');
+  });
+
   it('names the broken field of a damaged export', () => {
     const json = JSON.parse(exportAdventureJson(createBlankAdventure('T', 'x'))) as { adventure: { actions: unknown[] } };
     json.adventure.actions = [{ id: 'a', type: 'jump', versions: [], active: 0, createdAt: 0 }];

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { autoImagePrompt, imagePromptPrompt, tagLine, IMAGE_PROMPT_CHARS } from '@core/image/autoPrompt';
+import { autoImagePrompt, imagePromptPrompt, seePrompt, tagLine, IMAGE_PROMPT_CHARS } from '@core/image/autoPrompt';
 import type { Action } from '@core/model';
 import type { CompletionChunk, CompletionRequest, Provider } from '@core/ports';
 
@@ -70,7 +70,53 @@ describe('autoImagePrompt', () => {
     expect(d.provider.last?.prompt).toContain('A river of ferry towns.');
   });
 
+  it('gives the helper the brief, the scene and each character’s look', () => {
+    const p = imagePromptPrompt({
+      recentStory: 'x',
+      brief: 'she turns to face me',
+      scene: { location: 'the jetty', present: [], weather: 'rain' },
+      cast: [{ name: 'Tamsin', looks: 'a ferrywoman, grey braid' }],
+    });
+    expect(p).toContain('Scene: the jetty, rain');
+    expect(p).toContain('Tamsin: a ferrywoman, grey braid\nReplace every character name with the look given for it; never output a name.');
+    expect(p).toContain('The player asks to see: she turns to face me');
+  });
+
   it('throws when the reply is empty', async () => {
     await expect(autoImagePrompt({ actions }, deps('   \n  '))).rejects.toThrow('no image prompt');
+  });
+});
+
+describe('seePrompt', () => {
+  const tamsin = {
+    id: 'ent_t',
+    kind: 'character' as const,
+    name: 'Tamsin',
+    aliases: [],
+    description: 'Tamsin is a ferrywoman.',
+    appearance: 'grey braid',
+    facts: [],
+    state: {},
+    relations: [],
+    firstSeen: 0,
+    lastSeen: 0,
+  };
+  const req = { actions, entities: [tamsin], scene: { location: 'the jetty', present: ['Tamsin'] }, style: 'oil painting' };
+
+  it('composes a named brief without the helper', async () => {
+    const helper = () => Promise.reject(new Error('not called'));
+    expect(await seePrompt({ ...req, brief: 'Tamsin waves' }, helper)).toEqual({
+      prompt: 'a ferrywoman, grey braid waves, the jetty, oil painting',
+      entityIds: ['ent_t'],
+    });
+  });
+
+  it('asks the helper for an implicit brief, and no name survives its answer', async () => {
+    const d = deps('Tamsin turning on the ferry deck, rain');
+    const { prompt, entityIds } = await seePrompt({ ...req, brief: 'she turns to face me' }, () => Promise.resolve(d));
+    expect(d.provider.last?.prompt).toContain('Tamsin: a ferrywoman, grey braid');
+    expect(prompt).toBe('a ferrywoman, grey braid turning on the ferry deck, rain, oil painting');
+    expect(prompt).not.toContain('Tamsin');
+    expect(entityIds).toEqual(['ent_t']);
   });
 });

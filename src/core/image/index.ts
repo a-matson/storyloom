@@ -1,3 +1,3 @@
 export { imageRequest } from './request';
-/** Only needed when a See input is blank, so it stays off the start-up bundle. */
+/** Only needed on a See, so it stays off the start-up bundle. */
 export const loadImagePrompt = () => import('./autoPrompt');

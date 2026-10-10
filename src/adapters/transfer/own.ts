@@ -60,7 +60,11 @@ function renumber(a: Adventure): Adventure {
   return {
     ...rest,
     id: newId('adv_'),
-    actions: a.actions.map((x) => ({ ...x, id: newId('act_'), ...(x.image && { image: withoutBlob(x.image) }) })),
+    actions: a.actions.map(({ image, ...x }) => ({
+      ...x,
+      id: newId('act_'),
+      ...(image && { image: { ...withoutBlob(image), ...(image.entityIds && { entityIds: image.entityIds.map(id) }) } }),
+    })),
     storyCards: a.storyCards.map((c) => ({ ...c, id: id(c.id) })),
     // Without the id the portrait is drawn again between turns.
     entities: a.entities.map(({ portraitId: _portrait, ...e }) => ({

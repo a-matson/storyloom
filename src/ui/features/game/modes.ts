@@ -45,7 +45,7 @@ export const MODES: Record<Mode, ModeStyle> = {
   see: {
     label: 'See',
     prefix: '◉',
-    hint: 'Describe an image, or leave blank to auto-prompt (needs an image backend)',
+    hint: 'What does the picture show? Names become their looks; blank picks the moment',
     chip: 'aria-pressed:border-mode-see aria-pressed:bg-mode-see',
     focus: 'focus-within:border-mode-see focus-within:ring-1 focus-within:ring-mode-see',
     text: 'text-mode-see',
