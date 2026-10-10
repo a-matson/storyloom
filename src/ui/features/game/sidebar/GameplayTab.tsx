@@ -1,7 +1,7 @@
 import type { Adventure, AdventureSettings, AppSettings } from '@core/model';
 import { MODEL_PRESETS } from '@core/text';
 import type { GameApi } from '@ui/hooks/useGameSession';
-import { Select } from '@ui/components/ui/field';
+import { Input, Select } from '@ui/components/ui/field';
 import { TEMPLATES } from '@ui/features/setup/backends';
 import { ImagesSection } from './ImagesSection';
 import { ModelSettings } from './ModelSettings';
@@ -63,6 +63,29 @@ function StoryGenerator({ s, update }: { s: Settings; update: Update }) {
         checked={s.model.dynamic}
         onChange={(on) => update({ model: { ...s.model, dynamic: on } })}
       />
+      <Setting
+        label="Content"
+        htmlFor="content"
+        title="Sent in every system prompt. Unrestricted: adult fiction, nothing softened or skipped. Custom: your own text."
+      >
+        <Select
+          id="content"
+          className="h-8 w-35"
+          value={s.content}
+          onChange={(e) => update({ content: e.target.value === 'custom' ? 'custom' : 'unrestricted' })}
+        >
+          <option value="unrestricted">Unrestricted</option>
+          <option value="custom">Custom</option>
+        </Select>
+      </Setting>
+      {s.content === 'custom' && (
+        <Input
+          aria-label="Custom content text"
+          placeholder="Blank sends nothing"
+          value={s.contentText ?? ''}
+          onChange={(e) => update({ contentText: e.target.value })}
+        />
+      )}
       <p className="text-caption text-muted-foreground">Model: {s.modelId ?? 'as loaded in the backend'}. Change backends in Settings.</p>
     </Section>
   );

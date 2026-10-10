@@ -25,6 +25,7 @@ describe('schemas', () => {
         hiresDenoise: 0.55,
       },
       textStyle: 'print',
+      content: 'unrestricted',
     });
   });
 

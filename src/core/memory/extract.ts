@@ -6,6 +6,7 @@ import { ExtractedEntity, IntroducedEntity, MAX_ENTITIES, MAX_INTRODUCED, Extrac
 import { actionStoryText } from '../text/formatting';
 import { parseJsonReply } from '../text/jsonReply';
 import { EXTRACT_SYSTEM, extractPrompt, introducePrompt } from '../text/prompts';
+import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
 import { trackJob } from '../trace';
 import { attributeSpeakers, matchEntity, mergeEntity, namedInPassage } from './entities';
@@ -15,7 +16,7 @@ import { nextScene } from './scene';
 import type { MaintenanceDeps } from './memoryJobs';
 
 /** The call needs no embedder, so the player's "Update from story" works without one. */
-export type ExtractDeps = Pick<MaintenanceDeps, 'provider' | 'template' | 'cancel'>;
+export type ExtractDeps = Pick<MaintenanceDeps, 'provider' | 'template' | 'cancel' | 'content'>;
 
 // Entities are checked one by one, so a bad one (a lowercase name without the grammar) costs only itself.
 const Envelope = z.looseObject({ entities: z.array(z.unknown()) });
@@ -54,7 +55,7 @@ async function helperJson<R>(
   deps: ExtractDeps,
 ): Promise<R | null> {
   const caps = await deps.provider.capabilities();
-  const rendered = renderTemplate(deps.template, EXTRACT_SYSTEM, prompt(caps.jsonSchema), caps.jsonSchema ? '' : '{');
+  const rendered = renderTemplate(deps.template, withContent(EXTRACT_SYSTEM, deps.content), prompt(caps.jsonSchema), caps.jsonSchema ? '' : '{');
   const { text, stats } = await trackJob('entity', () =>
     collect(
       deps.provider.complete(

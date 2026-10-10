@@ -134,6 +134,21 @@ test('a present entity sends its facts and card under the structured cap', async
   ).toBeVisible();
 });
 
+test('the content clause rides in the system prompt, and Custom replaces it', async ({ page }) => {
+  await openSeededAdventure(page, 3);
+  let dialog = await takeTurnAndViewContext(page);
+  await dialog.getByRole('button', { name: 'Raw prompt' }).click();
+  await expect(dialog.getByText(/fiction for an adult reader/)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.getByRole('tab', { name: 'Gameplay' }).click();
+  await page.getByLabel('Content', { exact: true }).selectOption('custom');
+  await page.getByLabel('Custom content text').fill('House rules apply.');
+  dialog = await takeTurnAndViewContext(page);
+  await dialog.getByRole('button', { name: 'Raw prompt' }).click();
+  await expect(dialog.getByText(/House rules apply\./)).toBeVisible();
+  await expect(dialog.getByText(/fiction for an adult reader/)).toHaveCount(0);
+});
+
 test('without a scene or a mention, no structured blocks are sent', async ({ page }) => {
   await openSeededAdventure(page, 3);
   const dialog = await takeTurnAndViewContext(page);

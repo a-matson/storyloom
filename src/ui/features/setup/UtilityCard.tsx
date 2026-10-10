@@ -46,7 +46,8 @@ export function UtilityCard({ value, onChange }: Props) {
         <Switch aria-label="Use a utility model" checked={!!value} onChange={(on) => (on ? set({}) : onChange(undefined))} />
       </div>
       <p className="m-0 text-caption text-muted-foreground">
-        A small instruct model (e.g. 3-4B) on a second llama-server; summaries stop competing with the story slot.
+        A small instruct model (e.g. 3-4B) on a second llama-server; summaries stop competing with the story slot. An instruct model will refuse or soften
+        mature scenes in memories and summaries; leave it off for unrestricted play.
       </p>
       {value && (
         <>

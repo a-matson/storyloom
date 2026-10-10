@@ -1,7 +1,14 @@
 import type { ContextBuildResult, ScriptCache } from '@core/context';
-import type { Action, Adventure, AppSettings, TurnTrace } from '@core/model';
+import type { Action, Adventure, AppSettings, TemplateId, TurnTrace } from '@core/model';
 import type { CompletionStats, Embedder, ImageProvider, Provider, ScriptRunner, Storage } from '@core/ports';
 import type { CalibratedTokenizer, Tokenizer } from '@core/text';
+
+/** A model for between-turn jobs: its provider and template, and the content clause their system prompts carry. */
+export interface HelperModel {
+  provider: Provider;
+  template: TemplateId;
+  content?: string;
+}
 
 /** Immutable view of an open adventure; a new object on every change. */
 export interface GameSnapshot {

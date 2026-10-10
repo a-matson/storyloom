@@ -5,7 +5,7 @@ type ImageSettings = AdventureSettings['image'];
 
 /** A See-sized picture (See mode, covers) from the adventure's image settings; the hires pass only when it is on. */
 export const imageRequest = (s: ImageSettings, prompt: string): ImageRequest => ({
-  prompt,
+  prompt: [prompt, s.promptSuffix?.trim()].filter(Boolean).join(', '),
   width: s.width,
   height: s.height,
   steps: s.steps,

@@ -1,8 +1,8 @@
 import { imageRequest, loadImagePrompt } from '@core/image';
 import type { ActionLog } from '@core/log';
-import { newId, type Action, type Adventure, type AppSettings, type Entity, type TemplateId } from '@core/model';
-import type { Provider } from '@core/ports';
+import { newId, type Action, type Adventure, type AppSettings, type Entity } from '@core/model';
 import { trackJob } from '@core/trace';
+import { storyModel } from './helperModel';
 import { imageQueue } from './imageQueue';
 import { withProgress } from './imageProgress';
 import { portraitStyle } from './portraitPrompt';
@@ -20,8 +20,6 @@ export interface SeeHost {
   log: ActionLog;
   app: AppSettings;
   svc: SessionServices;
-  /** Utility model when one is configured and healthy, else the story model. */
-  helperModel: () => Promise<{ provider: Provider; template: TemplateId }>;
   /** The log changed: publish a snapshot and save. */
   changed: () => void;
   /** A txt2img for this action started or ended; the snapshot's `pendingImages` follows. */
@@ -60,7 +58,7 @@ async function composed(host: SeeHost, brief: string): Promise<Composed | undefi
       entities: adv.entities,
       style: adv.settings.image.portraitStyle ?? portraitStyle(adv.tags),
     };
-    const { prompt, entityIds, seed } = await seePrompt(req, host.helperModel);
+    const { prompt, entityIds, seed } = await seePrompt(req, async () => storyModel(host));
     return { ...(brief !== '' && { brief }), prompt, ...(entityIds.length > 0 && { entityIds }), ...(seed !== undefined && { seed }) };
   } catch (e) {
     host.onError(`Could not write an image prompt: ${message(e)}`);

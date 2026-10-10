@@ -5,6 +5,7 @@ import type { Adventure } from '../model/types';
 import { collect } from '../ports/provider';
 import { parseJsonReply } from '../text/jsonReply';
 import { CHECK_SYSTEM, checkPrompt } from '../text/prompts';
+import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
 import { trackJob } from '../trace';
 import { entityNamedIn } from './entities';
@@ -39,11 +40,11 @@ export function checkInputs(adv: Pick<Adventure, 'entities' | 'plot'>, output: s
 export async function checkOutput(
   output: string,
   lines: readonly string[],
-  deps: Pick<MaintenanceDeps, 'provider' | 'template' | 'signal'>,
+  deps: Pick<MaintenanceDeps, 'provider' | 'template' | 'signal' | 'content'>,
 ): Promise<string | null> {
   if (!lines.length) return null;
   const caps = await deps.provider.capabilities();
-  const rendered = renderTemplate(deps.template, CHECK_SYSTEM, checkPrompt(output, lines), caps.jsonSchema ? '' : '{');
+  const rendered = renderTemplate(deps.template, withContent(CHECK_SYSTEM, deps.content), checkPrompt(output, lines), caps.jsonSchema ? '' : '{');
   const { text } = await trackJob('check', () =>
     collect(
       deps.provider.complete(

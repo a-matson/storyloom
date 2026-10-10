@@ -2,6 +2,7 @@ import type { Action, Adventure, Memory, Speaker } from '../model/types';
 import { actionText } from '../model/types';
 import { createMemory, currentRange, dueMemoryRanges, evictToSize, isPlayerAction, MEMORY_SPAN, summaryDue, type MemoryRange } from './memoryBank';
 import { MEMORY_EXAMPLE_DETAILS, MEMORY_SYSTEM, SUMMARY_SYSTEM, memoryPrompt, sentenceGrammar, summaryPrompt } from '../text/prompts';
+import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
 import { collect, type Provider } from '../ports/provider';
 import type { Embedder } from '../ports/embedder';
@@ -30,6 +31,8 @@ export interface MaintenanceDeps {
   embedder: Embedder;
   /** Template of the model on `provider`. */
   template: Adventure['settings']['template'];
+  /** The content clause appended to every system prompt here (`contentClause(settings, 'record')`). */
+  content?: string | undefined;
   /** Stops before the next model call; a call already streaming finishes so its tokens are not wasted. */
   signal?: AbortSignal;
   /** Cuts a streaming call too (the player started typing); its partial reply is dropped. Pass it inside `signal` as well. */
@@ -95,7 +98,7 @@ async function sentencesOnly(deps: TextDeps, max: number): Promise<string | unde
 }
 
 async function summarise(passage: string, deps: TextDeps): Promise<string> {
-  const prompt = renderTemplate(deps.template, MEMORY_SYSTEM, memoryPrompt(passage));
+  const prompt = renderTemplate(deps.template, withContent(MEMORY_SYSTEM, deps.content), memoryPrompt(passage));
   // A memory is 1-4 sentences, so a player-stated trait fits beside the events; the extra stops end a reply that drifts into the next turn.
   const stop = [...new Set([...prompt.stop, '\n>', '<|im_start|>'])];
   const grammar = await sentencesOnly(deps, 4);
@@ -209,7 +212,7 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
         .slice(Math.max(0, count - RECENT_ACTIONS))
         .map(actionText)
         .join('\n\n');
-      const prompt = renderTemplate(deps.template, SUMMARY_SYSTEM, summaryPrompt(adventure.plot.storySummary ?? '', since, recent));
+      const prompt = renderTemplate(deps.template, withContent(SUMMARY_SYSTEM, deps.content), summaryPrompt(adventure.plot.storySummary ?? '', since, recent));
       const grammar = await sentencesOnly(deps, 8);
       const { text: raw, stats } = await trackJob('summary', () =>
         collect(

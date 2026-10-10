@@ -74,6 +74,8 @@ export const ImageSettings = z.object({
   hiresScale: z._default(z.number().check(z.gt(0)), 1.5),
   hiresDenoise: z._default(z.number().check(z.gt(0)), 0.55),
   hiresSteps: z.optional(z.int().check(z.gt(0))),
+  /** Appended to every See, portrait and cover prompt: style, nudity or gore words the checkpoint needs. */
+  promptSuffix: z.optional(z.string()),
 });
 
 /** The model-card part of `ImageSettings`: what an image preset sets. Size, checkpoint and portraits are left alone. */
@@ -101,6 +103,9 @@ export const AdventureSettings = z.object({
   context: z.prefault(ContextSettings, {}),
   image: z.prefault(ImageSettings, {}),
   textStyle: z._default(z.enum(['print', 'clean', 'hacker']), 'print'),
+  /** The content clause every system prompt carries; `custom` sends `contentText` instead (blank = none). */
+  content: z._default(z.enum(['unrestricted', 'custom']), 'unrestricted'),
+  contentText: z.optional(z.string()),
 });
 
 export const ProviderConfig = z.object({

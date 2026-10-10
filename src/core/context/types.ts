@@ -62,6 +62,8 @@ export interface ContextBuildSettings {
   structuredShare?: number;
   /** Send only pinned and conflicting facts, no entity cards; the scene line is unaffected. */
   pinnedFactsOnly?: boolean;
+  /** The content clause, appended to the AI Instructions in the system prompt. */
+  content?: string;
 }
 
 export interface ContextBuildInput {

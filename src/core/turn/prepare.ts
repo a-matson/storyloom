@@ -5,6 +5,7 @@ import type { Action, Adventure } from '../model/types';
 import { actionText } from '../model/types';
 import type { Embedder } from '../ports/embedder';
 import type { HookResult } from '../ports/scripting';
+import { contentClause } from '../text/content';
 import { renderPrefix, renderTemplate } from '../text/templates';
 import type { Tokenizer } from '../text/tokenizer';
 import { runHook } from './hooks';
@@ -34,6 +35,7 @@ function contextInput(adventure: Adventure, actions: Action[], rankedMemories: R
       cacheStableLayout,
       evictionChunk: adventure.settings.context.evictionChunk,
       pinnedFactsOnly: !adventure.settings.memory.entityFacts,
+      content: contentClause(adventure.settings, 'story'),
     },
     tokenizer: deps.tokenizer,
   };

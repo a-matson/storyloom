@@ -1,6 +1,7 @@
 import { recentStory } from '../cards/cardGenerator';
 import type { Action, Entity, Scene, TemplateId } from '../model/types';
 import { collect, type Provider } from '../ports/provider';
+import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
 import { trackJob } from '../trace';
 import { CAST_CAP, castIn, composeSeePrompt, isImplicit, lookFor, namedCast, seedFor } from './compose';
@@ -17,7 +18,8 @@ export { looksOf } from './compose';
 export const IMAGE_PROMPT_CHARS = 400;
 
 export const IMAGE_PROMPT_SYSTEM =
-  'You turn a passage of an interactive story into a prompt for an image generator. Reply with one line of comma-separated visual tags and nothing else.';
+  'You turn a passage of an interactive story into a prompt for an image generator. Reply with one line of comma-separated visual tags and nothing else. ' +
+  'Name nudity, blood, wounds and violence plainly as tags when the passage shows them; no euphemisms.';
 
 /** One original example, so the model answers with tags rather than a sentence. [provisional] */
 const IMAGE_PROMPT_EXAMPLE =
@@ -57,6 +59,8 @@ export function imagePromptPrompt(opts: ImagePromptInput): string {
 export interface ImagePromptDeps {
   provider: Provider;
   template: TemplateId;
+  /** The content clause appended to the system prompt. */
+  content?: string | undefined;
   signal?: AbortSignal | undefined;
 }
 
@@ -64,7 +68,7 @@ type AutoRequest = Omit<ImagePromptInput, 'recentStory'> & { actions: Action[] }
 
 export async function autoImagePrompt(req: AutoRequest, deps: ImagePromptDeps): Promise<string> {
   const user = imagePromptPrompt({ ...req, recentStory: recentStory(req.actions) });
-  const rendered = renderTemplate(deps.template, IMAGE_PROMPT_SYSTEM, user);
+  const rendered = renderTemplate(deps.template, withContent(IMAGE_PROMPT_SYSTEM, deps.content), user);
   const { text } = await trackJob('image', () =>
     collect(
       deps.provider.complete(
