@@ -22,6 +22,13 @@ export interface ImageRequest {
   hires?: { scale: number; denoise: number; steps?: number | undefined } | undefined;
 }
 
+/** Where the running render is. `pass` is set only while a hires request runs its two passes. */
+export interface ImageProgress {
+  step: number;
+  steps: number;
+  pass?: 1 | 2 | undefined;
+}
+
 export interface ImageProvider {
   readonly id: string;
   readonly baseUrl: string;
@@ -30,4 +37,6 @@ export interface ImageProvider {
   samplers(signal?: AbortSignal): Promise<string[]>;
   txt2img(req: ImageRequest, signal?: AbortSignal): Promise<Blob>;
   img2img(req: ImageRequest & { init: Blob; denoise: number }, signal?: AbortSignal): Promise<Blob>;
+  /** Optional: a server without the route is still a provider. `undefined` = nothing to show yet. */
+  progress?(signal?: AbortSignal): Promise<ImageProgress | undefined>;
 }

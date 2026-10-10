@@ -35,6 +35,7 @@ export const LlamaHealth = z.object({ status: z.string() });
 export const A1111Models = z.array(z.object({ title: str, model_name: str }));
 export const A1111Txt2Img = z.object({ images: z.array(z.string()) });
 export const A1111Samplers = z.array(z.object({ name: z.string() }));
+export const A1111Progress = z.object({ progress: num, state: z.optional(z.object({ sampling_step: num, sampling_steps: num })) });
 
 export const OpenAiModels = z.object({ data: z.optional(z.array(z.object({ id: z.string() }))) });
 export const OpenAiCompletionEvent = z.object({

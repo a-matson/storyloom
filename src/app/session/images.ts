@@ -4,6 +4,7 @@ import { newId, type Action, type Adventure, type AppSettings, type TemplateId }
 import type { Provider } from '@core/ports';
 import { trackJob } from '@core/trace';
 import { imageQueue } from './imageQueue';
+import { withProgress } from './imageProgress';
 import type { SessionServices } from './types';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -94,7 +95,9 @@ async function generate(host: SeeHost, actionId: string, image: Image): Promise<
   try {
     const provider = await pending;
     const req = imageRequest(s, image.prompt);
-    const blob = await imageQueue.enqueue('see', () => trackJob('image', () => provider.txt2img(req, AbortSignal.timeout(ms))));
+    const blob = await imageQueue.enqueue('see', () =>
+      withProgress('see', provider, () => trackJob('image', () => provider.txt2img(req, AbortSignal.timeout(ms)))),
+    );
     // An erase during those seconds already ran dropOrphanImages; storing now would leak a blob no action owns.
     if (!host.log.actions.some((a) => a.id === actionId)) return;
     const imageId = newId('img_');

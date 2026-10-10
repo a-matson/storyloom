@@ -70,6 +70,26 @@ describe('A1111 image provider', () => {
     expect(calls[0]?.body).toMatchObject({ init_images: [PNG], denoising_strength: 0.55 });
   });
 
+  it('reads progress steps, falls back to the fraction, and is undefined when idle', async () => {
+    // The idle body probed on KoboldCpp 2026-10-10, trimmed.
+    const idle = { progress: 0.0, eta_relative: 0.0, state: { job_count: 0, job_no: 0, sampling_step: 0, sampling_steps: 0 }, current_image: null };
+    expect(await new A1111Provider('img', 'http://x', stub(idle).fetch).progress()).toBeUndefined();
+    const busy = { progress: 0.25, state: { sampling_step: 10, sampling_steps: 40 } };
+    expect(await new A1111Provider('img', 'http://x', stub(busy).fetch).progress()).toEqual({ step: 10, steps: 40 });
+    expect(await new A1111Provider('img', 'http://x', stub({ progress: 0.42 }).fetch).progress()).toEqual({ step: 42, steps: 100 });
+  });
+
+  it('progress names the hires pass while one runs', async () => {
+    const passes: unknown[] = [];
+    const p = new A1111Provider('img', 'http://x', stub({ images: [PNG], progress: 0.5 }).fetch, async (b) => {
+      passes.push(await p.progress());
+      return b;
+    });
+    await p.txt2img({ ...req, hires: { scale: 1.5, denoise: 0.55 } });
+    expect(passes).toEqual([{ step: 50, steps: 100, pass: 1 }]);
+    expect(await p.progress()).toEqual({ step: 50, steps: 100 });
+  });
+
   it('a hires request renders, upscales, then redraws at the new size', async () => {
     const { fetch: f, calls } = stub({ images: [PNG] });
     const upscale = vi.fn<Upscale>((b) => Promise.resolve(b));

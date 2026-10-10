@@ -153,3 +153,26 @@ test('a failed render, and one a reload abandoned, both offer Retry', async ({ p
   await expect(page.getByText(/Generating…/)).toBeHidden();
   await expect(page.locator('figure', { hasText: 'a lantern' })).toContainText('Could not generate this image');
 });
+
+test('a server that reports progress shows a bar, the step and the time left', async ({ page }) => {
+  let step = 0;
+  let release = () => {};
+  await page.route(`${IMAGES}/**`, async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/sdapi/v1/sd-models') return route.fulfill({ json: [{ title: 'sd_xl_base.safetensors [31e35c80fc]', model_name: 'sd_xl_base' }] });
+    // Advances one step per poll, so the second reading already gives a rate.
+    if (path === '/sdapi/v1/progress') return route.fulfill({ json: { progress: step / 40, state: { sampling_step: ++step, sampling_steps: 40 } } });
+    if (path !== '/sdapi/v1/txt2img') return route.fulfill({ status: 404, json: {} });
+    await new Promise<void>((done) => (release = done));
+    return route.fulfill({ json: { images: [PNG] } });
+  });
+
+  await openAdventure(page);
+  await see(page, 'a lighthouse');
+  const figure = page.locator('figure', { hasText: 'a lighthouse' });
+  await expect(figure.getByRole('progressbar', { name: 'Image progress' })).toBeVisible();
+  await expect(figure).toContainText(/step \d+\/40 · ~\d+ s left/);
+  release();
+  await expect(page.getByRole('img', { name: 'a lighthouse' })).toBeVisible();
+  await expect(figure.getByRole('progressbar')).toBeHidden();
+});
