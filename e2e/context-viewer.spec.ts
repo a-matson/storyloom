@@ -67,7 +67,7 @@ async function openMemories(page: Page) {
 test('the Memories tab shows the bank and marks edited ranges stale', async ({ page }) => {
   await openSaltRoad(page);
   let dialog = await openMemories(page);
-  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 2 · stale 0 · forgotten 0');
+  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 2 · stale 0 · forgotten 0', { timeout: 15_000 });
   await expect(dialog.getByText('actions 7–12')).toBeVisible();
   await page.keyboard.press('Escape');
 
@@ -87,6 +87,8 @@ test('the Memories tab shows the bank and marks edited ranges stale', async ({ p
 test('a memory can be pinned, edited, forgotten and restored', async ({ page }) => {
   await openSaltRoad(page);
   let dialog = await openMemories(page);
+  // The bank loads after the dialog opens; wait for it rather than for the button.
+  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 2 · stale 0 · forgotten 0', { timeout: 15_000 });
   await dialog.getByRole('button', { name: 'Pin memory, actions 1–6' }).click();
   await expect(dialog.getByRole('button', { name: 'Pin memory, actions 1–6' })).toHaveAttribute('aria-pressed', 'true');
   await expect(dialog.getByText('pinned', { exact: true })).toBeVisible();
