@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { actionText, utilityProvider, type Adventure, type AppSettings } from '@core/model';
+import { actionText, type Adventure, type AppSettings } from '@core/model';
 import { tokenizer } from '@app/services';
 import { useAdventureTheme } from '@ui/hooks/useCoverAccent';
 import { useGameSession } from '@ui/hooks/useGameSession';
@@ -19,11 +19,13 @@ import { sidebarOpenByDefault, useGameKeys } from './useGameKeys';
 interface Props {
   adventure: Adventure;
   app: AppSettings;
+  /** Store app settings without leaving the game (saved image presets). */
+  onAppChange: (next: AppSettings) => void;
   backendLabel: string;
   onExit: () => void;
 }
 
-export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Props) {
+export function GameScreen({ adventure: initial, app, onAppChange, backendLabel, onExit }: Props) {
   const [state, api] = useGameSession(initial, app);
   const [showSidebar, setShowSidebar] = useState(sidebarOpenByDefault);
   const [showContext, setShowContext] = useState(false);
@@ -95,7 +97,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
             retryReady={state.prefetchReady}
           />
         </main>
-        <Sidebar adventure={adv} api={api} utilityModel={!!utilityProvider(app)} hidden={!showSidebar} onClose={() => setShowSidebar(false)} />
+        <Sidebar adventure={adv} api={api} app={app} onAppChange={onAppChange} hidden={!showSidebar} onClose={() => setShowSidebar(false)} />
       </div>
       {showContext && state.context && <ContextViewer {...state.context} adventure={adv} stats={last?.stats} api={api} onClose={() => setShowContext(false)} />}
       {traceAction !== null && <TraceViewer adventureId={adv.id} actionId={traceAction} onClose={() => setTraceAction(null)} />}

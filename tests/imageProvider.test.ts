@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { A1111Provider } from '@adapters/providers/a1111';
+import { describe, expect, it, vi } from 'vitest';
+import { A1111Provider, type Upscale } from '@adapters/providers/a1111';
 import { ProviderError } from '@adapters/providers/http';
 import type { ImageRequest } from '@core/ports';
 
@@ -43,6 +43,41 @@ describe('A1111 image provider', () => {
     const withModel = stub({ images: [PNG] });
     await new A1111Provider('img', 'http://x', withModel.fetch).txt2img({ ...req, model: 'sdxl' });
     expect(withModel.calls[0]?.body).toMatchObject({ override_settings: { sd_model_checkpoint: 'sdxl' } });
+  });
+
+  it('sends sampler_name and clip_skip only when set', async () => {
+    const plain = stub({ images: [PNG] });
+    await new A1111Provider('img', 'http://x', plain.fetch).txt2img(req);
+    expect(plain.calls[0]?.body).not.toHaveProperty('sampler_name');
+    expect(plain.calls[0]?.body).not.toHaveProperty('clip_skip');
+
+    const card = stub({ images: [PNG] });
+    await new A1111Provider('img', 'http://x', card.fetch).txt2img({ ...req, sampler: 'DPM++ 2M Karras', clipSkip: 2 });
+    expect(card.calls[0]?.body).toMatchObject({ sampler_name: 'DPM++ 2M Karras', clip_skip: 2 });
+  });
+
+  it('lists sampler names', async () => {
+    const { fetch: f, calls } = stub([{ name: 'Euler a', aliases: [] }, { name: 'DPM++ 2M Karras' }]);
+    expect(await new A1111Provider('img', 'http://x', f).samplers()).toEqual(['Euler a', 'DPM++ 2M Karras']);
+    expect(calls[0]?.url).toBe('http://x/sdapi/v1/samplers');
+  });
+
+  it('img2img sends the init image and the denoise', async () => {
+    const { fetch: f, calls } = stub({ images: [PNG] });
+    const init = await (await fetch(`data:image/png;base64,${PNG}`)).blob();
+    await new A1111Provider('img', 'http://x', f).img2img({ ...req, init, denoise: 0.55 });
+    expect(calls[0]?.url).toBe('http://x/sdapi/v1/img2img');
+    expect(calls[0]?.body).toMatchObject({ init_images: [PNG], denoising_strength: 0.55 });
+  });
+
+  it('a hires request renders, upscales, then redraws at the new size', async () => {
+    const { fetch: f, calls } = stub({ images: [PNG] });
+    const upscale = vi.fn<Upscale>((b) => Promise.resolve(b));
+    await new A1111Provider('img', 'http://x', f, upscale).txt2img({ ...req, sampler: 'DPM++ 2M Karras', hires: { scale: 1.5, denoise: 0.55 } });
+    expect(calls.map((c) => c.url)).toEqual(['http://x/sdapi/v1/txt2img', 'http://x/sdapi/v1/img2img']);
+    expect(calls[0]?.body).toMatchObject({ width: 512, height: 512 });
+    expect(upscale).toHaveBeenCalledWith(expect.any(Blob), 768, 768);
+    expect(calls[1]?.body).toMatchObject({ width: 768, height: 768, steps: 20, denoising_strength: 0.55, sampler_name: 'DPM++ 2M Karras' });
   });
 
   it('throws on a malformed body, an empty image list and a non-200', async () => {

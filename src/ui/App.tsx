@@ -18,10 +18,12 @@ export function App() {
   const [loadError, setLoadError] = useState<string | null>(null);
   // Outlives the screen that raised it (a scenario that started with a fallback opening).
   const [warning, setWarning] = useState<string | null>(null);
-  const [app, saveSettings] = useAppSettings(route, setLoadError);
+  const [app, saveSettings, persistSettings] = useAppSettings(route, setLoadError);
   const backend = useBackendStatus(app, route.name === 'library');
   const adventure = useRouteAdventure(app, route.name === 'adventure' ? route.id : null, setLoadError);
-  const onSave = (next: AppSettings) => void saveSettings(next).catch((e: unknown) => setLoadError(e instanceof Error ? e.message : String(e)));
+  const failed = (e: unknown) => setLoadError(e instanceof Error ? e.message : String(e));
+  const onSave = (next: AppSettings) => void saveSettings(next).catch(failed);
+  const onAppChange = (next: AppSettings) => void persistSettings(next).catch(failed);
 
   if (!app) return <div className="h-full" />;
 
@@ -33,7 +35,16 @@ export function App() {
         return <SetupScreen app={app} onSave={onSave} onBack={() => navigate({ name: 'library' })} />;
       case 'adventure':
         if (!adventure) return <div className="h-full" />;
-        return <GameScreen key={adventure.id} adventure={adventure} app={app} backendLabel={backend.label} onExit={() => navigate({ name: 'library' })} />;
+        return (
+          <GameScreen
+            key={adventure.id}
+            adventure={adventure}
+            app={app}
+            onAppChange={onAppChange}
+            backendLabel={backend.label}
+            onExit={() => navigate({ name: 'library' })}
+          />
+        );
       case 'scenario':
         return (
           <ScenarioEditor

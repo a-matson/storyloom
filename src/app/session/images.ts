@@ -1,4 +1,4 @@
-import { loadImagePrompt } from '@core/image';
+import { imageRequest, loadImagePrompt } from '@core/image';
 import type { ActionLog } from '@core/log';
 import { newId, type Action, type Adventure, type AppSettings, type TemplateId } from '@core/model';
 import type { Provider } from '@core/ports';
@@ -87,19 +87,13 @@ async function generate(host: SeeHost, actionId: string, image: Image): Promise<
   const pending = host.svc.imageProviderFor(host.app);
   if (!pending) return host.onError('No image server is configured; add one in Settings.');
   const s = host.adv.settings.image;
-  const ms = host.svc.imageTimeoutMs;
+  // The hires pass is a second render inside the same call. [provisional]
+  // ponytail: a flat 2x, not scale² × denoise; measure at M11-4b's live pair and size it then.
+  const ms = host.svc.imageTimeoutMs * (s.hires ? 2 : 1);
   host.imagePending(actionId, true);
   try {
     const provider = await pending;
-    const req = {
-      prompt: image.prompt,
-      width: s.width,
-      height: s.height,
-      steps: s.steps,
-      cfgScale: s.cfgScale,
-      negativePrompt: s.negativePrompt,
-      model: s.model,
-    };
+    const req = imageRequest(s, image.prompt);
     const blob = await imageQueue.enqueue('see', () => trackJob('image', () => provider.txt2img(req, AbortSignal.timeout(ms))));
     // An erase during those seconds already ran dropOrphanImages; storing now would leak a blob no action owns.
     if (!host.log.actions.some((a) => a.id === actionId)) return;

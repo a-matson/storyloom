@@ -1,4 +1,5 @@
 import { hasScripts, imageProvider, type Adventure, type AppSettings } from '@core/model';
+import { upscale } from './image';
 import { GameSession } from './session';
 import { AppSettings as AppSettingsSchema } from '@core/schema';
 import { createApproxTokenizer, createExactTokenizer, type Tokenizer } from '@core/text';
@@ -45,7 +46,7 @@ export function imageProviderFor(settings: AppSettings): Promise<ImageProvider> 
   const cfg = imageProvider(settings);
   if (!cfg) return undefined;
   const key = `${cfg.id}|${cfg.kind}|${cfg.baseUrl}`;
-  if (imageCache?.key !== key) imageCache = { key, provider: loadImageProvider(cfg) };
+  if (imageCache?.key !== key) imageCache = { key, provider: loadImageProvider(cfg, upscale) };
   return imageCache.provider;
 }
 

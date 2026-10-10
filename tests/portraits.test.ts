@@ -32,8 +32,18 @@ const gate: Entity = { ...lena, id: 'ent_gate', kind: 'place', name: 'Gate', fac
 function withImages(txt2img: ImageProvider['txt2img'] | null, ...entities: Entity[]) {
   const adventure = createBlankAdventure('Test', 'You stand at the gate.');
   adventure.entities = entities;
+  // Model-card settings on, so every test also proves portraits skip the hires pass.
+  adventure.settings.image = { ...adventure.settings.image, sampler: 'DPM++ 2M Karras', clipSkip: 2, hires: true };
   const images: ImageProvider | undefined = txt2img
-    ? { id: 'img', baseUrl: 'http://img.invalid', health: async () => true, models: async () => [], txt2img }
+    ? {
+        id: 'img',
+        baseUrl: 'http://img.invalid',
+        health: async () => true,
+        models: async () => [],
+        samplers: async () => [],
+        txt2img,
+        img2img: () => Promise.reject(new Error('portraits never redraw')),
+      }
     : undefined;
   return setup({ adventure, ...(images && { images }) });
 }
@@ -70,6 +80,8 @@ describe('queuePortraits', () => {
     await queuePortraits(session, new AbortController().signal);
     expect(calls).toHaveLength(1);
     expect(calls[0]).toMatchObject({ width: 384, height: 384, steps: 14, negativePrompt: 'text, watermark, signature, frame, caption' });
+    expect(calls[0]).toMatchObject({ sampler: 'DPM++ 2M Karras', clipSkip: 2 });
+    expect(calls[0]?.hires).toBeUndefined();
     expect(PORTRAIT_PX).toBe(64);
     await renderPortrait(session, lena.id);
     expect(calls[1]?.seed).toBe(calls[0]?.seed);

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ImageProvider } from '@core/ports';
+import { createBlankAdventure } from '@core/model';
+import type { ImageProvider, ImageRequest } from '@core/ports';
 import { setup } from './fixtures/session';
 
 const fakeImages = (txt2img: ImageProvider['txt2img']): ImageProvider => ({
@@ -7,7 +8,10 @@ const fakeImages = (txt2img: ImageProvider['txt2img']): ImageProvider => ({
   baseUrl: 'http://img.invalid',
   health: () => Promise.resolve(true),
   models: () => Promise.resolve([]),
+  samplers: () => Promise.resolve([]),
   txt2img,
+  // The hires pass lives inside the adapter's txt2img; the session never calls img2img itself.
+  img2img: () => Promise.reject(new Error('not called by the session')),
 });
 
 describe('See mode', () => {
@@ -138,5 +142,34 @@ describe('See mode', () => {
     expect(prompt).not.toBe('');
     expect(prompt).not.toContain('\n');
     expect(session.getSnapshot().error).toBeNull();
+  });
+
+  it('gives a hires render twice the time, since it is two renders in one call', async () => {
+    const adventure = createBlankAdventure('Test', 'You stand at the gate.');
+    adventure.settings.image = { ...adventure.settings.image, hires: true };
+    const hang: ImageProvider['txt2img'] = (_req, signal) =>
+      new Promise<Blob>((_resolve, reject) => signal?.addEventListener('abort', () => reject(signal.reason as Error)));
+    const { session } = setup({ adventure, imageTimeoutMs: 600, images: fakeImages(hang) });
+    session.see('a lantern');
+    // Both round to "1 s" in the message, so the elapsed time is what tells 600 ms from 1200 ms.
+    const started = performance.now();
+    await vi.waitFor(() => expect(session.getSnapshot().error).toContain('did not answer'), { timeout: 3000 });
+    expect(performance.now() - started).toBeGreaterThan(1000);
+  });
+
+  it('sends the model-card settings, and the hires pass only when it is on', async () => {
+    const calls: ImageRequest[] = [];
+    const adventure = createBlankAdventure('Test', 'You stand at the gate.');
+    adventure.settings.image = { ...adventure.settings.image, sampler: 'DPM++ 2M Karras', clipSkip: 2 };
+    const { session } = setup({ adventure, images: fakeImages(async (req) => (calls.push(req), new Blob(['png']))) });
+    session.see('a lantern');
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toMatchObject({ sampler: 'DPM++ 2M Karras', clipSkip: 2 });
+    expect(calls[0]?.hires).toBeUndefined();
+
+    session.updateSettings({ image: { ...adventure.settings.image, hires: true } });
+    session.see('a harbour');
+    await vi.waitFor(() => expect(calls).toHaveLength(2));
+    expect(calls[1]?.hires).toEqual({ scale: 1.5, denoise: 0.55, steps: undefined });
   });
 });

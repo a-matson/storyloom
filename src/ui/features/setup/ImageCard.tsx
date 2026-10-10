@@ -20,10 +20,12 @@ interface Props {
 /** Optional image server for See mode; the URL is normalised when settings are drafted. */
 export function ImageCard({ value, onChange }: Props) {
   const [models, setModels] = useState<string[] | null>(null);
+  const [samplers, setSamplers] = useState<string[] | null>(null);
   const [error, setError] = useState('');
   const set = (baseUrl: string) => {
     onChange(imageConfig(baseUrl));
     setModels(null);
+    setSamplers(null);
     setError('');
   };
   const test = async () => {
@@ -31,7 +33,11 @@ export function ImageCard({ value, onChange }: Props) {
     setError('');
     const pending = imageProviderFor({ ...DEFAULT_APP_SETTINGS, providers: [value] });
     try {
-      setModels((await (await pending)?.models()) ?? null);
+      const provider = await pending;
+      setModels((await provider?.models()) ?? null);
+      // Older servers lack the route; the sidebar's Sampler field is free text then.
+      const listed = await provider?.samplers().catch((err: unknown) => console.warn('the image server did not list its samplers', err));
+      setSamplers(listed ?? null);
     } catch (e) {
       setModels(null);
       setError(e instanceof Error ? e.message : String(e));
@@ -57,6 +63,7 @@ export function ImageCard({ value, onChange }: Props) {
           {models && (
             <p className="m-0 text-caption text-muted-foreground">
               {models.length === 0 ? 'Connected, but the server has no checkpoints loaded.' : `Connected · ${models.length} checkpoints: ${models.join(', ')}`}
+              {samplers && ` · ${samplers.length} samplers`}
             </p>
           )}
           {error !== '' && <p className="m-0 text-caption text-danger">{error}</p>}

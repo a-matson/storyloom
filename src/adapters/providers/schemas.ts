@@ -34,6 +34,7 @@ export const LlamaHealth = z.object({ status: z.string() });
 /** A1111-compatible image server: checkpoint list and base64 PNGs. */
 export const A1111Models = z.array(z.object({ title: str, model_name: str }));
 export const A1111Txt2Img = z.object({ images: z.array(z.string()) });
+export const A1111Samplers = z.array(z.object({ name: z.string() }));
 
 export const OpenAiModels = z.object({ data: z.optional(z.array(z.object({ id: z.string() }))) });
 export const OpenAiCompletionEvent = z.object({

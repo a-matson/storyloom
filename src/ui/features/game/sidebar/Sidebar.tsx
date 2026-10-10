@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Adventure } from '@core/model';
+import { utilityProvider, type Adventure, type AppSettings } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
 import { cn } from '@ui/lib/utils';
@@ -13,8 +13,9 @@ import { CHIP } from './Section';
 interface Props {
   adventure: Adventure;
   api: GameApi;
-  /** Memory jobs run on a separate utility model. */
-  utilityModel: boolean;
+  app: AppSettings;
+  /** Store app settings without leaving the game (saved image presets). */
+  onAppChange: (next: AppSettings) => void;
   hidden: boolean;
   onClose: () => void;
 }
@@ -32,7 +33,9 @@ const tab =
 const body = 'flex grow flex-col gap-2 overflow-y-auto px-4 pb-4';
 
 /** Adventure / Gameplay settings panel; an overlay sheet below 1100 px. Mirrors AI Dungeon's in-game settings. */
-export function Sidebar({ adventure, api, utilityModel, hidden, onClose }: Props) {
+export function Sidebar({ adventure, api, app, onAppChange, hidden, onClose }: Props) {
+  // Memory jobs run on a separate utility model.
+  const utilityModel = !!utilityProvider(app);
   const [current, setTab] = useState<Tab>('adventure');
   const [sub, setSub] = useState<SubTab>('plot');
   const characters = adventure.entities.filter((e) => e.kind === 'character').length;
@@ -84,7 +87,7 @@ export function Sidebar({ adventure, api, utilityModel, hidden, onClose }: Props
         </>
       ) : (
         <div className={cn(body, 'pt-3')}>
-          <GameplayTab adventure={adventure} api={api} />
+          <GameplayTab adventure={adventure} api={api} app={app} onAppChange={onAppChange} />
         </div>
       )}
     </aside>

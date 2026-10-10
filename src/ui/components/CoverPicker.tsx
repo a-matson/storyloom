@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { DEFAULT_ADVENTURE_SETTINGS, newId, type AdventureSettings, type AppSettings } from '@core/model';
+import { imageRequest } from '@core/image';
 import { trackJob } from '@core/trace';
 import { downscale } from '@app/image';
 import { imageQueue } from '@app/session/imageQueue';
@@ -52,7 +53,7 @@ export function CoverPicker({ ownerId, coverId, coverUrl, app, image, onChange }
     const provider = await pending;
     // Tracked like See mode: a cover generated mid-turn takes the GPU, so the turn's trace must see it.
     const blob = await imageQueue.enqueue('cover', () =>
-      trackJob('image', () => provider.txt2img({ ...(image ?? DEFAULT_ADVENTURE_SETTINGS.image), prompt: text })),
+      trackJob('image', () => provider.txt2img(imageRequest(image ?? DEFAULT_ADVENTURE_SETTINGS.image, text))),
     );
     await store(blob);
   };

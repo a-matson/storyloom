@@ -1,8 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const IMAGES = 'http://localhost:7999';
-// 1x1 transparent PNG, the smallest thing an A1111 server can honestly return.
-const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==';
+// 1x1 grey PNG, the smallest thing an A1111 server can honestly return. Valid checksums: the
+// hires pass decodes it with createImageBitmap, which is stricter than <img>.
+const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
 /** Demo backend plus the mocked image server, into a fantasy adventure. */
 async function openAdventure(page: Page): Promise<void> {
@@ -80,6 +81,35 @@ test('See mode generates an image, keeps the caption and survives a reload', asy
 
   await page.getByRole('button', { name: 'Delete' }).click();
   await expect(page.getByRole('figure')).toBeHidden();
+});
+
+test('a model-card preset sends its sampler and runs the hires pass', async ({ page }) => {
+  const bodies: { path: string; body: Record<string, unknown> }[] = [];
+  await page.route(`${IMAGES}/**`, async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/sdapi/v1/sd-models') return route.fulfill({ json: [{ title: 'sd_xl_base.safetensors [31e35c80fc]', model_name: 'sd_xl_base' }] });
+    if (path === '/sdapi/v1/samplers') return route.fulfill({ json: [{ name: 'Euler a' }, { name: 'DPM++ 2M Karras' }] });
+    if (path !== '/sdapi/v1/txt2img' && path !== '/sdapi/v1/img2img') return route.fulfill({ status: 404, json: {} });
+    bodies.push({ path, body: route.request().postDataJSON() as Record<string, unknown> });
+    return route.fulfill({ json: { images: [PNG] } });
+  });
+
+  await openAdventure(page);
+  await page.getByRole('tab', { name: 'Gameplay' }).click();
+  await page.getByText('Images', { exact: true }).click();
+  const sampler = page.getByRole('combobox', { name: 'Sampler' });
+  // "Server default" plus the two the server lists.
+  await expect(sampler.locator('option')).toHaveCount(3);
+  // One checkpoint loaded (KoboldCpp's --sdmodel): nothing to switch to, so no field.
+  await expect(page.getByLabel('Checkpoint')).toBeHidden();
+  await page.getByRole('combobox', { name: 'Apply preset' }).last().selectOption({ label: 'Realistic' });
+  await expect(sampler).toHaveValue('DPM++ 2M Karras');
+
+  await see(page, 'a harbour at dusk');
+  await expect(page.getByRole('img', { name: 'a harbour at dusk' })).toBeVisible();
+  expect(bodies.map((b) => b.path)).toEqual(['/sdapi/v1/txt2img', '/sdapi/v1/img2img']);
+  expect(bodies[0]?.body).toMatchObject({ sampler_name: 'DPM++ 2M Karras', clip_skip: 2, width: 512 });
+  expect(bodies[1]?.body).toMatchObject({ sampler_name: 'DPM++ 2M Karras', width: 768, height: 768, denoising_strength: 0.55 });
 });
 
 test('a failed render, and one a reload abandoned, both offer Retry', async ({ page }) => {
