@@ -83,6 +83,7 @@ export function GameScreen({ adventure: initial, app, backendLabel, onExit }: Pr
             contextSummary={ctx ? `${ctx.triggeredCards.length} story cards · ${ctx.usedMemories.length} memories used` : undefined}
             contradiction={state.contradiction?.actionId === last?.id ? state.contradiction?.fact : undefined}
             cast={app.speakerAvatars ? adv.entities : undefined}
+            present={adv.plot.scene?.present}
           />
           <CommandRow
             busy={state.busy}

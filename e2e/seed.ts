@@ -23,7 +23,7 @@ export async function openSeededAdventure(
     await page.getByRole('switch', { name: 'Use an image server' }).click();
     await page.getByRole('textbox', { name: 'Image server URL' }).fill(imageServer);
   }
-  if (opts.speakerAvatars === false) await page.getByRole('switch', { name: 'Speaker portraits beside dialogue' }).click();
+  if (opts.speakerAvatars === false) await page.getByRole('switch', { name: 'Character portraits beside the story' }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
   const actions = Array.from({ length: count }, (_, i) => ({ text: i === 0 && opts.opening !== undefined ? opts.opening : `The road bends ${i}.` }));
   const chooser = page.waitForEvent('filechooser');
