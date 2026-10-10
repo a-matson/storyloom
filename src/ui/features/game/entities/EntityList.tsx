@@ -1,13 +1,26 @@
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import type { Adventure, Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Pill } from '@ui/components/ui/pill';
+import { StatusDot } from '@ui/components/ui/status-dot';
 import { CHIP, SECTION, SECTION_HEADER } from '../sidebar/Section';
 import { Avatar } from './Avatar';
 import { EntityDrawer } from './EntityDrawer';
 
 type Kind = Entity['kind'];
 const WORLD: Kind[] = ['place', 'item', 'faction'];
+
+/** A dot while the portrait is queued or drawing, red when it failed; the drawer says why. */
+function PortraitDot({ id, api }: { id: string; api: GameApi }) {
+  const state = useSyncExternalStore(api.subscribe, () => api.getSnapshot().portraitState[id]);
+  if (!state) return null;
+  const failed = state.status === 'failed';
+  return (
+    <span title={failed ? 'Portrait failed' : 'Drawing portrait'} className="inline-flex">
+      <StatusDot status={failed ? 'bad' : 'busy'} />
+    </span>
+  );
+}
 
 /** One sidebar tab: the characters, or the places, items and factions the story has named. Built by the memory cycle. */
 export function EntityList({ adventure, api, world }: { adventure: Adventure; api: GameApi; world: boolean }) {
@@ -41,6 +54,7 @@ export function EntityList({ adventure, api, world }: { adventure: Adventure; ap
               <span className="flex items-center gap-1.5">
                 <span className="truncate">{e.name}</span>
                 {e.canon && <Pill>canon</Pill>}
+                <PortraitDot id={e.id} api={api} />
               </span>
               <span className="truncate text-caption font-normal text-muted-foreground">
                 {Object.entries(e.state)

@@ -6,6 +6,7 @@ import type { GameApi } from '@ui/hooks/useGameSession';
 import { Pill } from '@ui/components/ui/pill';
 import { cn } from '@ui/lib/utils';
 import { Avatar } from './entities/Avatar';
+import { faceFor } from './entities/faceFor';
 import { OutputTools, actionGrid, caretAtEnd, textColumn } from './OutputTools';
 import { SeeBlock } from './SeeBlock';
 
@@ -27,30 +28,36 @@ interface Props {
   contradiction?: string | undefined;
   /** The adventure's entities when speaker portraits are on. */
   cast?: readonly Entity[] | undefined;
+  /** The scene's present characters, set only when this action replies to a `say`. */
+  present?: readonly string[] | undefined;
 }
 
 const quoted = (a: Action) => a.type === 'do' || a.type === 'say';
 
 interface ProseProps {
   text: string;
-  speakers: Action['speakers'];
+  action: Action;
   cast: readonly Entity[] | undefined;
+  present: readonly string[] | undefined;
   adventureId: string;
 }
 
-/** The action text; with speaker labels, one block per paragraph and the speaker's portrait in the gutter (above it on phones). */
-function Prose({ text, speakers, cast, adventureId }: ProseProps) {
-  if (!cast || (speakers?.length ?? 0) === 0) return text;
-  return paragraphs(text).map((p, i) => {
-    const name = speakers?.find((s) => s.paragraph === i)?.name;
-    // Nothing for a name no entity has (deleted since): never a wrong face.
-    const e = name === undefined ? undefined : cast.find((c) => c.name === name || c.aliases.includes(name));
+/** The action text; when a paragraph has a face, one block per paragraph and the face in the gutter (above it on phones). Player text never has one. */
+function Prose({ text, action, cast, present, adventureId }: ProseProps) {
+  if (!cast || quoted(action) || action.type === 'story') return text;
+  const ps = paragraphs(text);
+  const labels = ps.map((_, i) => action.speakers?.find((s) => s.paragraph === i)?.name);
+  const faces = ps.map((p, i) => faceFor(p, labels[i], cast, action.type === 'continue' ? present : undefined));
+  if (faces.every((f) => f === undefined)) return text;
+  return ps.map((p, i) => {
+    const e = faces[i];
     return (
       // oxlint-disable-next-line react/no-array-index-key -- `Action.speakers` addresses paragraphs by index
       <span key={i} className="relative block not-first:mt-[1lh]">
         {e && (
           <span className="block w-fit max-sm:mb-1 sm:absolute sm:top-0 sm:-inset-s-(--gutter)">
-            <span className="sr-only">{e.name} says</span>
+            {/* Only a labelled paragraph is speech; a named one already says the name. */}
+            {labels[i] !== undefined && <span className="sr-only">{e.name} says</span>}
             <Avatar name={e.name} adventureId={adventureId} portraitId={e.portraitId} />
           </span>
         )}
@@ -78,7 +85,7 @@ export function ActionBlock(props: Props) {
   return <TextBlock {...props} />;
 }
 
-function TextBlock({ action, adventureId, isLast, busy, api, speech, onViewContext, onViewTrace, contextSummary, contradiction, cast }: Props) {
+function TextBlock({ action, adventureId, isLast, busy, api, speech, onViewContext, onViewTrace, contextSummary, contradiction, cast, present }: Props) {
   const [editing, setEditing] = useState(false);
   // Bumped when an edit ends: the paragraph remounts, so React never reconciles DOM the player rewrote.
   const [rev, setRev] = useState(0);
@@ -130,7 +137,7 @@ function TextBlock({ action, adventureId, isLast, busy, api, speech, onViewConte
       aria-keyshortcuts="Enter"
       title={editing ? 'Editing — click outside to save' : 'Double-click or press Enter to edit'}
     >
-      {editing ? display : <Prose text={display} speakers={action.speakers} cast={cast} adventureId={adventureId} />}
+      {editing ? display : <Prose text={display} action={action} cast={cast} present={present} adventureId={adventureId} />}
     </p>
   );
 

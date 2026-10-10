@@ -17,6 +17,7 @@ test('the Characters tab edits, pins and promotes an entity', async ({ page }) =
   await expect(drawer).toBeVisible();
   const { violations } = await new AxeBuilder({ page }).include('dialog').analyze();
   expect(violations).toEqual([]);
+  expect((await drawer.locator('span[aria-hidden="true"]', { hasText: /^M$/ }).boundingBox())?.width).toBe(32);
 
   await drawer.getByRole('textbox', { name: 'location' }).fill('the gate');
   await drawer.getByRole('button', { name: 'Pin: She keeps the needle map.' }).click();
@@ -76,6 +77,14 @@ test("dialogue gets the speaker's portrait after a turn", async ({ page }) => {
   await expect(story.locator('p').first().locator('span.block').nth(1)).toContainText('Merav says');
   const { violations } = await new AxeBuilder({ page }).include('#story').analyze();
   expect(violations).toEqual([]);
+});
+
+test('a paragraph naming one character gets its face without a speaker label', async ({ page }) => {
+  await openSeededAdventure(page, 3, undefined, { opening: 'The well is dry.\n\nMerav unrolls the map.' });
+  const blocks = page.locator('#story p').first().locator('span.block');
+  await expect(blocks.nth(1).locator('span[aria-hidden="true"]')).toHaveText('M');
+  await expect(blocks.nth(0).locator('span[aria-hidden="true"]')).toHaveCount(0);
+  await expect(page.locator('#story').getByText('Merav says', { exact: true })).toHaveCount(0);
 });
 
 test('a character the opening names has a card before the first turn', async ({ page }) => {

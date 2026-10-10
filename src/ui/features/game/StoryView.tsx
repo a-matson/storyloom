@@ -17,6 +17,8 @@ interface Props {
   contextSummary?: string | undefined;
   contradiction?: string | undefined;
   cast?: readonly Entity[] | undefined;
+  /** The scene's present characters: the face of a reply to a `say` that names nobody. */
+  present?: readonly string[] | undefined;
 }
 
 /** The story column: player actions carry a mode pill, AI outputs are plain prose, the last output gets the tools. */
@@ -33,6 +35,7 @@ export function StoryView({
   contextSummary,
   contradiction,
   cast,
+  present,
 }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
   // Follow the newest text: the compiler re-renders this view only when the story, stream or turn state changes.
@@ -60,6 +63,7 @@ export function StoryView({
             contextSummary={contextSummary}
             contradiction={i === lastIdx ? contradiction : undefined}
             cast={cast}
+            present={actions[i - 1]?.type === 'say' ? present : undefined}
           />
         ))}
         {streaming !== '' && (

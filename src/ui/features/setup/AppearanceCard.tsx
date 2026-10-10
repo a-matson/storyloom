@@ -78,7 +78,7 @@ export function AppearanceCard({ theme, onTheme, speech, onSpeech, speakerAvatar
       </div>
       <div className={row}>
         <label htmlFor="speaker-avatars" className="grow">
-          Speaker portraits beside dialogue
+          Character portraits beside the story
         </label>
         <Switch id="speaker-avatars" checked={speakerAvatars} onChange={onSpeakerAvatars} />
       </div>

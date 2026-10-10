@@ -39,7 +39,7 @@ export function EntityDrawer({ entity: e, adventure, api, onClose }: Props) {
       <DrawerHeader
         title={
           <span className="flex items-center gap-3">
-            <Avatar name={e.name} adventureId={adventure.id} portraitId={e.portraitId} large />
+            <Avatar name={e.name} adventureId={adventure.id} portraitId={e.portraitId} />
             <span className="text-card-title font-semibold">{e.name}</span>
             {e.canon && <Pill title="Seeded from a scenario card">canon</Pill>}
           </span>
