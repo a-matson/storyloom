@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openSeededAdventure } from './seed';
 
 const IMAGES = 'http://localhost:7999';
 // 1x1 grey PNG, the smallest thing an A1111 server can honestly return. Valid checksums: the
@@ -50,7 +51,8 @@ test('See mode generates an image, keeps the caption and survives a reload', asy
   await expect(page.getByRole('figure')).toContainText('a harbour at dusk');
   const image = page.getByRole('img', { name: 'a harbour at dusk' });
   await expect(image).toBeVisible();
-  expect(prompts).toEqual(['a harbour at dusk']);
+  // The brief leads; the adventure's style follows it.
+  expect(prompts).toEqual([expect.stringMatching(/^a harbour at dusk, \w/)]);
 
   // The blob is in IndexedDB, not in the action: the picture comes back after a reload.
   await page.reload();
@@ -76,11 +78,41 @@ test('See mode generates an image, keeps the caption and survives a reload', asy
   await caption.fill('a harbour at dawn');
   await page.getByRole('figure').click({ position: { x: 1, y: 1 } });
   // The caption changes on the spot; the picture follows when the server answers.
-  await expect.poll(() => prompts).toEqual(['a harbour at dusk', 'a harbour at dawn']);
+  await expect.poll(() => prompts.map((p) => p.split(',')[0])).toEqual(['a harbour at dusk', 'a harbour at dawn']);
   await expect(page.getByRole('img', { name: 'a harbour at dawn' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Delete' }).click();
   await expect(page.getByRole('figure')).toBeHidden();
+});
+
+test('a brief naming a character sends their looks, tags the image and shows it in their drawer', async ({ page }) => {
+  const prompts: string[] = [];
+  await page.route(`${IMAGES}/**`, async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/sdapi/v1/sd-models') return route.fulfill({ json: [{ title: 'sd_xl_base.safetensors [31e35c80fc]', model_name: 'sd_xl_base' }] });
+    if (path !== '/sdapi/v1/txt2img') return route.fulfill({ status: 404, json: {} });
+    const { prompt } = route.request().postDataJSON() as { prompt: string };
+    // Portraits render between turns too; only the See call matters here.
+    if (!prompt.startsWith('portrait')) prompts.push(prompt);
+    return route.fulfill({ json: { images: [PNG] } });
+  });
+  const tamsin = { id: 'ent_tamsin', name: 'Tamsin', description: 'Tamsin is a ferrywoman.', appearance: 'grey braid, patched cloak' };
+  await openSeededAdventure(page, 3, `${IMAGES}/`, { entities: [tamsin] });
+
+  await see(page, 'Tamsin at the ferry');
+  await expect(page.getByRole('img', { name: 'Tamsin at the ferry' })).toBeVisible();
+  expect(prompts).toHaveLength(1);
+  expect(prompts[0]).toContain('a ferrywoman, grey braid, patched cloak at the ferry');
+  expect(prompts[0]).not.toContain('Tamsin');
+
+  const figure = page.getByRole('figure');
+  await figure.getByText('Prompt', { exact: true }).click();
+  await expect(figure.getByRole('textbox', { name: 'Image prompt' })).toHaveValue(prompts[0] ?? '');
+  await figure.getByRole('button', { name: 'Open Tamsin' }).click();
+  const drawer = page.getByRole('dialog', { name: 'Tamsin' });
+  await drawer.getByRole('button', { name: /^Show image \d+: Tamsin at the ferry$/ }).click();
+  await expect(drawer).toBeHidden();
+  await expect(figure).toBeInViewport();
 });
 
 test('a model-card preset sends its sampler and runs the hires pass', async ({ page }) => {

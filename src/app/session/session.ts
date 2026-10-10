@@ -254,9 +254,9 @@ export class GameSession {
   };
 
   /** See mode: one image from the player's prompt (blank = written by the helper model), generated in the background. */
-  readonly see = (prompt: string): void => seeImage(prompt, this);
-  /** Retry (no `prompt`) or edit the prompt of a `see` action; the old blob is replaced. */
-  readonly regenerateSee = (id: string, prompt?: string): void => regenerateImage(this, id, prompt);
+  readonly see = (brief: string): void => seeImage(brief, this);
+  /** Retry (no `brief`) or rewrite the brief of a `see` action (`/raw …` sends a prompt as written); the old blob is replaced. */
+  readonly regenerateSee = (id: string, brief?: string): void => regenerateImage(this, id, brief);
 
   readonly cancel = (): void => this.abort?.abort();
   /** The turn input is focused and holds text; memory jobs wait so they do not slow the coming turn. */

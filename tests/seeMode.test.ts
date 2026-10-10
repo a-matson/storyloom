@@ -14,16 +14,33 @@ const fakeImages = (txt2img: ImageProvider['txt2img']): ImageProvider => ({
   img2img: () => Promise.reject(new Error('not called by the session')),
 });
 
+type Session = ReturnType<typeof setup>['session'];
+/** The See action once its prompt is composed (a lazy import away). */
+const seeAction = (session: Session) =>
+  vi.waitFor(
+    () => {
+      const a = session.getSnapshot().actions.findLast((x) => x.type === 'see');
+      if (!a) throw new Error('no See action yet');
+      return a;
+    },
+    { interval: 1 },
+  );
+// A blank adventure has no tags, so the neutral style is appended.
+const STYLE = 'painted illustration, soft light';
+
 describe('See mode', () => {
-  it('appends the caption at once, then patches the action with the stored image id', async () => {
+  it('appends the caption before the image arrives, then patches the action with the stored image id', async () => {
     const blob = new Blob(['png'], { type: 'image/png' });
-    const { session, images } = setup({ images: fakeImages(() => Promise.resolve(blob)) });
+    let answer: (() => void) | undefined;
+    const { session, images } = setup({ images: fakeImages(() => new Promise((r) => (answer = () => r(blob)))) });
     session.see('  a lantern  ');
     // The caption is on screen before the image server answers.
-    const seen = session.getSnapshot().actions.filter((a) => a.type === 'see');
-    expect(seen).toHaveLength(1);
-    expect(seen[0]?.image?.prompt).toBe('a lantern');
-    expect(seen[0]?.image?.imageId).toBeUndefined();
+    const seen = await seeAction(session);
+    expect(seen.image?.brief).toBe('a lantern');
+    expect(seen.image?.prompt).toBe(`a lantern, ${STYLE}`);
+    expect(seen.image?.imageId).toBeUndefined();
+    await vi.waitFor(() => expect(answer).toBeDefined());
+    answer?.();
     expect(session.getSnapshot().busy).toBe(false);
     await vi.waitFor(() => expect(session.getSnapshot().actions.at(-1)?.image?.imageId).toBeDefined());
     const imageId = session.getSnapshot().actions.at(-1)?.image?.imageId;
@@ -53,11 +70,11 @@ describe('See mode', () => {
       ),
     });
     session.see('a lantern');
-    const action = session.getSnapshot().actions.at(-1);
-    expect(session.getSnapshot().pendingImages).toEqual([action?.id]);
+    const action = await seeAction(session);
+    expect(session.getSnapshot().pendingImages).toEqual([action.id]);
     await vi.waitFor(() => expect(session.getSnapshot().error).toContain('did not answer'));
     expect(session.getSnapshot().pendingImages).toEqual([]);
-    expect(session.getSnapshot().actions.at(-1)?.image?.prompt).toBe('a lantern');
+    expect(session.getSnapshot().actions.at(-1)?.image?.brief).toBe('a lantern');
 
     hang = false;
     session.regenerateSee(action?.id ?? '');
@@ -102,8 +119,42 @@ describe('See mode', () => {
     session.see('a lantern');
     await vi.waitFor(() => expect(session.getSnapshot().actions.at(-1)?.image?.imageId).toBeDefined());
     session.regenerateSee(session.getSnapshot().actions.at(-1)?.id ?? '', '  a lantern at dusk  ');
-    await vi.waitFor(() => expect(prompts).toEqual(['a lantern', 'a lantern at dusk']));
-    expect(session.getSnapshot().actions.at(-1)?.image?.prompt).toBe('a lantern at dusk');
+    await vi.waitFor(() => expect(prompts).toEqual([`a lantern, ${STYLE}`, `a lantern at dusk, ${STYLE}`]));
+    expect(session.getSnapshot().actions.at(-1)?.image).toMatchObject({ brief: 'a lantern at dusk', prompt: `a lantern at dusk, ${STYLE}` });
+  });
+
+  it('turns names into looks, tags the image, and recomposes a new brief', async () => {
+    const prompts: string[] = [];
+    const adventure = createBlankAdventure('Test', 'You stand at the gate.');
+    const base = { kind: 'character' as const, aliases: [], facts: [], state: {}, relations: [], firstSeen: 0, lastSeen: 0 };
+    adventure.entities = [
+      { ...base, id: 'ent_t', name: 'Tamsin', description: 'Tamsin is a ferrywoman.', appearance: 'grey braid' },
+      { ...base, id: 'ent_b', name: 'Bram', description: 'A toll keeper.' },
+    ];
+    adventure.plot.scene = { location: 'the jetty', present: ['Bram'] };
+    const { session } = setup({ adventure, images: fakeImages(async (r) => (prompts.push(r.prompt), new Blob(['png']))) });
+    session.see('Tamsin at the ferry');
+    const action = await seeAction(session);
+    expect(action.image).toMatchObject({ brief: 'Tamsin at the ferry', entityIds: ['ent_t'] });
+    expect(action.image?.prompt).toBe(`a ferrywoman, grey braid at the ferry, the jetty, ${STYLE}`);
+    session.regenerateSee(action.id, 'an empty boat');
+    await vi.waitFor(() => expect(prompts).toHaveLength(2));
+    expect(session.getSnapshot().actions.at(-1)?.image).toMatchObject({ brief: 'an empty boat', entityIds: ['ent_b'] });
+    expect(prompts[1]).toBe(`an empty boat, a toll keeper, the jetty, ${STYLE}`);
+  });
+
+  it('sends /raw and a raw prompt edit as written, without a brief', async () => {
+    const prompts: string[] = [];
+    const { session } = setup({ images: fakeImages(async (r) => (prompts.push(r.prompt), new Blob(['png']))) });
+    session.see('/raw Tamsin, masterpiece');
+    const action = await seeAction(session);
+    expect(action.image?.prompt).toBe('Tamsin, masterpiece');
+    expect(action.image?.brief).toBeUndefined();
+    session.regenerateSee(action.id, 'a boat');
+    await vi.waitFor(() => expect(session.getSnapshot().actions.at(-1)?.image?.brief).toBe('a boat'));
+    session.regenerateSee(action.id, '/raw  boat, river ');
+    await vi.waitFor(() => expect(prompts).toEqual(['Tamsin, masterpiece', `a boat, ${STYLE}`, 'boat, river']));
+    expect(session.getSnapshot().actions.at(-1)?.image?.brief).toBeUndefined();
   });
 
   it('deletes the blob when an erase removes the action', async () => {
@@ -124,9 +175,9 @@ describe('See mode', () => {
     let resolve: ((b: Blob) => void) | undefined;
     const { session, images } = setup({ images: fakeImages(() => new Promise<Blob>((r) => (resolve = r))) });
     session.see('a lantern');
-    const action = session.getSnapshot().actions.at(-1);
+    const action = await seeAction(session);
     await vi.waitFor(() => expect(resolve).toBeDefined());
-    session.eraseTo(action?.id ?? '');
+    session.eraseTo(action.id);
     resolve?.(new Blob(['png']));
     await new Promise((r) => setTimeout(r, 0));
     expect(session.getSnapshot().actions.some((a) => a.type === 'see')).toBe(false);

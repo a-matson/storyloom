@@ -22,12 +22,17 @@ export const Action = z.object({
   versions: z.array(z.string()),
   active: z.int().check(z.gte(0)),
   createdAt: z.number(),
-  /** Present for `see` actions. `imageId` points at a stored blob; `url` only comes from imported AID data. `missing`: the blob did not come with the import. */
+  /**
+   * Present for `see` actions. `imageId` points at a stored blob; `url` only comes from imported AID data. `missing`: the blob did not come with the import.
+   * `brief` is what the player typed and `prompt` what was sent; a raw prompt and older actions have no brief. `entityIds`: the characters it shows.
+   */
   image: z.optional(
     z.object({
       imageId: z.optional(z.string()),
       url: z.optional(z.string()),
+      brief: z.optional(z.string()),
       prompt: z.string(),
+      entityIds: z.optional(z.array(z.string())),
       model: z.optional(z.string()),
       missing: z.optional(z.literal(true)),
     }),

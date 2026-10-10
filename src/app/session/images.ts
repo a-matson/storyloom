@@ -5,6 +5,7 @@ import type { Provider } from '@core/ports';
 import { trackJob } from '@core/trace';
 import { imageQueue } from './imageQueue';
 import { withProgress } from './imageProgress';
+import { portraitStyle } from './portraitPrompt';
 import type { SessionServices } from './types';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -28,39 +29,67 @@ export interface SeeHost {
   onError: (message: string) => void;
 }
 
+/** `/raw <prompt>` sends the text as it is, skipping composition. */
+const RAW = /^\/raw\s+/i;
+
 /**
- * See mode. The `see` action is appended at once so the caption is on screen while the
- * image server works; the blob lands in storage and `imageId` is patched in afterwards.
- * Image generation never blocks a turn: `busy` stays false and the story stays playable.
+ * See mode. The input is a brief; `seePrompt` composes the prompt from it, the scene and the cast's
+ * looks (a blank or implicit brief asks the helper model first). The `see` action is appended as soon
+ * as the prompt exists, so the caption is on screen while the image server works; the blob lands in
+ * storage and `imageId` is patched in afterwards. Image generation never blocks a turn.
  */
-export function seeImage(prompt: string, host: SeeHost): void {
-  const text = prompt.trim();
-  if (text === '') return void auto(host);
-  start(host, text);
+export function seeImage(input: string, host: SeeHost): void {
+  const text = input.trim();
+  if (RAW.test(text)) return void (text.replace(RAW, '') && start(host, { prompt: text.replace(RAW, '') }));
+  void composed(host, text).then((c) => c && start(host, c));
 }
 
-/** A blank prompt: the helper model writes one from the story so far, then that image is generated. */
-async function auto(host: SeeHost): Promise<void> {
+type Composed = Pick<Image, 'brief' | 'prompt' | 'entityIds'>;
+
+async function composed(host: SeeHost, brief: string): Promise<Composed | undefined> {
   try {
-    const { autoImagePrompt } = await loadImagePrompt();
-    const req = { actions: host.log.actions, plotEssentials: host.adv.plot.plotEssentials };
-    start(host, await autoImagePrompt(req, await host.helperModel()));
+    const { seePrompt } = await loadImagePrompt();
+    const { adv } = host;
+    const req = {
+      brief,
+      actions: host.log.actions,
+      plotEssentials: adv.plot.plotEssentials,
+      scene: adv.plot.scene,
+      entities: adv.entities,
+      style: adv.settings.image.portraitStyle ?? portraitStyle(adv.tags),
+    };
+    const { prompt, entityIds } = await seePrompt(req, host.helperModel);
+    return { ...(brief !== '' && { brief }), prompt, ...(entityIds.length > 0 && { entityIds }) };
   } catch (e) {
     host.onError(`Could not write an image prompt: ${message(e)}`);
+    return undefined;
   }
 }
 
 /**
- * Retry (no `prompt`) or edit the prompt of a `see` action: the old blob is dropped and a new
- * image generated into the same action. No seed is sent, so the same prompt still yields a new
- * picture. No new version either — the caption is the action's text and the image is a patch.
+ * Retry (no `brief`) or rewrite the brief of a `see` action, which composes a new prompt: the old blob
+ * is dropped and a new image generated into the same action. No seed is sent, so the same prompt still
+ * yields a new picture. No new version either — the caption is the action's text and the image is a patch.
  */
-export function regenerateImage(host: SeeHost, actionId: string, prompt?: string): void {
+export function regenerateImage(host: SeeHost, actionId: string, brief?: string): void {
+  if (brief === undefined) return redo(host, actionId, (i) => i);
+  const text = brief.trim();
+  if (RAW.test(text)) return editSeePrompt(host, actionId, text.replace(RAW, ''));
+  if (text === '') return;
+  void composed(host, text).then((c) => c && redo(host, actionId, ({ brief: _b, entityIds: _e, ...i }) => ({ ...i, ...c })));
+}
+
+/** The prompt itself, edited raw: sent as written, and the caption shows it, since no brief describes it any more. */
+function editSeePrompt(host: SeeHost, actionId: string, prompt: string): void {
+  const text = prompt.trim();
+  if (text !== '') redo(host, actionId, ({ brief: _b, ...i }) => ({ ...i, prompt: text }));
+}
+
+function redo(host: SeeHost, actionId: string, next: (old: Image) => Image): void {
   const old = host.log.actions.find((a) => a.id === actionId)?.image;
   if (!old) return;
   const { imageId, missing: _wasImported, ...rest } = old;
-  const image: Image = { ...rest, ...(prompt !== undefined && { prompt: prompt.trim() }) };
-  if (image.prompt === '') return;
+  const image = next(rest);
   if (imageId !== undefined) drop(host, imageId);
   host.log.patch(actionId, { image });
   host.changed();
@@ -76,9 +105,9 @@ export function dropOrphanImages(host: SeeHost, before: Action[]): void {
 const drop = (host: SeeHost, imageId: string): void =>
   void host.svc.storage.deleteImage(host.adv.id, imageId).catch((e: unknown) => console.warn('could not delete the stored image', e));
 
-function start(host: SeeHost, prompt: string): void {
+function start(host: SeeHost, c: Composed): void {
   const model = host.adv.settings.image.model;
-  const image: Image = { prompt, ...(model !== undefined && { model }) };
+  const image: Image = { ...c, ...(model !== undefined && { model }) };
   const action = host.log.append('see', '', { image });
   host.changed();
   void generate(host, action.id, image);

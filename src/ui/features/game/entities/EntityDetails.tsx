@@ -1,5 +1,6 @@
 import { useId } from 'react';
-import type { Entity, EntityFact } from '@core/model';
+import type { Adventure, Entity, EntityFact } from '@core/model';
+import { useImageBlob } from '@ui/hooks/useImageBlob';
 import { Button } from '@ui/components/ui/button';
 import { Input } from '@ui/components/ui/field';
 import { Pill } from '@ui/components/ui/pill';
@@ -38,6 +39,38 @@ export function StateRows({ entity: e, update }: { entity: Entity; update: Updat
       ))}
     </>
   );
+}
+
+/** Thumbnails of the See images tagged with this character, newest first; a click shows the image in the story. */
+export function Appearances({ entity: e, adventure, onClose }: { entity: Entity; adventure: Adventure; onClose: () => void }) {
+  const shots = adventure.actions.flatMap((a, i) => (a.image?.entityIds?.includes(e.id) ? [{ index: i, image: a.image }] : [])).toReversed();
+  if (shots.length === 0) return null;
+  return (
+    <>
+      <SectionLabel>Appearances</SectionLabel>
+      <div className="flex flex-wrap gap-2">
+        {shots.map(({ index, image }) => (
+          <button
+            key={index}
+            type="button"
+            className="size-16 overflow-hidden rounded-md border border-border bg-secondary"
+            aria-label={`Show image ${index}: ${image.brief ?? image.prompt}`}
+            onClick={() => {
+              onClose();
+              showAction(index);
+            }}
+          >
+            <Thumb adventureId={adventure.id} imageId={image.imageId} />
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function Thumb({ adventureId, imageId }: { adventureId: string; imageId: string | undefined }) {
+  const url = useImageBlob(adventureId, imageId);
+  return url === undefined ? null : <img src={url} alt="" className="size-full object-cover" />;
 }
 
 export function Facts({ entity: e, update, onClose }: { entity: Entity; update: Update; onClose: () => void }) {

@@ -6,6 +6,7 @@ import { progressText, useImageProgress } from '@ui/hooks/useImageProgress';
 import { Button, buttonClass } from '@ui/components/ui/button';
 import { cn } from '@ui/lib/utils';
 import { caretAtEnd, revealOnHover, seeIndent } from './OutputTools';
+import { SeeDetails } from './SeeDetails';
 
 type Image = NonNullable<Action['image']>;
 interface Props {
@@ -93,7 +94,7 @@ function ImageTools({ id, prompt, src, api }: { id: string; prompt: string; src:
   );
 }
 
-/** A See-mode action: the caption shows while the image is still generating; double-click it to change the prompt. */
+/** A See-mode action: the caption shows while the image is still generating; double-click it to change the brief. */
 export function SeeBlock({ action, image, adventureId, isLast, busy, generating, api }: Props) {
   const [editing, setEditing] = useState(false);
   const ref = useRef<HTMLElement>(null);
@@ -105,17 +106,19 @@ export function SeeBlock({ action, image, adventureId, isLast, busy, generating,
     if (editing && ref.current) caretAtEnd(ref.current);
   }, [editing]);
 
+  // The brief the player typed; a raw prompt, or an action from before briefs, shows its prompt.
+  const caption = image.brief ?? image.prompt;
   const commit = () => {
     setEditing(false);
-    const next = ref.current?.innerText ?? image.prompt;
-    if (next.trim() !== image.prompt) api.regenerateSee(action.id, next);
+    const next = ref.current?.innerText ?? caption;
+    if (next.trim() !== caption) api.regenerateSee(action.id, next);
   };
 
   return (
     // No kind label of its own, so the empty gutter is padding rather than a grid cell — same token, same left edge as the prose.
     <figure className={cn('group m-0', seeIndent)}>
       {src !== undefined ? (
-        <img src={src} alt={image.prompt} className="max-w-full rounded-lg" />
+        <img src={src} alt={caption} className="max-w-full rounded-lg" />
       ) : image.missing === true ? (
         <div className="font-sans text-caption text-muted-foreground">Image not exported</div>
       ) : image.imageId !== undefined ? null : generating ? ( // the blob is on disk and loading: a reload must not claim it is still generating
@@ -149,14 +152,15 @@ export function SeeBlock({ action, image, adventureId, isLast, busy, generating,
           }
           if (e.key !== 'Escape') return;
           setEditing(false);
-          if (ref.current) ref.current.innerText = image.prompt;
+          if (ref.current) ref.current.innerText = caption;
         }}
         aria-keyshortcuts="Enter"
-        title={editing ? 'Editing — click outside to generate a new image' : 'Double-click or press Enter to edit the prompt'}
+        title={editing ? 'Editing — click outside to generate a new image' : 'Double-click or press Enter to change what the picture shows'}
       >
-        {image.prompt}
+        {caption}
       </figcaption>
-      {isLast && !busy && <ImageTools id={action.id} prompt={image.prompt} src={src} api={api} />}
+      <SeeDetails id={action.id} image={image} busy={busy} api={api} />
+      {isLast && !busy && <ImageTools id={action.id} prompt={caption} src={src} api={api} />}
     </figure>
   );
 }
