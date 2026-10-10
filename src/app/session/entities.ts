@@ -1,12 +1,15 @@
 // Only `loadMemoryJobs`: importing more from the barrel splits it out of the start-up chunk.
+import { loadImagePrompt } from '@core/image';
 import { loadMemoryJobs } from '@core/memory';
 import { newId, type Adventure, type Entity } from '@core/model';
-import { downscale } from '../image';
+import { cropSquare, downscale } from '../image';
+import { withoutReference } from './images';
 import { clearPortrait, dropPortrait, PORTRAIT_PX, renderPortrait, setPortrait } from './portraits';
 import type { GameSession } from './session';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
+const withoutLook = ({ look: _l, ...e }: Entity): Entity => e;
 const patch = (adv: Adventure, id: string, p: Partial<Entity>) => (adv.entities = adv.entities.map((e) => (e.id === id ? { ...e, ...p } : e)));
 
 /**
@@ -32,6 +35,27 @@ export function entityEdits(host: GameSession) {
       }
     },
     clearPortrait: (id: string) => clearPortrait(host, id),
+    /** Freeze the character's current look and point at that See image; later Sees repeat the words and the seed. */
+    setReference: async (id: string, imageId: string) => {
+      const { looksOf } = await loadImagePrompt();
+      mutate((adv) => {
+        const e = adv.entities.find((x) => x.id === id);
+        if (e) patch(adv, id, { referenceImageId: imageId, look: looksOf(e) });
+      });
+    },
+    clearReference: (id: string) => mutate((adv) => (adv.entities = adv.entities.map((e) => (e.id === id ? withoutReference(e) : e)))),
+    /** Back to the story's own words and a random seed; the reference image stays. */
+    unfreeze: (id: string) => mutate((adv) => (adv.entities = adv.entities.map((e) => (e.id === id ? withoutLook(e) : e)))),
+    /** The reference's centre square becomes the portrait. */
+    portraitFromReference: async (id: string, imageId: string) => {
+      try {
+        const blob = await host.svc.storage.getImage(host.adv.id, imageId);
+        if (!blob) throw new Error('the image is not stored');
+        await setPortrait(host, id, await cropSquare(blob, PORTRAIT_PX));
+      } catch (err) {
+        host.onError(`Could not use that image: ${message(err)}`);
+      }
+    },
     /** `fromId` is folded into `intoId` and deleted; no undo. */
     merge: async (intoId: string, fromId: string) => {
       const { mergeEntities } = await loadMemoryJobs();

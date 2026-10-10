@@ -1,6 +1,6 @@
 import { imageRequest, loadImagePrompt } from '@core/image';
 import type { ActionLog } from '@core/log';
-import { newId, type Action, type Adventure, type AppSettings, type TemplateId } from '@core/model';
+import { newId, type Action, type Adventure, type AppSettings, type Entity, type TemplateId } from '@core/model';
 import type { Provider } from '@core/ports';
 import { trackJob } from '@core/trace';
 import { imageQueue } from './imageQueue';
@@ -29,6 +29,8 @@ export interface SeeHost {
   onError: (message: string) => void;
 }
 
+export const withoutReference = ({ referenceImageId: _r, ...e }: Entity): Entity => e;
+
 /** `/raw <prompt>` sends the text as it is, skipping composition. */
 const RAW = /^\/raw\s+/i;
 
@@ -44,7 +46,7 @@ export function seeImage(input: string, host: SeeHost): void {
   void composed(host, text).then((c) => c && start(host, c));
 }
 
-type Composed = Pick<Image, 'brief' | 'prompt' | 'entityIds'>;
+type Composed = Pick<Image, 'brief' | 'prompt' | 'entityIds' | 'seed'>;
 
 async function composed(host: SeeHost, brief: string): Promise<Composed | undefined> {
   try {
@@ -58,8 +60,8 @@ async function composed(host: SeeHost, brief: string): Promise<Composed | undefi
       entities: adv.entities,
       style: adv.settings.image.portraitStyle ?? portraitStyle(adv.tags),
     };
-    const { prompt, entityIds } = await seePrompt(req, host.helperModel);
-    return { ...(brief !== '' && { brief }), prompt, ...(entityIds.length > 0 && { entityIds }) };
+    const { prompt, entityIds, seed } = await seePrompt(req, host.helperModel);
+    return { ...(brief !== '' && { brief }), prompt, ...(entityIds.length > 0 && { entityIds }), ...(seed !== undefined && { seed }) };
   } catch (e) {
     host.onError(`Could not write an image prompt: ${message(e)}`);
     return undefined;
@@ -72,11 +74,11 @@ async function composed(host: SeeHost, brief: string): Promise<Composed | undefi
  * yields a new picture. No new version either — the caption is the action's text and the image is a patch.
  */
 export function regenerateImage(host: SeeHost, actionId: string, brief?: string): void {
-  if (brief === undefined) return redo(host, actionId, (i) => i);
+  if (brief === undefined) return redo(host, actionId, ({ seed: _s, ...i }) => i);
   const text = brief.trim();
   if (RAW.test(text)) return editSeePrompt(host, actionId, text.replace(RAW, ''));
   if (text === '') return;
-  void composed(host, text).then((c) => c && redo(host, actionId, ({ brief: _b, entityIds: _e, ...i }) => ({ ...i, ...c })));
+  void composed(host, text).then((c) => c && redo(host, actionId, ({ brief: _b, entityIds: _e, seed: _s, ...i }) => ({ ...i, ...c })));
 }
 
 /** The prompt itself, edited raw: sent as written, and the caption shows it, since no brief describes it any more. */
@@ -102,8 +104,11 @@ export function dropOrphanImages(host: SeeHost, before: Action[]): void {
   for (const a of before) if (a.image?.imageId !== undefined && !kept.has(a.id)) drop(host, a.image.imageId);
 }
 
-const drop = (host: SeeHost, imageId: string): void =>
+/** A reference pointing at the dropped blob goes with it; the frozen look stays. */
+function drop(host: SeeHost, imageId: string): void {
+  host.adv.entities = host.adv.entities.map((e) => (e.referenceImageId === imageId ? withoutReference(e) : e));
   void host.svc.storage.deleteImage(host.adv.id, imageId).catch((e: unknown) => console.warn('could not delete the stored image', e));
+}
 
 function start(host: SeeHost, c: Composed): void {
   const model = host.adv.settings.image.model;
@@ -123,7 +128,7 @@ async function generate(host: SeeHost, actionId: string, image: Image): Promise<
   host.imagePending(actionId, true);
   try {
     const provider = await pending;
-    const req = imageRequest(s, image.prompt);
+    const req = { ...imageRequest(s, image.prompt), ...(image.seed !== undefined && { seed: image.seed }) };
     const blob = await imageQueue.enqueue('see', () =>
       withProgress('see', provider, () => trackJob('image', () => provider.txt2img(req, AbortSignal.timeout(ms)))),
     );

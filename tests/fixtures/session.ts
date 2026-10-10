@@ -26,6 +26,9 @@ export function setup(
     async putImage(adventureId: string, id: string, blob: Blob) {
       images.set(`${adventureId}|${id}`, blob);
     },
+    async getImage(adventureId: string, id: string) {
+      return images.get(`${adventureId}|${id}`);
+    },
     async deleteImage(adventureId: string, id: string) {
       images.delete(`${adventureId}|${id}`);
     },

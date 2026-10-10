@@ -7,7 +7,7 @@ import type { ImageProvider, ImageRequest } from '@core/ports';
 import { settled, setup } from './fixtures/session';
 
 // No canvas under vitest; the re-encode is the browser's job.
-vi.mock('@app/image', () => ({ downscale: (b: Blob) => Promise.resolve(b) }));
+vi.mock('@app/image', () => ({ downscale: (b: Blob) => Promise.resolve(b), cropSquare: (b: Blob) => Promise.resolve(b) }));
 
 const lena: Entity = {
   id: 'ent_lena',
@@ -216,6 +216,25 @@ describe('portrait edits', () => {
     expect(images.size).toBe(1);
     edits.delete('ent_e');
     await vi.waitFor(() => expect(images.size).toBe(0));
+  });
+
+  it('a reference freezes the look, becomes the portrait, and goes when its image is erased', async () => {
+    const { session, images } = withImages(async () => new Blob(['png']), { ...lena, id: 'ent_r', appearance: 'grey hair' });
+    session.see('Lena by the gate');
+    await vi.waitFor(() => expect(session.getSnapshot().adventure.actions.at(-1)?.image?.imageId).toBeDefined());
+    const imageId = session.getSnapshot().adventure.actions.at(-1)?.image?.imageId ?? '';
+    const edits = entityEdits(session);
+    const ent = () => session.getSnapshot().adventure.entities.find((e) => e.id === 'ent_r');
+    await edits.setReference('ent_r', imageId);
+    expect(ent()).toMatchObject({ referenceImageId: imageId, look: 'a ferrywoman, grey hair' });
+    await edits.portraitFromReference('ent_r', imageId);
+    expect(ent()?.portraitId).toBeDefined();
+    edits.unfreeze('ent_r');
+    expect(ent()?.look).toBeUndefined();
+    expect(ent()?.referenceImageId).toBe(imageId);
+    session.erase();
+    await vi.waitFor(() => expect(ent()?.referenceImageId).toBeUndefined());
+    expect(images.size).toBe(1);
   });
 
   it('shows a failed redraw', async () => {

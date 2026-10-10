@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { castIn, composeSeePrompt, isImplicit, namedCast, PROMPT_BUDGET } from '@core/image/compose';
 import type { Entity } from '@core/model';
+import { seedOf } from '@core/trace';
 
 const char = (id: string, name: string, description: string, appearance?: string, aliases: string[] = []): Entity => ({
   id,
@@ -89,6 +90,16 @@ describe('composeSeePrompt', () => {
   it('falls back to "a person" when the description is only the name', () => {
     const solo = char('s', 'Sol', 'Sol.', undefined);
     expect(composeSeePrompt({ brief: 'Sol sleeps', entities: [solo], style: '' }).prompt).toBe('a person sleeps');
+  });
+
+  it('repeats a frozen look verbatim, and fixes the seed only for one character', () => {
+    const frozen = { ...tamsin, look: 'a ferrywoman, grey braid', appearance: 'now shaved' };
+    const one = composeSeePrompt({ brief: 'Tamsin at the ferry', entities: [frozen, bram], style });
+    expect(one.prompt).toBe('a ferrywoman, grey braid at the ferry, oil painting');
+    expect(one.seed).toBe(seedOf('t'));
+    expect(composeSeePrompt({ brief: 'Tamsin sings', entities: [frozen], style }).seed).toBe(one.seed);
+    expect(composeSeePrompt({ brief: 'Tamsin and Bram', entities: [frozen, bram], style }).seed).toBeUndefined();
+    expect(composeSeePrompt({ brief: 'Tamsin at the ferry', entities: [tamsin], style }).seed).toBeUndefined();
   });
 });
 

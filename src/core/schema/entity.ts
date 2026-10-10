@@ -35,6 +35,10 @@ export const Entity = z.object({
   firstSeen: count,
   lastSeen: count,
   portraitId: z.optional(z.string()),
+  /** A See action's `imageId` the player chose as this character's reference; dropped with that blob. */
+  referenceImageId: z.optional(z.string()),
+  /** The appearance tags frozen when the reference was set: later See prompts repeat them verbatim. */
+  look: z.optional(z.string()),
   cardId: z.optional(z.string()),
   /** Seeded from a scenario card: model output never replaces its name, kind or description. */
   canon: z.optional(z.boolean()),

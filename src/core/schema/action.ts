@@ -33,6 +33,8 @@ export const Action = z.object({
       brief: z.optional(z.string()),
       prompt: z.string(),
       entityIds: z.optional(z.array(z.string())),
+      /** Sent with the prompt when one character with a frozen look is shown; Retry drops it so it still yields a new picture. */
+      seed: z.optional(z.number()),
       model: z.optional(z.string()),
       missing: z.optional(z.literal(true)),
     }),
