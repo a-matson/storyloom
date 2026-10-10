@@ -1,5 +1,4 @@
-import type { Adventure, AppSettings } from '@core/model';
-import { contentClause } from '@core/text';
+import { contentClause, type Adventure, type AppSettings } from '@core/model';
 import type { HelperModel, SessionServices } from './types';
 
 /**
