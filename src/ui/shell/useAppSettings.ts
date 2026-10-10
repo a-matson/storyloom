@@ -29,11 +29,15 @@ export function useAppSettings(route: Route, onError: (message: string) => void)
     });
   }, [onError]);
 
-  const save = async (next: AppSettings) => {
+  /** Store without leaving the screen (saved image presets from the game sidebar). */
+  const persist = async (next: AppSettings) => {
     setApp(next);
     applyTheme(next);
     await storage.putSettings(next);
+  };
+  const save = async (next: AppSettings) => {
+    await persist(next);
     navigate({ name: 'library' });
   };
-  return [app, save] as const;
+  return [app, save, persist] as const;
 }

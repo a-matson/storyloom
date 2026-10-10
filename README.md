@@ -104,6 +104,12 @@ koboldcpp --nomodel --sdmodel ~/models/dreamshaper_8.safetensors --port 5001
 Then Setup → **Image server** → `http://localhost:5001`. 512×512 is the default; covers for
 your adventures can be generated or uploaded the same way.
 
+A checkpoint's model page usually names a sampler, a clip skip and a "denoise". Copy them into
+Gameplay → Images (or pick an **Apply preset**): Sampler and Clip skip go to the server as they
+are, and **Hires pass** is the denoise: the picture is rendered, upscaled and redrawn at that
+strength, which roughly doubles the time. Portraits never use it. **Save as preset** keeps
+those settings under a name for every adventure.
+
 **Read aloud.** Setup → Appearance → **Read aloud** speaks each new passage with a system
 voice (the browser's own speech engine, nothing is downloaded). Every passage also has a
 **Speak** button.

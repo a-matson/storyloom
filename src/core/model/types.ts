@@ -34,6 +34,7 @@ export type Adventure = z.output<typeof S.Adventure>;
 export type Scenario = z.output<typeof S.Scenario>;
 export type ProviderConfig = z.output<typeof S.ProviderConfig>;
 export type AppSettings = z.output<typeof S.AppSettings>;
+export type ImagePreset = z.output<typeof S.ImagePreset>;
 
 export function actionText(a: Action): string {
   return a.versions[a.active] ?? a.versions.at(-1) ?? '';

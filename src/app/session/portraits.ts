@@ -70,6 +70,9 @@ export async function renderPortrait(host: PortraitHost, id: string): Promise<vo
     cfgScale: s.cfgScale,
     seed: seedOf(e.id),
     model: s.model,
+    sampler: s.sampler,
+    clipSkip: s.clipSkip,
+    // No hires pass: the picture is kept at 64 px, so a second render would buy nothing.
   };
   const provider = await pending;
   const ms = host.svc.imageTimeoutMs;

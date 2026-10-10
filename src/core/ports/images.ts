@@ -15,6 +15,11 @@ export interface ImageRequest {
   seed?: number | undefined;
   /** Checkpoint to switch to for this request only. */
   model?: string | undefined;
+  /** A1111 sampler name, as a model card gives it; unset = server default. */
+  sampler?: string | undefined;
+  clipSkip?: number | undefined;
+  /** A model page's "denoise": render, upscale by `scale`, then img2img at `denoise`. Two server calls. */
+  hires?: { scale: number; denoise: number; steps?: number | undefined } | undefined;
 }
 
 export interface ImageProvider {
@@ -22,5 +27,7 @@ export interface ImageProvider {
   readonly baseUrl: string;
   health(signal?: AbortSignal): Promise<boolean>;
   models(signal?: AbortSignal): Promise<string[]>;
+  samplers(signal?: AbortSignal): Promise<string[]>;
   txt2img(req: ImageRequest, signal?: AbortSignal): Promise<Blob>;
+  img2img(req: ImageRequest & { init: Blob; denoise: number }, signal?: AbortSignal): Promise<Blob>;
 }

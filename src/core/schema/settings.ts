@@ -65,7 +65,31 @@ export const ImageSettings = z.object({
   /** A portrait is shown at 32 CSS px, so it renders smaller and cheaper than a See image. [provisional] */
   portraitSize: z._default(z.int().check(z.gt(0)), 384),
   portraitSteps: z._default(z.int().check(z.gt(0)), 14),
+  /** A1111 sampler name from the checkpoint's model card; unset = server default. */
+  sampler: z.optional(z.string()),
+  clipSkip: z.optional(z.int().check(z.gt(0))),
+  /** A model page's "denoise": See and covers render, upscale and redraw at `hiresDenoise`. Portraits never do. Off until its time cost is measured. */
+  hires: z._default(z.boolean(), false),
+  // The usual 1.5x upscale, and a typical model page's 0.55 denoise. [provisional]
+  hiresScale: z._default(z.number().check(z.gt(0)), 1.5),
+  hiresDenoise: z._default(z.number().check(z.gt(0)), 0.55),
+  hiresSteps: z.optional(z.int().check(z.gt(0))),
 });
+
+/** The model-card part of `ImageSettings`: what an image preset sets. Size, checkpoint and portraits are left alone. */
+export const ImagePresetSettings = z.object({
+  sampler: z.optional(z.string()),
+  clipSkip: z.optional(z.int().check(z.gt(0))),
+  steps: z.int().check(z.gt(0)),
+  cfgScale: z.number().check(z.gt(0)),
+  hires: z.boolean(),
+  hiresScale: z.optional(z.number().check(z.gt(0))),
+  hiresDenoise: z.optional(z.number().check(z.gt(0))),
+  hiresSteps: z.optional(z.int().check(z.gt(0))),
+});
+
+/** A preset the player saved; app-wide, so every adventure can apply it. */
+export const ImagePreset = z.object({ id: z.string(), name: z.string(), settings: ImagePresetSettings });
 
 export const AdventureSettings = z.object({
   providerId: z._default(z.string(), 'local'),
@@ -116,4 +140,5 @@ export const AppSettings = z.object({
   speech: z.prefault(SpeechSettings, {}),
   stickyInput: z._default(z.boolean(), true),
   compactButtons: z._default(z.boolean(), false),
+  imagePresets: z._default(z.array(ImagePreset), []),
 });

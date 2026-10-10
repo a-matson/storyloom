@@ -1,4 +1,4 @@
-import type { Adventure, AdventureSettings } from '@core/model';
+import type { Adventure, AdventureSettings, AppSettings } from '@core/model';
 import { MODEL_PRESETS } from '@core/text';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Select } from '@ui/components/ui/field';
@@ -186,14 +186,24 @@ function Appearance({ s, update }: { s: Settings; update: Update }) {
   );
 }
 
-export function GameplayTab({ adventure, api }: { adventure: Adventure; api: GameApi }) {
+export function GameplayTab({
+  adventure,
+  api,
+  app,
+  onAppChange,
+}: {
+  adventure: Adventure;
+  api: GameApi;
+  app: AppSettings;
+  onAppChange: (next: AppSettings) => void;
+}) {
   const s = adventure.settings;
   return (
     <>
       <StoryGenerator s={s} update={api.updateSettings} />
       <MemorySystem s={s} update={api.updateSettings} />
       <ModelSettings model={s.model} onChange={(patch) => api.updateSettings({ model: { ...s.model, ...patch } })} />
-      <ImagesSection s={s} update={api.updateSettings} />
+      <ImagesSection s={s} app={app} onAppChange={onAppChange} update={api.updateSettings} />
       <Feedback s={s} update={api.updateSettings} />
       <Appearance s={s} update={api.updateSettings} />
     </>
