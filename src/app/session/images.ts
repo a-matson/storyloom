@@ -3,10 +3,15 @@ import type { ActionLog } from '@core/log';
 import { newId, type Action, type Adventure, type AppSettings, type TemplateId } from '@core/model';
 import type { Provider } from '@core/ports';
 import { trackJob } from '@core/trace';
+import { imageQueue } from './imageQueue';
 import type { SessionServices } from './types';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 type Image = NonNullable<Action['image']>;
+
+/** A bare "signal timed out" would not say what timed out, so the timeout names itself. */
+export const imageFailure = (e: unknown, timeoutMs: number): string =>
+  e instanceof Error && e.name === 'TimeoutError' ? `the image server did not answer in ${Math.round(timeoutMs / 1000)} s` : message(e);
 
 export interface SeeHost {
   adv: Adventure;
@@ -86,20 +91,16 @@ async function generate(host: SeeHost, actionId: string, image: Image): Promise<
   host.imagePending(actionId, true);
   try {
     const provider = await pending;
-    const blob = await trackJob('image', () =>
-      provider.txt2img(
-        {
-          prompt: image.prompt,
-          width: s.width,
-          height: s.height,
-          steps: s.steps,
-          cfgScale: s.cfgScale,
-          negativePrompt: s.negativePrompt,
-          model: s.model,
-        },
-        AbortSignal.timeout(ms),
-      ),
-    );
+    const req = {
+      prompt: image.prompt,
+      width: s.width,
+      height: s.height,
+      steps: s.steps,
+      cfgScale: s.cfgScale,
+      negativePrompt: s.negativePrompt,
+      model: s.model,
+    };
+    const blob = await imageQueue.enqueue('see', () => trackJob('image', () => provider.txt2img(req, AbortSignal.timeout(ms))));
     // An erase during those seconds already ran dropOrphanImages; storing now would leak a blob no action owns.
     if (!host.log.actions.some((a) => a.id === actionId)) return;
     const imageId = newId('img_');
@@ -108,9 +109,7 @@ async function generate(host: SeeHost, actionId: string, image: Image): Promise<
     host.changed();
   } catch (e) {
     // The caption and the prompt stay; the block shows its failed state with Retry.
-    // A bare "signal timed out" would not say what timed out, so the timeout names itself.
-    const why = e instanceof Error && e.name === 'TimeoutError' ? `the image server did not answer in ${Math.round(ms / 1000)} s` : message(e);
-    host.onError(`Could not generate the image: ${why}`);
+    host.onError(`Could not generate the image: ${imageFailure(e, ms)}`);
   } finally {
     host.imagePending(actionId, false);
   }

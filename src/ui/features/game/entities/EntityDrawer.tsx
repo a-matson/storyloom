@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useState, useSyncExternalStore } from 'react';
 // Not through the barrel: that would pull the session out of the start-up chunk into a shared one.
 import { entityEdits } from '@app/session/entities';
 import type { Adventure, Entity } from '@core/model';
@@ -47,7 +47,7 @@ export function EntityDrawer({ entity: e, adventure, api, onClose }: Props) {
         onClose={onClose}
       />
       <DrawerBody>
-        <Portrait entity={e} edits={edits} />
+        <Portrait entity={e} api={api} edits={edits} />
         <label htmlFor={`${id}-name`}>
           <SectionLabel>Name</SectionLabel>
         </label>
@@ -81,8 +81,11 @@ export function EntityDrawer({ entity: e, adventure, api, onClose }: Props) {
 type Edits = ReturnType<typeof entityEdits>;
 
 /** Drawn between turns when an image server is configured; these are the player's overrides. */
-function Portrait({ entity: e, edits }: { entity: Entity; edits: Edits }) {
-  const [drawing, setDrawing] = useState(false);
+function Portrait({ entity: e, api, edits }: { entity: Entity; api: GameApi; edits: Edits }) {
+  const [asked, setDrawing] = useState(false);
+  const state = useSyncExternalStore(api.subscribe, () => api.getSnapshot().portraitState[e.id]);
+  const drawing = asked || state?.status === 'queued' || state?.status === 'rendering';
+  const label = state?.status === 'queued' ? 'Queued…' : drawing ? 'Drawing…' : state?.status === 'failed' ? 'Retry' : e.portraitId ? 'Redraw' : 'Draw';
   const regenerate = () => {
     setDrawing(true);
     void edits.regeneratePortrait(e.id).finally(() => setDrawing(false));
@@ -95,7 +98,7 @@ function Portrait({ entity: e, edits }: { entity: Entity; edits: Edits }) {
     <div className="flex flex-wrap items-center gap-2">
       <SectionLabel>Portrait</SectionLabel>
       <Button className="h-7" onClick={regenerate} disabled={drawing}>
-        {drawing ? 'Drawing…' : e.portraitId ? 'Redraw' : 'Draw'}
+        {label}
       </Button>
       <Button className="h-7" onClick={() => void upload()}>
         Upload
@@ -105,6 +108,7 @@ function Portrait({ entity: e, edits }: { entity: Entity; edits: Edits }) {
           Clear
         </Button>
       )}
+      {state?.status === 'failed' && <p className="w-full text-caption text-danger">Could not draw the portrait: {state.error}</p>}
     </div>
   );
 }

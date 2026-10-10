@@ -22,7 +22,14 @@ export interface GameSnapshot {
   warm: 'idle' | 'warming' | 'warm';
   /** The contradiction check flagged the last output; cleared when that output changes. Not persisted. */
   contradiction: { actionId: string; fact: string } | null;
+  /** Portrait renders by entity id; absent = none wanted, or done. Not persisted: a reload retries. */
+  portraitState: Readonly<Record<string, PortraitState>>;
 }
+
+export type PortraitState =
+  | { status: 'queued' | 'rendering' }
+  /** `turn`: model outputs at the failure; `down`: the image server failed its health check right after. */
+  | { status: 'failed'; error: string; turn: number; down: boolean };
 
 /** Session state of a freshly opened adventure. */
 export const OPENED: Omit<GameSnapshot, 'adventure' | 'actions' | 'canUndo' | 'canRedo'> = {
@@ -35,6 +42,7 @@ export const OPENED: Omit<GameSnapshot, 'adventure' | 'actions' | 'canUndo' | 'c
   pendingImages: [],
   warm: 'idle',
   contradiction: null,
+  portraitState: {},
 };
 
 export interface SessionServices {

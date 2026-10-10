@@ -1,8 +1,10 @@
 import { newId, type Adventure, type AppSettings, type Entity } from '@core/model';
-import { trackJob } from '@core/trace';
+import { hashPrompt, trackJob } from '@core/trace';
 import { downscale } from '../image';
+import { imageQueue } from './imageQueue';
+import { imageFailure } from './images';
 import { PORTRAIT_NEGATIVE, portraitPrompt, portraitStyle } from './portraitPrompt';
-import type { SessionServices } from './types';
+import type { GameSnapshot, PortraitState, SessionServices } from './types';
 
 export interface PortraitHost {
   adv: Adventure;
@@ -10,27 +12,42 @@ export interface PortraitHost {
   svc: SessionServices;
   /** The adventure changed in place: publish and save. */
   changed: () => void;
+  getSnapshot: () => GameSnapshot;
+  emit: (patch: Partial<GameSnapshot>) => void;
 }
 
-/** SD 1.5's native size; it cannot draw a face at the size it is shown. */
-const RENDER_PX = 512;
-/** 2x the 64 CSS px the drawer shows [provisional]. */
-export const PORTRAIT_PX = 128;
-
-/** Characters tried this page load: a failing render is not retried every idle period. */
-const tried = new Set<string>();
+/** 2x the 32 CSS px a portrait is shown at. */
+export const PORTRAIT_PX = 64;
+/** A failed portrait is tried again after this many turns, or as soon as a down image server answers. [provisional] */
+export const PORTRAIT_RETRY_TURNS = 5;
 
 const find = (host: PortraitHost, id: string) => host.adv.entities.find((e) => e.id === id);
+const turns = (adv: Adventure) => adv.actions.filter((a) => a.type === 'continue').length;
+/** Per entity, so a redraw of the same prompt keeps the face. A1111 seeds are 32-bit. */
+const seedOf = (id: string) => parseInt(hashPrompt(id).slice(-8), 16);
+
+/** `undefined` clears the entity's state. */
+function setState(host: PortraitHost, id: string, state: PortraitState | undefined): void {
+  const { [id]: _old, ...rest } = host.getSnapshot().portraitState;
+  host.emit({ portraitState: state ? { ...rest, [id]: state } : rest });
+}
 
 /**
  * Between turns: one character without a portrait at a time, until none is left or the next
  * turn starts. A render already running is not cut (the server would finish it anyway). A
- * failure is console-only: the player did not ask, and the initials avatar is a full answer.
+ * failure shows on the card, not as an error: the player did not ask.
  */
 export async function queuePortraits(host: PortraitHost, idle: AbortSignal): Promise<void> {
-  if (!host.adv.settings.image.portraits || !host.svc.imageProviderFor(host.app)) return;
+  const pending = host.svc.imageProviderFor(host.app);
+  if (!host.adv.settings.image.portraits || !pending) return;
+  const failed = Object.values(host.getSnapshot().portraitState).filter((s) => s.status === 'failed');
+  const back = failed.some((s) => s.down) && (await (await pending).health());
+  // Once per run: a retry that fails again must not loop.
+  const tried = new Set<string>();
   for (;;) {
-    const next = host.adv.entities.find((e) => e.kind === 'character' && e.portraitId === undefined && !tried.has(e.id));
+    const state = host.getSnapshot().portraitState;
+    const due = (s: PortraitState | undefined) => !s || (s.status === 'failed' && ((s.down && back) || turns(host.adv) - s.turn >= PORTRAIT_RETRY_TURNS));
+    const next = host.adv.entities.find((e) => e.kind === 'character' && e.portraitId === undefined && !tried.has(e.id) && due(state[e.id]));
     if (idle.aborted || !next) return;
     tried.add(next.id);
     await renderPortrait(host, next.id).catch((e: unknown) => console.warn(`no portrait for ${next.name}`, e));
@@ -47,16 +64,28 @@ export async function renderPortrait(host: PortraitHost, id: string): Promise<vo
   const req = {
     prompt: portraitPrompt(e, s.portraitStyle ?? portraitStyle(host.adv.tags)),
     negativePrompt: [PORTRAIT_NEGATIVE, s.negativePrompt].filter(Boolean).join(', '),
-    width: RENDER_PX,
-    height: RENDER_PX,
-    steps: s.steps,
+    width: s.portraitSize,
+    height: s.portraitSize,
+    steps: s.portraitSteps,
     cfgScale: s.cfgScale,
+    seed: seedOf(e.id),
     model: s.model,
   };
   const provider = await pending;
-  const blob = await trackJob('image', () => provider.txt2img(req, AbortSignal.timeout(host.svc.imageTimeoutMs)));
-  if (find(host, id)?.portraitId !== e.portraitId) return;
-  await setPortrait(host, id, await downscale(blob, PORTRAIT_PX));
+  const ms = host.svc.imageTimeoutMs;
+  setState(host, id, { status: 'queued' });
+  try {
+    const blob = await imageQueue.enqueue('portrait', () => {
+      setState(host, id, { status: 'rendering' });
+      return trackJob('image', () => provider.txt2img(req, AbortSignal.timeout(ms)));
+    });
+    setState(host, id, undefined);
+    if (find(host, id)?.portraitId !== e.portraitId) return;
+    await setPortrait(host, id, await downscale(blob, PORTRAIT_PX));
+  } catch (err) {
+    setState(host, id, { status: 'failed', error: imageFailure(err, ms), turn: turns(host.adv), down: !(await provider.health()) });
+    throw err;
+  }
 }
 
 /** Store `blob` (already downscaled) as `id`'s portrait; the old blob is dropped. */

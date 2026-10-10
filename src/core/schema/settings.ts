@@ -62,6 +62,9 @@ export const ImageSettings = z.object({
   portraits: z._default(z.boolean(), true),
   /** Appended to every portrait prompt so they match; unset = derived from the adventure's tags. */
   portraitStyle: z.optional(z.string()),
+  /** A portrait is shown at 32 CSS px, so it renders smaller and cheaper than a See image. [provisional] */
+  portraitSize: z._default(z.int().check(z.gt(0)), 384),
+  portraitSteps: z._default(z.int().check(z.gt(0)), 14),
 });
 
 export const AdventureSettings = z.object({

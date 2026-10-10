@@ -38,24 +38,28 @@ test('the Characters tab edits, pins and promotes an entity', async ({ page }) =
   await expect(page.getByText('The road bends 2.')).toBeInViewport();
 });
 
-test('a portrait is drawn on the image server and replaces the initials', async ({ page }) => {
+test('a portrait is queued on open; a failed one shows why and Retry draws it', async ({ page }) => {
   const images = 'http://localhost:7999';
-  const prompts: string[] = [];
+  const requests: { prompt: string; seed: number; width: number }[] = [];
+  let fail = true;
   await page.route(`${images}/**`, async (route) => {
     if (new URL(route.request().url()).pathname !== '/sdapi/v1/txt2img') return route.fulfill({ json: [] });
-    prompts.push((route.request().postDataJSON() as { prompt: string }).prompt);
-    return route.fulfill({ json: { images: [PNG] } });
+    requests.push(route.request().postDataJSON() as { prompt: string; seed: number; width: number });
+    // KoboldCpp's failed render: 200 with an empty image.
+    return route.fulfill({ json: { images: [fail ? '' : PNG] } });
   });
   await openSeededAdventure(page, 3, `${images}/`);
 
   await page.getByRole('button', { name: 'Characters · 1' }).click();
   const card = page.getByRole('button', { name: 'Open Merav' });
-  await expect(card.locator('img')).toHaveCount(0);
   await card.click();
   const drawer = page.getByRole('dialog', { name: 'Merav' });
-  await drawer.getByRole('button', { name: 'Draw' }).click();
+  await expect(drawer.getByText('Could not draw the portrait: The image server returned no image')).toBeVisible();
+  expect(requests).toEqual([expect.objectContaining({ prompt: expect.stringMatching(/^portrait, head and shoulders, A well-warden/), width: 384 })]);
+  fail = false;
+  await drawer.getByRole('button', { name: 'Retry' }).click();
   await expect(drawer.getByRole('button', { name: 'Redraw' })).toBeEnabled();
-  expect(prompts).toEqual([expect.stringMatching(/^portrait, head and shoulders, A well-warden/)]);
+  expect(requests[1]?.seed).toBe(requests[0]?.seed);
   await page.keyboard.press('Escape');
   await expect(card.locator('img')).toHaveAttribute('src', /^blob:/);
 });

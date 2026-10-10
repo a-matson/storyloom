@@ -44,8 +44,10 @@ export class MemoryScheduler {
     void this.checkThenRun(idle);
   }
 
-  /** The adventure opened: cards for the opening's cast. */
-  open(): void {
+  /** The adventure opened: portraits still missing, and cards (then portraits) for the opening's cast. */
+  open(idle: AbortSignal): void {
+    this.idle = idle;
+    this.portraits(idle);
     void this.introduce();
   }
 
@@ -128,15 +130,23 @@ export class MemoryScheduler {
     else if (!typing && this.waiting && !this.running && this.idle && !this.idle.aborted) void this.run(this.idle);
   }
 
-  /** Started with the idle period and again once a run may have added characters. A render takes minutes and outlives its idle period, so a second queue must not start beside it. */
+  /**
+   * Started with the idle period and again once a run may have added characters. A render takes minutes and outlives its idle
+   * period, so a second queue must not start beside it; a call meanwhile re-runs it for the current idle period once it ends.
+   */
   private portraiting = false;
+  private portraitAgain = false;
   private portraits(idle: AbortSignal): void {
-    if (this.portraiting) return;
+    if (this.portraiting) return void (this.portraitAgain = true);
     this.portraiting = true;
+    this.portraitAgain = false;
     void this.host
       .portraits(idle)
       .catch((e: unknown) => console.warn('portraits failed', e))
-      .finally(() => (this.portraiting = false));
+      .finally(() => {
+        this.portraiting = false;
+        if (this.portraitAgain && this.idle && !this.idle.aborted) this.portraits(this.idle);
+      });
   }
 
   private overdue(): boolean {

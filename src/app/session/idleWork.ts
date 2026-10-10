@@ -92,6 +92,13 @@ export class IdleWork {
     return ac.signal;
   }
 
+  /** The idle period before the first turn: a signal the next action, edit or close fires, with nothing warmed. */
+  hold(): AbortSignal {
+    this.stop();
+    this.abort = new AbortController();
+    return this.abort.signal;
+  }
+
   /** An edit changed the prompt: stop, then re-warm once edits stop so the next turn does not prefill cold. */
   afterEdit(): void {
     this.stop();
