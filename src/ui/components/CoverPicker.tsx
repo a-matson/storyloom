@@ -4,12 +4,14 @@ import { imageRequest } from '@core/image';
 import { trackJob } from '@core/trace';
 import { downscale } from '@app/image';
 import { imageQueue } from '@app/session/imageQueue';
+import { withProgress } from '@app/session/imageProgress';
 import { imageProviderFor, storage } from '@app/services';
 import { CoverThumb } from '@ui/components/CoverThumb';
 import { Button } from '@ui/components/ui/button';
 import { Input } from '@ui/components/ui/field';
 import { SectionLabel } from '@ui/components/ui/section-label';
 import { pickFile } from '@ui/transferUi';
+import { progressText, useImageProgress } from '@ui/hooks/useImageProgress';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -31,6 +33,7 @@ interface Props {
 export function CoverPicker({ ownerId, coverId, coverUrl, app, image, onChange }: Props) {
   const [prompt, setPrompt] = useState('');
   const [busy, setBusy] = useState(false);
+  const p = useImageProgress('cover');
 
   // Every path downscales here, so a generated PNG is stored at the same ceiling as an upload.
   const store = async (blob: Blob) => {
@@ -53,7 +56,7 @@ export function CoverPicker({ ownerId, coverId, coverUrl, app, image, onChange }
     const provider = await pending;
     // Tracked like See mode: a cover generated mid-turn takes the GPU, so the turn's trace must see it.
     const blob = await imageQueue.enqueue('cover', () =>
-      trackJob('image', () => provider.txt2img(imageRequest(image ?? DEFAULT_ADVENTURE_SETTINGS.image, text))),
+      withProgress('cover', provider, () => trackJob('image', () => provider.txt2img(imageRequest(image ?? DEFAULT_ADVENTURE_SETTINGS.image, text)))),
     );
     await store(blob);
   };
@@ -79,7 +82,7 @@ export function CoverPicker({ ownerId, coverId, coverUrl, app, image, onChange }
         <div className="flex min-w-0 grow flex-col gap-2">
           <Input value={prompt} placeholder="lantern-lit tavern, rainy night, painted illustration" onChange={(e) => setPrompt(e.target.value)} />
           <div className="flex items-center gap-2">
-            <Button disabled={busy} onClick={() => run(generate)}>
+            <Button disabled={busy} onClick={() => run(generate)} title={p && progressText(p)}>
               Generate
             </Button>
             <Button disabled={busy} onClick={() => run(upload)}>

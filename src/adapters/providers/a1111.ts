@@ -1,6 +1,6 @@
 import { fetchJson, ProviderError } from './http';
-import { A1111Models, A1111Samplers, A1111Txt2Img } from './schemas';
-import type { ImageProvider, ImageRequest } from '@core/ports';
+import { A1111Models, A1111Progress, A1111Samplers, A1111Txt2Img } from './schemas';
+import type { ImageProgress, ImageProvider, ImageRequest } from '@core/ports';
 
 /** Resizes a PNG to exactly `w`x`h`. Canvas work needs the DOM, so the app passes it in. */
 export type Upscale = (image: Blob, w: number, h: number) => Promise<Blob>;
@@ -26,6 +26,7 @@ async function base64(blob: Blob): Promise<string> {
  *   GET  /sdapi/v1/samplers  → [{ name }]
  *   POST /sdapi/v1/txt2img   → { images: [base64 PNG] }
  *   POST /sdapi/v1/img2img   → { images: [base64 PNG] }
+ *   GET  /sdapi/v1/progress  → { progress, state: { sampling_step, sampling_steps } }
  *
  * The checkpoint rides along as `override_settings`, so no stateful `/options` call.
  */
@@ -64,14 +65,35 @@ export class A1111Provider implements ImageProvider {
     return (await fetchJson(this.fetchFn, this.url('/sdapi/v1/samplers'), A1111Samplers, {}, signal)).map((s) => s.name);
   }
 
+  /**
+   * The step counts when the server fills them, else the 0–1 `progress` as percent; KoboldCpp's
+   * behaviour mid-render is unconfirmed, so both are read. [provisional]
+   */
+  async progress(signal?: AbortSignal): Promise<ImageProgress | undefined> {
+    const p = await fetchJson(this.fetchFn, this.url('/sdapi/v1/progress'), A1111Progress, {}, signal);
+    const steps = p.state?.sampling_steps ?? 0;
+    const at =
+      steps > 0 ? { step: p.state?.sampling_step ?? 0, steps } : (p.progress ?? 0) > 0 ? { step: Math.round((p.progress ?? 0) * 100), steps: 100 } : undefined;
+    return at && { ...at, ...(this.pass !== undefined && { pass: this.pass }) };
+  }
+
+  /** Which hires pass is running; the server cannot tell, the provider can. One render at a time per page. */
+  private pass: 1 | 2 | undefined;
+
   /** With `hires`, two server calls behind one method, so the image queue and the trace see one job. */
   async txt2img(req: ImageRequest, signal?: AbortSignal): Promise<Blob> {
-    const base = await this.render('/sdapi/v1/txt2img', req, {}, signal);
-    if (!req.hires) return base;
-    const width = snap(req.width * req.hires.scale);
-    const height = snap(req.height * req.hires.scale);
-    const init = await this.upscale(base, width, height);
-    return this.img2img({ ...req, width, height, steps: req.hires.steps ?? req.steps, init, denoise: req.hires.denoise }, signal);
+    if (!req.hires) return this.render('/sdapi/v1/txt2img', req, {}, signal);
+    try {
+      this.pass = 1;
+      const base = await this.render('/sdapi/v1/txt2img', req, {}, signal);
+      const width = snap(req.width * req.hires.scale);
+      const height = snap(req.height * req.hires.scale);
+      const init = await this.upscale(base, width, height);
+      this.pass = 2;
+      return await this.img2img({ ...req, width, height, steps: req.hires.steps ?? req.steps, init, denoise: req.hires.denoise }, signal);
+    } finally {
+      this.pass = undefined;
+    }
   }
 
   async img2img(req: ImageRequest & { init: Blob; denoise: number }, signal?: AbortSignal): Promise<Blob> {

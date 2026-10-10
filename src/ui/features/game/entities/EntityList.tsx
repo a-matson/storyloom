@@ -1,6 +1,7 @@
 import { useState, useSyncExternalStore } from 'react';
 import type { Adventure, Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
+import { progressText, useImageProgress } from '@ui/hooks/useImageProgress';
 import { Pill } from '@ui/components/ui/pill';
 import { StatusDot } from '@ui/components/ui/status-dot';
 import { CHIP, SECTION, SECTION_HEADER } from '../sidebar/Section';
@@ -13,10 +14,12 @@ const WORLD: Kind[] = ['place', 'item', 'faction'];
 /** A dot while the portrait is queued or drawing, red when it failed; the drawer says why. */
 function PortraitDot({ id, api }: { id: string; api: GameApi }) {
   const state = useSyncExternalStore(api.subscribe, () => api.getSnapshot().portraitState[id]);
+  const p = useImageProgress('portrait');
   if (!state) return null;
   const failed = state.status === 'failed';
+  const drawing = state.status === 'rendering' && p ? `Drawing portrait · ${progressText(p)}` : 'Drawing portrait';
   return (
-    <span title={failed ? 'Portrait failed' : 'Drawing portrait'} className="inline-flex">
+    <span title={failed ? 'Portrait failed' : drawing} className="inline-flex">
       <StatusDot status={failed ? 'bad' : 'busy'} />
     </span>
   );

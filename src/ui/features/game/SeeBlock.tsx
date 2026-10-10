@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Action } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { useImageBlob } from '@ui/hooks/useImageBlob';
+import { progressText, useImageProgress } from '@ui/hooks/useImageProgress';
 import { Button, buttonClass } from '@ui/components/ui/button';
 import { cn } from '@ui/lib/utils';
 import { caretAtEnd, revealOnHover, seeIndent } from './OutputTools';
@@ -50,6 +51,15 @@ function Generating() {
       clearInterval(t);
     };
   }, []);
+  // ponytail: a See queued behind another See shows the running one's progress too; key by action id if that confuses.
+  const p = useImageProgress('see');
+  if (p)
+    return (
+      <div className="flex flex-col gap-1 font-sans text-caption text-muted-foreground">
+        <progress aria-label="Image progress" value={p.step} max={p.steps} className="h-1.5 w-full max-w-64 accent-lantern" />
+        {progressText(p)}
+      </div>
+    );
   // ponytail: counts ticks, not wall time, so a backgrounded tab under-counts; Date.now is impure in render.
   return <div className="font-sans text-caption text-muted-foreground">Generating… {s} s</div>;
 }

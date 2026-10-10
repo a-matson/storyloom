@@ -2,6 +2,7 @@ import { newId, type Adventure, type AppSettings, type Entity } from '@core/mode
 import { hashPrompt, trackJob } from '@core/trace';
 import { downscale } from '../image';
 import { imageQueue } from './imageQueue';
+import { withProgress } from './imageProgress';
 import { imageFailure } from './images';
 import { PORTRAIT_NEGATIVE, portraitPrompt, portraitStyle } from './portraitPrompt';
 import type { GameSnapshot, PortraitState, SessionServices } from './types';
@@ -80,7 +81,7 @@ export async function renderPortrait(host: PortraitHost, id: string): Promise<vo
   try {
     const blob = await imageQueue.enqueue('portrait', () => {
       setState(host, id, { status: 'rendering' });
-      return trackJob('image', () => provider.txt2img(req, AbortSignal.timeout(ms)));
+      return withProgress('portrait', provider, () => trackJob('image', () => provider.txt2img(req, AbortSignal.timeout(ms))));
     });
     setState(host, id, undefined);
     if (find(host, id)?.portraitId !== e.portraitId) return;

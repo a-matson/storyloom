@@ -3,6 +3,7 @@ import { useId, useState, useSyncExternalStore } from 'react';
 import { entityEdits } from '@app/session/entities';
 import type { Adventure, Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
+import { progressText, useImageProgress } from '@ui/hooks/useImageProgress';
 import { Button } from '@ui/components/ui/button';
 import { Drawer, DrawerBody, DrawerHeader } from '@ui/components/ui/drawer';
 import { Input, Select } from '@ui/components/ui/field';
@@ -85,7 +86,17 @@ function Portrait({ entity: e, api, edits }: { entity: Entity; api: GameApi; edi
   const [asked, setDrawing] = useState(false);
   const state = useSyncExternalStore(api.subscribe, () => api.getSnapshot().portraitState[e.id]);
   const drawing = asked || state?.status === 'queued' || state?.status === 'rendering';
-  const label = state?.status === 'queued' ? 'Queued…' : drawing ? 'Drawing…' : state?.status === 'failed' ? 'Retry' : e.portraitId ? 'Redraw' : 'Draw';
+  const p = useImageProgress('portrait');
+  const label =
+    state?.status === 'queued'
+      ? 'Queued…'
+      : drawing
+        ? `Drawing…${state?.status === 'rendering' && p ? ` ${progressText(p)}` : ''}`
+        : state?.status === 'failed'
+          ? 'Retry'
+          : e.portraitId
+            ? 'Redraw'
+            : 'Draw';
   const regenerate = () => {
     setDrawing(true);
     void edits.regeneratePortrait(e.id).finally(() => setDrawing(false));
