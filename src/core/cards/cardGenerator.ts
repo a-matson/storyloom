@@ -4,6 +4,7 @@ import { actionStoryText } from '../text/formatting';
 import { parseJsonReply } from '../text/jsonReply';
 import { CARD_SYSTEM, cardPrompt } from '../text/prompts';
 import { normaliseTriggers } from './storyCards';
+import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
 import { collect, type Provider } from '../ports/provider';
 import { trackJob } from '../trace';
@@ -58,6 +59,7 @@ export interface GeneratedCard {
 export interface GenerateDeps {
   provider: Provider;
   template: TemplateId;
+  content?: string;
   signal?: AbortSignal;
 }
 
@@ -75,7 +77,7 @@ export async function generateStoryCard(req: GenerateCardRequest, deps: Generate
     recentStory: req.recentStory,
     existing: req.existingNames,
   });
-  const rendered = renderTemplate(deps.template, CARD_SYSTEM, user, caps.jsonSchema ? '' : '{');
+  const rendered = renderTemplate(deps.template, withContent(CARD_SYSTEM, deps.content), user, caps.jsonSchema ? '' : '{');
   const attempt = async () => {
     const { text } = await trackJob('card', () =>
       collect(

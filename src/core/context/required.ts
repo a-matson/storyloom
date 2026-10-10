@@ -1,4 +1,5 @@
 import type { Action } from '../model/types';
+import { withContent } from '../text/content';
 import { actionStoryText } from '../text/formatting';
 import { trimHeadToTokens, trimToTokens, type Tokenizer } from '../text/tokenizer';
 import { renderSection } from './render';
@@ -23,12 +24,12 @@ export interface RequiredResult {
   requiredUsed: number;
 }
 
-function plotValues({ plot, overrides, retryNote }: ContextBuildInput): Partial<Record<SectionKind, string>> {
+function plotValues({ plot, overrides, retryNote, settings }: ContextBuildInput): Partial<Record<SectionKind, string>> {
   return {
     retryNote: (retryNote ?? '').trim(),
     authorsNote: (overrides?.authorsNote || plot.authorsNote || '').trim(),
     plotEssentials: (overrides?.plotEssentials || plot.plotEssentials || '').trim(),
-    instructions: (plot.aiInstructions ?? '').trim(),
+    instructions: withContent((plot.aiInstructions ?? '').trim(), settings.content?.trim()),
     storySummary: (plot.storySummary ?? '').trim(),
   };
 }

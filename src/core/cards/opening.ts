@@ -2,6 +2,7 @@ import type { Adventure, Scenario, TemplateId } from '../model/types';
 import { collect, type Provider } from '../ports/provider';
 import { applyPlaceholders } from '../text/placeholders';
 import { OPENING_SYSTEM, openingPrompt } from '../text/prompts';
+import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
 
 export interface OpeningRequest {
@@ -27,8 +28,12 @@ export function openingRequest(s: Scenario, adv: Adventure): OpeningRequest {
 }
 
 /** AI-written first action (Character Creator, later "Surprise me"). Runs on slot 1, uncached. */
-export async function writeOpening(req: OpeningRequest, deps: { provider: Provider; template: TemplateId; signal?: AbortSignal }): Promise<string> {
-  const rendered = renderTemplate(deps.template, req.aiInstructions?.trim() || OPENING_SYSTEM, req.prompt ?? openingPrompt(req));
+export async function writeOpening(
+  req: OpeningRequest,
+  deps: { provider: Provider; template: TemplateId; content?: string; signal?: AbortSignal },
+): Promise<string> {
+  const system = withContent(req.aiInstructions?.trim() || OPENING_SYSTEM, deps.content);
+  const rendered = renderTemplate(deps.template, system, req.prompt ?? openingPrompt(req));
   const { text } = await collect(
     deps.provider.complete(
       {

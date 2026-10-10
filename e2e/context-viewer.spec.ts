@@ -67,7 +67,7 @@ async function openMemories(page: Page) {
 test('the Memories tab shows the bank and marks edited ranges stale', async ({ page }) => {
   await openSaltRoad(page);
   let dialog = await openMemories(page);
-  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 2 · stale 0 · forgotten 0');
+  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 2 · stale 0 · forgotten 0', { timeout: 15_000 });
   await expect(dialog.getByText('actions 7–12')).toBeVisible();
   await page.keyboard.press('Escape');
 
@@ -87,6 +87,8 @@ test('the Memories tab shows the bank and marks edited ranges stale', async ({ p
 test('a memory can be pinned, edited, forgotten and restored', async ({ page }) => {
   await openSaltRoad(page);
   let dialog = await openMemories(page);
+  // The bank loads after the dialog opens; wait for it rather than for the button.
+  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 2 · stale 0 · forgotten 0', { timeout: 15_000 });
   await dialog.getByRole('button', { name: 'Pin memory, actions 1–6' }).click();
   await expect(dialog.getByRole('button', { name: 'Pin memory, actions 1–6' })).toHaveAttribute('aria-pressed', 'true');
   await expect(dialog.getByText('pinned', { exact: true })).toBeVisible();
@@ -132,6 +134,21 @@ test('a present entity sends its facts and card under the structured cap', async
   await expect(
     dialog.getByText(/Known entities:\s+Merav: A well-warden who keeps the salt road maps\.\s+location: the well\s+Old Well: A dry well/),
   ).toBeVisible();
+});
+
+test('the content clause rides in the system prompt, and Custom replaces it', async ({ page }) => {
+  await openSeededAdventure(page, 3);
+  let dialog = await takeTurnAndViewContext(page);
+  await dialog.getByRole('button', { name: 'Raw prompt' }).click();
+  await expect(dialog.getByText(/fiction for an adult reader/)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.getByRole('tab', { name: 'Gameplay' }).click();
+  await page.getByLabel('Content', { exact: true }).selectOption('custom');
+  await page.getByLabel('Custom content text').fill('House rules apply.');
+  dialog = await takeTurnAndViewContext(page);
+  await dialog.getByRole('button', { name: 'Raw prompt' }).click();
+  await expect(dialog.getByText(/House rules apply\./)).toBeVisible();
+  await expect(dialog.getByText(/fiction for an adult reader/)).toHaveCount(0);
 });
 
 test('without a scene or a mention, no structured blocks are sent', async ({ page }) => {

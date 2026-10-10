@@ -111,6 +111,18 @@ export function ImagesSection({ s, app, onAppChange, update }: Props) {
           onChange={(e) => image({ portraitStyle: text(e.target.value) })}
         />
       </Setting>
+      <Setting
+        label="Prompt suffix"
+        htmlFor="img-suffix"
+        title="Added to every See, portrait and cover prompt: style, nudity or gore words your checkpoint needs"
+      >
+        <Input
+          id="img-suffix"
+          className={IMAGE_TEXT_INPUT}
+          value={s.image.promptSuffix ?? ''}
+          onChange={(e) => image({ promptSuffix: text(e.target.value) })}
+        />
+      </Setting>
     </Section>
   );
 }

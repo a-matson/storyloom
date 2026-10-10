@@ -61,7 +61,7 @@ export async function renderPortrait(host: PortraitHost, id: string): Promise<vo
   if (!e) return;
   const s = host.adv.settings.image;
   const req = {
-    prompt: portraitPrompt(e, s.portraitStyle ?? portraitStyle(host.adv.tags)),
+    prompt: portraitPrompt(e, [s.portraitStyle ?? portraitStyle(host.adv.tags), s.promptSuffix?.trim()].filter(Boolean).join(', ')),
     negativePrompt: [PORTRAIT_NEGATIVE, s.negativePrompt].filter(Boolean).join(', '),
     width: s.portraitSize,
     height: s.portraitSize,

@@ -1,14 +1,15 @@
 import { ActionLog } from '@core/log';
 import { markStale } from '@core/memory';
-import { utilityProvider, type Adventure, type AdventureSettings, type AppSettings, type PlotComponents, type TemplateId, type TurnTrace } from '@core/model';
-import type { Embedder, Provider, ScriptRunner } from '@core/ports';
+import { utilityProvider, type Adventure, type AdventureSettings, type AppSettings, type PlotComponents, type TurnTrace } from '@core/model';
+import type { Embedder, ScriptRunner } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
+import { storyModel } from './helperModel';
 import { IdleWork } from './idleWork';
 import { dropOrphanImages, regenerateImage, seeImage } from './images';
 import { MemoryScheduler } from './memoryScheduler';
 import { SaveQueue } from './saveQueue';
 import { sessionScripts } from './scripts';
-import { OPENED, type GameSnapshot, type Prefetched, type SessionServices } from './types';
+import { OPENED, type GameSnapshot, type HelperModel, type Prefetched, type SessionServices } from './types';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -59,10 +60,7 @@ export class GameSession {
     deps: () => this.deps(),
     busy: () => this.snapshot.busy,
     delayMs: () => this.svc.rewarmDelayMs,
-    onPrefetched: (p) => {
-      this.prefetched = p;
-      this.emit({ prefetchReady: true });
-    },
+    onPrefetched: (p) => ((this.prefetched = p), this.emit({ prefetchReady: true })),
     onWarm: (warm) => this.emit({ warm }),
   });
 
@@ -193,15 +191,15 @@ export class GameSession {
   private readonly storeTrace = (t: TurnTrace): void => void this.svc.storage.putTrace(t).catch((e: unknown) => console.warn('could not store turn trace', e));
 
   /** Memories, summaries and story cards run on the utility server when configured and reachable, else the story provider; each with its own template. */
-  readonly helperModel = async (): Promise<{ provider: Provider; template: TemplateId }> => {
+  readonly helperModel = async (): Promise<HelperModel> => {
     const utility = utilityProvider(this.app);
     if (utility) {
       const provider = this.svc.providerFor(this.app, utility.id);
-      if ((await provider.health()).ok) return { provider, template: utility.template ?? this.adv.settings.template };
+      if ((await provider.health()).ok) return { ...storyModel(this), provider, template: utility.template ?? this.adv.settings.template };
       if (!this.utilityDown) console.warn(`utility model at ${utility.baseUrl} is unreachable; helper jobs use the story model`);
       this.utilityDown = true;
     }
-    return { provider: this.svc.providerFor(this.app, this.adv.settings.providerId), template: this.adv.settings.template };
+    return storyModel(this);
   };
 
   /** Any player action cancels background work. */

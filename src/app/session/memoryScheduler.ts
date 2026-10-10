@@ -1,10 +1,11 @@
 import { entitiesOverdue, loadMemoryJobs, memoryOverdue } from '@core/memory';
-import { actionText, type Adventure, type Speaker, type TemplateId } from '@core/model';
-import type { Embedder, Provider } from '@core/ports';
+import { actionText, type Adventure, type Speaker } from '@core/model';
+import type { Embedder } from '@core/ports';
+import type { HelperModel } from './types';
 
 interface Host {
   adventure: () => Adventure;
-  helperModel: () => Promise<{ provider: Provider; template: TemplateId }>;
+  helperModel: () => Promise<HelperModel>;
   embedder: () => Promise<Embedder>;
   /** The adventure changed in place: publish and save. */
   changed: () => void;

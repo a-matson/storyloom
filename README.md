@@ -110,6 +110,10 @@ are, and **Hires pass** is the denoise: the picture is rendered, upscaled and re
 strength, which roughly doubles the time. Portraits never use it. **Save as preset** keeps
 those settings under a name for every adventure.
 
+Storyloom filters nothing: the checkpoint decides what can be drawn. **Prompt suffix** (Gameplay →
+Images) is added to every See, portrait and cover prompt, for the style or nudity words a
+checkpoint needs. Image prompts are written by the story model, never the utility one.
+
 **Read aloud.** Setup → Appearance → **Read aloud** speaks each new passage with a system
 voice (the browser's own speech engine, nothing is downloaded). Every passage also has a
 **Speak** button.
