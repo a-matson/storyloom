@@ -24,10 +24,16 @@ export interface RequiredResult {
   requiredUsed: number;
 }
 
+/** The note and the length line as one bracketed aside; either may be empty. */
+function withLength(note: string, line: string | undefined): string {
+  const l = line?.trim();
+  return l ? (note ? `${note.replace(/[.;]\s*$/, '')}; ${l}` : l) : note;
+}
+
 function plotValues({ plot, overrides, retryNote, settings }: ContextBuildInput): Partial<Record<SectionKind, string>> {
   return {
     retryNote: (retryNote ?? '').trim(),
-    authorsNote: (overrides?.authorsNote || plot.authorsNote || '').trim(),
+    authorsNote: withLength((overrides?.authorsNote || plot.authorsNote || '').trim(), settings.lengthLine),
     plotEssentials: (overrides?.plotEssentials || plot.plotEssentials || '').trim(),
     instructions: withContent((plot.aiInstructions ?? '').trim(), settings.content?.trim()),
     storySummary: (plot.storySummary ?? '').trim(),

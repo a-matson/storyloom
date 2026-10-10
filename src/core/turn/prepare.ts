@@ -6,6 +6,7 @@ import { actionText } from '../model/types';
 import type { Embedder } from '../ports/embedder';
 import type { HookResult } from '../ports/scripting';
 import { contentClause } from '../text/content';
+import { lengthLine } from '../text/length';
 import { renderPrefix, renderTemplate } from '../text/templates';
 import type { Tokenizer } from '../text/tokenizer';
 import { runHook } from './hooks';
@@ -36,6 +37,7 @@ function contextInput(adventure: Adventure, actions: Action[], rankedMemories: R
       evictionChunk: adventure.settings.context.evictionChunk,
       pinnedFactsOnly: !adventure.settings.memory.entityFacts,
       content: contentClause(adventure.settings, 'story'),
+      ...(adventure.settings.context.lengthHint && { lengthLine: lengthLine(adventure.settings.model.responseLength) }),
     },
     tokenizer: deps.tokenizer,
   };
