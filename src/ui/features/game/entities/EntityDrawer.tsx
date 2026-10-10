@@ -66,7 +66,7 @@ export function EntityDrawer({ entity: e, adventure, api, onClose }: Props) {
         </label>
         <Input id={`${id}-aliases`} defaultValue={e.aliases.join(', ')} onBlur={(ev) => update({ aliases: list(ev.target.value) })} />
         <StateRows entity={e} update={update} />
-        <Appearances entity={e} adventure={adventure} onClose={onClose} />
+        <Appearances entity={e} adventure={adventure} onClose={onClose} edits={edits} />
         <Facts entity={e} update={update} onClose={onClose} />
         {e.relations.length > 0 && <SectionLabel>Relations</SectionLabel>}
         {e.relations.map((r) => (

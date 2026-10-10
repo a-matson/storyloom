@@ -3,7 +3,9 @@ import type { Action, Entity, Scene, TemplateId } from '../model/types';
 import { collect, type Provider } from '../ports/provider';
 import { renderTemplate } from '../text/templates';
 import { trackJob } from '../trace';
-import { CAST_CAP, castIn, composeSeePrompt, isImplicit, looksOf, namedCast } from './compose';
+import { CAST_CAP, castIn, composeSeePrompt, isImplicit, lookFor, namedCast, seedFor } from './compose';
+
+export { looksOf } from './compose';
 
 /**
  * See prompts: a brief is composed into the sent prompt, and a blank or implicit one ("she turns
@@ -86,12 +88,17 @@ export interface SeeRequest {
 }
 
 /** The prompt to send for a brief and the characters it shows; the helper is asked only for a blank or implicit brief. */
-export async function seePrompt(req: SeeRequest, helper: () => Promise<ImagePromptDeps>): Promise<{ prompt: string; entityIds: string[] }> {
+export async function seePrompt(req: SeeRequest, helper: () => Promise<ImagePromptDeps>): Promise<{ prompt: string; entityIds: string[]; seed?: number }> {
   if (req.brief !== '' && !isImplicit(req.brief, namedCast(req.brief, req.entities))) return composeSeePrompt(req);
   const cast = castIn(req.brief, req.scene, req.entities).slice(0, CAST_CAP);
-  const line = await autoImagePrompt({ ...req, cast: cast.map((e) => ({ name: e.name, looks: looksOf(e) })) }, await helper());
+  const line = await autoImagePrompt({ ...req, cast: cast.map((e) => ({ name: e.name, looks: lookFor(e) })) }, await helper());
   // No scene: the helper already placed it. Composing still swaps any name it let slip and adds the style.
-  return { prompt: composeSeePrompt({ brief: line, entities: req.entities, style: req.style }).prompt, entityIds: cast.map((e) => e.id) };
+  const seed = seedFor(cast);
+  return {
+    prompt: composeSeePrompt({ brief: line, entities: req.entities, style: req.style }).prompt,
+    entityIds: cast.map((e) => e.id),
+    ...(seed !== undefined && { seed }),
+  };
 }
 
 /** First non-empty line, no quotes or label, cut at a comma so a long reply never ends mid-tag. */

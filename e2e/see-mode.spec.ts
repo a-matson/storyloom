@@ -115,6 +115,36 @@ test('a brief naming a character sends their looks, tags the image and shows it 
   await expect(figure).toBeInViewport();
 });
 
+test('a reference freezes a character look and seed for the next Sees', async ({ page }) => {
+  const calls: { prompt: string; seed?: number }[] = [];
+  await page.route(`${IMAGES}/**`, async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/sdapi/v1/sd-models') return route.fulfill({ json: [{ title: 'sd_xl_base.safetensors [31e35c80fc]', model_name: 'sd_xl_base' }] });
+    if (path !== '/sdapi/v1/txt2img') return route.fulfill({ status: 404, json: {} });
+    const body = route.request().postDataJSON() as { prompt: string; seed?: number };
+    if (!body.prompt.startsWith('portrait')) calls.push(body);
+    return route.fulfill({ json: { images: [PNG] } });
+  });
+  const tamsin = { id: 'ent_tamsin', name: 'Tamsin', description: 'Tamsin is a ferrywoman.', appearance: 'grey braid, patched cloak' };
+  await openSeededAdventure(page, 3, `${IMAGES}/`, { entities: [tamsin] });
+
+  await see(page, 'Tamsin at the ferry');
+  await expect(page.getByRole('img', { name: 'Tamsin at the ferry' })).toBeVisible();
+  expect(calls[0]?.seed).toBeUndefined();
+
+  await page.getByRole('figure').getByRole('button', { name: 'Open Tamsin' }).click();
+  const drawer = page.getByRole('dialog', { name: 'Tamsin' });
+  await drawer.getByRole('button', { name: 'Use as reference' }).click();
+  await expect(drawer.getByText('Frozen look: a ferrywoman, grey braid, patched cloak')).toBeVisible();
+  await expect(drawer.getByRole('button', { name: 'Clear reference' })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await see(page, 'Tamsin by the lantern');
+  await expect.poll(() => calls.length).toBe(2);
+  expect(calls[1]?.prompt).toContain('a ferrywoman, grey braid, patched cloak by the lantern');
+  expect(calls[1]?.seed).toEqual(expect.any(Number));
+});
+
 test('a model-card preset sends its sampler and runs the hires pass', async ({ page }) => {
   const bodies: { path: string; body: Record<string, unknown> }[] = [];
   await page.route(`${IMAGES}/**`, async (route) => {

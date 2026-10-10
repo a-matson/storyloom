@@ -44,11 +44,15 @@ describe('adventure JSON', () => {
         firstSeen: 0,
         lastSeen: 0,
         portraitId: 'img_face',
+        referenceImageId: 'img_1',
+        look: 'a ferrywoman, grey braid',
       },
     ];
     const { adventure: b } = importAdventureJson(exportAdventureJson(a));
     expect(b.coverId).toBeUndefined();
     expect(b.entities[0]).not.toHaveProperty('portraitId');
+    expect(b.entities[0]).not.toHaveProperty('referenceImageId');
+    expect(b.entities[0]?.look).toBe('a ferrywoman, grey braid');
     expect(b.actions[1]!.image).toEqual({ prompt: 'a door', missing: true });
   });
 

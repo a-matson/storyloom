@@ -1,4 +1,5 @@
 import type { Entity, Scene } from '../model/types';
+import { seedOf } from '../trace';
 
 /**
  * A See input is a brief: what the picture shows. The prompt sent to the image server is composed
@@ -11,7 +12,7 @@ export const CAST_CAP = 2;
 /** CLIP reads 75 tokens; ~4 characters a token. [provisional] */
 export const PROMPT_BUDGET = 300;
 
-type Character = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'description' | 'appearance'>;
+type Character = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'description' | 'appearance' | 'look'>;
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const nameRe = (n: string) => new RegExp(`(?<![\\p{L}\\p{N}])${escape(n.trim())}(?![\\p{L}\\p{N}])`, 'giu');
@@ -49,8 +50,16 @@ function noun(e: Character): string {
 }
 
 const looks = (e: Character, full: boolean) => [noun(e), full ? e.appearance?.trim() : ''].filter(Boolean).join(', ');
-/** A character's look without their name, for the helper prompt. */
+/** A character's current look without their name, from what the story says: what a new reference freezes. */
 export const looksOf = (e: Character): string => looks(e, true);
+/** What a See repeats for them: the frozen look when the player set a reference, else `looksOf`. */
+export const lookFor = (e: Character): string => e.look ?? looks(e, true);
+
+/** One character with a frozen look keeps their face across Sees; a fixed seed for any other cast would only repeat the layout. [provisional] */
+export const seedFor = (cast: readonly Character[]): number | undefined => {
+  const [only] = cast;
+  return cast.length === 1 && only?.look !== undefined ? seedOf(only.id) : undefined;
+};
 
 /** Comma-separated tags, trimmed and deduped (case-insensitive), empties dropped. */
 function tags(parts: readonly (string | undefined)[]): string {
@@ -73,21 +82,24 @@ export interface ComposeInput {
  * `brief (names → looks), looks of present-but-unnamed cast, location, weather, style`. Over budget it
  * drops, in order: the second character's looks, the weather, the first character's looks, then cuts at a comma.
  */
-export function composeSeePrompt({ brief, scene, entities, style }: ComposeInput): { prompt: string; entityIds: string[] } {
+export function composeSeePrompt({ brief, scene, entities, style }: ComposeInput): { prompt: string; entityIds: string[]; seed?: number } {
   const cast = castIn(brief, scene, entities);
   const build = (full: readonly boolean[], weather: boolean) => {
     let text = brief;
     const unnamed: string[] = [];
     cast.forEach((e, i) => {
       const before = text;
-      for (const n of namesOf(e).toSorted((a, b) => b.length - a.length)) text = text.replace(nameRe(n), () => looks(e, full[i] ?? false));
-      if (text === before && i < CAST_CAP) unnamed.push(looks(e, full[i] ?? false));
+      const look = full[i] ? lookFor(e) : looks(e, false);
+      for (const n of namesOf(e).toSorted((a, b) => b.length - a.length)) text = text.replace(nameRe(n), () => look);
+      if (text === before && i < CAST_CAP) unnamed.push(look);
     });
     return tags([text, ...unnamed, scene?.location, weather ? scene?.weather : '', style]);
   };
   const tries = [build([true, true], true), build([true, false], true), build([true, false], false), build([false, false], false)];
   const fit = tries.find((t) => t.length <= PROMPT_BUDGET);
-  return { prompt: fit ?? cut(tries.at(-1) ?? ''), entityIds: cast.slice(0, CAST_CAP).map((e) => e.id) };
+  const shown = cast.slice(0, CAST_CAP);
+  const seed = seedFor(shown);
+  return { prompt: fit ?? cut(tries.at(-1) ?? ''), entityIds: shown.map((e) => e.id), ...(seed !== undefined && { seed }) };
 }
 
 function cut(text: string): string {

@@ -1,5 +1,5 @@
 import { newId, type Adventure, type AppSettings, type Entity } from '@core/model';
-import { hashPrompt, trackJob } from '@core/trace';
+import { seedOf, trackJob } from '@core/trace';
 import { downscale } from '../image';
 import { imageQueue } from './imageQueue';
 import { withProgress } from './imageProgress';
@@ -24,8 +24,6 @@ export const PORTRAIT_RETRY_TURNS = 5;
 
 const find = (host: PortraitHost, id: string) => host.adv.entities.find((e) => e.id === id);
 const turns = (adv: Adventure) => adv.actions.filter((a) => a.type === 'continue').length;
-/** Per entity, so a redraw of the same prompt keeps the face. A1111 seeds are 32-bit. */
-const seedOf = (id: string) => parseInt(hashPrompt(id).slice(-8), 16);
 
 /** `undefined` clears the entity's state. */
 function setState(host: PortraitHost, id: string, state: PortraitState | undefined): void {

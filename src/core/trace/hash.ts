@@ -11,3 +11,6 @@ export function hashPrompt(text: string): string {
   h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
   return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(14, '0');
 }
+
+/** Per entity, so a redraw of the same prompt keeps the face. A1111 seeds are 32-bit. */
+export const seedOf = (id: string): number => parseInt(hashPrompt(id).slice(-8), 16);
