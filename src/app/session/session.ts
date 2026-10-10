@@ -81,7 +81,7 @@ export class GameSession {
   }
 
   /** The adventure is on screen: background work that needs no turn. */
-  readonly open = (): void => this.memory.open();
+  readonly open = (): void => this.memory.open(this.idleWork.hold());
 
   // ---- store ---------------------------------------------------------------
   readonly subscribe = (fn: () => void): (() => void) => (this.listeners.add(fn), () => this.listeners.delete(fn));

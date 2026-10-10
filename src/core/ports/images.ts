@@ -11,6 +11,8 @@ export interface ImageRequest {
   height: number;
   steps: number;
   cfgScale: number;
+  /** Fixed for a stable picture from the same prompt; unset = random. */
+  seed?: number | undefined;
   /** Checkpoint to switch to for this request only. */
   model?: string | undefined;
 }

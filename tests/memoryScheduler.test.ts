@@ -134,7 +134,7 @@ describe('MemoryScheduler', () => {
         false,
         true,
       );
-      return { adv, calls, release, scheduler: new MemoryScheduler(host(adv, provider)) };
+      return { adv, calls, release, provider, scheduler: new MemoryScheduler(host(adv, provider)) };
     }
 
     it('runs before the memory run, and typing does not cut it', async () => {
@@ -165,12 +165,15 @@ describe('MemoryScheduler', () => {
       expect(calls.filter((c) => c === 'introduce')).toHaveLength(1);
     });
 
-    it('reads the opening on open', async () => {
-      const { adv, release, scheduler } = setup();
+    it('reads the opening on open, and queues portraits before and after it', async () => {
+      const { adv, release, provider } = setup();
       adv.scriptState = { ...adv.scriptState, __introducedAt: undefined };
-      scheduler.open();
+      const portraits = vi.fn<() => Promise<void>>(() => Promise.resolve());
+      new MemoryScheduler({ ...host(adv, provider), portraits }).open(new AbortController().signal);
+      expect(portraits).toHaveBeenCalledTimes(1);
       release();
       await vi.waitFor(() => expect(adv.entities.map((e) => e.name)).toEqual(['Tamsin']));
+      await vi.waitFor(() => expect(portraits).toHaveBeenCalledTimes(2));
     });
   });
 

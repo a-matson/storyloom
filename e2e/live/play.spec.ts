@@ -1,9 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import { z } from 'zod/mini';
-import type { Entity } from '@core/model';
 import * as S from '@core/schema';
-import { OUT_DIR, writeMeasurement } from '../../bench/env';
+import { writeMeasurement } from '../../bench/env';
 import { watchIntroductions } from '../../bench/introductions';
+import { portraits } from '../../bench/portraits';
 
 // `pnpm measure live <url>`: plays the real app against a real llama-server; never runs in CI.
 const URL = process.env['MEASURE_URL'];
@@ -124,37 +124,6 @@ async function settledDb(page: Page) {
   return readDb(page);
 }
 
-/** What landed in IndexedDB for each portrait, decoded the way the app shows it; plus a Characters tab screenshot. */
-async function portraits(page: Page, entities: Entity[]) {
-  const ids = entities.flatMap((e) => (e.portraitId === undefined ? [] : [{ name: e.name, id: e.portraitId }]));
-  const sizes = await page.evaluate(async (wanted) => {
-    const req = indexedDB.open('storyloom');
-    const db = await new Promise<IDBDatabase>((ok, fail) => {
-      req.addEventListener('success', () => ok(req.result));
-      req.addEventListener('error', () => fail(req.error));
-    });
-    const rows = await new Promise<{ id: string; blob: Blob }[]>((ok, fail) => {
-      const r = db.transaction('images').objectStore('images').getAll();
-      r.addEventListener('success', () => ok(r.result as { id: string; blob: Blob }[]));
-      r.addEventListener('error', () => fail(r.error));
-    });
-    db.close();
-    return Promise.all(
-      wanted.map(async ({ name, id }) => {
-        const blob = rows.find((r) => r.id === id)?.blob;
-        if (!blob) return { name, stored: false };
-        const bitmap = await createImageBitmap(blob);
-        return { name, stored: true, type: blob.type, bytes: blob.size, width: bitmap.width, height: bitmap.height };
-      }),
-    );
-  }, ids);
-  const toggle = page.getByRole('button', { name: 'Adventure settings' });
-  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
-  await page.getByRole('button', { name: /^Characters/ }).click();
-  await page.screenshot({ path: `${OUT_DIR}/${new Date().toISOString().slice(0, 10)}-portraits.png` });
-  return sizes;
-}
-
 test('scripted live play', async ({ page }) => {
   test.setTimeout(60 * 60_000);
   await page.goto('/');
@@ -173,8 +142,12 @@ test('scripted live play', async ({ page }) => {
   // A render outlives the DB settling (minutes, and nothing is written until it ends), so the run waits on the requests themselves.
   const renders: { ms?: number; failed?: string }[] = [];
   let rendering = 0;
+  // The image queue sends one txt2img at a time; KoboldCpp would only make a second one wait.
+  let mostRendering = 0;
   const isRender = (r: { url: () => string }) => r.url().endsWith('/sdapi/v1/txt2img');
-  page.on('request', (r) => void (isRender(r) && rendering++));
+  page.on('request', (r) => {
+    if (isRender(r)) mostRendering = Math.max(mostRendering, ++rendering);
+  });
   page.on('requestfinished', (r) => {
     if (!isRender(r)) return;
     renders.push({ ms: Math.round(r.timing().responseEnd) });
@@ -205,6 +178,8 @@ test('scripted live play', async ({ page }) => {
 
   let db = await settledDb(page);
   if (IMAGES) {
+    // The queue starts on the idle callback after the last turn; polling at once would see "none in flight" before it.
+    await page.waitForTimeout(READ_MS);
     await expect.poll(() => rendering, { timeout: 2 * TURN_MS, intervals: [5000] }).toBe(0);
     db = await settledDb(page);
   }
@@ -265,7 +240,7 @@ test('scripted live play', async ({ page }) => {
       facts: facts.map((f) => f.text),
     })),
     entityPrompt,
-    ...(IMAGES && { images: IMAGES, renders, portraitLog, portraits: await portraits(page, entities) }),
+    ...(IMAGES && { images: IMAGES, renders, mostRendering, portraitLog, portraits: await portraits(page, entities) }),
     cards: z
       .array(S.StoryCard)
       .parse(db.cards)
@@ -274,4 +249,5 @@ test('scripted live play', async ({ page }) => {
   });
   console.log(`wrote ${path}`);
   expect(turns.length).toBeGreaterThanOrEqual(TURNS.length);
+  if (IMAGES) expect(mostRendering).toBe(1);
 });

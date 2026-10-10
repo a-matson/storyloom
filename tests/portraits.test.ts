@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { entityEdits } from '@app/session/entities';
-import { queuePortraits } from '@app/session/portraits';
+import { PORTRAIT_PX, PORTRAIT_RETRY_TURNS, queuePortraits, renderPortrait } from '@app/session/portraits';
 import { portraitPrompt, portraitStyle } from '@app/session/portraitPrompt';
 import { createBlankAdventure, type Entity } from '@core/model';
 import type { ImageProvider, ImageRequest } from '@core/ports';
@@ -64,16 +64,58 @@ describe('portraitPrompt', () => {
 });
 
 describe('queuePortraits', () => {
-  it('draws one portrait per character, once, at 512² and stores it', async () => {
+  it('draws one portrait per character, once, at the portrait preset with a fixed seed, and stores it', async () => {
     const calls: ImageRequest[] = [];
     const { session, images } = withImages(async (req) => (calls.push(req), new Blob(['png'])), { ...lena }, gate);
     await queuePortraits(session, new AbortController().signal);
     expect(calls).toHaveLength(1);
-    expect(calls[0]).toMatchObject({ width: 512, height: 512, negativePrompt: 'text, watermark, signature, frame, caption' });
+    expect(calls[0]).toMatchObject({ width: 384, height: 384, steps: 14, negativePrompt: 'text, watermark, signature, frame, caption' });
+    expect(PORTRAIT_PX).toBe(64);
+    await renderPortrait(session, lena.id);
+    expect(calls[1]?.seed).toBe(calls[0]?.seed);
+    expect(calls[0]?.seed).toBeLessThan(2 ** 32);
+    expect(session.getSnapshot().portraitState).toEqual({});
     expect(images.size).toBe(1);
     expect(portraitOf(session, lena.id)).toBeDefined();
     await queuePortraits(session, new AbortController().signal);
-    expect(calls).toHaveLength(1);
+    expect(calls).toHaveLength(2);
+  });
+
+  it('marks a failed render, and retries it once the server is back or after five turns', async () => {
+    let up = false;
+    const txt2img = vi.fn<ImageProvider['txt2img']>(async () => {
+      if (!up) throw new Error('connection refused');
+      return new Blob(['png']);
+    });
+    const { session } = withImages(txt2img, { ...lena, id: 'ent_r' });
+    const images = await session.svc.imageProviderFor(session.app);
+    if (images) images.health = async () => up;
+    const run = () => queuePortraits(session, new AbortController().signal);
+    await run();
+    expect(session.getSnapshot().portraitState['ent_r']).toMatchObject({ status: 'failed', error: 'connection refused', down: true });
+    await run();
+    expect(txt2img).toHaveBeenCalledTimes(1);
+    up = true;
+    await run();
+    expect(txt2img).toHaveBeenCalledTimes(2);
+    expect(portraitOf(session, 'ent_r')).toBeDefined();
+    expect(session.getSnapshot().portraitState).toEqual({});
+  });
+
+  it('retries a failure on a healthy server after PORTRAIT_RETRY_TURNS turns', async () => {
+    const txt2img = vi.fn<ImageProvider['txt2img']>(() => Promise.reject(new Error('bad checkpoint')));
+    const { session } = withImages(txt2img, { ...lena, id: 'ent_t' });
+    const run = () => queuePortraits(session, new AbortController().signal);
+    await run();
+    expect(session.getSnapshot().portraitState['ent_t']).toMatchObject({ status: 'failed', down: false });
+    for (let i = 0; i < PORTRAIT_RETRY_TURNS - 1; i++) session.log.append('continue', 'More.');
+    session.emit();
+    await run();
+    expect(txt2img).toHaveBeenCalledTimes(1);
+    session.log.append('continue', 'More.');
+    session.emit();
+    await run();
+    expect(txt2img).toHaveBeenCalledTimes(2);
   });
 
   it('does nothing without an image server or with portraits off', async () => {
@@ -102,6 +144,26 @@ describe('queuePortraits', () => {
     idle.abort();
     await queuePortraits(session, idle.signal);
     expect(txt2img).not.toHaveBeenCalled();
+  });
+});
+
+describe('one image at a time', () => {
+  it('a See image and a portrait never render together', async () => {
+    let inFlight = 0;
+    let most = 0;
+    const txt2img = vi.fn<ImageProvider['txt2img']>(async () => {
+      most = Math.max(most, ++inFlight);
+      await new Promise((r) => setTimeout(r, 5));
+      inFlight--;
+      return new Blob(['png']);
+    });
+    const { session } = withImages(txt2img, { ...lena, id: 'ent_s' }, { ...lena, id: 'ent_u' });
+    const portraits = queuePortraits(session, new AbortController().signal);
+    session.see('a ferry at dusk');
+    await portraits;
+    await vi.waitFor(() => expect(txt2img).toHaveBeenCalledTimes(3));
+    await vi.waitFor(() => expect(session.getSnapshot().pendingImages).toEqual([]));
+    expect(most).toBe(1);
   });
 });
 
