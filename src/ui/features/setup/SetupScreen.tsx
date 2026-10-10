@@ -11,13 +11,15 @@ import { IconBack } from '@ui/components/Icons';
 import { AppearanceCard } from './AppearanceCard';
 import { BackendTiles } from './BackendTiles';
 import { ConnectionCard } from './ConnectionCard';
-import { draftSettings } from './draft';
+import { draftSettings, type Choice } from './draft';
 import { ImageCard } from './ImageCard';
 import { UtilityCard } from './UtilityCard';
 
 interface Props {
   app: AppSettings;
   onSave: (next: AppSettings) => void;
+  /** Every edit is stored as it is made, so a reload or Back loses nothing. */
+  onChange: (next: AppSettings) => void;
   onBack?: () => void;
   firstRun?: boolean;
 }
@@ -36,14 +38,39 @@ function SaveRow({ firstRun, onSave }: { firstRun: boolean; onSave: () => void }
         </Button>
       )}
       <Button size="lg" variant="primary" onClick={onSave}>
-        {firstRun ? 'Continue' : 'Save'}
+        {firstRun ? 'Continue' : 'Done'}
       </Button>
     </div>
   );
 }
 
+function SettingsBar({ onBack }: { onBack: (() => void) | undefined }) {
+  return (
+    <TopBar>
+      {onBack && (
+        <Button size="icon" aria-label="Back" onClick={onBack}>
+          <IconBack />
+        </Button>
+      )}
+      <TopBarTitle>Settings</TopBarTitle>
+    </TopBar>
+  );
+}
+
+function Intro({ firstRun }: { firstRun: boolean }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {firstRun && <SectionLabel className="text-lantern">First run</SectionLabel>}
+      <h1 className="m-0 font-display text-title font-medium">Connect an inference backend</h1>
+      <p className="m-0 text-muted-foreground">
+        Storyloom runs entirely on your machine. Point it at a local server that hosts your story model; nothing leaves your computer.
+      </p>
+    </div>
+  );
+}
+
 /** Backend connection + app-level preferences. Doubles as the first-run screen. */
-export function SetupScreen({ app, onSave, onBack, firstRun = false }: Props) {
+export function SetupScreen({ app, onSave, onChange, onBack, firstRun = false }: Props) {
   const current = app.providers.find((p) => p.id === app.defaultProviderId) ?? app.providers[0] ?? DEFAULT_PROVIDER_CONFIG;
   const [kind, setKind] = useState<ProviderConfig['kind']>(current.kind);
   const [url, setUrl] = useState(current.baseUrl);
@@ -57,7 +84,18 @@ export function SetupScreen({ app, onSave, onBack, firstRun = false }: Props) {
   const [utility, setUtility] = useState(utilityProvider(app));
   const [image, setImage] = useState(imageProvider(app));
 
-  const draft = () => draftSettings(app, { current, kind, url, theme, speech, speakerAvatars, health, utility, image });
+  const choice: Choice = { current, kind, url, theme, speech, speakerAvatars, health, utility, image };
+  const draft = () => draftSettings(app, choice);
+  // From the handlers with the next values, not an effect: storing re-renders with a new `app`.
+  const store = (patch: Partial<Choice>) => onChange(draftSettings(app, { ...choice, ...patch }));
+  const field =
+    <K extends keyof Choice>(key: K, set: (v: Choice[K]) => void) =>
+    (v: Choice[K]) => {
+      set(v);
+      const patch: Partial<Choice> = {};
+      patch[key] = v;
+      store(patch);
+    };
   // A new backend or URL invalidates the last test.
   const choose = (nextKind: ProviderConfig['kind'], nextUrl: string) => {
     setKind(nextKind);
@@ -65,35 +103,26 @@ export function SetupScreen({ app, onSave, onBack, firstRun = false }: Props) {
     setHealth(null);
     setCaps(null);
     setTemplateOk(null);
+    store({ kind: nextKind, url: nextUrl, health: null });
   };
   const test = async () => {
     setTesting(true);
     const p = providerFor(draft(), current.id);
     const h = await p.health(); // never throws: failures come back as { ok: false }
     setHealth(h);
+    const next = draftSettings(app, { ...choice, health: h });
+    onChange(next);
     if (h.ok) setCaps(await p.capabilities().catch(() => null));
-    setTemplateOk(h.ok ? await checkTemplate(p, app.defaults.template) : null);
+    // Against the template just stored (guessed from the model), not the one before the test.
+    setTemplateOk(h.ok ? await checkTemplate(p, next.defaults.template) : null);
     setTesting(false);
   };
 
   return (
     <div className="flex h-full flex-col">
-      <TopBar>
-        {onBack && (
-          <Button size="icon" aria-label="Back" onClick={onBack}>
-            <IconBack />
-          </Button>
-        )}
-        <TopBarTitle>Settings</TopBarTitle>
-      </TopBar>
+      <SettingsBar onBack={onBack} />
       <div className="flex w-full max-w-220 grow flex-col gap-7 self-center overflow-y-auto px-8 py-7 max-sm:p-4">
-        <div className="flex flex-col gap-1.5">
-          {firstRun && <SectionLabel className="text-lantern">First run</SectionLabel>}
-          <h1 className="m-0 font-display text-title font-medium">Connect an inference backend</h1>
-          <p className="m-0 text-muted-foreground">
-            Storyloom runs entirely on your machine. Point it at a local server that hosts your story model; nothing leaves your computer.
-          </p>
-        </div>
+        <Intro firstRun={firstRun} />
         <BackendTiles kind={kind} onPick={choose} />
         <label htmlFor="server-url" className="flex flex-col gap-2">
           <span className="font-semibold">Server URL</span>
@@ -111,15 +140,15 @@ export function SetupScreen({ app, onSave, onBack, firstRun = false }: Props) {
           </div>
         </label>
         {health && <ConnectionCard health={health} caps={caps} templateOk={templateOk} template={app.defaults.template} />}
-        <UtilityCard value={utility} onChange={setUtility} />
-        <ImageCard value={image} onChange={setImage} />
+        <UtilityCard value={utility} onChange={field('utility', setUtility)} />
+        <ImageCard value={image} onChange={field('image', setImage)} />
         <AppearanceCard
           theme={theme}
-          onTheme={setTheme}
+          onTheme={field('theme', setTheme)}
           speech={speech}
-          onSpeech={setSpeech}
+          onSpeech={field('speech', setSpeech)}
           speakerAvatars={speakerAvatars}
-          onSpeakerAvatars={setSpeakerAvatars}
+          onSpeakerAvatars={field('speakerAvatars', setSpeakerAvatars)}
         />
         <SaveRow firstRun={firstRun} onSave={() => onSave(draft())} />
       </div>

@@ -3,7 +3,7 @@ import type { ProviderHealth } from '@core/ports';
 import { findPreset, guessTemplate } from '@core/text';
 import { BACKENDS } from './backends';
 
-interface Choice {
+export interface Choice {
   current: ProviderConfig;
   kind: ProviderConfig['kind'];
   url: string;
@@ -25,7 +25,10 @@ export function draftSettings(app: AppSettings, { current, kind, url, theme, spe
     baseUrl: normalizeUrl(url),
     name: `${BACKENDS.find((k) => k.kind === kind)?.name ?? kind} (${url})`,
   };
-  const modelId = health?.modelId === '' ? undefined : health?.modelId;
+  const tested = health?.ok && health.modelId ? health.modelId : undefined;
+  // Settings save on every change, so an untested edit elsewhere must not wipe the model.
+  const unchanged = current.kind === kind && normalizeUrl(current.baseUrl) === cfg.baseUrl;
+  const modelId = tested ?? (unchanged ? app.defaults.modelId : undefined);
   const contextSize = health?.contextSize ?? 0;
   return {
     ...app,
@@ -43,10 +46,10 @@ export function draftSettings(app: AppSettings, { current, kind, url, theme, spe
       ...app.defaults,
       providerId: cfg.id,
       modelId,
-      template: modelId === undefined ? app.defaults.template : guessTemplate(modelId),
+      template: tested === undefined ? app.defaults.template : guessTemplate(tested),
       model: {
         ...app.defaults.model,
-        ...(modelId === undefined ? {} : findPreset(modelId)?.settings),
+        ...(tested === undefined ? {} : findPreset(tested)?.settings),
         contextLength: contextSize > 0 ? Math.min(contextSize, 131072) : app.defaults.model.contextLength,
       },
     },

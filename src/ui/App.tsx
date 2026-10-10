@@ -30,9 +30,9 @@ export function App() {
   const screen = (() => {
     switch (route.name) {
       case 'setup':
-        return <SetupScreen app={app} onSave={onSave} firstRun />;
+        return <SetupScreen app={app} onSave={onSave} onChange={onAppChange} firstRun />;
       case 'settings':
-        return <SetupScreen app={app} onSave={onSave} onBack={() => navigate({ name: 'library' })} />;
+        return <SetupScreen app={app} onSave={onSave} onChange={onAppChange} onBack={() => navigate({ name: 'library' })} />;
       case 'adventure':
         if (!adventure) return <div className="h-full" />;
         return (
