@@ -31,6 +31,12 @@ export const EntityFact = z.object({
   evidence: z.optional(z.string()),
   /** Absent: `basisOf` derives it from `source`. */
   basis: z.optional(z.enum(['stated', 'inferred', 'player'])),
+  /** Absent: `trait`. A `state` is `key` → `value`, ended (`until`) when a new value for its key arrives. */
+  kind: z.optional(z.enum(['trait', 'state', 'effect', 'relationship'])),
+  key: z.optional(z.string()),
+  value: z.optional(z.string()),
+  /** Action index the value stopped being true at; absent while current. */
+  until: z.optional(count),
 });
 
 /** A character, place, item or faction the story has named, built up from the memory cycle's helper call. */
@@ -40,12 +46,12 @@ export const Entity = z.object({
   name: z.string(),
   aliases: z.array(z.string()),
   description: z.string(),
-  /** What they look like, for the portrait prompt; merged like `description`. */
+  /** Legacy free-text looks, set once; current look facts (`LOOK_KEYS`) take its place in `appearanceOf`. */
   appearance: z.optional(z.string()),
   /** The action that set `appearance`. */
   appearanceFrom: z.optional(Provenance),
   facts: z.array(EntityFact),
-  /** Current values (location, condition, ...); an overwrite keeps the old value as a fact. */
+  /** Values the player set (and legacy model ones); a current state fact of the same key overrides it (`currentStates`). */
   state: z.record(z.string(), z.string()),
   relations: z.array(Relation),
   /** Action indexes. */

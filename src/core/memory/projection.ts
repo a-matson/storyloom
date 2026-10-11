@@ -1,4 +1,5 @@
 import type { Entity, StoryCard } from '../model/types';
+import { isCurrentState } from './looks';
 
 /** Cap on a projected card's entry. [provisional] */
 export const ENTITY_ENTRY_TOKENS = 120;
@@ -12,7 +13,9 @@ const CHARS_PER_TOKEN = 3.9;
 export function projectEntity(e: Entity): StoryCard {
   // World Lore has no headings, so an entry that does not name its subject ("A letter with no seal") gets the name.
   const named = !e.description || e.description.toLowerCase().includes(e.name.toLowerCase()) ? e.description : `${e.name}: ${e.description}`;
-  const lines = [named, ...Object.entries(e.state).map(([k, v]) => `${k}: ${v}`)].filter((l) => l.trim() !== '');
+  // A current state fact goes out with the facts; the map value it overrides is stale.
+  const facts = new Set(e.facts.filter(isCurrentState).map((f) => f.key));
+  const lines = [named, ...Object.entries(e.state).flatMap(([k, v]) => (facts.has(k) ? [] : [`${k}: ${v}`]))].filter((l) => l.trim() !== '');
   const full = lines.join('\n');
   const max = Math.floor(ENTITY_ENTRY_TOKENS * CHARS_PER_TOKEN);
   const entry = full.length <= max ? full : full.slice(0, max).replace(/\s+\S*$/, '');

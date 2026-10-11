@@ -13,19 +13,23 @@ export interface RankedFact {
 export const isConfirmed = (e: Entity): boolean =>
   !!e.canon || !!e.cardId || e.lastSeen > e.firstSeen || e.facts.some((f) => f.source !== 'memory' || f.pinned);
 
+const KIND_ORDER = ['state', 'effect', 'relationship', 'trait'];
+const kindRank = (f: EntityFact) => KIND_ORDER.indexOf(f.kind ?? 'trait');
+
 /**
  * Facts for the next prompt, best first: pinned facts, then facts of entities present in the scene
- * (what the next sentence needs), then facts of entities the recent text names. Within a tier, facts
- * the query matches lexically (`lexical`, BM25 ids best first) lead, then newest first. Other
- * entities' facts are left out: a lexical hit on "the" must not spend the structured cap. A canon
- * conflict ranks as pinned and is kept as worded, so the model always sees the disagreement.
+ * (what the next sentence needs), then facts of entities the recent text names. Within a tier: by
+ * entity name, then kind (state, effect, relationship, trait), then newest first, so the block
+ * reads the same turn to turn and the prompt cache holds. Other entities' facts, ended states and
+ * the old `looked:` history are left out. A canon conflict ranks as pinned and is kept as worded,
+ * so the model always sees the disagreement.
  */
-export function rankFacts(entities: Entity[], present: ReadonlySet<string>, mentioned: ReadonlySet<string>, lexical: readonly string[] = []): RankedFact[] {
+export function rankFacts(entities: Entity[], present: ReadonlySet<string>, mentioned: ReadonlySet<string>): RankedFact[] {
   const tier = ({ entity, fact }: RankedFact): number => (fact.pinned || fact.conflict ? 0 : present.has(entity.id) ? 1 : mentioned.has(entity.id) ? 2 : 3);
-  const hits = new Map(lexical.map((id, i) => [id, i]));
-  const hit = (r: RankedFact) => hits.get(r.fact.id) ?? Infinity;
   return entities
     .flatMap((entity) => entity.facts.map((fact) => ({ entity, fact })))
-    .filter((r) => tier(r) < 3)
-    .toSorted((a, b) => tier(a) - tier(b) || hit(a) - hit(b) || b.fact.fromAction - a.fact.fromAction);
+    .filter((r) => tier(r) < 3 && r.fact.until === undefined && !r.fact.text.startsWith('looked: '))
+    .toSorted(
+      (a, b) => tier(a) - tier(b) || a.entity.name.localeCompare(b.entity.name) || kindRank(a.fact) - kindRank(b.fact) || b.fact.fromAction - a.fact.fromAction,
+    );
 }

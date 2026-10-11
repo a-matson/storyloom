@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { attributeSpeakers, entityNamedIn, matchEntity, mergeEntities, mergeEntity, namedInPassage } from '@core/memory/entities';
 import { isConfirmed } from '@core/memory/facts';
+import { appearanceOf, currentStates, setState } from '@core/memory/looks';
 import { ENTITY_ENTRY_TOKENS, projectEntity } from '@core/memory/projection';
 import type { Action, Entity, ExtractedEntity } from '@core/model';
 
@@ -21,12 +22,36 @@ describe('entity merge rules', () => {
     expect(next).toMatchObject({ id: first.id, firstSeen: 4, lastSeen: 10 });
   });
 
-  it('keeps an overwritten state value as a fact naming the action', () => {
+  it('ends the current state of a key when a new value arrives, and ignores the same value', () => {
     const first = mergeEntity(undefined, seen({ state: { location: 'the tavern' } }), 4);
     const next = mergeEntity(first, seen({ state: { location: 'the docks' } }), 23);
-    expect(next.state).toEqual({ location: 'the docks' });
-    expect(next.facts.map((f) => f.text)).toEqual(['location was the tavern until action 23']);
-    expect(mergeEntity(next, seen({ state: { location: 'the docks' } }), 30).facts).toHaveLength(1);
+    expect(next.state).toEqual({});
+    expect(currentStates(next)).toEqual({ location: 'the docks' });
+    expect(next.facts.map((f) => [f.text, f.kind, f.until])).toEqual([
+      ['location: the tavern', 'state', 23],
+      ['location: the docks', 'state', undefined],
+    ]);
+    const again = mergeEntity(next, seen({ state: { location: 'The docks' } }), 30);
+    expect(again.facts).toHaveLength(2);
+    expect(again.lastSeen).toBe(30);
+  });
+
+  it('lets a state fact override a legacy map value of the same key', () => {
+    const legacy: Entity = { ...mergeEntity(undefined, seen(), 1), state: { location: 'the tavern', mood: 'calm' } };
+    expect(currentStates(mergeEntity(legacy, seen({ state: { location: 'the docks' } }), 5))).toEqual({ location: 'the docks', mood: 'calm' });
+    expect(mergeEntity(legacy, seen({ state: { location: 'the tavern' } }), 5).facts).toEqual([]);
+  });
+
+  it('dedupes facts by containment, keeping the longer, but never rewrites a player or pinned fact', () => {
+    const first = mergeEntity(undefined, seen({ facts: ['She has a scar.'] }), 1);
+    const longer = mergeEntity(first, seen({ facts: ['She has a scar on her left cheek.'] }), 4);
+    expect(longer.facts.map((f) => [f.id, f.text, f.fromAction])).toEqual([[first.facts[0]?.id, 'She has a scar on her left cheek.', 4]]);
+    expect(mergeEntity(longer, seen({ facts: ['she has a scar'] }), 6).facts).toHaveLength(1);
+    const pinned: Entity = { ...first, facts: first.facts.map((f) => ({ ...f, pinned: true })) };
+    expect(mergeEntity(pinned, seen({ facts: ['She has a scar on her left cheek.'] }), 4).facts.map((f) => f.text)).toEqual([
+      'She has a scar.',
+      'She has a scar on her left cheek.',
+    ]);
   });
 
   it('unions aliases without repeating the name', () => {
@@ -49,15 +74,22 @@ describe('entity merge rules', () => {
     expect(next.facts).toHaveLength(3);
   });
 
-  it('sets the appearance when empty and lets a fuller one replace it, keeping the old as a fact', () => {
+  it('sets the free-text appearance once and never appends to it', () => {
     const first = mergeEntity(undefined, seen({ appearance: 'Grey hair.' }), 1);
     expect(first.appearance).toBe('Grey hair.');
-    expect(mergeEntity(first, seen({ appearance: 'Tall.' }), 2).appearance).toBe('Grey hair.');
     expect(mergeEntity(first, seen(), 2).appearance).toBe('Grey hair.');
     const next = mergeEntity(first, seen({ appearance: 'Grey hair and a patched blue coat.' }), 5);
-    expect(next.appearance).toBe('Grey hair and a patched blue coat.');
-    expect(next.facts.map((f) => f.text)).toEqual(['looked: Grey hair.']);
+    expect(next.appearance).toBe('Grey hair.');
+    expect(next.facts).toEqual([]);
     expect(mergeEntity(undefined, seen(), 1)).not.toHaveProperty('appearance');
+  });
+
+  it('reads looks from current look-key states in a fixed order, else the free text', () => {
+    const e = mergeEntity(undefined, seen({ appearance: 'Grey hair.', state: { wearing: 'a blue coat', eyes: 'green', mood: 'wary' } }), 1);
+    expect(appearanceOf(e)).toBe('eyes: green, wearing: a blue coat');
+    const changed = mergeEntity(e, seen({ state: { wearing: 'a red cloak' } }), 3);
+    expect(appearanceOf(changed)).toBe('eyes: green, wearing: a red cloak');
+    expect(appearanceOf(mergeEntity(undefined, seen({ appearance: 'Grey hair.' }), 1))).toBe('Grey hair.');
   });
 
   it('never replaces a canon appearance, but fills a missing one', () => {
@@ -96,8 +128,8 @@ describe('mergeEntities', () => {
     const merged = mergeEntities(into, from);
     expect(merged).toMatchObject({ id: into.id, name: 'Tamsin', portraitId: 'p1', description: 'Rows the night ferry.', firstSeen: 2, lastSeen: 9 });
     expect(merged.aliases).toEqual(['The ferrywoman']);
-    expect(merged.facts.map((f) => f.text)).toEqual(['She owes the guild.', 'She has a scar.']);
-    expect(merged.state).toEqual({ mood: 'wary', location: 'the docks' });
+    expect(merged.facts.map((f) => f.text)).toEqual(['mood: wary', 'She owes the guild.', 'She has a scar.']);
+    expect(currentStates(merged)).toEqual({ mood: 'wary', location: 'the docks' });
     expect(merged.relations).toEqual([{ to: 'Odo', label: 'rival' }]);
   });
 });
@@ -145,8 +177,9 @@ describe('attributeSpeakers', () => {
 });
 
 describe('projectEntity', () => {
-  it('is a story card triggered by name and aliases, with state lines', () => {
-    const e = mergeEntity(undefined, seen({ aliases: ['ferrywoman'], description: 'A ferrywoman.', state: { location: 'the docks' } }), 1);
+  it('is a story card triggered by name and aliases, with the map states no state fact overrides', () => {
+    const base = mergeEntity(undefined, seen({ aliases: ['ferrywoman'], description: 'A ferrywoman.', state: { mood: 'wary' } }), 1);
+    const e = { ...base, state: { location: 'the docks', mood: 'calm' } };
     expect(projectEntity(e)).toEqual({
       id: e.id,
       type: 'character',
@@ -177,6 +210,21 @@ describe('namedInPassage', () => {
     expect(namedInPassage('Duke Aerick', 'He bows. "Duke Aerick awaits."')).toBe(false);
     expect(namedInPassage('Duke Aerick', '"Duke Aerick awaits." You bow to Duke Aerick.')).toBe(true);
     expect(namedInPassage('Brass Owl', 'You enter the tavern.')).toBe(false);
+  });
+
+  it('is not a name when the passage also writes it lower-case', () => {
+    expect(namedInPassage('Kobold', 'You meet Kobold scouts. The kobold hisses.')).toBe(false);
+    expect(namedInPassage('Kobold', 'You meet Kobold. The kobolds hiss.')).toBe(true);
+  });
+});
+
+describe('setState', () => {
+  it("writes the player's value to the map and ends the model's current value for the key", () => {
+    const e = mergeEntity(undefined, seen({ state: { location: 'the docks', mood: 'calm' } }), 3);
+    const next = { ...e, ...setState(e, 'location', 'the tavern') };
+    expect(currentStates(next)).toEqual({ location: 'the tavern', mood: 'calm' });
+    expect(next.facts.find((f) => f.key === 'location')?.until).toBe(3);
+    expect(currentStates({ ...next, ...setState(next, 'location', '') })).toEqual({ mood: 'calm' });
   });
 });
 

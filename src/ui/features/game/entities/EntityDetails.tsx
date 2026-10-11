@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { currentStates, isCurrentState, setState } from '@core/memory';
 import type { Adventure, Entity, EntityFact } from '@core/model';
 import type { entityEdits } from '@app/session/entities';
 import { useImageBlob } from '@ui/hooks/useImageBlob';
@@ -16,14 +17,13 @@ const showAction = (index: number) => document.getElementById('story')?.children
 /** State values, each editable and lockable: a locked value is canon, and the memory cycle only flags a disagreement. */
 export function StateRows({ entity: e, update }: { entity: Entity; update: Update }) {
   const id = useId();
-  const entries = Object.entries(e.state);
+  const entries = Object.entries(currentStates(e));
   if (entries.length === 0) return null;
   const locked = new Set(e.canonKeys);
-  const set = (k: string, value: string) => {
-    const state = { ...e.state, [k]: value };
-    update({ state: Object.fromEntries(Object.entries(state).filter(([, v]) => v !== '')) });
-  };
-  const lock = (k: string) => update({ canonKeys: locked.has(k) ? [...locked].filter((x) => x !== k) : [...locked, k] });
+  const set = (k: string, value: string) => update(setState(e, k, value));
+  // Locking moves the value into the map, so the lock and the value live in one place.
+  const lock = (k: string, v: string) =>
+    update(locked.has(k) ? { canonKeys: [...locked].filter((x) => x !== k) } : { ...setState(e, k, v), canonKeys: [...locked, k] });
   return (
     <>
       <SectionLabel>State</SectionLabel>
@@ -34,7 +34,7 @@ export function StateRows({ entity: e, update }: { entity: Entity; update: Updat
           </label>
           {/* Keyed by value: "Accept the story" changes it under an uncontrolled input. */}
           <Input key={v} id={`${id}-${i}`} className="h-8" defaultValue={v} onBlur={(ev) => ev.target.value.trim() !== v && set(k, ev.target.value.trim())} />
-          <Button variant="ghost" className="h-7 shrink-0" aria-pressed={locked.has(k)} aria-label={`Lock ${k} as canon`} onClick={() => lock(k)}>
+          <Button variant="ghost" className="h-7 shrink-0" aria-pressed={locked.has(k)} aria-label={`Lock ${k} as canon`} onClick={() => lock(k, v)}>
             {locked.has(k) ? 'Canon' : 'Lock'}
           </Button>
         </div>
@@ -111,13 +111,15 @@ export function Facts({ entity: e, update, onClose }: { entity: Entity; update: 
   const without = (f: EntityFact) => e.facts.filter((x) => x.id !== f.id);
   // The player is the author: taking the story's side writes its value and unlocks the key.
   const accept = (f: EntityFact, { key, value }: { key: string; value: string }) =>
-    update({ facts: without(f), state: { ...e.state, [key]: value }, canonKeys: (e.canonKeys ?? []).filter((k) => k !== key) });
+    update({ ...setState({ ...e, facts: without(f) }, key, value), canonKeys: (e.canonKeys ?? []).filter((k) => k !== key) });
+  // Current state values are the State rows.
+  const shown = e.facts.filter((f) => !isCurrentState(f));
   return (
     <>
       <SectionLabel>Facts</SectionLabel>
-      {e.facts.length === 0 && <p className="m-0 text-caption text-muted-foreground">None yet.</p>}
+      {shown.length === 0 && <p className="m-0 text-caption text-muted-foreground">None yet.</p>}
       <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
-        {e.facts.map((f) => (
+        {shown.map((f) => (
           <li key={f.id} className="flex flex-wrap items-center gap-2 text-control">
             <Button
               variant="ghost"
@@ -131,6 +133,7 @@ export function Facts({ entity: e, update, onClose }: { entity: Entity; update: 
               action {f.fromAction}
             </Button>
             {f.conflict && <Pill tone="see">conflict</Pill>}
+            {f.until !== undefined && <Pill>until {f.until}</Pill>}
             <span className="min-w-0 grow">{f.text}</span>
             {f.claim ? (
               <span className="flex gap-1">

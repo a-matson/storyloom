@@ -8,8 +8,12 @@ export const MAX_ENTITIES = 5;
 
 /**
  * Caps the grammar enforces. Without a worked example the 12B ran one description past the whole
- * 300-token reply ("…, and is …, and is …"). [provisional]
+ * 300-token reply ("…, and is …, and is …"). A value that reaches its cap was cut: `uncut` trims it.
+ * A word-cap pattern compiles, but the 12B met it by gluing the words ("offeringcomfortingwords…").
+ * [measured: 2026-10-11 Wayfarer-2-12B json_schema probe] [provisional]
  */
+export const FACT_CHARS = 100;
+export const DESCRIPTION_CHARS = 120;
 const sentence = (chars: number) => z.string().check(z.maxLength(chars));
 
 /** One entity as the helper model reports it. */
@@ -20,19 +24,20 @@ export const ExtractedEntity = z.object({
   kind: EntityKind,
   aliases: z.optional(z.array(z.string())),
   // Required and capped so the grammar keeps a reply short and every projected card has an entry. [provisional]
-  description: sentence(120),
+  description: sentence(DESCRIPTION_CHARS),
   /**
    * One visual sentence for the portrait prompt. Optional: required, every entity wrote looks
    * (factions too) and each reply hit the 300-token cap, losing entities. [provisional]
    */
-  appearance: z.optional(sentence(120)),
-  facts: z.array(sentence(100)).check(z.maxLength(2)),
+  appearance: z.optional(sentence(DESCRIPTION_CHARS)),
+  facts: z.array(sentence(FACT_CHARS)).check(z.maxLength(2)),
   state: z.optional(z.record(z.string(), z.string())),
   relations: z.optional(z.array(Relation)),
 });
 
 /** New names one introduction reply covers; a turn rarely brings more. [provisional] */
 export const MAX_INTRODUCED = 3;
+export const INTRODUCED_CHARS = 100;
 
 /**
  * The introduction call's reply: only what a new card needs. The full reply (scene, speakers, facts)
@@ -41,8 +46,8 @@ export const MAX_INTRODUCED = 3;
 export const IntroducedEntity = z.object({
   name: ExtractedEntity.shape.name,
   kind: EntityKind,
-  description: sentence(100),
-  appearance: z.optional(sentence(100)),
+  description: sentence(INTRODUCED_CHARS),
+  appearance: z.optional(sentence(INTRODUCED_CHARS)),
 });
 export const IntroductionJson = z.object({ entities: z.array(IntroducedEntity).check(z.maxLength(MAX_INTRODUCED)) });
 

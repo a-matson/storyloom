@@ -2,6 +2,7 @@ import type { Action, Adventure, Entity, EntityFact, ExtractedEntity, Speaker } 
 import { actionText, newId } from '../model/types';
 import { guessSpeakers } from '../text/speakers';
 import type { Source } from './invalidate';
+import { currentStates, isCurrentState } from './looks';
 
 const isOutput = (a: Action) => a.type === 'continue' || a.type === 'start';
 
@@ -40,16 +41,24 @@ const WORD = /[\p{L}\p{N}]/u;
  * noun would not be capitalised (not at the start of a sentence). Rejects the grammar's forced
  * capitals ("Cobblestones"), sentence-initial vagueness ("Something") and names the model copied
  * from the prompt's example. `"Run," Tamsin said` counts: a quote after a comma closes no sentence.
+ * A name the passage also writes lower-case ("the kobold") is a species or a thing, not a name.
  */
 export function namedInPassage(name: string, passage: string): boolean {
   const n = name.trim();
-  for (let i = n ? passage.indexOf(n) : -1; i >= 0; i = passage.indexOf(n, i + 1)) {
-    if (WORD.test(passage[i - 1] ?? '') || WORD.test(passage[i + n.length] ?? '')) continue;
+  if (n.toLowerCase() !== n && wholeAt(passage, n.toLowerCase()).length) return false;
+  return wholeAt(passage, n).some((i) => {
     const before = passage.slice(0, i).trimEnd();
     const prev = before.at(-1);
-    if (prev !== undefined && (!OPENS_SENTENCE.test(prev) || before.at(-2) === ',')) return true;
-  }
-  return false;
+    return prev !== undefined && (!OPENS_SENTENCE.test(prev) || before.at(-2) === ',');
+  });
+}
+
+/** Where `passage` holds `n` as whole words. */
+function wholeAt(passage: string, n: string): number[] {
+  const out: number[] = [];
+  for (let i = n ? passage.indexOf(n) : -1; i >= 0; i = passage.indexOf(n, i + 1))
+    if (!WORD.test(passage[i - 1] ?? '') && !WORD.test(passage[i + n.length] ?? '')) out.push(i);
+  return out;
 }
 
 const words = (s: string): string =>
@@ -93,12 +102,16 @@ export function attributeSpeakers(
   return out;
 }
 
+/** Whether `inner` is `outer` or a run of its whole words. */
+const within = (inner: string, outer: string) => words(outer).includes(words(inner));
+
 /**
- * Fold one sighting into an entity (or create it). Model output only adds: facts append (deduped),
- * aliases union, a changed `state` value keeps the old one as a fact. Existing facts — the
- * player's and pinned ones included — and a non-empty description are never replaced. Canon:
- * a canon entity's description is never set, and a change to a `canonKeys` value is recorded as
- * a conflict fact instead of applied. `source` stamps new facts and a set appearance with the action they came from.
+ * Fold one sighting into an entity (or create it). Facts append, deduped by text and by
+ * containment (a model fact the new one contains is replaced by it); aliases union; a `state`
+ * value becomes a state fact that ends (`until`) the key's current one. The player's and pinned
+ * facts, the `state` map and a non-empty description or appearance are never replaced. Canon: a
+ * canon entity's description is never set, and a change to a `canonKeys` value is recorded as a
+ * conflict fact instead. `source` stamps new facts and a set appearance with the action they came from.
  */
 export function mergeEntity(existing: Entity | undefined, incoming: ExtractedEntity, atAction: number, source?: (text: string) => Source | undefined): Entity {
   const base: Entity = existing ?? {
@@ -114,26 +127,36 @@ export function mergeEntity(existing: Entity | undefined, incoming: ExtractedEnt
     lastSeen: atAction,
   };
   const facts = [...base.facts];
-  const known = new Set(facts.map((f) => norm(f.text)));
-  // `from`: the words to find the source by; null when the value's source is already known (or unknown).
-  const addFact = (text: string, extra?: Partial<EntityFact>, from: string | null = text): void => {
+  const fact = (text: string, from: string, extra?: Partial<EntityFact>): EntityFact => ({
+    id: newId('fact_'),
+    text: text.trim(),
+    fromAction: atAction,
+    source: 'memory',
+    ...source?.(from),
+    ...extra,
+  });
+  const addFact = (text: string, extra?: Partial<EntityFact>, from = text): void => {
     const key = norm(text);
-    if (!key || known.has(key)) return;
-    known.add(key);
-    const stamp = from === null ? undefined : source?.(from);
-    facts.push({ id: newId('fact_'), text: text.trim(), fromAction: atAction, source: 'memory', ...stamp, ...extra } satisfies EntityFact);
+    if (!key) return;
+    const i = facts.findIndex((f) => f.kind !== 'state' && (within(key, f.text) || within(f.text, key)));
+    const old = facts[i];
+    if (old && within(key, old.text)) return;
+    if (old && old.source === 'memory' && !old.pinned && !old.conflict) facts[i] = { ...fact(text, from, extra), id: old.id };
+    else facts.push(fact(text, from, extra));
   };
 
-  const state = { ...base.state };
+  const current = currentStates(base);
   const locked = new Set(base.canonKeys);
   for (const [key, value] of Object.entries(incoming.state ?? {})) {
-    const old = state[key];
-    if (old === undefined || norm(old) === norm(value)) state[key] = value;
-    else if (locked.has(key)) addFact(`the story says ${key} is ${value}, but canon says ${old}`, { conflict: true, claim: { key, value } }, value);
-    else {
-      addFact(`${key} was ${old} until action ${atAction}`, undefined, value);
-      state[key] = value;
+    const old = current[key];
+    if (!norm(value) || (old !== undefined && norm(old) === norm(value))) continue;
+    if (old !== undefined && locked.has(key)) {
+      addFact(`the story says ${key} is ${value}, but canon says ${old}`, { conflict: true, claim: { key, value } }, value);
+      continue;
     }
+    for (const [i, f] of facts.entries()) if (isCurrentState(f) && f.key === key) facts[i] = { ...f, until: atAction };
+    facts.push(fact(`${key}: ${value.trim()}`, value, { kind: 'state', key, value: value.trim() }));
+    current[key] = value;
   }
   for (const f of incoming.facts) addFact(f);
 
@@ -154,25 +177,18 @@ export function mergeEntity(existing: Entity | undefined, incoming: ExtractedEnt
     relations.push(r);
   }
 
-  // A fuller description of the looks wins over a sparse one; canon looks are the player's.
+  // Set once: appending fuller looks over sparse ones ran the See prompt long and kept stale clothes. Keyed looks come as state.
   const looks = incoming.appearance?.trim() ?? '';
-  let appearance = base.appearance;
-  let appearanceFrom = base.appearanceFrom;
-  if (looks && (!appearance || (!base.canon && looks.length > appearance.length))) {
-    // The old looks keep the old source: an edit of that action drops them too.
-    if (appearance) addFact(`looked: ${appearance}`, appearanceFrom, null);
-    appearance = looks;
-    appearanceFrom = source?.(looks);
-  }
+  const setLooks = looks !== '' && !base.appearance;
+  const appearanceFrom = setLooks ? source?.(looks) : base.appearanceFrom;
 
   return {
     ...base,
     aliases,
     description: base.canon ? base.description : base.description || (incoming.description ?? '').trim(),
-    ...(appearance && { appearance }),
+    ...(setLooks && { appearance: looks }),
     ...(appearanceFrom && { appearanceFrom }),
     facts,
-    state,
     relations,
     lastSeen: Math.max(base.lastSeen, atAction),
   };

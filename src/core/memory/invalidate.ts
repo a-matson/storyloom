@@ -32,6 +32,8 @@ export function sourceIn(actions: readonly Action[], range: MemoryRange): (text:
   };
 }
 
+const withoutUntil = ({ until: _u, ...f }: EntityFact): EntityFact => f;
+
 export interface Dropped {
   facts: number;
   appearances: number;
@@ -57,7 +59,9 @@ export function dropUnsupported(adventure: Adventure, actions: readonly Action[]
     if (!gone.length && !looksGone) return e;
     for (const f of gone) if (f.sourceId) reread(f.sourceId);
     out.facts += gone.length;
-    const facts = e.facts.filter((f) => !gone.includes(f));
+    // A dropped state value hands its key back to the value it ended.
+    const ended = (f: EntityFact) => gone.some((g) => g.kind === 'state' && g.until === undefined && g.key === f.key && g.fromAction === f.until);
+    const facts = e.facts.filter((f) => !gone.includes(f)).map((f) => (f.kind === 'state' && ended(f) ? withoutUntil(f) : f));
     if (!looksGone || !e.appearanceFrom) return { ...e, facts };
     reread(e.appearanceFrom.sourceId);
     out.appearances += 1;
