@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { memoryText, runMemoryMaintenance } from '@core/memory/memoryJobs';
+import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import { actionText } from '@core/model';
 import type { CompletionRequest, Provider } from '@core/ports';
 import { memoryPrompt } from '@core/text/prompts';
@@ -129,22 +129,20 @@ describe('memory maintenance', () => {
     expect(adv.plot.storySummary).toBe('Mira owes the ferryman.');
   });
 
-  it('asks the memory to keep what the player states about themselves, as its example does', () => {
+  it('asks the memory to keep what the player states about themselves, with no worked example', () => {
     const prompt = memoryPrompt('> You show the guard the scar on your cheek.');
     expect(prompt).toContain('anything the player states about themselves (name, body, belongings, past)');
-    expect(prompt).toContain("Memory: You wear your mother's copper ring on your thumb");
-    expect(prompt).toContain('never copy its names or events');
+    for (const word of ['Dunmere', 'copper ring', 'two pennies', 'loft above the stables', 'snowed in', 'Example']) expect(prompt).not.toContain(word);
   });
 
-  it("drops memory sentences that copy the example's details unless the passage has them", async () => {
+  it('keeps a memory as written, even one naming a place the passage lacks', async () => {
     const adv = adventure(15);
+    const text = 'Mira found the map. You walked from Dunmere to sell your songs. The rider left.';
     const provider = fakeProvider(async function* () {
-      yield { text: 'Mira found the map. You walked from Dunmere to sell your songs, wearing your copper ring. The rider left.', done: true };
+      yield { text, done: true };
     });
     await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
-    expect(adv.memories[0]?.text).toBe('Mira found the map. The rider left.');
-    const slice = [{ ...adv.actions[0]!, versions: ['Mira walked from Dunmere with a copper ring.'], active: 0 }];
-    expect(await memoryText(slice, { provider, template: adv.settings.template }, { memoriesRejected: 0 })).toContain('Dunmere');
+    expect(adv.memories[0]?.text).toBe(text);
   });
 
   it('constrains memories to 4 and the summary to 8 sentences when the backend has grammar', async () => {
@@ -156,7 +154,7 @@ describe('memory maintenance', () => {
       yield { text: 'Mira found the map.', done: true };
     };
     await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider: fakeProvider(answer, true) });
-    expect(reqs[0]?.prompt).toContain('Memory: You wear');
+    expect(reqs[0]?.prompt).toContain('Memory:');
     expect(reqs[0]?.grammar).toMatchInlineSnapshot(`
       "root ::= sentence{1,4}
       sentence ::= [^.!?"“”\\n> ] [^.!?"“”\\n>]* [.!?] " "?
