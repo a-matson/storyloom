@@ -46,6 +46,12 @@ const EXTRACT_SKELETON =
   '  {"name": "<Name>", "kind": "place", "description": "<one sentence>", "facts": []}],\n' +
   ' "speakers": [{"action": <number>, "name": "<Name>"}]}';
 
+/**
+ * llama-server's schema grammar allows newlines and indentation; pretty-printed, 3 of 8 entity
+ * replies ran into the 500-token cap, with this line 0 of 8 (~330 tokens). [measured: M12-1 PR 4 probe, 2026-10-11]
+ */
+const ONE_LINE = ' Write the JSON on one line, with no line breaks or indentation.';
+
 const LOOKS_ASK = `looks is only for characters: a few words for each of ${LOOK_KEYS.join(', ')} that the passage shows; leave out the rest, and leave it out for places, items and factions.`;
 
 /**
@@ -63,7 +69,8 @@ export function extractPrompt(passage: string, knownNames: readonly string[], gr
     `${LOOKS_ASK} state is where it is and how it is now (${STATE_KEYS.join(', ')}), a few words each, only what the passage shows. ` +
     'The player is "you", not an entity. speakers names who talks in each numbered paragraph. ' +
     'scene is where the passage ends: the place, the named characters there, and the weather only when the passage states it.\n' +
-    (grammar ? 'Return {"scene": {...}, "entities": [...], "speakers": [...]}.' : EXTRACT_SKELETON)
+    (grammar ? 'Return {"scene": {...}, "entities": [...], "speakers": [...]}.' : EXTRACT_SKELETON) +
+    ONE_LINE
   );
 }
 
@@ -75,7 +82,8 @@ export function introducePrompt(passage: string, newNames: readonly string[], gr
     `Skip a name that is not one (a common word, an exclamation, the player "you"). ${LOOKS_ASK}\n` +
     (grammar
       ? 'Return {"entities": [...]}.'
-      : 'Return JSON in this shape (<...> are placeholders):\n{"entities": [{"name": "<Name>", "kind": "character", "description": "<one sentence>", "looks": {"<key>": "<a few words>"}}]}')
+      : 'Return JSON in this shape (<...> are placeholders):\n{"entities": [{"name": "<Name>", "kind": "character", "description": "<one sentence>", "looks": {"<key>": "<a few words>"}}]}') +
+    ONE_LINE
   );
 }
 

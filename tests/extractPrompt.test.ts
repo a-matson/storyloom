@@ -10,6 +10,10 @@ describe('the entity call’s prompt', () => {
     expect(extractPrompt('[0] Mira waves.', [], false)).toMatch(/"looks": \{"<key>": "<a few words>"\}/);
     expect(extractPrompt('[0] Mira waves.', [], false)).not.toMatch(/Ysolde|Brass Owl|timeDelta|cards|New here/);
   });
+
+  it('asks for the JSON on one line, grammar or not', () => {
+    for (const g of [true, false]) expect(extractPrompt('[0] Mira waves.', [], g)).toMatch(/on one line, with no line breaks/);
+  });
 });
 
 describe('newNamesIn', () => {
