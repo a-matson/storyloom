@@ -1,4 +1,5 @@
-import { newId } from '../model/types';
+import { actionText, newId } from '../model/types';
+import { REPEAT_WINDOW } from '../text/repetition';
 import type { Adventure, TurnErrorKind, TurnKind, TurnOutcome, TurnTrace } from '../model/types';
 import type { CompletionRequest } from '../ports/provider';
 import { TurnErrorKind as ErrorKinds } from '../schema';
@@ -16,6 +17,21 @@ export interface TurnRun {
   actionId?: string;
   /** `log()` lines and errors of every hook run in this turn. */
   scriptLogs: string[];
+  error?: { message: string; status?: number | undefined };
+}
+
+/** `ProviderError` lives in adapters, so its HTTP status is read by shape. */
+function errorDetail(e: unknown): { message: string; status?: number | undefined } {
+  const status = typeof e === 'object' && e !== null && 'status' in e && typeof e.status === 'number' ? e.status : undefined;
+  return { message: e instanceof Error ? e.message : String(e), status };
+}
+
+/** The AI outputs a repetition is measured against: the last few before this turn's own action. */
+function previousOutputs(adventure: Adventure, actionId: string | undefined): string[] {
+  return adventure.actions
+    .filter((a) => (a.type === 'continue' || a.type === 'start') && a.id !== actionId)
+    .slice(-REPEAT_WINDOW)
+    .map(actionText);
 }
 
 export function startRun(kind: TurnKind): TurnRun {
@@ -53,6 +69,9 @@ export function traceOf(adventure: Adventure, deps: TurnDeps, run: PromptedRun, 
     stats: run.generated?.stats,
     ttftMs: run.generated?.ttftMs,
     totalMs: Date.now() - run.startedAt,
+    output: run.generated?.text,
+    previousOutputs: run.generated ? previousOutputs(adventure, run.actionId) : [],
+    error: run.error,
   });
 }
 
@@ -76,6 +95,7 @@ export async function* traced(
       if (e.type === 'error') {
         outcome = 'error';
         errorKind = e.kind;
+        run.error = { message: e.message };
       }
       yield e;
     }
@@ -87,7 +107,8 @@ export async function* traced(
     } else {
       outcome = 'error';
       errorKind = errorKindOf(e);
-      yield { type: 'error', turnId, kind: errorKind, message: e instanceof Error ? e.message : String(e) };
+      run.error = errorDetail(e);
+      yield { type: 'error', turnId, kind: errorKind, message: run.error.message };
     }
   }
   const { prepared, request } = run;

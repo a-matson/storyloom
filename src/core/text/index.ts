@@ -4,5 +4,6 @@ export * from './length';
 export * from './modelPresets';
 export * from './placeholders';
 export * from './prompts';
+export * from './repetition';
 export * from './templates';
 export * from './tokenizer';

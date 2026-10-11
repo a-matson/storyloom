@@ -51,6 +51,18 @@ export function TraceSummary({ trace: t }: { trace: TurnTrace }) {
         <Row label="Memories">{t.memoryIds.length} used</Row>
         {t.entitiesUsed && <Row label="Entities">{t.entitiesUsed.length} used</Row>}
         {t.droppedSections.length > 0 && <Row label="Dropped">{t.droppedSections.join(', ')}</Row>}
+        {t.words !== undefined && (
+          <Row label="Output">
+            {t.words} words · {t.paragraphs} paragraphs
+            {t.repeatedPhrases && t.repeatedPhrases.length > 0 ? ` · repeats:${t.repeatedPhrases.slice(0, 3).join(', ')}` : ''}
+          </Row>
+        )}
+        {t.error && (
+          <Row label="Error">
+            {t.error.status === undefined ? '' : `${t.error.status} · `}
+            {t.error.message}
+          </Row>
+        )}
       </div>
       <SectionLabel>Sections</SectionLabel>
       <div className="flex flex-col gap-1">

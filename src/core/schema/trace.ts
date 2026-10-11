@@ -60,4 +60,12 @@ export const TurnTrace = z.object({
   timings: z.object({ totalMs: count, ttftMs: z.optional(count) }),
   /** Background jobs that held a slot while this turn ran, with the overlapping ms and how many threw; absent on traces before Pre-M7. */
   overlap: z.optional(z.array(z.object({ job: JobKind, ms: count, failed: z.optional(count) }))),
+  /** The kept reply, cut at `TRACE_OUTPUT_CAP`; the fields below are absent before M12-0. */
+  output: z.optional(z.string()),
+  words: z.optional(count),
+  paragraphs: z.optional(count),
+  /** Word runs this reply shares with the previous few AI outputs, longest first. */
+  repeatedPhrases: z.optional(z.array(z.string())),
+  /** What actually went wrong behind `errorKind`, `unknown` most of all. */
+  error: z.optional(z.object({ message: z.string(), status: z.optional(z.number()) })),
 });

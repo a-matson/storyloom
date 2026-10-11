@@ -176,6 +176,7 @@ test('the trace viewer shows the latest generation and its prompt', async ({ pag
   await page.getByRole('button', { name: 'Trace' }).last().click();
   const dialog = page.getByRole('dialog', { name: 'Turn trace' });
   await expect(dialog.getByText('done', { exact: true })).toBeVisible();
+  await expect(dialog.getByText(/^\d+ words · \d+ paragraphs/)).toBeVisible();
   await dialog.getByRole('button', { name: 'Prompt' }).click();
   await expect(dialog.getByText('open the letter')).toBeVisible();
 });
