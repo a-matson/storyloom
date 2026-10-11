@@ -68,11 +68,12 @@ describe('introduce', () => {
     expect(reqs[1]?.prompt).not.toContain(`[${n - 1}]`);
   });
 
-  it('asks a short reply: new cards only, no facts, speakers or scene', async () => {
+  it('asks a short reply: the scene first, then new cards, no facts or speakers', async () => {
     const { adv, reqs, deps } = setup('You meet Tamsin at the ferry.');
     await introduce(adv, deps);
     expect(reqs[0]?.maxTokens).toBeLessThanOrEqual(200);
-    expect(JSON.stringify(reqs[0]?.jsonSchema)).not.toMatch(/speakers|scene|facts/);
+    expect(reqs[0]?.jsonSchema).toMatchObject({ required: ['scene', 'entities'] });
+    expect(JSON.stringify(reqs[0]?.jsonSchema)).not.toMatch(/speakers|facts/);
     // The fixture reply carries facts the short shape drops.
     expect(adv.entities[0]?.facts).toEqual([]);
   });
@@ -119,11 +120,50 @@ describe('introduce', () => {
     expect(reqs[0]?.prompt).not.toContain(`[${n - 5}] `);
   });
 
-  it('does nothing when the setting is off', async () => {
+  it('does nothing when both settings are off', async () => {
     const { adv, reqs, deps } = setup('You meet Tamsin at the ferry.');
     adv.settings.memory = { ...adv.settings.memory, introductions: false };
     await introduce(adv, deps);
     expect(reqs).toHaveLength(0);
+  });
+
+  describe('the scene', () => {
+    const at = { location: 'the ferry', present: ['tamsin', 'You'], items: ['the Ledger'] };
+
+    it('is read on a turn with no new name: a scene-only call, then the scene moves and is logged', async () => {
+      const { adv, reqs, deps } = setup('You wait at the ferry.', { scene: at });
+      adv.entities = [mergeEntity(undefined, { name: 'Tamsin', kind: 'character', description: '', facts: [] }, 0)];
+      adv.settings.memory = { ...adv.settings.memory, introductions: false, sceneEachTurn: true };
+      const n = adv.actions.length;
+      expect(await introduce(adv, deps)).toMatchObject({ touched: 0, sceneUpdated: true });
+      expect(reqs).toHaveLength(1);
+      expect(reqs[0]?.maxTokens).toBe(80);
+      expect(reqs[0]?.prompt).not.toContain('New here:');
+      expect(JSON.stringify(reqs[0]?.jsonSchema)).not.toContain('entities');
+      expect(adv.plot.scene).toMatchObject({
+        location: 'the ferry',
+        present: ['Tamsin'],
+        items: ['the Ledger'],
+        since: n - 1,
+        sourceId: adv.actions.at(-1)?.id,
+      });
+      expect(adv.plot.sceneLog).toEqual([{ at: n - 1, location: 'the ferry' }]);
+    });
+
+    it('comes with the cards when there are new names, which it resolves to', async () => {
+      const { adv, reqs, deps } = setup('You meet Tamsin at the ferry.', { ...reply, scene: at });
+      adv.settings.memory = { ...adv.settings.memory, sceneEachTurn: true };
+      await introduce(adv, deps);
+      expect(reqs).toHaveLength(1);
+      expect(adv.entities.map((e) => e.name)).toEqual(['Tamsin']);
+      expect(adv.plot.scene?.present).toEqual(['Tamsin']);
+    });
+
+    it('is not touched by the turn read when its setting is off', async () => {
+      const { adv, deps } = setup('You meet Tamsin at the ferry.', { ...reply, scene: at });
+      await introduce(adv, deps);
+      expect(adv.plot.scene).toBeUndefined();
+    });
   });
 
   it('leaves the marker unset when the call was cut', async () => {

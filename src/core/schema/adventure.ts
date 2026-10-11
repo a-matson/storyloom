@@ -16,6 +16,10 @@ export const Scene = z.object({
   /** Absent until a passage states the time of day; then it moves only by stated elapsed time. */
   time: z.optional(z.object({ day: z.int(), part: DayPart })),
   weather: z.optional(z.string()),
+  /** Named items there, as written. */
+  items: z.optional(z.array(z.string())),
+  /** Action index of the last location change. */
+  since: z.optional(z.int()),
   /** The last action the scene was read from; cleared when that action's text changes. */
   sourceId: z.optional(z.string()),
   sourceHash: z.optional(z.string()),
@@ -35,6 +39,8 @@ export const PlotComponents = z.object({
   thirdPerson: z.optional(z.object({ enabled: z.boolean(), name: z.string() })),
   /** Sent as one `[Scene: …]` line beside the author's note. */
   scene: z.optional(Scene),
+  /** One entry per location change, newest last. */
+  sceneLog: z.optional(z.array(z.object({ at: z.int(), location: z.string() }))),
 });
 
 /** `state.memory` in the scripting API: overrides for plot essentials / author's note, plus front memory. */

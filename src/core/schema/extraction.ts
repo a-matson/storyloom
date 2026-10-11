@@ -57,22 +57,28 @@ export const IntroducedEntity = z.object({
   description: sentence(INTRODUCED_CHARS),
   looks: ExtractedEntity.shape.looks,
 });
-export const IntroductionJson = z.object({ entities: z.array(IntroducedEntity).check(z.maxLength(MAX_INTRODUCED)) });
+
+/** Where the passage ends, as the helper writes it; `scene.ts` cleans and resolves it. */
+export const TurnScene = z.object({
+  location: z.optional(z.string()),
+  present: z.optional(z.array(z.string())),
+  items: z.optional(z.array(z.string())),
+  weather: z.optional(z.string()),
+});
+/** A turn with no new name asks only this. */
+export const SceneJson = z.object({ scene: TurnScene });
+/**
+ * The turn read's reply. `scene` first and required: optional and with no worked example, the 12B
+ * left it out. [measured: 2026-10-09-recall-m11-1.json]
+ */
+export const IntroductionJson = z.object({ scene: TurnScene, entities: z.array(IntroducedEntity).check(z.maxLength(MAX_INTRODUCED)) });
 
 /**
- * The combined helper call's reply. Short fields come first so a reply cut at `maxTokens` still
- * has them; a cut loses the last item of the list it fell in (see `extract.ts`).
+ * The combined helper call's reply. No scene: it reads memories back, so it would move the scene
+ * into the past. Short fields come first so a reply cut at `maxTokens` still has them; a cut loses
+ * the last item of the list it fell in (see `extract.ts`).
  */
 export const ExtractionJson = z.object({
-  /**
-   * Where the passage ends. Required so the grammar asks for it: optional and with no worked
-   * example, the 12B left it out (the `timeDelta` lesson again). [measured: 2026-10-09-recall-m11-1.json]
-   */
-  scene: z.object({
-    location: z.optional(z.string()),
-    present: z.optional(z.array(z.string())),
-    weather: z.optional(z.string()),
-  }),
   entities: z.array(ExtractedEntity).check(z.maxLength(MAX_ENTITIES)),
   speakers: z.array(SpokenIn),
 });

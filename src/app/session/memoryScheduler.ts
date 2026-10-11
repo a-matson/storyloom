@@ -78,8 +78,8 @@ export class MemoryScheduler {
   }
 
   /**
-   * A card for each name the turn brings. Nothing cuts it: a call takes ~16 s on slot 1, longer than
-   * a player reads, and a cut call never made a card. It may overlap the next turn's start.
+   * The turn read: the scene, and a card for each name the turn brings. Nothing cuts it: a call takes
+   * ~16 s on slot 1, longer than a player reads, and a cut call never made a card. It may overlap the next turn's start.
    * [measured: 2026-10-09-live-play-m11-2c.json] One at a time; turns that end meanwhile share one re-run.
    */
   private introducing: Promise<void> | null = null;
@@ -98,13 +98,13 @@ export class MemoryScheduler {
     return this.introducing;
   }
   private async introduceOnce(): Promise<void> {
-    if (!this.host.adventure().settings.memory.introductions) return;
+    const { introductions, sceneEachTurn } = this.host.adventure().settings.memory;
+    if (!introductions && !sceneEachTurn) return;
     try {
       const { introduce } = await loadMemoryJobs();
       const r = await introduce(this.host.adventure(), await this.host.helperModel());
-      if (!r.touched) return;
-      this.host.changed();
-      if (this.idle && !this.idle.aborted) this.portraits(this.idle);
+      if (r.touched || r.sceneUpdated) this.host.changed();
+      if (r.touched && this.idle && !this.idle.aborted) this.portraits(this.idle);
     } catch (e) {
       console.warn('introduction call failed', e);
     }
@@ -176,14 +176,7 @@ export class MemoryScheduler {
       // A live run reads these from the console: whether the summary keeps up, what typing cuts, what the entity call proposes and its guards drop.
       if (summaryUpdated || cutCalls || finishedPastCut || entityCalls.length)
         console.info(`memory run ${JSON.stringify({ summaryUpdated, summaryFirst, cutCalls, finishedPastCut, factsProposed, rejected, entityCalls })}`);
-      if (
-        report.memoriesWritten ||
-        report.memoriesRegenerated ||
-        report.memoriesDropped ||
-        report.entitiesTouched ||
-        report.sceneUpdated ||
-        report.summaryUpdated
-      )
+      if (report.memoriesWritten || report.memoriesRegenerated || report.memoriesDropped || report.entitiesTouched || report.summaryUpdated)
         this.host.changed();
       this.label(report.speakers);
       progressed = this.host.adventure().scriptState.__entitiesAt !== entitiesAt;

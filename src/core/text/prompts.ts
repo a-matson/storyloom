@@ -40,8 +40,7 @@ export const EXTRACT_SYSTEM = 'You keep a record of the people, places, items an
  */
 const EXTRACT_SKELETON =
   'Return JSON in this shape (<...> are placeholders):\n' +
-  '{"scene": {"location": "<place>", "present": ["<Name>"], "weather": "<weather>"},\n' +
-  ' "entities": [{"name": "<Name>", "kind": "character", "aliases": ["<role>"], "description": "<one sentence>",\n' +
+  '{"entities": [{"name": "<Name>", "kind": "character", "aliases": ["<role>"], "description": "<one sentence>",\n' +
   '   "looks": {"<key>": "<a few words>"}, "facts": ["<fact>"], "state": {"<key>": "<a few words>"}},\n' +
   '  {"name": "<Name>", "kind": "place", "description": "<one sentence>", "facts": []}],\n' +
   ' "speakers": [{"action": <number>, "name": "<Name>"}]}';
@@ -67,22 +66,32 @@ export function extractPrompt(passage: string, knownNames: readonly string[], gr
     (knownNames.length ? `Already recorded (use these exact names when the passage means them): ${knownNames.join(', ')}.\n` : '') +
     'Give each entity a one-sentence description and 0–2 facts: short sentences about what lasts (who or what it is, what it owns, injuries, loyalties), not single actions or dialogue, and nothing the passage does not state. ' +
     `${LOOKS_ASK} state is where it is and how it is now (${STATE_KEYS.join(', ')}), a few words each, only what the passage shows. ` +
-    'The player is "you", not an entity. speakers names who talks in each numbered paragraph. ' +
-    'scene is where the passage ends: the place, the named characters there, and the weather only when the passage states it.\n' +
-    (grammar ? 'Return {"scene": {...}, "entities": [...], "speakers": [...]}.' : EXTRACT_SKELETON) +
+    'The player is "you", not an entity. speakers names who talks in each numbered paragraph.\n' +
+    (grammar ? 'Return {"entities": [...], "speakers": [...]}.' : EXTRACT_SKELETON) +
     ONE_LINE
   );
 }
 
-/** The introduction call: a card for each new name, nothing else, so it ends while the player reads. */
+/** Opens the turn read's prompt; the demo backend answers by it. */
+export const TURN_READ_ASK = 'Where does the passage end, who is there, and which named items are there?';
+
+/** The turn read: the scene, then a card for each new name when there are any, so it ends while the player reads. */
 export function introducePrompt(passage: string, newNames: readonly string[], grammar: boolean): string {
+  const cards = newNames.length > 0;
   return (
-    `New here: ${newNames.join(', ')}.\n\n---\n${passage}\n---\n\n` +
-    'For each new name that is a proper name of a character, place, item or faction in this passage, give its kind and a one-sentence description of who or what it is. ' +
-    `Skip a name that is not one (a common word, an exclamation, the player "you"). ${LOOKS_ASK}\n` +
+    TURN_READ_ASK +
+    (cards ? ` New here: ${newNames.join(', ')}.` : '') +
+    `\n\n---\n${passage}\n---\n\n` +
+    'scene is where the passage ends: the place, the named characters there (not the player "you"), the named items there, and the weather only when the passage states it. ' +
+    (cards
+      ? 'For each new name that is a proper name of a character, place, item or faction in this passage, give its kind and a one-sentence description of who or what it is. ' +
+        `Skip a name that is not one (a common word, an exclamation, the player "you"). ${LOOKS_ASK}\n`
+      : '\n') +
     (grammar
-      ? 'Return {"entities": [...]}.'
-      : 'Return JSON in this shape (<...> are placeholders):\n{"entities": [{"name": "<Name>", "kind": "character", "description": "<one sentence>", "looks": {"<key>": "<a few words>"}}]}') +
+      ? `Return {"scene": {...}${cards ? ', "entities": [...]' : ''}}.`
+      : 'Return JSON in this shape (<...> are placeholders):\n{"scene": {"location": "<place>", "present": ["<Name>"], "items": ["<Name>"], "weather": "<weather>"}' +
+        (cards ? ', "entities": [{"name": "<Name>", "kind": "character", "description": "<one sentence>", "looks": {"<key>": "<a few words>"}}]' : '') +
+        '}') +
     ONE_LINE
   );
 }

@@ -165,6 +165,29 @@ describe('MemoryScheduler', () => {
       expect(calls.filter((c) => c === 'introduce')).toHaveLength(1);
     });
 
+    it('reads the scene once per turn with no new name, and saves it', async () => {
+      const adv = memoryAdventure(19);
+      adv.settings.memory = { ...adv.settings.memory, sceneEachTurn: true };
+      adv.scriptState = { ...adv.scriptState, __introducedAt: 0 };
+      const asks: string[] = [];
+      const provider = fakeProvider(
+        async function* (req) {
+          if (req.prompt.includes('Where does the passage end')) asks.push(req.prompt);
+          yield { text: req.prompt.includes('Where does the passage end') ? '{"scene": {"location": "the ferry"}}' : 'Mira found the map.', done: true };
+        },
+        false,
+        true,
+      );
+      const changed = vi.fn<() => void>();
+      const scheduler = new MemoryScheduler({ ...host(adv, provider), changed });
+      // Two starts while the first read runs share it.
+      scheduler.start(new AbortController().signal);
+      scheduler.start(new AbortController().signal);
+      await vi.waitFor(() => expect(adv.plot.scene?.location).toBe('the ferry'));
+      await vi.waitFor(() => expect(changed).toHaveBeenCalled());
+      expect(asks).toHaveLength(1);
+    });
+
     it('reads the opening on open, and queues portraits before and after it', async () => {
       const { adv, release, provider } = setup();
       adv.scriptState = { ...adv.scriptState, __introducedAt: undefined };

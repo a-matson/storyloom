@@ -54,8 +54,6 @@ export interface MaintenanceReport extends CutCounts {
   entitiesTouched: number;
   /** The helper's speaker labels by action id; the caller applies them through the log. */
   speakers: Map<string, Speaker[]>;
-  /** `plot.scene` moved, from the same helper call. */
-  sceneUpdated: boolean;
   summaryUpdated: boolean;
   /** The summary was overdue and ran before the memories. */
   summaryFirst: boolean;
@@ -168,7 +166,6 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
     memoriesRejected: 0,
     entitiesTouched: 0,
     speakers: new Map(),
-    sceneUpdated: false,
     summaryUpdated: false,
     summaryFirst: false,
     factsProposed: 0,
@@ -210,7 +207,7 @@ async function maintain(adventure: Adventure, deps: MaintenanceDeps, report: Mai
     }
     // The one combined helper call per two memories; a bad reply only costs the entities.
     const e = await catchUpEntities(adventure, deps);
-    ({ touched: report.entitiesTouched, speakers: report.speakers, sceneUpdated: report.sceneUpdated } = e);
+    ({ touched: report.entitiesTouched, speakers: report.speakers } = e);
     report.factsProposed = e.log?.proposed ?? 0;
     report.rejected = e.log?.rejected ?? [];
     await reembed(adventure, deps);

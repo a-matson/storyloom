@@ -31,6 +31,7 @@ const LINES = [
 ] as const;
 const NAMES = ['Merav', 'The Needle Map', 'Well-wardens', 'Ashen Flats'] as const;
 const MEMORY = 'The caravan crossed the flats; Merav hid her blindness; a needle-pricked map surfaced.';
+const LIGHTHOUSE = { location: 'the lighthouse', present: ['Merav'], items: ['the Needle Map'], weather: 'fog' };
 const PROPS = { default_generation_settings: { n_ctx: 8192 }, total_slots: 2, model_path: '/models/Fake-12B-Q4_K_M.gguf', build_info: 'fake' };
 
 const json = (obj: unknown, status = 200): Response => new Response(JSON.stringify(obj), { status, headers: { ...CORS, 'content-type': 'application/json' } });
@@ -99,8 +100,10 @@ export function createFakeLlama(opts: FakeLlamaOptions = {}): (req: Request) => 
     opts.onPrompt?.(prompt, body);
     if (body.n_predict === 0) return json({ content: '', stop: true, tokens_evaluated: Math.ceil(prompt.length / 4), tokens_cached: 0 });
     // Entity calls find nobody, and leave the rotation alone: the opening's call would shift every story line.
-    if (prompt.includes('List every named character') || prompt.includes('New here:'))
-      return oneShot({ content: '{"scene": {}, "entities": [], "speakers": []}', stop: true });
+    if (prompt.includes('List every named character')) return oneShot({ content: '{"entities": [], "speakers": []}', stop: true });
+    // The turn read moves the scene only for a lighthouse, so other specs' prompts carry no scene line.
+    if (prompt.includes('Where does the passage end'))
+      return oneShot({ content: JSON.stringify({ scene: /lighthouse/i.test(prompt) ? LIGHTHOUSE : {}, entities: [] }), stop: true });
     if (body.json_schema !== undefined) return card(prompt, rotate(NAMES, n++));
     if (/Memory:\s*$|Write the updated summary:\s*$/.test(prompt)) {
       return oneShot({ content: MEMORY, stop: true, stop_type: 'eos', tokens_evaluated: 200, tokens_predicted: 20 });
