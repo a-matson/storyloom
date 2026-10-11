@@ -58,7 +58,8 @@ function stream(line: string, prompt: string, delay: number, signal: AbortSignal
         }
         const cached = Math.floor(pn * 0.8);
         const timings = { prompt_ms: 120, predicted_ms: 40 * words.length, prompt_n: pn - cached, cache_n: cached, predicted_n: words.length };
-        const stats = { content: '', stop: true, stop_type: 'eos', tokens_evaluated: pn, tokens_cached: pn + words.length, tokens_predicted: words.length };
+        // 'limit', not 'eos': a canned line is far below the length floor and must not be continued.
+        const stats = { content: '', stop: true, stop_type: 'limit', tokens_evaluated: pn, tokens_cached: pn + words.length, tokens_predicted: words.length };
         ctrl.enqueue(enc.encode(evt({ ...stats, timings })));
         ctrl.close();
       };

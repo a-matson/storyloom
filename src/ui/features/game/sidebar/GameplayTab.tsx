@@ -59,7 +59,7 @@ function StoryGenerator({ s, update }: { s: Settings; update: Update }) {
       <SettingSwitch
         id="dynamic-samplers"
         label="Dynamic samplers"
-        title="Each turn uses the next preset's samplers instead of Model settings, against sameness in long stories; the prompt and cache are unaffected"
+        title="Each turn nudges the loaded model's preset samplers (temperature, top-k, seed) instead of using Model settings, against sameness in long stories; the prompt and cache are unaffected"
         checked={s.model.dynamic}
         onChange={(on) => update({ model: { ...s.model, dynamic: on } })}
       />

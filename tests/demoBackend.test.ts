@@ -27,7 +27,7 @@ describe('demo backend', () => {
     expect(text.length).toBeGreaterThan(10);
     expect(stats?.generatedTokens).toBeGreaterThan(0);
     expect(stats?.cachedTokens).toBeGreaterThan(0);
-    expect(stats?.stopReason).toBe('eos');
+    expect(stats?.stopReason).toBe('length');
   });
 
   it('answers json_schema requests with a card', async () => {

@@ -16,7 +16,7 @@ function recording() {
     async *complete(req) {
       requests.push(req);
       yield { text: 'The gate opens.', done: false };
-      yield { text: '', done: true, stats: { stopReason: 'stop' } };
+      yield { text: '', done: true, stats: { stopReason: 'length' } };
     },
   };
   return { provider, requests };
@@ -42,12 +42,19 @@ describe('dynamic samplers', () => {
     expect(requests.map((r) => r.temperature)).toEqual([0.42, 0.42, 0.42]);
   });
 
-  it('on: each turn takes the next preset, so consecutive turns differ', async () => {
-    const requests = await playTurns(true, 3);
-    const temps = requests.map((r) => r.temperature);
-    expect(temps).not.toContain(0.42);
-    for (const r of requests) expect(MODEL_PRESETS.some((p) => p.settings.topK === r.topK && p.settings.topP === r.topP)).toBe(true);
-    expect(new Set(requests.map((r) => `${r.temperature}/${r.topK}/${r.topP}`)).size).toBe(3);
+  it('on: jitters only the loaded preset, so consecutive turns differ', async () => {
+    const requests = await playTurns(true, 4);
+    const [preset] = MODEL_PRESETS;
+    if (preset?.settings.topK === undefined) throw new Error('first preset has no topK');
+    for (const r of requests) {
+      expect(Math.abs(r.temperature - preset.settings.temperature)).toBeLessThanOrEqual(0.1 + 1e-9);
+      expect(r.topP).toBe(preset.settings.topP);
+      expect(r.minP).toBe(0.05);
+      expect(r.topK).toBeGreaterThanOrEqual(Math.round(preset.settings.topK * 0.8));
+      expect(r.topK).toBeLessThanOrEqual(Math.round(preset.settings.topK * 1.2));
+    }
+    expect(new Set(requests.map((r) => `${r.temperature}/${r.topK}`)).size).toBe(4);
+    expect(new Set(requests.map((r) => r.seed)).size).toBe(4);
   });
 
   it('on: the prompt is the same as off, so the KV cache is unaffected', async () => {
