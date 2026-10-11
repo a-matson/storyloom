@@ -99,6 +99,8 @@ export function costAndState(r: Rows) {
     .parse(r.traces)
     .toSorted((a, b) => a.createdAt - b.createdAt);
   return {
+    repeatedPerTurn: traces.reduce((n, t) => n + (t.repeatedPhrases?.length ?? 0), 0) / (traces.length || 1),
+    errors: traces.flatMap((t) => (t.error ? [t.error.message] : [])),
     turns: traces.map(({ kind, outcome, stats, timings, overlap, sections, entitiesUsed }) => ({
       kind,
       outcome,

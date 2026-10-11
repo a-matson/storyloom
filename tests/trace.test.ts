@@ -10,10 +10,10 @@ import { createApproxTokenizer } from '@core/text';
 import { buildTrace, clearJobLog, hashPrompt, overlappingJobs, TRACE_PROMPT_CAP, trackJob } from '@core/trace';
 import { runTurn, type TurnEvent } from '@core/turn';
 
-async function oneTurn() {
+async function oneTurn(fetchFn?: typeof fetch, opening = 'You stand at the gate.') {
   const handler = createFakeLlama({ wordDelayMs: 0 });
-  const provider = new LlamaServerProvider('demo', 'http://demo.invalid', (i, init) => handler(new Request(i, init)));
-  const adventure = createBlankAdventure('Test', 'You stand at the gate.');
+  const provider = new LlamaServerProvider('demo', 'http://demo.invalid', fetchFn ?? ((i, init) => handler(new Request(i, init))));
+  const adventure = createBlankAdventure('Test', opening);
   const events: TurnEvent[] = [];
   for await (const e of runTurn(adventure, new ActionLog(adventure.actions), { type: 'do', text: 'wait' }, { provider, tokenizer: createApproxTokenizer() }))
     events.push(e);
@@ -30,6 +30,60 @@ describe('TurnTrace schema', () => {
     expect(S.TurnTrace.safeParse({ ...trace, kind: 'bogus' }).success).toBe(false);
     expect(S.TurnTrace.safeParse({ ...trace, sections: [{ kind: 'history', tokens: -1, cacheable: true, trimmed: false }] }).success).toBe(false);
     expect(S.TurnTrace.safeParse({ ...trace, promptHash: undefined }).success).toBe(false);
+  });
+});
+
+describe('trace output and error detail', () => {
+  it('keeps the reply with its word and paragraph counts', async () => {
+    const { adventure, trace } = await oneTurn();
+    const reply = adventure.actions.at(-1)?.versions[0] ?? '';
+    expect(trace.output).toBe(reply);
+    expect(trace.words).toBeGreaterThan(0);
+    expect(trace.paragraphs).toBeGreaterThan(0);
+    expect(trace.error).toBeUndefined();
+  });
+
+  it('reports phrases shared with earlier outputs', async () => {
+    const { context } = await oneTurn();
+    const t = buildTrace({
+      turnId: 't',
+      kind: 'turn',
+      adventureId: 'a',
+      createdAt: 0,
+      outcome: 'done',
+      result: context.result,
+      prompt: 'p',
+      request: { prompt: 'p', maxTokens: 1, temperature: 1 },
+      template: 'chatml',
+      providerId: 'demo',
+      totalMs: 1,
+      output: 'She sets it on the metal table.\n\nThe lamp hums.\n\n',
+      previousOutputs: ['A cup on the metal table.', 'The lamp hums softly.'],
+    });
+    expect(t).toMatchObject({ words: 10, paragraphs: 2, repeatedPhrases: ['on the metal table'] });
+  });
+
+  it('carries the message and HTTP status of a failed turn', async () => {
+    const { trace } = await oneTurn(() => Promise.resolve(new Response('', { status: 500 })));
+    expect(trace.outcome).toBe('error');
+    expect(trace.error).toEqual({ message: expect.stringContaining('500'), status: 500 });
+    expect(trace.output).toBeUndefined();
+  });
+
+  it('still parses a trace stored before the output fields', async () => {
+    const { trace } = await oneTurn();
+    const { output: _o, words: _w, paragraphs: _p, repeatedPhrases: _r, ...old } = trace;
+    expect(S.TurnTrace.safeParse(old).success).toBe(true);
+  });
+
+  it('lists an image render still running when the turn ends in its overlap', async () => {
+    clearJobLog();
+    let release = () => {};
+    const render = trackJob('image', () => new Promise<void>((ok) => (release = ok)));
+    const { trace } = await oneTurn();
+    release();
+    await render;
+    expect(trace.overlap?.map((o) => o.job)).toContain('image');
   });
 });
 
