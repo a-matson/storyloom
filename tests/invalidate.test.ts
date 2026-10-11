@@ -36,6 +36,18 @@ describe('derived values follow edits', () => {
     expect(dropUnsupported(erased, erased.actions.slice(0, 1)).facts).toBe(1);
   });
 
+  it('gives a key back to the state value a dropped one ended', () => {
+    const adv = story();
+    const source = sourceIn(adv.actions, { fromAction: 0, toAction: 3 });
+    const first = mergeEntity(undefined, { name: 'Tamsin', kind: 'character', description: '', facts: [], state: { location: 'the river' } }, 0, source);
+    adv.entities = [mergeEntity(first, { name: 'Tamsin', kind: 'character', description: '', facts: [], state: { location: 'the far bank' } }, 2, source)];
+    dropUnsupported(
+      adv,
+      adv.actions.map((a) => (a.id === 'a2' ? edited(a, 'The fog thickens.') : a)),
+    );
+    expect(adv.entities[0]?.facts.map((f) => [f.value, f.until])).toEqual([['the river', undefined]]);
+  });
+
   it('checks evidence instead of the hash when a value has it', () => {
     const adv = story();
     const fact = adv.entities[0]?.facts[0];

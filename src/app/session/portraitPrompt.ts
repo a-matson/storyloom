@@ -1,4 +1,5 @@
 import type { Entity } from '@core/model';
+import { appearanceOf } from '@core/memory';
 
 // Pure, but in app beside its only user: a core `load*()` that only lazy code calls moves its
 // `import()` into the lazy chunk, which split `preload-helper` out of the start-up chunk (+0.34 kB).
@@ -25,9 +26,11 @@ export function portraitStyle(tags: readonly string[]): string {
 
 /** Looks first: SD 1.5 weighs the start of a prompt most. */
 export function portraitPrompt(e: Pick<Entity, 'description' | 'appearance' | 'facts'>, style: string): string {
+  // State facts are in `appearanceOf` or not looks at all; `looked:` is the old, replaced looks.
   const looks = e.facts
+    .filter((f) => f.kind !== 'state' && !f.text.startsWith('looked: '))
     .map((f) => f.text.trim())
     .filter((t) => APPEARANCE.test(t))
     .slice(0, 2);
-  return ['portrait, head and shoulders', e.appearance?.trim(), e.description.trim(), ...looks, style.trim()].filter(Boolean).join(', ');
+  return ['portrait, head and shoulders', appearanceOf(e), e.description.trim(), ...looks, style.trim()].filter(Boolean).join(', ');
 }

@@ -47,7 +47,8 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps): Promis
   if (at === n && __introducedHash === hash) return none();
   // From the last finished call: a call the next turn cut (it takes ~28 s) is read again with that turn. [measured: 2026-10-09-live-play-m11-2-read30.json]
   const range = { fromAction: Math.max(0, n - MEMORY_SPAN, Math.min(at ?? 0, n - INTRODUCE_SPAN)), toAction: n };
-  const known = adventure.entities.flatMap((e) => [e.name, ...e.aliases]);
+  const player = adventure.plot.thirdPerson?.enabled ? [adventure.plot.thirdPerson.name] : [];
+  const known = [...player, ...adventure.entities.flatMap((e) => [e.name, ...e.aliases])];
   const names = [...new Set(adventure.actions.slice(range.fromAction).flatMap((a) => candidateNames(actionText(a), known)))];
   const passage = passageOf(adventure, range);
   // ponytail: names past the grammar's cap wait for the batch call; raise MAX_INTRODUCED if openings name more.

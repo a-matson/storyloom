@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { seedCanonEntities } from '@core/memory/canon';
 import { mergeEntity } from '@core/memory/entities';
 import { rankFacts } from '@core/memory/facts';
+import { currentStates } from '@core/memory/looks';
 import { createAdventureFromScenario, newScenario } from '@core/model/scenario';
 import type { Entity, ExtractedEntity, StoryCard } from '@core/model';
 
@@ -47,8 +48,8 @@ describe('canon lock', () => {
   it('a locked state key keeps its value and records one conflict per disagreement', () => {
     const e = canon({ state: { eyes: 'grey' }, canonKeys: ['eyes'] });
     const once = mergeEntity(e, seen({ state: { eyes: 'blue', location: 'the docks' } }), 7);
-    expect(once.state).toEqual({ eyes: 'grey', location: 'the docks' });
-    expect(once.facts).toEqual([
+    expect(currentStates(once)).toEqual({ eyes: 'grey', location: 'the docks' });
+    expect(once.facts.filter((f) => f.conflict)).toEqual([
       expect.objectContaining({
         text: 'the story says eyes is blue, but canon says grey',
         conflict: true,
@@ -56,13 +57,13 @@ describe('canon lock', () => {
         fromAction: 7,
       }),
     ]);
-    expect(mergeEntity(once, seen({ state: { eyes: 'Blue' } }), 9).facts).toHaveLength(1);
-    expect(mergeEntity(once, seen({ state: { eyes: 'grey' } }), 9).facts).toHaveLength(1);
+    expect(mergeEntity(once, seen({ state: { eyes: 'Blue' } }), 9).facts).toHaveLength(2);
+    expect(mergeEntity(once, seen({ state: { eyes: 'grey' } }), 9).facts).toHaveLength(2);
   });
 
   it('an unlocked key on a canon entity changes as usual', () => {
     const next = mergeEntity(canon({ state: { location: 'the tower' } }), seen({ state: { location: 'the docks' } }), 3);
-    expect(next.state).toEqual({ location: 'the docks' });
+    expect(currentStates(next)).toEqual({ location: 'the docks' });
     expect(next.facts.some((f) => f.conflict)).toBe(false);
   });
 

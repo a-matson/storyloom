@@ -55,7 +55,7 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
   const byId = new Map(entities.map((e) => [e.id, e]));
   const mentioned = matchCards(compileCards(entities.map(projectEntity)), recent.map(actionStoryText)).flatMap((m) => byId.get(m.card.id) ?? []);
   const only = input.settings.pinnedFactsOnly ?? false;
-  const ranked = rankFacts(entities, new Set(here.map((e) => e.id)), new Set(mentioned.map((e) => e.id)), input.factHits);
+  const ranked = rankFacts(entities, new Set(here.map((e) => e.id)), new Set(mentioned.map((e) => e.id)));
   // The player's own facts (Correct, pins) and canon conflicts go in even with entity facts off.
   const facts = fill('facts', only ? ranked.filter((r) => r.fact.pinned || r.fact.conflict) : ranked, (r) => `${r.entity.name}: ${r.fact.text}`, '\n');
 

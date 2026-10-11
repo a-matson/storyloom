@@ -26,9 +26,30 @@ describe('rankFacts', () => {
     expect(ids(['lena'], ['orrin'])).toEqual(['absent-conflict', 'absent-pinned', 'orrin-pinned', 'lena-new', 'lena-old', 'orrin-new']);
   });
 
-  it('puts lexical hits first within each tier, never above a pinned or present fact', () => {
-    const ranked = rankFacts([absent, orrin, lena], new Set(['lena']), new Set(['orrin']), ['mem_x', 'orrin-new', 'lena-old', 'absent']);
-    expect(ranked.map((r) => r.fact.id)).toEqual(['absent-conflict', 'absent-pinned', 'orrin-pinned', 'lena-old', 'lena-new', 'orrin-new']);
+  it('orders a tier by entity name, then state, effect, relationship, trait, whatever order the entities come in', () => {
+    const mira = entity('mira', [
+      fact('m-trait', 9),
+      fact('m-rel', 1, { kind: 'relationship' }),
+      fact('m-state', 2, { kind: 'state', key: 'mood', value: 'calm' }),
+    ]);
+    const both = [mira, lena];
+    expect(rankFacts(both, new Set(['lena', 'mira']), new Set()).map((r) => r.fact.id)).toEqual(['lena-new', 'lena-old', 'm-state', 'm-rel', 'm-trait']);
+    expect(rankFacts(both.toReversed(), new Set(['lena', 'mira']), new Set()).map((r) => r.fact.id)).toEqual([
+      'lena-new',
+      'lena-old',
+      'm-state',
+      'm-rel',
+      'm-trait',
+    ]);
+  });
+
+  it('leaves out ended states and the old looked: history', () => {
+    const e = entity('e', [
+      fact('was', 1, { kind: 'state', key: 'mood', value: 'calm', until: 4 }),
+      fact('now', 4, { kind: 'state', key: 'mood', value: 'angry' }),
+    ]);
+    e.facts.push(fact('looked', 2, { text: 'looked: tall, grey cloak' }));
+    expect(rankFacts([e], new Set(['e']), new Set()).map((r) => r.fact.id)).toEqual(['now']);
   });
 
   it('keeps a conflicted fact as worded, flag intact', () => {

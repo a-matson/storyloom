@@ -53,17 +53,15 @@ async function buildExact(input: ContextBuildInput): Promise<ContextBuildResult>
   return result;
 }
 
-interface Retrieval {
-  rankedMemories: RankedMemory[];
-  factHits: string[];
-}
-
-/** One BM25 index over the active bank and every entity fact, so both rank against one corpus and one query. */
-async function rankForQuery(adventure: Adventure, query: string, embedder?: Embedder): Promise<Retrieval> {
+/**
+ * Memories by BM25 and the embedding. Entity facts stay in the BM25 corpus though only memory hits
+ * are read: dropping them would shift every word's weight and with it the measured recall.
+ */
+async function rankForQuery(adventure: Adventure, query: string, embedder?: Embedder): Promise<RankedMemory[]> {
   const bank = adventure.settings.memory.memoryBank ? adventure.memories.filter(isActive) : [];
+  if (!bank.length) return [];
   const facts = adventure.entities.flatMap((e) => e.facts.map((f) => ({ id: f.id, text: `${e.name}: ${f.text}` })));
   const hits = bm25(buildIndex([...bank, ...facts]), tokenise(query));
-  if (!bank.length) return { rankedMemories: [], factHits: hits };
   let queryVec: number[] | undefined;
   if (embedder && query) {
     try {
@@ -72,7 +70,7 @@ async function rankForQuery(adventure: Adventure, query: string, embedder?: Embe
       queryVec = undefined; // embedding failure falls back to recency-only ranking
     }
   }
-  return { rankedMemories: rankMemories(adventure.memories, queryVec, Infinity, hits), factHits: hits };
+  return rankMemories(adventure.memories, queryVec, Infinity, hits);
 }
 
 const withoutSystem = (text: string, system: string): string => (system && text.startsWith(`${system}\n\n`) ? text.slice(system.length + 2) : text);
@@ -109,10 +107,9 @@ export async function prepareContext(
   retryNote?: string,
 ): Promise<PreparedContext | { stopped: string }> {
   const last = actions.at(-1);
-  const { rankedMemories, factHits } = await rankForQuery(adventure, last ? actionText(last) : '', deps.embedder);
+  const rankedMemories = await rankForQuery(adventure, last ? actionText(last) : '', deps.embedder);
   const result = await buildExact({
     ...contextInput(adventure, actions, rankedMemories, deps, adventure.settings.context.cacheStableLayout),
-    factHits,
     retryNote,
   });
 

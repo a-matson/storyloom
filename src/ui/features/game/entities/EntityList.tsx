@@ -1,4 +1,5 @@
 import { useState, useSyncExternalStore } from 'react';
+import { currentStates } from '@core/memory';
 import type { Adventure, Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { progressText, useImageProgress } from '@ui/hooks/useImageProgress';
@@ -60,7 +61,7 @@ export function EntityList({ adventure, api, world }: { adventure: Adventure; ap
                 <PortraitDot id={e.id} api={api} />
               </span>
               <span className="truncate text-caption font-normal text-muted-foreground">
-                {Object.entries(e.state)
+                {Object.entries(currentStates(e))
                   .map(([k, v]) => `${k}: ${v}`)
                   .join(' · ') || e.description}
               </span>

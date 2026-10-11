@@ -4,7 +4,7 @@ import { actionText } from '../model/types';
 import { hashPrompt } from '../trace';
 import { sourceIn } from './invalidate';
 import { z } from 'zod/mini';
-import { ExtractedEntity, IntroducedEntity, MAX_ENTITIES, MAX_INTRODUCED, ExtractionJson as Schema } from '../schema/extraction';
+import { ExtractedEntity, FACT_CHARS, INTRODUCED_CHARS, IntroducedEntity, MAX_ENTITIES, MAX_INTRODUCED, ExtractionJson as Schema } from '../schema/extraction';
 import { actionStoryText } from '../text/formatting';
 import { parseJsonReply } from '../text/jsonReply';
 import { EXTRACT_SYSTEM, extractPrompt, introducePrompt } from '../text/prompts';
@@ -104,8 +104,15 @@ export function introduceFromPassage(passage: string, newNames: readonly string[
  */
 const ENTITY_BATCH = 2;
 
-/** The player, and a role the grammar let through by capitalising its article ("The creature"). */
-export const NOT_A_NAME = /^\s*you\s*$|^(the|a|an) \p{Ll}/iu;
+/** The player and how the story addresses them, and a role the grammar let through by capitalising its article ("The creature"). */
+export const NOT_A_NAME = /^\s*(?:you|master|mistress|sir|madam|my lord|my lady)\s*$|^(the|a|an) \p{Ll}/iu;
+
+/** Not an entity: `NOT_A_NAME`, or the player's own name in a third-person adventure. */
+export const notAName = (plot: Adventure['plot'], name: string): boolean =>
+  NOT_A_NAME.test(name) || (!!plot.thirdPerson?.enabled && name.trim().toLowerCase() === plot.thirdPerson.name.trim().toLowerCase());
+
+/** A description that makes the name a kind of creature, not one of them ("Kobolds are a race of…"). */
+const A_KIND = /^(?:[^,.]* (?:is|are) )?(?:a|an|the) (?:species|race|kind|type) of\b/i;
 
 /**
  * One combined call over the oldest `ENTITY_BATCH` memories not yet extracted, as one passage.
@@ -124,7 +131,7 @@ export async function catchUpEntities(adventure: Adventure, deps: MaintenanceDep
   // so would a re-read after an edit, hence the check against the scene's source.
   const old = adventure.plot.scene;
   const newer = old?.sourceId === undefined || adventure.actions.findIndex((a) => a.id === old.sourceId) < last.toAction;
-  const scene = newer && r.reply ? nextScene(old, r.reply, (n) => n !== '' && !NOT_A_NAME.test(n)) : undefined;
+  const scene = newer && r.reply ? nextScene(old, r.reply, (n) => n !== '' && !notAName(adventure.plot, n)) : undefined;
   const sceneUpdated = scene !== undefined && scene !== old;
   const from = adventure.actions[last.toAction - 1];
   if (scene !== undefined && sceneUpdated)
@@ -145,6 +152,19 @@ export interface EntityUpdate {
 /** An appearance that says there is none: the 12B fills the field anyway ("Not described in the passage"). [measured: 2026-10-09-live-play-m11-2.json] */
 const NO_LOOKS = /\bnot (?:described|mentioned|stated|shown|given|specified)\b|^(?:unknown|none(?: specified| given)?|n\/a)\.?$/i;
 
+/** The shortest grammar cap: a value this long with no closing punctuation was cut by it. */
+const CUT_AT = Math.min(FACT_CHARS, INTRODUCED_CHARS);
+
+/** A value the grammar's cap cut, back to its last sentence end, else its last comma; `''` when nothing whole is left. */
+export function uncut(text: string): string {
+  const t = text.trim();
+  if (t.length < CUT_AT || /[.!?]["”’)]?$/u.test(t)) return t;
+  const end = Math.max(...['. ', '! ', '? '].map((p) => t.lastIndexOf(p)));
+  if (end > 0) return t.slice(0, end + 1);
+  const comma = t.lastIndexOf(',');
+  return comma > 0 ? t.slice(0, comma) : '';
+}
+
 /** The range's actions, numbered by index, as the helper reads them. */
 export function passageOf(adventure: Adventure, range: MemoryRange): string {
   return adventure.actions
@@ -159,11 +179,13 @@ export function passageOf(adventure: Adventure, range: MemoryRange): string {
 export function foldEntities(adventure: Adventure, incoming: readonly z.infer<typeof ExtractedEntity>[], passage: string, range: MemoryRange): number {
   let entities = adventure.entities;
   const source = sourceIn(adventure.actions, range);
-  for (const { appearance, ...rest } of incoming) {
-    if (NOT_A_NAME.test(rest.name)) continue;
+  for (const { appearance, ...cut } of incoming) {
+    const looks = uncut(appearance ?? '');
+    const rest = { ...cut, description: uncut(cut.description), facts: cut.facts.map(uncut).filter(Boolean) };
+    if (notAName(adventure.plot, rest.name)) continue;
     const old = matchEntity(entities, rest.name);
-    if (!old && !namedInPassage(rest.name, passage)) continue;
-    const merged = mergeEntity(old, appearance && !NO_LOOKS.test(appearance) ? { ...rest, appearance } : rest, range.toAction - 1, source);
+    if (!old && (!namedInPassage(rest.name, passage) || A_KIND.test(rest.description))) continue;
+    const merged = mergeEntity(old, looks && !NO_LOOKS.test(looks) ? { ...rest, appearance: looks } : rest, range.toAction - 1, source);
     entities = old ? entities.map((e) => (e === old ? merged : e)) : [...entities, merged];
   }
   const touched = entities.filter((e, i) => e !== adventure.entities[i]).length;

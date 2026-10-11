@@ -149,6 +149,32 @@ test('a canon conflict is shown on the fact and resolved from the drawer', async
   await expect(page.getByText('eyes: blue')).toBeVisible();
 });
 
+test("the story's current state shows as a row, and the player's edit ends it", async ({ page }) => {
+  const state = (id: string, value: string, fromAction: number, until?: number) => ({
+    id,
+    text: `location: ${value}`,
+    fromAction,
+    source: 'memory' as const,
+    kind: 'state' as const,
+    key: 'location',
+    value,
+    ...(until !== undefined && { until }),
+  });
+  await openSeededAdventure(page, 3, undefined, {
+    entities: [{ id: 'ent_tamsin', name: 'Tamsin', state: {}, facts: [state('s1', 'the tavern', 1, 2), state('s2', 'the docks', 2)] }],
+  });
+  await page.getByRole('button', { name: 'Characters · 2' }).click();
+  await page.getByRole('button', { name: 'Open Tamsin' }).click();
+  const drawer = page.getByRole('dialog', { name: 'Tamsin' });
+  await expect(drawer.getByRole('textbox', { name: 'location' })).toHaveValue('the docks');
+  await expect(drawer.getByRole('listitem').filter({ hasText: 'location: the tavern' })).toContainText('until 2');
+  await drawer.getByRole('textbox', { name: 'location' }).fill('the ferry');
+  await drawer.getByRole('textbox', { name: 'location' }).blur();
+  await expect(drawer.getByRole('listitem').filter({ hasText: 'location: the docks' })).toContainText('until');
+  await page.keyboard.press('Escape');
+  await expect(page.getByText('location: the ferry')).toBeVisible();
+});
+
 test('a fact goes when the action it came from is edited', async ({ page }) => {
   const fact = { id: 'f9', text: 'Corrow sells salt.', fromAction: 1, source: 'memory' as const, sourceId: 'action:1', evidence: 'bends 1' };
   await openSeededAdventure(page, 3, undefined, { scene: { present: ['Corrow'] }, entities: [{ id: 'ent_corrow', name: 'Corrow', facts: [fact] }] });
