@@ -1,5 +1,5 @@
 import type { Entity, Scene } from '../model/types';
-import { knownAs } from './entities';
+import { knownAs } from './names';
 import { currentStates, rivalKey, setState } from './looks';
 
 /** The `holder` value that means the player. */
