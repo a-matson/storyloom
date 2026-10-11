@@ -10,23 +10,16 @@ export const MEMORY_SYSTEM =
   'proper names kept, no prose flourishes, no commentary, no headings.';
 
 /**
- * One original passage -> memory pair, so the model sees a summary rather than a continuation. Its player
- * line states a trait the memory keeps. A ferry example was copied verbatim into ferry stories. [provisional]
+ * A format line, not a worked example: the example's names leaked into 5-7 of 16 memories and the guard
+ * against that dropped real facts. [measured: 2026-10-08-memory-keep-after]
  */
-const MEMORY_EXAMPLE =
-  'Example (from a different story; never copy its names or events):\n---\nThe innkeeper eyes your pack. "Two pennies a night. The pass is snowed in till spring."\n' +
-  "> You pay, turning the copper ring on your thumb, your mother's last gift, and say you walked from Dunmere to sell your songs.\n" +
-  'She hands you the key to the loft above the stables.\n---\n' +
-  "Memory: You wear your mother's copper ring on your thumb and walked from Dunmere to sell your songs. You paid two pennies for the loft above the stables; the pass is snowed in until spring.\n\n";
-
-/** The example's details that the model copies into memories (5-7 of 16 in memory-keep runs). [measured: 2026-10-08-memory-keep-after] */
-export const MEMORY_EXAMPLE_DETAILS = ['dunmere', 'copper ring', 'two pennies', 'loft above the stables', 'snowed in'];
+const MEMORY_FORMAT =
+  'Format: 1–4 past-tense sentences. First, anything the player states about themselves (name, body, belongings, past), ' +
+  'then the facts, decisions, discoveries and relationship changes, with every proper name kept. ' +
+  'No dialogue, no prose, no commentary.\n\n';
 
 export function memoryPrompt(passage: string): string {
-  return (
-    `${MEMORY_EXAMPLE}Summarise the key facts, decisions, discoveries and relationship changes in this passage, ` +
-    `and anything the player states about themselves (name, body, belongings, past).\n\n---\n${passage}\n---\n\nMemory:`
-  );
+  return `${MEMORY_FORMAT}Summarise this passage.\n\n---\n${passage}\n---\n\nMemory:`;
 }
 
 /**
