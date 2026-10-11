@@ -77,6 +77,7 @@ export function buildTrace(i: TraceInput): TurnTrace {
       generationMs: i.stats.generationMs,
     },
     stopReason: i.stats?.stopReason,
+    ...(i.stats?.continued ? { continued: true } : {}),
     scriptLogs: i.scriptLogs ?? [],
     ...(i.scriptCache ? { scriptCache: i.scriptCache } : {}),
     timings: { totalMs: i.totalMs, ttftMs: i.ttftMs },

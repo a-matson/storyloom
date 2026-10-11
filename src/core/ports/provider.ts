@@ -68,6 +68,8 @@ export interface CompletionStats {
   generationMs?: number | undefined;
   /** `soft`: the engine stopped the stream itself at a sentence end. */
   stopReason?: 'stop' | 'length' | 'eos' | 'soft' | 'abort' | 'unknown';
+  /** The reply ended below the length floor and was continued once. */
+  continued?: boolean | undefined;
 }
 
 export interface CompletionChunk {
