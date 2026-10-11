@@ -3,8 +3,12 @@ import type { Entity, EntityFact } from '../model/types';
 /** State keys that say how a character looks, in the order their tags are written. [provisional] */
 export const LOOK_KEYS = ['species', 'build', 'eyes', 'hair', 'horns', 'scales', 'marks', 'wearing'] as const;
 
-/** The other keys a model state change may set. [provisional] */
-export const STATE_KEYS = ['location', 'condition', 'posture', 'mood', 'role'] as const;
+/** The other keys a model state change may set; `holder` is who carries an item (a name or "you"). [provisional] */
+export const STATE_KEYS = ['location', 'holder', 'condition', 'posture', 'mood', 'role'] as const;
+
+/** An item is held (`holder`) or at a place (`location`), never both: a value for one ends the other. */
+export const rivalKey = (kind: Entity['kind'], key: string): string | undefined =>
+  kind !== 'item' ? undefined : key === 'holder' ? 'location' : key === 'location' ? 'holder' : undefined;
 
 export type CurrentState = EntityFact & { kind: 'state'; key: string; value: string; until?: undefined };
 

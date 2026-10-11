@@ -61,11 +61,11 @@ const LOOKS_ASK = `looks is only for characters: a few words for each of ${LOOK_
 export function extractPrompt(passage: string, knownNames: readonly string[], grammar: boolean): string {
   return (
     'List every named character, place, item and faction in this passage, with what it tells about each. ' +
-    'Only things with a proper name; skip common nouns like "the path" or "wolves". An unnamed role ("the ferrywoman") is an alias of the named person it refers to.' +
+    'Only things with a proper name; skip common nouns like "the path" or "wolves", except an item someone carries ("the horn" is the item Horn). An unnamed role ("the ferrywoman") is an alias of the named person it refers to.' +
     `\n\n---\n${passage}\n---\n\n` +
     (knownNames.length ? `Already recorded (use these exact names when the passage means them): ${knownNames.join(', ')}.\n` : '') +
     'Give each entity a one-sentence description and 0–2 facts: short sentences about what lasts (who or what it is, what it owns, injuries, loyalties), not single actions or dialogue, and nothing the passage does not state. ' +
-    `${LOOKS_ASK} state is where it is and how it is now (${STATE_KEYS.join(', ')}), a few words each, only what the passage shows. ` +
+    `${LOOKS_ASK} state is where it is and how it is now (${STATE_KEYS.join(', ')}), a few words each, only what the passage shows; holder is who carries an item (a Name or "you"). ` +
     'The player is "you", not an entity. speakers names who talks in each numbered paragraph.\n' +
     (grammar ? 'Return {"entities": [...], "speakers": [...]}.' : EXTRACT_SKELETON) +
     ONE_LINE

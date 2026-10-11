@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { currentStates, isCurrentState, setState } from '@core/memory';
+import { currentStates, isCurrentState, rivalKey, setState } from '@core/memory';
 import type { Adventure, Entity, EntityFact } from '@core/model';
 import type { entityEdits } from '@app/session/entities';
 import { useImageBlob } from '@ui/hooks/useImageBlob';
@@ -17,7 +17,8 @@ const showAction = (index: number) => document.getElementById('story')?.children
 /** State values, each editable and lockable: a locked value is canon, and the memory cycle only flags a disagreement. */
 export function StateRows({ entity: e, update }: { entity: Entity; update: Update }) {
   const id = useId();
-  const entries = Object.entries(currentStates(e));
+  // An item's holder and place are the Where selects.
+  const entries = Object.entries(currentStates(e)).filter(([k]) => !rivalKey(e.kind, k));
   if (entries.length === 0) return null;
   const locked = new Set(e.canonKeys);
   const set = (k: string, value: string) => update(setState(e, k, value));

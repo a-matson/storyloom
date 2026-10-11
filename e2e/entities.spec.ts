@@ -39,6 +39,30 @@ test('the Characters tab edits, pins and promotes an entity', async ({ page }) =
   await expect(page.getByText('The road bends 2.')).toBeInViewport();
 });
 
+test("an item the player holds is in the scene line and on the holder's card", async ({ page }) => {
+  await openSeededAdventure(page, 3, undefined, { entities: [{ id: 'ent_lantern', kind: 'item', name: 'Lantern', description: 'A storm lantern.' }] });
+  await page.getByRole('button', { name: 'World · 2' }).click();
+  await page.getByRole('button', { name: 'Open Lantern' }).click();
+  const drawer = page.getByRole('dialog', { name: 'Lantern' });
+  await drawer.getByRole('combobox', { name: 'Held by' }).selectOption('you');
+  await drawer.getByRole('combobox', { name: 'Held by' }).selectOption('Merav');
+  await page.keyboard.press('Escape');
+  await expect(page.getByText('held by Merav')).toBeVisible();
+
+  await page.getByRole('button', { name: /^Characters/ }).click();
+  await page.getByRole('button', { name: 'Open Merav' }).click();
+  await page.getByRole('dialog', { name: 'Merav' }).getByRole('button', { name: 'Lantern' }).click();
+  await page.getByRole('dialog', { name: 'Lantern' }).getByRole('combobox', { name: 'Held by' }).selectOption('you');
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('textbox', { name: 'Take a turn' }).fill('raise the lantern');
+  await page.getByRole('button', { name: 'Send' }).click();
+  await page.getByRole('button', { name: 'View context' }).last().click();
+  const context = page.getByRole('dialog', { name: 'Context sent to the model' });
+  await context.getByRole('button', { name: 'Raw prompt' }).click();
+  await expect(context.getByText('[Scene: You hold: Lantern]')).toBeVisible();
+});
+
 test('a portrait is queued on open; a failed one shows why and Retry draws it', async ({ page }) => {
   const images = 'http://localhost:7999';
   const requests: { prompt: string; seed: number; width: number }[] = [];

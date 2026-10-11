@@ -2,7 +2,7 @@ import type { Action, Adventure, Entity, EntityFact, Speaker } from '../model/ty
 import { actionText, newId } from '../model/types';
 import { guessSpeakers } from '../text/speakers';
 import type { Source } from './invalidate';
-import { currentStates, isCurrentState } from './looks';
+import { currentStates, isCurrentState, rivalKey } from './looks';
 
 const isOutput = (a: Action) => a.type === 'continue' || a.type === 'start';
 
@@ -188,7 +188,8 @@ export function mergeEntity(existing: Entity | undefined, incoming: Sighting, at
       addFact(`the story says ${key} is ${value}, but canon says ${old}`, { conflict: true, claim: { key, value } }, value);
       continue;
     }
-    for (const [i, f] of facts.entries()) if (isCurrentState(f) && f.key === key) facts[i] = { ...f, until: atAction };
+    const rival = rivalKey(base.kind, key);
+    for (const [i, f] of facts.entries()) if (isCurrentState(f) && (f.key === key || f.key === rival)) facts[i] = { ...f, until: atAction };
     facts.push(fact(`${key}: ${value.trim()}`, value, { kind: 'state', key, value: value.trim() }));
     current[key] = value;
   }
