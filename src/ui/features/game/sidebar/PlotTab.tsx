@@ -70,7 +70,7 @@ export function PlotTab({ adventure, api, utilityModel }: { adventure: Adventure
           {f.key === 'storySummary' && adventure.settings.memory.autoSummary && <SummaryCadence adventure={adventure} />}
         </Section>
       ))}
-      {p.scene && <SceneSection scene={p.scene} api={api} />}
+      {p.scene && <SceneSection scene={p.scene} log={p.sceneLog ?? []} api={api} />}
       <ThirdPerson plot={p} api={api} />
       <MemoryStatus adventure={adventure} utilityModel={utilityModel} />
     </>

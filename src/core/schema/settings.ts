@@ -29,8 +29,10 @@ export const MemorySettings = z.object({
   contradictionCheck: z._default(z.boolean(), false),
   /** Send entity facts and cards in the prompt. Off: no recall gain in the wave-2 bench. [measured: 2026-10-08-recall-wave2-run1.json] */
   entityFacts: z._default(z.boolean(), false),
-  /** One short entity call after a turn that names someone new. */
+  /** Cards for the names a turn brings, from the short call after each turn. */
   introductions: z._default(z.boolean(), true),
+  /** The same call reads where the turn ends: place, who and which named items are there. */
+  sceneEachTurn: z._default(z.boolean(), true),
 });
 
 export const ContextSettings = z.object({

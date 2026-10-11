@@ -1,10 +1,20 @@
 import { expect, test } from '@playwright/test';
 import { openSeededAdventure } from './seed';
 
-test('there is no Scene section before the memory jobs write a scene', async ({ page }) => {
+test('there is no Scene section before the turn read writes a scene', async ({ page }) => {
   await openSeededAdventure(page, 3);
   await expect(page.getByText('Story Summary', { exact: true })).toBeVisible();
   await expect(page.getByText('Scene', { exact: true })).toHaveCount(0);
+});
+
+// The demo backend's turn read answers with a scene when the passage has a lighthouse.
+test('the turn read fills the Scene section and its timeline', async ({ page }) => {
+  await openSeededAdventure(page, 3, undefined, { opening: 'You climb to the lighthouse with Merav.' });
+  await page.getByText('Scene', { exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Scene location' })).toHaveValue('the lighthouse');
+  await expect(page.getByRole('textbox', { name: 'Present' })).toHaveValue('Merav');
+  await expect(page.getByRole('textbox', { name: 'Items here' })).toHaveValue('the Needle Map');
+  await expect(page.getByRole('list', { name: 'Scene timeline' })).toHaveText('action 2 · the lighthouse');
 });
 
 // The seeded `time` is an old save's clock: it stays in the data but never reaches the prompt.

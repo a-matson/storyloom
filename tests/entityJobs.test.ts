@@ -157,7 +157,7 @@ describe('entity extraction in memory maintenance', () => {
     expect([...report.speakers]).toEqual([[said?.id, [{ paragraph: 0, name: 'Mira' }]]]);
   });
 
-  it('moves the scene from the same call, with no clock', async () => {
+  it('leaves the scene to the turn read: an old reply’s scene is ignored, and none is asked', async () => {
     const adv = adventure(18);
     const reqs: CompletionRequest[] = [];
     const reply = { scene: { location: 'the mill', present: ['Mira'] }, entities: [], speakers: [] };
@@ -169,10 +169,10 @@ describe('entity extraction in memory maintenance', () => {
       false,
       true,
     );
-    expect(await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider })).toMatchObject({ sceneUpdated: true });
-    expect(adv.plot.scene).toEqual({ location: 'the mill', present: ['Mira'], sourceId: expect.any(String), sourceHash: expect.any(String) });
+    await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
+    expect(adv.plot.scene).toBeUndefined();
     const schema = reqs.find((r) => r.jsonSchema)?.jsonSchema;
-    expect(JSON.stringify(schema)).not.toMatch(/timeDelta|timeOfDay/);
+    expect(JSON.stringify(schema)).not.toMatch(/timeDelta|timeOfDay|scene/);
   });
 
   it('stores the keyed looks a reply gives, and none when the reply has none', async () => {
@@ -197,7 +197,7 @@ describe('entity extraction in memory maintenance', () => {
   it('neither asks for nor keeps the fields the schema dropped', async () => {
     expect(extractPrompt('[0] Mira waves.', none, false)).not.toMatch(/importance|threads|timeDelta|time of day|appearance/);
     const schema = EXTRACT_JSON_SCHEMA;
-    expect(schema.required).toEqual(['scene', 'entities', 'speakers']);
+    expect(schema.required).toEqual(['entities', 'speakers']);
     // Required, every entity wrote looks and the reply hit the token cap.
     expect(schema).toMatchObject({ properties: { entities: { items: { required: expect.not.arrayContaining(['looks']) } } } });
     // Uncapped, one description ran past the whole reply.

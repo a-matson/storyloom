@@ -53,8 +53,8 @@ export function newNamesIn(adventure: Adventure, range: MemoryRange): string[] {
 /** A description that makes the name a kind of creature, not one of them ("Kobolds are a race of…"). */
 const A_KIND = /^(?:[^,.]* (?:is|are) )?(?:a|an|the) (?:species|race|kind|type) of\b/i;
 
-/** An appearance that says there is none: the 12B fills the field anyway ("Not described in the passage"). [measured: 2026-10-09-live-play-m11-2.json] */
-const NO_LOOKS = /\bnot (?:described|mentioned|stated|shown|given|specified)\b|^(?:unknown|none(?: specified| given)?|n\/a)\.?$/i;
+/** A value that says there is none: the 12B fills the field anyway ("Not described in the passage", "None specified"). [measured: 2026-10-09-live-play-m11-2.json] */
+export const EMPTY_VALUE = /\bnot (?:described|mentioned|stated|shown|given|specified)\b|^(?:unknown|nobody|no one|none(?: specified| given)?|n\/a)\.?$/i;
 
 /** The shortest sentence cap: a value this long with no closing punctuation was cut by it. */
 const CUT_AT = Math.min(FACT_CHARS, INTRODUCED_CHARS);
@@ -135,7 +135,7 @@ export function foldEntities(
     const reject = (value: string, reason: Rejected['reason']) => opts.log?.rejected.push({ entity: who.name, value, reason, passageRange: range });
     const keep = (value: string, cap?: number): string[] => {
       const v = uncut(value, cap);
-      if (!v || NO_LOOKS.test(v)) return [];
+      if (!v || EMPTY_VALUE.test(v)) return [];
       const s = supportOf(actions, who, v);
       if (typeof s === 'string') {
         reject(v, s);

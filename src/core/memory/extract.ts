@@ -1,9 +1,7 @@
 import { jsonrepair } from 'jsonrepair';
 import type { Adventure, ExtractionJson, Speaker } from '../model/types';
-import { actionText } from '../model/types';
-import { hashPrompt } from '../trace';
 import { z } from 'zod/mini';
-import { ExtractedEntity, IntroducedEntity, MAX_ENTITIES, MAX_INTRODUCED, ExtractionJson as Schema, SpokenIn } from '../schema/extraction';
+import { ExtractedEntity, IntroducedEntity, MAX_ENTITIES, MAX_INTRODUCED, ExtractionJson as Schema, SpokenIn, TurnScene } from '../schema/extraction';
 import { actionStoryText } from '../text/formatting';
 import { parseJsonReply } from '../text/jsonReply';
 import { EXTRACT_SYSTEM, extractPrompt, introducePrompt } from '../text/prompts';
@@ -11,10 +9,9 @@ import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
 import { helperCall } from './helperCall';
 import { attributeSpeakers } from './entities';
-import { EXTRACT_JSON_SCHEMA, INTRODUCE_JSON_SCHEMA } from './extractJsonSchema';
-import { foldEntities, notAName, type FoldLog } from './fold';
+import { EXTRACT_JSON_SCHEMA, INTRODUCE_JSON_SCHEMA, SCENE_JSON_SCHEMA } from './extractJsonSchema';
+import { foldEntities, type FoldLog } from './fold';
 import { entitiesOverdue, type MemoryRange } from './memoryBank';
-import { nextScene } from './scene';
 import type { MaintenanceDeps } from './memoryJobs';
 
 /** The call needs no embedder, so the player's "Update from story" works without one. */
@@ -51,14 +48,23 @@ const extractAccepter =
     const l = lists(data, cut);
     if (!l) return null;
     const r = Schema.safeParse({
-      scene: {},
       ...l.data,
       entities: l.items('entities', ExtractedEntity, MAX_ENTITIES),
       speakers: l.items('speakers', SpokenIn, Infinity),
     });
     return r.success ? r.data : null;
   };
-const introduceAccepter = (cut: boolean) => (data: unknown) => lists(data, cut)?.items('entities', IntroducedEntity, MAX_INTRODUCED) ?? null;
+export interface TurnRead {
+  scene: z.output<typeof TurnScene>;
+  entities: z.output<typeof IntroducedEntity>[];
+}
+const turnAccepter =
+  (cut: boolean) =>
+  (data: unknown): TurnRead | null => {
+    const l = lists(data, cut);
+    // A bad scene costs only the scene.
+    return l && { scene: TurnScene.safeParse(l.data['scene']).data ?? {}, entities: l.items('entities', IntroducedEntity, MAX_INTRODUCED) };
+  };
 
 /** One helper call on slot 1 for a JSON reply: the grammar when the backend has one, else a `{` prefill. Null when unusable; a call typing cut throws. */
 async function helperJson<R>(
@@ -96,19 +102,28 @@ async function helperJson<R>(
 const EXTRACT_TOKENS = 500;
 
 /**
- * The combined helper call: entities, speakers and scene for one passage whose paragraphs are
+ * The combined helper call: entities and speakers for one passage whose paragraphs are
  * numbered by action index. Null when the reply is unusable.
  */
 export function extractFromPassage(passage: string, knownNames: readonly string[], deps: ExtractDeps): Promise<ExtractionJson | null> {
   return helperJson((g) => extractPrompt(passage, knownNames, g), EXTRACT_JSON_SCHEMA, EXTRACT_TOKENS, extractAccepter, deps);
 }
 
-/** Three entities of a description and a look each, with the JSON around them. [provisional] */
+/** The scene, then three entities of a description and a look each, with the JSON around them. [provisional] */
 const INTRODUCE_TOKENS = 200;
+/** The scene alone: a place, a few names, the weather. [provisional] */
+const SCENE_TOKENS = 80;
 
-/** The introduction call: kind, description and looks for each new name. */
-export function introduceFromPassage(passage: string, newNames: readonly string[], deps: ExtractDeps): Promise<z.infer<typeof IntroducedEntity>[] | null> {
-  return helperJson((g) => introducePrompt(passage, newNames, g), INTRODUCE_JSON_SCHEMA, INTRODUCE_TOKENS, introduceAccepter, deps);
+/** The turn read: where the passage ends, and kind, description and looks for each new name. */
+export function readTurn(passage: string, newNames: readonly string[], deps: ExtractDeps): Promise<TurnRead | null> {
+  const cards = newNames.length > 0;
+  return helperJson(
+    (g) => introducePrompt(passage, newNames, g),
+    cards ? INTRODUCE_JSON_SCHEMA : SCENE_JSON_SCHEMA,
+    cards ? INTRODUCE_TOKENS : SCENE_TOKENS,
+    turnAccepter,
+    deps,
+  );
 }
 
 /**
@@ -123,25 +138,16 @@ const ENTITY_BATCH = 2;
  * `scriptState.__entitiesAt` advances past them once the call ends, unusable reply included,
  * but not when the call was cut: a cut call is retried on the next idle run.
  */
-export async function catchUpEntities(adventure: Adventure, deps: MaintenanceDeps): Promise<EntityUpdate & { sceneUpdated: boolean }> {
-  const none = { touched: 0, speakers: new Map<string, Speaker[]>(), sceneUpdated: false };
+export async function catchUpEntities(adventure: Adventure, deps: MaintenanceDeps): Promise<EntityUpdate> {
+  const none = { touched: 0, speakers: new Map<string, Speaker[]>() };
   const done = adventure.scriptState.__entitiesAt ?? 0;
   const due = adventure.memories.filter((m) => !m.stale && m.toAction > done).toSorted((a, b) => a.fromAction - b.fromAction);
   const first = due[0];
   const last = due[ENTITY_BATCH - 1];
   if (!first || !last || (deps.signal?.aborted && !entitiesOverdue(adventure))) return none;
   const r = await updateEntities(adventure, { fromAction: first.fromAction, toAction: last.toAction }, deps);
-  // Here, not in `updateEntities`: "Update from story" re-reads old ranges and would move the scene back to them;
-  // so would a re-read after an edit, hence the check against the scene's source.
-  const old = adventure.plot.scene;
-  const newer = old?.sourceId === undefined || adventure.actions.findIndex((a) => a.id === old.sourceId) < last.toAction;
-  const scene = newer && r.reply ? nextScene(old, r.reply, (n) => n !== '' && !notAName(adventure.plot, n)) : undefined;
-  const sceneUpdated = scene !== undefined && scene !== old;
-  const from = adventure.actions[last.toAction - 1];
-  if (scene !== undefined && sceneUpdated)
-    adventure.plot = { ...adventure.plot, scene: from ? { ...scene, sourceId: from.id, sourceHash: hashPrompt(actionText(from)) } : scene };
   adventure.scriptState = { ...adventure.scriptState, __entitiesAt: last.toAction };
-  return { touched: r.touched, speakers: r.speakers, sceneUpdated, ...(r.log && { log: r.log }) };
+  return { touched: r.touched, speakers: r.speakers, ...(r.log && { log: r.log }) };
 }
 
 export interface EntityUpdate {
