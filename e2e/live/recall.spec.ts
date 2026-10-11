@@ -6,6 +6,7 @@ import * as S from '@core/schema';
 import { FACTS, FILLERS, isOrig, retrievalHit, scenarioJson, scoreProbe, type Verdict } from '../../bench/recall';
 import { HISTORY_FILE, HISTORY_SETTINGS, RecallHistory, sliceHistory, stripAdventure, turnEnds } from '../../bench/recallHistory';
 import { writeMeasurement } from '../../bench/env';
+import { watchMemoryRuns } from '../../bench/memoryRuns';
 import { costAndState, lastTurn, readAdventure, rewind, run, shownAdventure, turn, type Rows } from '../../bench/recallPage';
 
 // `pnpm measure recall-record <url>` once per fact set, then `pnpm measure recall <url>`; never runs in CI.
@@ -160,6 +161,7 @@ test('recall benchmark', async ({ page }) => {
   test.setTimeout(3 * 60 * 60_000);
   // Background jobs fail only into the console; the review needs to see them.
   page.on('console', (m) => void (['warning', 'error'].includes(m.type()) && warnings.push(m.text().slice(0, 300))));
+  const memoryRuns = watchMemoryRuns(page);
   await page.goto('/');
   await page.getByRole('button', { name: /^llama-server/ }).click();
   await page.getByRole('textbox', { name: /Server URL/ }).fill(URL ?? '');
@@ -239,6 +241,7 @@ test('recall benchmark', async ({ page }) => {
     orig: tally(rows.filter((r) => orig.has(r.id))),
     probes: rows,
     state,
+    memoryRuns,
     warnings,
   });
   console.log(`wrote ${path}`);

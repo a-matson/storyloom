@@ -5,6 +5,8 @@
  * instruct model), otherwise on the story model between turns.
  */
 
+import { LOOK_KEYS, STATE_KEYS } from '../memory/looks';
+
 export const MEMORY_SYSTEM =
   'You compress story passages into dense factual memories. Output only the memory: 1–4 sentences, past tense, ' +
   'proper names kept, no prose flourishes, no commentary, no headings.';
@@ -40,19 +42,25 @@ const EXTRACT_SKELETON =
   'Return JSON in this shape (<...> are placeholders):\n' +
   '{"scene": {"location": "<place>", "present": ["<Name>"], "weather": "<weather>"},\n' +
   ' "entities": [{"name": "<Name>", "kind": "character", "aliases": ["<role>"], "description": "<one sentence>",\n' +
-  '   "appearance": "<one sentence>", "facts": ["<fact>"], "state": {"<key>": "<value>"}},\n' +
+  '   "looks": {"<key>": "<a few words>"}, "facts": ["<fact>"], "state": {"<key>": "<a few words>"}},\n' +
   '  {"name": "<Name>", "kind": "place", "description": "<one sentence>", "facts": []}],\n' +
   ' "speakers": [{"action": <number>, "name": "<Name>"}]}';
 
-/** `grammar`: the reply is constrained by `EXTRACT_JSON_SCHEMA`, which already carries the shape. */
-export function extractPrompt(passage: string, knownNames: string[], grammar: boolean): string {
+const LOOKS_ASK = `looks is only for characters: a few words for each of ${LOOK_KEYS.join(', ')} that the passage shows; leave out the rest, and leave it out for places, items and factions.`;
+
+/**
+ * The combined call. No cards of the known names and no list of new ones: with both, the 12B
+ * proposed 10 facts at d30 where the bare prompt's reply kept 15. [measured: 2026-10-11-recall-m12-1-pr2-log-d30.json]
+ * `grammar`: the reply is constrained by `EXTRACT_JSON_SCHEMA`, which already carries the shape.
+ */
+export function extractPrompt(passage: string, knownNames: readonly string[], grammar: boolean): string {
   return (
     'List every named character, place, item and faction in this passage, with what it tells about each. ' +
     'Only things with a proper name; skip common nouns like "the path" or "wolves". An unnamed role ("the ferrywoman") is an alias of the named person it refers to.' +
     `\n\n---\n${passage}\n---\n\n` +
     (knownNames.length ? `Already recorded (use these exact names when the passage means them): ${knownNames.join(', ')}.\n` : '') +
     'Give each entity a one-sentence description and 0–2 facts: short sentences about what lasts (who or what it is, what it owns, injuries, loyalties), not single actions or dialogue, and nothing the passage does not state. ' +
-    'appearance is only for characters: one sentence of what they look like, only what the passage shows (hair, build, clothes, marks). Leave it out for places, items and factions, and for a character the passage does not describe. ' +
+    `${LOOKS_ASK} state is where it is and how it is now (${STATE_KEYS.join(', ')}), a few words each, only what the passage shows. ` +
     'The player is "you", not an entity. speakers names who talks in each numbered paragraph. ' +
     'scene is where the passage ends: the place, the named characters there, and the weather only when the passage states it.\n' +
     (grammar ? 'Return {"scene": {...}, "entities": [...], "speakers": [...]}.' : EXTRACT_SKELETON)
@@ -64,11 +72,10 @@ export function introducePrompt(passage: string, newNames: readonly string[], gr
   return (
     `New here: ${newNames.join(', ')}.\n\n---\n${passage}\n---\n\n` +
     'For each new name that is a proper name of a character, place, item or faction in this passage, give its kind and a one-sentence description of who or what it is. ' +
-    'Skip a name that is not one (a common word, an exclamation, the player "you"). ' +
-    'appearance is only for characters: one sentence of what they look like, only what the passage shows (hair, build, clothes, marks); leave it out otherwise.\n' +
+    `Skip a name that is not one (a common word, an exclamation, the player "you"). ${LOOKS_ASK}\n` +
     (grammar
       ? 'Return {"entities": [...]}.'
-      : 'Return JSON in this shape (<...> are placeholders):\n{"entities": [{"name": "<Name>", "kind": "character", "description": "<one sentence>", "appearance": "<one sentence>"}]}')
+      : 'Return JSON in this shape (<...> are placeholders):\n{"entities": [{"name": "<Name>", "kind": "character", "description": "<one sentence>", "looks": {"<key>": "<a few words>"}}]}')
   );
 }
 

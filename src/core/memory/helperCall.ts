@@ -11,11 +11,22 @@ export async function sentencesOnly(provider: Provider, max: number): Promise<st
 /** Share of `maxTokens` after which typing no longer cuts a helper call: its work is worth more than the GPU it shares. [provisional] */
 const CUT_BEFORE = 0.5;
 
+/** One helper call as a live run reads it. */
+export interface HelperCallLog {
+  job: JobKind;
+  cut: boolean;
+  generatedTokens: number;
+  /** Entity calls: trait facts the reply carried. */
+  factsProposed?: number;
+}
+
 export interface CutCounts {
   /** Helper calls the player's typing cut; their partial reply is dropped. */
   cutCalls: number;
   /** Helper calls typed over past the half mark that ran to their end and were kept. */
   finishedPastCut: number;
+  /** Every call, in order. */
+  calls?: HelperCallLog[];
 }
 
 export interface CallDeps {
@@ -55,6 +66,7 @@ export function helperCall(
     } finally {
       cancel?.removeEventListener('abort', follow);
     }
+    cuts?.calls?.push({ job, cut: call.signal.aborted, generatedTokens: stats?.generatedTokens ?? tokens });
     if (call.signal.aborted) {
       if (cuts) cuts.cutCalls += 1;
       call.signal.throwIfAborted();

@@ -1,6 +1,9 @@
 import { expect, type Page } from '@playwright/test';
 import { z } from 'zod/mini';
 import * as S from '@core/schema';
+import { appearanceOf, currentStates, LOOK_KEYS } from '@core/memory/looks';
+
+const LOOKS = new Set<string>(LOOK_KEYS);
 
 // Same gaps as `play.spec.ts` so memory jobs get their idle slot. [provisional]
 const READ_MS = 6000;
@@ -114,13 +117,14 @@ export function costAndState(r: Rows) {
     entities: z
       .array(S.Entity)
       .parse(r.entities)
-      .map(({ kind, name, canon, appearance, facts, state }) => ({
-        kind,
-        name,
-        canon,
-        appearance,
-        state,
-        facts: facts.map((f) => (f.conflict ? `CONFLICT ${f.text}` : f.text)),
+      // Looks and state are keyed state facts: dumped apart, so `facts` counts trait facts only.
+      .map((e) => ({
+        kind: e.kind,
+        name: e.name,
+        canon: e.canon,
+        looks: appearanceOf(e),
+        state: Object.fromEntries(Object.entries(currentStates(e)).filter(([k]) => !LOOKS.has(k))),
+        facts: e.facts.filter((f) => (f.kind ?? 'trait') === 'trait' || f.conflict).map((f) => (f.conflict ? `CONFLICT ${f.text}` : f.text)),
       })),
     scene: (r.adventure['plot'] as { scene?: unknown } | undefined)?.scene,
   };

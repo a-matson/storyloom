@@ -7,6 +7,7 @@ import type { Provider } from '../ports/provider';
 import type { Embedder } from '../ports/embedder';
 import { joinStory, trimUnfinishedSentence } from '../text/formatting';
 import { catchUpEntities } from './extract';
+import type { Rejected } from './fold';
 import { dropUnsupported } from './invalidate';
 import { helperCall, sentencesOnly, type CutCounts } from './helperCall';
 import { refreshSummary } from './summary';
@@ -58,6 +59,9 @@ export interface MaintenanceReport extends CutCounts {
   summaryUpdated: boolean;
   /** The summary was overdue and ran before the memories. */
   summaryFirst: boolean;
+  /** Trait facts the entity call proposed, and every value its guards dropped: a live run sums them. */
+  factsProposed: number;
+  rejected: Rejected[];
 }
 
 /** A memory's text needs no embedder. */
@@ -167,6 +171,9 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
     sceneUpdated: false,
     summaryUpdated: false,
     summaryFirst: false,
+    factsProposed: 0,
+    rejected: [],
+    calls: [],
     cutCalls: 0,
     finishedPastCut: 0,
   };
@@ -202,7 +209,10 @@ async function maintain(adventure: Adventure, deps: MaintenanceDeps, report: Mai
       report.memoriesWritten += 1;
     }
     // The one combined helper call per two memories; a bad reply only costs the entities.
-    ({ touched: report.entitiesTouched, speakers: report.speakers, sceneUpdated: report.sceneUpdated } = await catchUpEntities(adventure, deps));
+    const e = await catchUpEntities(adventure, deps);
+    ({ touched: report.entitiesTouched, speakers: report.speakers, sceneUpdated: report.sceneUpdated } = e);
+    report.factsProposed = e.log?.proposed ?? 0;
+    report.rejected = e.log?.rejected ?? [];
     await reembed(adventure, deps);
     const evicted = evictToSize(adventure.memories, settings.bankSize);
     adventure.memories = evicted.memories;

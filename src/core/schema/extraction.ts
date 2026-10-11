@@ -1,5 +1,6 @@
 import { z } from 'zod/mini';
-import { EntityKind, Relation } from './entity';
+import { LOOK_KEYS, STATE_KEYS } from '../memory/looks';
+import { EntityKind } from './entity';
 
 // Not re-exported from `./index`: only the lazy memory jobs parse these, so they stay off the start-up bundle.
 
@@ -14,26 +15,33 @@ export const MAX_ENTITIES = 5;
  */
 export const FACT_CHARS = 100;
 export const DESCRIPTION_CHARS = 120;
+/** A look or state is a few words per key ("long grey braid"). [provisional] */
+export const LOOK_CHARS = 40;
 const sentence = (chars: number) => z.string().check(z.maxLength(chars));
+
+// The grammar then cannot write "the path": prompting alone did not stop common nouns filling the cap.
+// ponytail: ASCII capitals only; widen when a non-Latin story needs it.
+const Name = z.string().check(z.regex(/^[A-Z][^"\\]*$/)); // llama-server's `.` would let the grammar close the string early
+
+/** Optional values by fixed keys, so a new value replaces one key instead of piling up sentences. */
+const keyed = (keys: readonly string[]) => z.object(Object.fromEntries(keys.map((k) => [k, z.optional(sentence(LOOK_CHARS))])));
 
 /** One entity as the helper model reports it. */
 export const ExtractedEntity = z.object({
-  // The grammar then cannot write "the path": prompting alone did not stop common nouns filling the cap.
-  // ponytail: ASCII capitals only; widen when a non-Latin story needs it.
-  name: z.string().check(z.regex(/^[A-Z][^"\\]*$/)), // llama-server's `.` would let the grammar close the string early
+  name: Name,
   kind: EntityKind,
   aliases: z.optional(z.array(z.string())),
   // Required and capped so the grammar keeps a reply short and every projected card has an entry. [provisional]
   description: sentence(DESCRIPTION_CHARS),
-  /**
-   * One visual sentence for the portrait prompt. Optional: required, every entity wrote looks
-   * (factions too) and each reply hit the 300-token cap, losing entities. [provisional]
-   */
-  appearance: z.optional(sentence(DESCRIPTION_CHARS)),
+  // Before the keyed fields, which the grammar writes in this order: behind them the 12B proposed 10 facts at d30, not 15. [provisional]
   facts: z.array(sentence(FACT_CHARS)).check(z.maxLength(2)),
-  state: z.optional(z.record(z.string(), z.string())),
-  relations: z.optional(z.array(Relation)),
+  /** Optional: required, every entity wrote looks (factions too) and each reply hit the 300-token cap. [provisional] */
+  looks: z.optional(keyed(LOOK_KEYS)),
+  state: z.optional(keyed(STATE_KEYS)),
 });
+
+/** Who speaks in which numbered action. */
+export const SpokenIn = z.object({ action: z.number(), name: z.string() });
 
 /** New names one introduction reply covers; a turn rarely brings more. [provisional] */
 export const MAX_INTRODUCED = 3;
@@ -44,17 +52,16 @@ export const INTRODUCED_CHARS = 100;
  * took ~28 s on slot 1, longer than a player reads, so the next turn cut it. [measured: 2026-10-09-live-play-m11-2-read30.json]
  */
 export const IntroducedEntity = z.object({
-  name: ExtractedEntity.shape.name,
+  name: Name,
   kind: EntityKind,
   description: sentence(INTRODUCED_CHARS),
-  appearance: z.optional(sentence(INTRODUCED_CHARS)),
+  looks: ExtractedEntity.shape.looks,
 });
 export const IntroductionJson = z.object({ entities: z.array(IntroducedEntity).check(z.maxLength(MAX_INTRODUCED)) });
 
 /**
- * The combined helper call's reply (also sent as llama-server `json_schema`, which keeps this key
- * order). Short fields come first so a reply cut at `maxTokens` still has them; `entities` is the
- * long one, and the trailing `speakers` may be lost to a cut (see `extract.ts`).
+ * The combined helper call's reply. Short fields come first so a reply cut at `maxTokens` still
+ * has them; a cut loses the last item of the list it fell in (see `extract.ts`).
  */
 export const ExtractionJson = z.object({
   /**
@@ -67,6 +74,5 @@ export const ExtractionJson = z.object({
     weather: z.optional(z.string()),
   }),
   entities: z.array(ExtractedEntity).check(z.maxLength(MAX_ENTITIES)),
-  /** Who speaks in which numbered action. */
-  speakers: z.array(z.object({ action: z.number(), name: z.string() })),
+  speakers: z.array(SpokenIn),
 });

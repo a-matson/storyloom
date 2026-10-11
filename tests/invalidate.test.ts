@@ -13,7 +13,7 @@ function story(): Adventure {
   adv.actions = [act('a0', 'You reach the river.'), act('a1', 'Tamsin, grey-haired, rows the ferry.'), act('a2', 'The far bank is dark.')];
   const source = sourceIn(adv.actions, { fromAction: 0, toAction: 3 });
   adv.entities = [
-    mergeEntity(undefined, { name: 'Tamsin', kind: 'character', description: '', facts: ['She rows the ferry.'], appearance: 'grey-haired' }, 2, source),
+    mergeEntity(undefined, { name: 'Tamsin', kind: 'character', description: '', facts: ['She rows the ferry.'], state: { hair: 'grey' } }, 2, source),
   ];
   return adv;
 }
@@ -21,19 +21,17 @@ function story(): Adventure {
 describe('derived values follow edits', () => {
   it('attributes a value to the newest action holding its longest word', () => {
     const tamsin = story().entities[0];
-    expect(tamsin?.facts[0]?.sourceId).toBe('a1');
-    expect(tamsin?.appearanceFrom?.sourceId).toBe('a1');
+    expect(tamsin?.facts.map((f) => f.sourceId)).toEqual(['a1', 'a1']);
   });
 
   it('keeps values whose source text is unchanged, drops them when it changes or is erased', () => {
     const adv = story();
-    expect(dropUnsupported(adv, adv.actions)).toEqual({ facts: 0, appearances: 0, scene: false });
+    expect(dropUnsupported(adv, adv.actions)).toEqual({ facts: 0, scene: false });
     const changed = adv.actions.map((a) => (a.id === 'a1' ? edited(a, 'A boy rows the ferry.') : a));
-    expect(dropUnsupported(adv, changed)).toEqual({ facts: 1, appearances: 1, scene: false });
+    expect(dropUnsupported(adv, changed)).toEqual({ facts: 2, scene: false });
     expect(adv.entities[0]?.facts).toEqual([]);
-    expect(adv.entities[0]).not.toHaveProperty('appearance');
     const erased = story();
-    expect(dropUnsupported(erased, erased.actions.slice(0, 1)).facts).toBe(1);
+    expect(dropUnsupported(erased, erased.actions.slice(0, 1)).facts).toBe(2);
   });
 
   it('gives a key back to the state value a dropped one ended', () => {
@@ -50,8 +48,7 @@ describe('derived values follow edits', () => {
 
   it('checks evidence instead of the hash when a value has it', () => {
     const adv = story();
-    const fact = adv.entities[0]?.facts[0];
-    if (fact) Object.assign(fact, { evidence: 'rows  the FERRY', sourceHash: undefined });
+    for (const fact of adv.entities[0]?.facts ?? []) Object.assign(fact, { evidence: 'rows  the FERRY', sourceHash: undefined });
     const changed = adv.actions.map((a) => (a.id === 'a1' ? edited(a, 'Tamsin, bald now, rows the ferry.') : a));
     expect(dropUnsupported(adv, changed).facts).toBe(0);
   });
@@ -98,7 +95,7 @@ describe('derived values follow edits', () => {
     const appended = [...adv.actions, act('a3', 'More.')];
     followLog(adv, adv.actions, appended);
     expect(adv.memories[0]?.stale).toBeUndefined();
-    expect(adv.entities[0]?.facts).toHaveLength(1);
+    expect(adv.entities[0]?.facts).toHaveLength(2);
     followLog(
       adv,
       appended,

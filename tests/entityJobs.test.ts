@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { mergeEntity } from '@core/memory/entities';
 import { extractFromPassage } from '@core/memory/extract';
 import { EXTRACT_JSON_SCHEMA } from '@core/memory/extractJsonSchema';
+import { appearanceOf } from '@core/memory/looks';
 import { extractPrompt } from '@core/text/prompts';
 import { entitiesOverdue } from '@core/memory/memoryBank';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
@@ -10,11 +11,15 @@ import { MAX_ENTITIES } from '@core/schema/extraction';
 import type { Adventure } from '@core/model';
 import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure } from './fixtures/memoryJobs';
 
-/** A new entity is kept only when its passage names it, and the fixture's text names nobody the replies do. */
+const none: string[] = [];
+
+/**
+ * A new entity is kept only when two actions name it, and the fixture's text names nobody the
+ * replies do: actions 3 and 4 read `text`.
+ */
 function adventure(actions: number, text = 'You wave and Mira waves back.'): Adventure {
   const adv = memoryAdventure(actions);
-  const a = adv.actions[3];
-  if (a) a.versions = [text];
+  for (const a of adv.actions.slice(3, 5)) a.versions = [text];
   return adv;
 }
 
@@ -46,7 +51,7 @@ describe('entity extraction in memory maintenance', () => {
     const reqs: CompletionRequest[] = [];
     const reply = {
       entities: [
-        { name: 'Mira', kind: 'character', aliases: ['the courier'], description: 'A courier.', facts: ['She found the map.'] },
+        { name: 'Mira', kind: 'character', aliases: ['the courier'], description: 'A courier.', facts: ['She waves back.'] },
         { name: 'the map', kind: 'item', description: 'A common noun, not a name.', facts: [] },
         { name: 'The creature', kind: 'character', description: 'A role with a capitalised article.', facts: [] },
       ],
@@ -67,7 +72,7 @@ describe('entity extraction in memory maintenance', () => {
     const entityReqs = reqs.filter((r) => r.prompt.includes(ENTITY_PROMPT));
     expect(entityReqs).toHaveLength(2);
     expect(entityReqs[0]).toMatchObject({
-      maxTokens: 300,
+      maxTokens: 500,
       temperature: 0.2,
       slotId: 1,
       cachePrompt: false,
@@ -93,16 +98,22 @@ describe('entity extraction in memory maintenance', () => {
     expect(adv.entities).toEqual([]);
   });
 
-  it('keeps the whole entities of a reply cut at maxTokens and drops the cut one', async () => {
-    const adv = adventure(18);
-    const cut =
-      '{"importance": 2, "entities": [{"name": "Mira", "kind": "character", "description": "A courier.", "facts": []}, {"name": "Odo", "kind": "character", "description": "A captain.", "facts": ["He i';
-    const provider = fakeProvider(async function* (req) {
-      const entity = req.prompt.includes(ENTITY_PROMPT);
-      yield { text: entity ? cut.slice(1) : 'Mira found the map.', done: true, stats: { stopReason: entity ? 'length' : 'eos' } };
-    });
-    expect(await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider })).toMatchObject({ entitiesTouched: 1 });
-    expect(adv.entities.map((e) => e.name)).toEqual(['Mira']);
+  it('drops only the last item of the list a reply cut at maxTokens fell in', async () => {
+    const adv = adventure(18, 'You wave and Mira and Odo wave back.');
+    const entities =
+      '{"entities": [{"name": "Mira", "kind": "character", "description": "A courier.", "facts": []}, {"name": "Odo", "kind": "character", "description": "A captain.", "facts": []}]';
+    const run = async (cut: string) => {
+      const provider = fakeProvider(async function* (req) {
+        const entity = req.prompt.includes(ENTITY_PROMPT);
+        yield { text: entity ? cut.slice(1) : 'Mira found the map.', done: true, stats: { stopReason: entity ? 'length' : 'eos' } };
+      });
+      return extractFromPassage('[3] You wave and Mira and Odo wave back.', none, { ...fakeDeps(adv).deps, provider });
+    };
+    const inEntities = await run(entities.replace('A captain.", "facts": []}]', 'A capt'));
+    expect(inEntities?.entities.map((e) => e.name)).toEqual(['Mira']);
+    const inSpeakers = await run(`${entities}, "speakers": [{"action": 3, "name": "Mira"}, {"action": 3, "na`);
+    expect(inSpeakers?.entities.map((e) => e.name)).toEqual(['Mira', 'Odo']);
+    expect(inSpeakers?.speakers).toEqual([{ action: 3, name: 'Mira' }]);
   });
 
   it('retries a cut entity call on the next idle run and catches up two memories per run', async () => {
@@ -164,11 +175,11 @@ describe('entity extraction in memory maintenance', () => {
     expect(JSON.stringify(schema)).not.toMatch(/timeDelta|timeOfDay/);
   });
 
-  it('stores the appearance a reply gives, and leaves it unset when the reply has none', async () => {
+  it('stores the keyed looks a reply gives, and none when the reply has none', async () => {
     const reply =
-      '{"entities": [{"name": "Mira", "kind": "character", "description": "A courier.", "appearance": "Short, with a shaved head.", "facts": []}, ' +
+      '{"entities": [{"name": "Mira", "kind": "character", "description": "A courier.", "looks": {"build": "short", "hair": "shaved head"}, "facts": []}, ' +
       '{"name": "Tobin", "kind": "character", "description": "A miller.", "facts": []}], "speakers": []}';
-    const adv = adventure(18, 'You wave and Mira and Tobin wave back.');
+    const adv = adventure(18, 'You wave and Mira, short and with a shaved head, and Tobin wave back.');
     const provider = fakeProvider(
       async function* (req) {
         yield { text: req.prompt.includes(ENTITY_PROMPT) ? reply : 'Mira found the map.', done: true };
@@ -177,32 +188,27 @@ describe('entity extraction in memory maintenance', () => {
       true,
     );
     await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
-    expect(adv.entities.map((e) => [e.name, e.appearance])).toEqual([
-      ['Mira', 'Short, with a shaved head.'],
-      ['Tobin', undefined],
+    expect(adv.entities.map((e) => [e.name, appearanceOf(e)])).toEqual([
+      ['Mira', 'build: short, hair: shaved head'],
+      ['Tobin', ''],
     ]);
   });
 
-  it('shows a worked example only when no grammar carries the shape', () => {
-    expect(extractPrompt('[0] Mira waves.', [], true)).not.toMatch(/<Name>|Ysolde/);
-    expect(extractPrompt('[0] Mira waves.', [], false)).toMatch(/"appearance": "<one sentence>"/);
-    expect(extractPrompt('[0] Mira waves.', [], false)).not.toMatch(/Ysolde|Brass Owl|timeDelta/);
-  });
-
   it('neither asks for nor keeps the fields the schema dropped', async () => {
-    expect(extractPrompt('[0] Mira waves.', [], false)).not.toMatch(/importance|threads|timeDelta|time of day/);
-    expect(EXTRACT_JSON_SCHEMA.required).toEqual(['scene', 'entities', 'speakers']);
+    expect(extractPrompt('[0] Mira waves.', none, false)).not.toMatch(/importance|threads|timeDelta|time of day|appearance/);
+    const schema = EXTRACT_JSON_SCHEMA;
+    expect(schema.required).toEqual(['scene', 'entities', 'speakers']);
     // Required, every entity wrote looks and the reply hit the token cap.
-    expect(EXTRACT_JSON_SCHEMA).toMatchObject({ properties: { entities: { items: { required: expect.not.arrayContaining(['appearance']) } } } });
+    expect(schema).toMatchObject({ properties: { entities: { items: { required: expect.not.arrayContaining(['looks']) } } } });
     // Uncapped, one description ran past the whole reply.
-    expect(EXTRACT_JSON_SCHEMA).toMatchObject({ properties: { entities: { items: { properties: { description: { maxLength: 120 } } } } } });
+    expect(schema).toMatchObject({ properties: { entities: { items: { properties: { description: { maxLength: 120 } } } } } });
     // `timeDelta` is what a reply from before the clock was dropped still carries.
     const stray =
       '{"importance": 4, "timeDelta": {"days": 0, "parts": 0}, "entities": [{"name": "Mira", "kind": "character", "description": "A courier.", "facts": []}], "speakers": [], "threads": ["x"]}';
     const provider = fakeProvider(async function* () {
       yield { text: stray.slice(1), done: true };
     });
-    const r = await extractFromPassage('[0] Mira waves.', [], { ...fakeDeps(adventure(1)).deps, provider });
+    const r = await extractFromPassage('[0] Mira waves.', none, { ...fakeDeps(adventure(1)).deps, provider });
     expect(r?.entities.map((e) => e.name)).toEqual(['Mira']);
     expect(r).not.toHaveProperty('importance');
     expect(r).not.toHaveProperty('threads');

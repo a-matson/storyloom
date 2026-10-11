@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { seedCanonEntities } from '@core/memory/canon';
-import { mergeEntity } from '@core/memory/entities';
+import { mergeEntity, type Sighting } from '@core/memory/entities';
 import { rankFacts } from '@core/memory/facts';
 import { currentStates } from '@core/memory/looks';
 import { createAdventureFromScenario, newScenario } from '@core/model/scenario';
-import type { Entity, ExtractedEntity, StoryCard } from '@core/model';
+import type { Entity, StoryCard } from '@core/model';
 
 const card = (type: string, name: string, over: Partial<StoryCard> = {}): StoryCard => ({
   id: `card_${name}`,
@@ -15,7 +15,7 @@ const card = (type: string, name: string, over: Partial<StoryCard> = {}): StoryC
   ...over,
 });
 
-const seen = (over: Partial<ExtractedEntity> = {}): ExtractedEntity => ({ name: 'Tamsin', kind: 'character', description: '', facts: [], ...over });
+const seen = (over: Partial<Sighting> = {}): Sighting => ({ name: 'Tamsin', kind: 'character', description: '', facts: [], ...over });
 
 describe('canon seeding', () => {
   it('seeds characters, places and factions from cards and skips other types', () => {
