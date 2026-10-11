@@ -1,5 +1,5 @@
 import { ActionLog } from '@core/log';
-import { markStale } from '@core/memory';
+import { followLog } from '@core/memory';
 import { utilityProvider, type Adventure, type AdventureSettings, type AppSettings, type PlotComponents, type TurnTrace } from '@core/model';
 import type { Embedder, ScriptRunner } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
@@ -129,11 +129,14 @@ export class GameSession {
   // ---- turns ------------------------------------------------------------------
   private async drive(gen: AsyncGenerator<TurnEvent>): Promise<void> {
     this.emit({ busy: true, error: null, streaming: '' });
+    const before = this.log.actions;
     let ok = false;
     try {
       for await (const evt of gen) ok = this.onEvent(evt) || ok;
     } finally {
       this.pending = '';
+      // A retry replaced the last action's text.
+      if (ok) followLog(this.adv, before, this.log.actions);
       this.emit({ busy: false, streaming: '' });
       this.save();
       if (ok) this.afterTurn();
@@ -230,8 +233,10 @@ export class GameSession {
     this.dropPrefetch();
     if (pre && last && pre.actionId === last.id && note === undefined) {
       // Instant retry: the alternative was generated in the background.
+      const before = this.log.actions;
       this.log.addVersion(last.id, pre.text);
       if (pre.stats) this.log.patch(last.id, { stats: pre.stats });
+      followLog(this.adv, before, this.log.actions);
       this.storeTrace(pre.trace);
       this.emit();
       this.save();
@@ -267,6 +272,7 @@ export class GameSession {
     if (this.snapshot.busy) return;
     const before = this.log.actions;
     fn(this.log, this.adv);
+    followLog(this.adv, before, this.log.actions);
     dropOrphanImages(this, before);
     // Editing the log makes a prefetched alternative stale unless it still targets the last action.
     if (this.prefetched && this.prefetched.actionId !== this.log.last?.id) this.dropPrefetch();
@@ -276,22 +282,11 @@ export class GameSession {
     this.save();
   }
 
-  readonly erase = () =>
-    this.mutate((log, adv) => {
-      const a = log.erase();
-      if (a) adv.memories = markStale(adv.memories, new Set([a.id]));
-    });
-  readonly eraseTo = (id: string) =>
-    this.mutate((log, adv) => {
-      adv.memories = markStale(adv.memories, new Set(log.eraseTo(id).map((a) => a.id)));
-    });
+  readonly erase = () => this.mutate((log) => log.erase());
+  readonly eraseTo = (id: string) => this.mutate((log) => log.eraseTo(id));
   readonly undo = () => this.mutate((log) => log.undo());
   readonly redo = () => this.mutate((log) => log.redo());
-  readonly edit = (id: string, text: string) =>
-    this.mutate((log, adv) => {
-      log.edit(id, text);
-      adv.memories = markStale(adv.memories, new Set([id]));
-    });
+  readonly edit = (id: string, text: string) => this.mutate((log) => log.edit(id, text));
   readonly setVersion = (id: string, i: number) => this.mutate((log) => log.setActiveVersion(id, i));
   readonly updatePlot = (patch: Partial<PlotComponents>) => this.mutate((_, adv) => (adv.plot = { ...adv.plot, ...patch }));
   readonly updateSettings = (patch: Partial<AdventureSettings>) => this.mutate((_, adv) => (adv.settings = { ...adv.settings, ...patch }));

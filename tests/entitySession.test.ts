@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { correct } from '@app/session/correct';
 import { entityEdits } from '@app/session/entities';
-import { createBlankAdventure, type Entity } from '@core/model';
-import { setup } from './fixtures/session';
+import { actionText, createBlankAdventure, type Entity } from '@core/model';
+import { hashPrompt } from '@core/trace';
+import { settled, setup } from './fixtures/session';
 
 const gate: Entity = {
   id: 'ent_gate',
@@ -25,6 +26,52 @@ function withGate(...more: Entity[]) {
 }
 
 const count = (text: string, needle: string) => text.split(needle).length - 1;
+
+describe('GameSession derived values follow log edits', () => {
+  const sourced = (text: string, opening: string): Entity => ({
+    ...gate,
+    facts: [{ id: 'f9', text, fromAction: 0, source: 'memory', sourceId: 'x', sourceHash: hashPrompt(opening) }],
+  });
+  const open = (fact: string, from = 'You stand at the gate.') => {
+    const s = withGate(sourced(fact, from));
+    const first = s.session.getSnapshot().actions[0];
+    if (!first) throw new Error('no opening');
+    const e = s.session.adv.entities[1]?.facts[0];
+    if (e) e.sourceId = first.id;
+    return { ...s, id: first.id };
+  };
+
+  it('edit drops a fact its action no longer supports, from the drawer and the prompt', async () => {
+    const { session, id } = open('The gate hums at night.');
+    await session.previewContext();
+    expect(session.getSnapshot().context?.prompt).toContain('hums at night');
+    session.edit(id, 'You stand at a hedge.');
+    expect(session.getSnapshot().adventure.entities[1]?.facts).toEqual([]);
+    await session.previewContext();
+    expect(session.getSnapshot().context?.prompt).not.toContain('hums at night');
+  });
+
+  it('retry drops a fact sourced from the output it replaced', async () => {
+    const { session } = withGate();
+    session.submit('continue', '');
+    await settled(session);
+    const last = session.getSnapshot().actions.at(-1);
+    if (!last) throw new Error('no output');
+    const said = { id: 'f9', text: 'Said once.', fromAction: 1, source: 'memory' as const, sourceId: last.id, sourceHash: hashPrompt(actionText(last)) };
+    session.adv.entities = [{ ...gate, facts: [...gate.facts, said] }];
+    session.retry();
+    await settled(session);
+    expect(session.getSnapshot().adventure.entities[0]?.facts.map((f) => f.id)).toEqual(['f1']);
+  });
+
+  it('a version switch drops what the other version said', () => {
+    const { session, id } = open('A hedge grows here.', 'You stand at a hedge.');
+    session.edit(id, 'You stand at a hedge.');
+    expect(session.getSnapshot().adventure.entities[1]?.facts).toHaveLength(1);
+    session.setVersion(id, 0);
+    expect(session.getSnapshot().adventure.entities[1]?.facts).toEqual([]);
+  });
+});
 
 describe('GameSession entity edits', () => {
   it('entity.update publishes and persists', async () => {

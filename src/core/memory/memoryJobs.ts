@@ -7,6 +7,7 @@ import type { Provider } from '../ports/provider';
 import type { Embedder } from '../ports/embedder';
 import { joinStory, trimUnfinishedSentence } from '../text/formatting';
 import { catchUpEntities } from './extract';
+import { dropUnsupported } from './invalidate';
 import { helperCall, sentencesOnly, type CutCounts } from './helperCall';
 import { refreshSummary } from './summary';
 
@@ -181,13 +182,18 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
 async function maintain(adventure: Adventure, deps: MaintenanceDeps, report: MaintenanceReport): Promise<void> {
   const settings = adventure.settings.memory;
   const actions = adventure.actions;
+  // Memories feed both features (auto-summary uses them to bridge gaps).
+  const memoriesOn = settings.memoryBank || settings.autoSummary;
+  dropUnsupported(adventure, actions);
   // Memory jobs filled every idle slot and the summary never ran (none in 44 actions); the gap is bridged by its recent passage.
   report.summaryFirst = settings.autoSummary && summaryOverdue(actions.length, adventure.scriptState.__summaryAt ?? 0);
+  // An edited range must not feed the summary its old text.
+  const regenerateFirst = report.summaryFirst && memoriesOn && adventure.memories.some((m) => m.stale);
+  if (regenerateFirst) await regenerateStale(adventure, deps, report);
   if (report.summaryFirst) report.summaryUpdated = await refreshSummary(adventure, deps);
 
-  if (settings.memoryBank || settings.autoSummary) {
-    // Memories feed both features (auto-summary uses them to bridge gaps).
-    await regenerateStale(adventure, deps, report);
+  if (memoriesOn) {
+    if (!regenerateFirst) await regenerateStale(adventure, deps, report);
     for (const range of dueMemoryRanges(actions, adventure.memories)) {
       if (deps.signal?.aborted) break;
       const memory = await writeMemory(adventure, range, deps, report);

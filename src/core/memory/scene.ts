@@ -18,5 +18,6 @@ export function nextScene(scene: Scene | undefined, reply: ExtractionJson, isNam
     ...(weather !== undefined && { weather }),
   };
   if (!next.location && !next.present.length && !next.weather) return scene;
-  return JSON.stringify(next) === JSON.stringify(scene) ? scene : next;
+  const { sourceId: _id, sourceHash: _hash, ...was } = scene ?? {};
+  return JSON.stringify(next) === JSON.stringify(was) ? scene : next;
 }

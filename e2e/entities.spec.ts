@@ -149,6 +149,38 @@ test('a canon conflict is shown on the fact and resolved from the drawer', async
   await expect(page.getByText('eyes: blue')).toBeVisible();
 });
 
+test('a fact goes when the action it came from is edited', async ({ page }) => {
+  const fact = { id: 'f9', text: 'Corrow sells salt.', fromAction: 1, source: 'memory' as const, sourceId: 'action:1', evidence: 'bends 1' };
+  await openSeededAdventure(page, 3, undefined, { scene: { present: ['Corrow'] }, entities: [{ id: 'ent_corrow', name: 'Corrow', facts: [fact] }] });
+  await page.getByRole('tab', { name: 'Gameplay' }).click();
+  await page.getByRole('switch', { name: 'Send entity facts and cards' }).click();
+  const prompt = async () => {
+    await page.getByRole('textbox', { name: 'Take a turn' }).fill('look around');
+    await page.getByRole('button', { name: 'Send' }).click();
+    await page.getByRole('button', { name: 'View context' }).last().click();
+    const dialog = page.getByRole('dialog', { name: 'Context sent to the model' });
+    await dialog.getByRole('button', { name: 'Raw prompt' }).click();
+    return dialog;
+  };
+  await expect((await prompt()).getByText(/Corrow sells salt/)).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  const older = page.getByText('The road bends 1.');
+  await older.focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.type('The road ends.');
+  await page.getByRole('textbox', { name: 'Take a turn' }).focus(); // blur commits
+  await expect(page.getByText('The road ends.')).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Adventure' }).click();
+  await page.getByRole('button', { name: /^Characters/ }).click();
+  await page.getByRole('button', { name: 'Open Corrow' }).click();
+  await expect(page.getByRole('dialog', { name: 'Corrow' }).getByText('Corrow sells salt.')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect((await prompt()).getByText(/Corrow sells salt/)).toHaveCount(0);
+});
+
 test('no portraits beside dialogue when the setting is off', async ({ page }) => {
   await openSeededAdventure(page, 3, undefined, { opening: OPENING, speakerAvatars: false });
   await page.getByRole('textbox', { name: 'Take a turn' }).fill('wait');

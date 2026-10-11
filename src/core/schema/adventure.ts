@@ -16,6 +16,9 @@ export const Scene = z.object({
   /** Absent until a passage states the time of day; then it moves only by stated elapsed time. */
   time: z.optional(z.object({ day: z.int(), part: DayPart })),
   weather: z.optional(z.string()),
+  /** The last action the scene was read from; cleared when that action's text changes. */
+  sourceId: z.optional(z.string()),
+  sourceHash: z.optional(z.string()),
 });
 
 /** Always-on prompt pieces ("Plot Components"). All optional. */
@@ -58,6 +61,8 @@ export const ScriptState = z.looseObject({
   /** Action count, and a hash of the last action's text, at the last introduction call (memory jobs). */
   __introducedAt: z.optional(z.number()),
   __introducedHash: z.optional(z.string()),
+  /** An action the summary read was edited or erased: rebuild it from the memories. */
+  __summaryDirty: z.optional(z.boolean()),
 });
 
 export const CardGeneratorSettings = z.object({
