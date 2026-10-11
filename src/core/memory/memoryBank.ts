@@ -70,6 +70,9 @@ export function summaryDue(actionCount: number, lastSummarisedAt: number): boole
   return actionCount - lastSummarisedAt >= SUMMARY_INTERVAL;
 }
 
+/** Two intervals without a refresh: memory jobs kept starving the summary, so it goes first. [provisional] */
+export const summaryOverdue = (actionCount: number, lastSummarisedAt: number): boolean => actionCount - lastSummarisedAt >= 2 * SUMMARY_INTERVAL;
+
 /** Actions until `summaryDue` turns true; 0 when it already is. */
 export const actionsUntilSummary = (actionCount: number, lastSummarisedAt: number): number => Math.max(0, lastSummarisedAt + SUMMARY_INTERVAL - actionCount);
 

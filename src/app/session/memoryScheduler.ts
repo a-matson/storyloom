@@ -171,6 +171,10 @@ export class MemoryScheduler {
       const { runMemoryMaintenance } = await loadMemoryJobs();
       const deps = { ...(await this.host.helperModel()), embedder: await this.host.embedder() };
       const report = await runMemoryMaintenance(this.host.adventure(), { ...deps, signal: AbortSignal.any([idle, cancel.signal]), cancel: cancel.signal });
+      const { summaryUpdated, summaryFirst, cutCalls, finishedPastCut } = report;
+      // A live run reads these from the console: whether the summary keeps up and what typing cuts.
+      if (summaryUpdated || cutCalls || finishedPastCut)
+        console.info(`memory run ${JSON.stringify({ summaryUpdated, summaryFirst, cutCalls, finishedPastCut })}`);
       if (
         report.memoriesWritten ||
         report.memoriesRegenerated ||

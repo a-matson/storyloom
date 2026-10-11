@@ -1,0 +1,65 @@
+import { trackJob } from '../trace';
+import type { JobKind } from '../model/types';
+import type { CompletionChunk, CompletionStats, Provider } from '../ports/provider';
+import { sentenceGrammar } from '../text/prompts';
+
+/** Grammar for at most `max` sentences when the backend supports one; the trim and validator cover the rest. */
+export async function sentencesOnly(provider: Provider, max: number): Promise<string | undefined> {
+  return (await provider.capabilities()).grammar ? sentenceGrammar(max) : undefined;
+}
+
+/** Share of `maxTokens` after which typing no longer cuts a helper call: its work is worth more than the GPU it shares. [provisional] */
+const CUT_BEFORE = 0.5;
+
+export interface CutCounts {
+  /** Helper calls the player's typing cut; their partial reply is dropped. */
+  cutCalls: number;
+  /** Helper calls typed over past the half mark that ran to their end and were kept. */
+  finishedPastCut: number;
+}
+
+export interface CallDeps {
+  /** The player started typing. */
+  cancel?: AbortSignal | undefined;
+  cuts?: CutCounts | undefined;
+}
+
+/**
+ * Collects one helper call on slot 1. `cancel` aborts it only until it has streamed half its
+ * `maxTokens`; past that it runs to its end so the memory lands. A cut call throws the abort.
+ */
+export function helperCall(
+  job: JobKind,
+  maxTokens: number,
+  start: (signal: AbortSignal) => AsyncIterable<CompletionChunk>,
+  { cancel, cuts }: CallDeps,
+): Promise<{ text: string; stats?: CompletionStats | undefined }> {
+  return trackJob(job, async () => {
+    const call = new AbortController();
+    const follow = () => call.abort(cancel?.reason);
+    if (cancel?.aborted) follow();
+    else cancel?.addEventListener('abort', follow, { once: true });
+    let text = '';
+    let stats: CompletionStats | undefined;
+    let tokens = 0;
+    try {
+      for await (const c of start(call.signal)) {
+        text += c.text;
+        if (c.done) stats = c.stats;
+        tokens = c.stats?.generatedTokens ?? tokens + 1;
+        if (tokens >= maxTokens * CUT_BEFORE) cancel?.removeEventListener('abort', follow);
+      }
+    } catch (e) {
+      // The provider's own abort error; a cut is reported below either way.
+      if (!call.signal.aborted) throw e;
+    } finally {
+      cancel?.removeEventListener('abort', follow);
+    }
+    if (call.signal.aborted) {
+      if (cuts) cuts.cutCalls += 1;
+      call.signal.throwIfAborted();
+    }
+    if (cancel?.aborted && cuts) cuts.finishedPastCut += 1;
+    return { text, stats };
+  });
+}

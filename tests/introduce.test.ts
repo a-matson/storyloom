@@ -128,7 +128,7 @@ describe('introduce', () => {
     const { adv, deps } = setup('You meet Tamsin at the ferry.');
     const cancel = new AbortController();
     cancel.abort();
-    await introduce(adv, { ...deps, cancel: cancel.signal });
+    await expect(introduce(adv, { ...deps, cancel: cancel.signal })).rejects.toThrow('aborted');
     expect(adv.scriptState.__introducedAt).toBeUndefined();
   });
 });

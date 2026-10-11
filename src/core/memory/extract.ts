@@ -1,6 +1,5 @@
 import { jsonrepair } from 'jsonrepair';
 import type { Adventure, ExtractionJson, Speaker } from '../model/types';
-import { collect } from '../ports/provider';
 import { z } from 'zod/mini';
 import { ExtractedEntity, IntroducedEntity, MAX_ENTITIES, MAX_INTRODUCED, ExtractionJson as Schema } from '../schema/extraction';
 import { actionStoryText } from '../text/formatting';
@@ -8,7 +7,7 @@ import { parseJsonReply } from '../text/jsonReply';
 import { EXTRACT_SYSTEM, extractPrompt, introducePrompt } from '../text/prompts';
 import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
-import { trackJob } from '../trace';
+import { helperCall } from './helperCall';
 import { attributeSpeakers, matchEntity, mergeEntity, namedInPassage } from './entities';
 import { EXTRACT_JSON_SCHEMA, INTRODUCE_JSON_SCHEMA } from './extractJsonSchema';
 import { entitiesOverdue, type MemoryRange } from './memoryBank';
@@ -16,7 +15,7 @@ import { nextScene } from './scene';
 import type { MaintenanceDeps } from './memoryJobs';
 
 /** The call needs no embedder, so the player's "Update from story" works without one. */
-export type ExtractDeps = Pick<MaintenanceDeps, 'provider' | 'template' | 'cancel' | 'content'>;
+export type ExtractDeps = Pick<MaintenanceDeps, 'provider' | 'template' | 'cancel' | 'cuts' | 'content'>;
 
 // Entities are checked one by one, so a bad one (a lowercase name without the grammar) costs only itself.
 const Envelope = z.looseObject({ entities: z.array(z.unknown()) });
@@ -46,7 +45,7 @@ const extractAccepter = accepter(ExtractedEntity, MAX_ENTITIES, (data, entities)
 });
 const introduceAccepter = accepter(IntroducedEntity, MAX_INTRODUCED, (_, entities) => entities);
 
-/** One helper call on slot 1 for a JSON reply: the grammar when the backend has one, else a `{` prefill. Null when unusable or cancelled. */
+/** One helper call on slot 1 for a JSON reply: the grammar when the backend has one, else a `{` prefill. Null when unusable; a call typing cut throws. */
 async function helperJson<R>(
   prompt: (grammar: boolean) => string,
   jsonSchema: Record<string, unknown>,
@@ -56,8 +55,10 @@ async function helperJson<R>(
 ): Promise<R | null> {
   const caps = await deps.provider.capabilities();
   const rendered = renderTemplate(deps.template, withContent(EXTRACT_SYSTEM, deps.content), prompt(caps.jsonSchema), caps.jsonSchema ? '' : '{');
-  const { text, stats } = await trackJob('entity', () =>
-    collect(
+  const { text, stats } = await helperCall(
+    'entity',
+    maxTokens,
+    (signal) =>
       deps.provider.complete(
         {
           prompt: rendered.prompt,
@@ -69,11 +70,10 @@ async function helperJson<R>(
           slotId: 1,
           jsonSchema: caps.jsonSchema ? jsonSchema : undefined,
         },
-        deps.cancel,
+        signal,
       ),
-    ),
+    deps,
   );
-  if (deps.cancel?.aborted) return null;
   return parseJsonReply(caps.jsonSchema ? text : `{${text}`, accept(stats?.stopReason === 'length'), jsonrepair);
 }
 
@@ -117,7 +117,6 @@ export async function catchUpEntities(adventure: Adventure, deps: MaintenanceDep
   const last = due[ENTITY_BATCH - 1];
   if (!first || !last || (deps.signal?.aborted && !entitiesOverdue(adventure))) return none;
   const r = await updateEntities(adventure, { fromAction: first.fromAction, toAction: last.toAction }, deps);
-  if (deps.cancel?.aborted) return none;
   // Here, not in `updateEntities`: "Update from story" re-reads old ranges and would move the scene back to them.
   const scene = r.reply && nextScene(adventure.plot.scene, r.reply, (n) => n !== '' && !NOT_A_NAME.test(n));
   const sceneUpdated = !!scene && scene !== adventure.plot.scene;
