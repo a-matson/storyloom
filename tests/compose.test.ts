@@ -82,6 +82,21 @@ describe('composeSeePrompt', () => {
     expect(/tag \d+$/.test(longest)).toBe(true);
   });
 
+  it('inlines the look at the first mention only; later mentions and aliases get the bare noun', () => {
+    expect(composeSeePrompt({ brief: 'Bram nods, Bram smiles', entities: all, style }).prompt).toBe(
+      'a toll keeper, bald, red beard nods, a toll keeper smiles, oil painting',
+    );
+    expect(composeSeePrompt({ brief: 'Tamsin hails the ferrywoman', entities: all, style: '' }).prompt).toBe(
+      'a ferrywoman who poles the river, grey braid, patched cloak hails a ferrywoman who poles the river',
+    );
+  });
+
+  it('keeps a possessive on the noun and puts the look once before it', () => {
+    expect(composeSeePrompt({ brief: "Bram's lantern swings, Bram’s hat", entities: all, style: '' }).prompt).toBe(
+      "a toll keeper, bald, red beard, a toll keeper's lantern swings, a toll keeper’s hat",
+    );
+  });
+
   it('passes a tag list through, deduped, with commas normalised', () => {
     const { prompt } = composeSeePrompt({ brief: 'moon,  river ,, Moon, oil painting', entities: [], style });
     expect(prompt).toBe('moon, river, oil painting');

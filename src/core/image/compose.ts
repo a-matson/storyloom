@@ -18,6 +18,15 @@ type Character = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'description'
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const nameRe = (n: string) => new RegExp(`(?<![\\p{L}\\p{N}])${escape(n.trim())}(?![\\p{L}\\p{N}])`, 'giu');
 const namesOf = (e: Character) => [e.name, ...e.aliases].filter((n) => n.trim() !== '');
+/** Any of a character's names, longest first, with a trailing possessive captured. */
+const mentionRe = (e: Character) =>
+  new RegExp(
+    `(?<![\\p{L}\\p{N}])(?:${namesOf(e)
+      .toSorted((a, b) => b.length - a.length)
+      .map((n) => escape(n.trim()))
+      .join('|')})(?![\\p{L}\\p{N}])(['’]s(?![\\p{L}\\p{N}]))?`,
+    'giu',
+  );
 
 /** Characters `text` names as whole words, in order of first mention; a longer name wins an overlap ("Lena Morrow" over "Lena"). */
 export function namedCast<E extends Character>(text: string, entities: readonly E[]): E[] {
@@ -91,7 +100,14 @@ export function composeSeePrompt({ brief, scene, entities, style }: ComposeInput
     cast.forEach((e, i) => {
       const before = text;
       const look = full[i] ? lookFor(e) : looks(e, false);
-      for (const n of namesOf(e).toSorted((a, b) => b.length - a.length)) text = text.replace(nameRe(n), () => look);
+      const n = noun(e);
+      let first = true;
+      text = text.replace(mentionRe(e), (_m: string, poss: string | undefined) => {
+        // The look once, at the first mention; repeating it reads to SD as more people.
+        const head = first ? look : n;
+        first = false;
+        return poss ? (head === n ? n + poss : `${head}, ${n}${poss}`) : head;
+      });
       if (text === before && i < CAST_CAP) unnamed.push(look);
     });
     return tags([text, ...unnamed, scene?.location, weather ? scene?.weather : '', style]);
