@@ -124,5 +124,7 @@ export function openSession(adventure: Adventure, app: AppSettings): GameSession
     // Well above the 130 s a 512²/24-step render takes with the story model on the same GPU
     // [measured: docs/measurements/2026-10-05-play-images.json], so only a hung server is killed.
     imageTimeoutMs: 300_000, // [provisional]
+    // A cold 8k prefill is ~50 s on the M2 Pro, and a memory job on slot 1 can add tens of seconds.
+    ttftTimeoutMs: 90_000, // [provisional]
   });
 }

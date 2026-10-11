@@ -97,8 +97,9 @@ export class GameSession {
   readonly setApp = (app: AppSettings): void => void (this.app = app);
 
   private deps(): TurnDeps {
-    const provider = this.svc.providerFor(this.app, this.adv.settings.providerId);
-    return { provider, tokenizer: this.svc.tokenizerFor(provider), scripts: this.scripts, embedder: this.embedder, contextSize: this.contextSize };
+    const { svc, scripts, embedder, contextSize } = this;
+    const provider = svc.providerFor(this.app, this.adv.settings.providerId);
+    return { provider, tokenizer: svc.tokenizerFor(provider), scripts, embedder, contextSize, ttftTimeoutMs: svc.ttftTimeoutMs };
   }
 
   private async resolveEmbedder(): Promise<Embedder> {

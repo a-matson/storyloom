@@ -70,6 +70,8 @@ export interface SessionServices {
   saveDelayMs: number;
   /** A txt2img that runs longer than this is abandoned. */
   imageTimeoutMs: number;
+  /** A turn with no first token after this long fails as `stalled`. */
+  ttftTimeoutMs: number;
   /** Quiet time after the last edit before the cache is re-warmed. */
   rewarmDelayMs: number;
 }

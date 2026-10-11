@@ -53,6 +53,7 @@ export function setup(
     saveDelayMs: 0,
     rewarmDelayMs: 0,
     imageTimeoutMs: opts.imageTimeoutMs ?? 300_000,
+    ttftTimeoutMs: 90_000,
   });
   const snapshots: GameSnapshot[] = [];
   session.subscribe(() => snapshots.push(session.getSnapshot()));

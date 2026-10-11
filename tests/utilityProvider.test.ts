@@ -58,6 +58,7 @@ function setup(utilityReachable: boolean) {
     saveDelayMs: 0,
     rewarmDelayMs: 0,
     imageTimeoutMs: 300_000,
+    ttftTimeoutMs: 90_000,
   });
   return { session, story, utility, embeddedFor, idle };
 }

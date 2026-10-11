@@ -14,6 +14,8 @@ export interface TurnDeps {
   embedder?: Embedder | undefined;
   /** Per-slot `n_ctx` the provider reports; the prompt budget is clamped to fit it. */
   contextSize?: number | undefined;
+  /** A stream with no first token after this long is cancelled as `stalled`. */
+  ttftTimeoutMs?: number | undefined;
 }
 
 /** Events that belong to one turn carry its `turnId`; tokens and messages are tied to it by order. */
