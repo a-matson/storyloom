@@ -88,6 +88,11 @@ export interface FoldLog {
 /** One reply entity; the introduction call's carry no facts or state. */
 export type Incoming = Omit<ExtractedEntity, 'facts'> & { facts?: string[] | undefined };
 
+type Held = NonNullable<Adventure['scriptState']['__pending']>[number];
+
+/** Held names kept; an older one is dropped with its facts. [provisional] */
+const MAX_HELD = 20;
+
 /**
  * Folds the helper's entities read from `range` into `adventure.entities`. A new one only when the
  * passage names it; a name `knownAs` resolves merges there as an alias. Each fact, state and look
@@ -95,7 +100,8 @@ export type Incoming = Omit<ExtractedEntity, 'facts'> & { facts?: string[] | und
  * basis); looks only for characters. A state value then replaces its key's current one. With
  * `twice` (the batch call), a new name needs two actions so far that name it: once, every
  * capitalised name became a card (20 against 12). [measured: 2026-10-11-recall-m12-1-pr2-hybrid-d30.json]
- * A fact the description or a state already says is dropped too. `log` counts the trait facts
+ * A name seen once is held (`scriptState.__pending`) and folded, with its own range, once a card
+ * it resolves to exists: its first facts were lost before. A fact the description or a state already says is dropped too. `log` counts the trait facts
  * proposed and records every value a guard dropped. Returns how many entities changed.
  */
 export function foldEntities(
@@ -109,12 +115,18 @@ export function foldEntities(
   const actions = adventure.actions.slice(range.fromAction, range.toAction);
   const fallback = sourceIn(adventure.actions, range);
   const once = (name: string) => adventure.actions.slice(0, range.toAction).filter((a) => namedInPassage(name, actionText(a))).length < 2;
-  for (const { looks, state, facts = [], ...e } of incoming) {
+  const held: Held[] = [];
+  for (const item of incoming) {
+    const { looks, state, facts = [], ...e } = item;
     const description = uncut(e.description);
     if (opts.log) opts.log.proposed += facts.length;
     const old = notAName(adventure.plot, e.name) ? undefined : knownAs(entities, e.name);
-    if (!old && (notAName(adventure.plot, e.name) || !namedInPassage(e.name, passage) || A_KIND.test(description) || (opts.twice && once(e.name)))) {
+    if (!old && (notAName(adventure.plot, e.name) || !namedInPassage(e.name, passage) || A_KIND.test(description))) {
       for (const f of facts) opts.log?.rejected.push({ entity: e.name, value: f, reason: 'entity-dropped', passageRange: range });
+      continue;
+    }
+    if (!old && opts.twice && once(e.name)) {
+      held.push({ entity: { ...item, facts }, range });
       continue;
     }
     const aliases = [...(e.aliases ?? []), ...(old && !matchEntity([old], e.name) ? [e.name] : [])];
@@ -154,5 +166,11 @@ export function foldEntities(
   }
   const touched = entities.filter((x, i) => x !== adventure.entities[i]).length;
   adventure.entities = entities;
-  return touched;
+  const pending = [...(adventure.scriptState.__pending ?? []), ...held];
+  const due = pending.filter((p) => knownAs(entities, p.entity.name));
+  if (!held.length && !due.length) return touched;
+  adventure.scriptState = { ...adventure.scriptState, __pending: pending.filter((p) => !due.includes(p)).slice(-MAX_HELD) };
+  // Each was counted as proposed when it arrived; its rejections still log.
+  const log = opts.log && { log: { proposed: 0, rejected: opts.log.rejected } };
+  return touched + due.reduce((n, p) => n + foldEntities(adventure, [p.entity], '', p.range, log), 0);
 }
