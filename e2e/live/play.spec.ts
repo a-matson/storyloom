@@ -206,6 +206,9 @@ test('scripted live play', async ({ page }) => {
       cacheHit: promptTokens > 0 ? +(cachedTokens / promptTokens).toFixed(3) : undefined,
       promptMs: s.promptMs,
       genMs: s.generationMs,
+      generatedTokens: s.generatedTokens,
+      words: out.split(/\s+/).filter(Boolean).length,
+      paragraphs: out.split(/\n\s*\n/).filter((x) => x.trim()).length,
       tokPerSec: generationMs > 0 ? +((generatedTokens / generationMs) * 1000).toFixed(1) : undefined,
       ttftMs: timings.ttftMs,
       // Which background job held a slot during this turn (Gate V finding 19): the reason a turn is slow.
@@ -220,6 +223,19 @@ test('scripted live play', async ({ page }) => {
   const entityPrompt = traces.findLast((t) => t.triggeredCardIds.some((id) => entityIds.has(id)))?.prompt;
   const stopReasons: Record<string, number> = {};
   for (const t of turns) stopReasons[t.stopReason ?? 'none'] = (stopReasons[t.stopReason ?? 'none'] ?? 0) + 1;
+  // Spread of AI-turn lengths: what the length line and the soft stop are measured on.
+  const spread = (xs: number[]) => {
+    const v = xs.toSorted((a, b) => a - b);
+    const at = (q: number) => v[Math.min(v.length - 1, Math.floor(q * v.length))];
+    const mean = v.reduce((a, b) => a + b, 0) / (v.length || 1);
+    const stdev = Math.sqrt(v.reduce((a, b) => a + (b - mean) ** 2, 0) / (v.length || 1));
+    return { n: v.length, p10: at(0.1), median: at(0.5), p90: at(0.9), stdev: +stdev.toFixed(1) };
+  };
+  const done = turns.filter((t) => t.outcome === 'done');
+  const length = {
+    tokens: spread(done.flatMap((t) => (t.generatedTokens === undefined ? [] : [t.generatedTokens]))),
+    words: spread(done.map((t) => t.words)),
+  };
   // A label keeps same-day re-runs from overwriting each other.
   const label = process.env['MEASURE_LABEL'];
   const path = writeMeasurement(label ? `live-play-${label}` : 'live-play', {
@@ -228,6 +244,7 @@ test('scripted live play', async ({ page }) => {
     model: traces.at(-1)?.modelId,
     turns,
     stopReasons,
+    length,
     // Rows keep embeddings as Float32Array; the output does not need them.
     memories: z
       .array(z.omit(S.Memory, { embedding: true }))

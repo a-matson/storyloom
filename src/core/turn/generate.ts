@@ -1,12 +1,12 @@
 import type { Adventure } from '../model/types';
 import type { CompletionRequest, CompletionStats } from '../ports/provider';
 import { MODEL_PRESETS } from '../text/modelPresets';
-import { sentenceEndAfter, trimUnfinishedSentence } from '../text/formatting';
+import { paragraphEndAfter, trimUnfinishedSentence } from '../text/formatting';
 import { runHook } from './hooks';
 import type { Generated, PreparedContext, TurnDeps, TurnEvent } from './types';
 
-/** Tokens allowed past `responseLength` to reach a sentence end; 44 live turns never ran out of margin. [measured: 2026-10-02-gate-v.md] */
-export const SOFT_STOP_MARGIN = 50;
+/** Tokens allowed past `responseLength` to reach a paragraph break; at the margin the sentence trim stands. [provisional] */
+export const SOFT_STOP_MARGIN = 80;
 
 /** [provisional] wording from SPEC-scripting-api. */
 const SCRIPT_EMPTIED_OUTPUT = 'A custom script running on this scenario failed. Please try again or fix the script.';
@@ -45,7 +45,7 @@ export function buildRequest(
 
 /**
  * Stream a completion for `request`, then pass it through the onOutput hook.
- * Past `responseLength` tokens the stream is cut at the first sentence end
+ * Past `responseLength` tokens the stream is cut at the first paragraph break
  * (soft stop); if none comes before the margin runs out, the trim cleans up.
  */
 export async function* generate(
@@ -70,7 +70,7 @@ export async function* generate(
     if (++tokens >= responseLength) softFrom ??= text.length;
     text += chunk.text;
     yield { type: 'token', text: chunk.text };
-    const end = softFrom === undefined ? 0 : sentenceEndAfter(text, softFrom);
+    const end = softFrom === undefined ? 0 : paragraphEndAfter(text, softFrom);
     if (end) {
       // Leaving the loop cancels the stream, so the server stops generating.
       text = text.slice(0, end);

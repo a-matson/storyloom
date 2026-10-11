@@ -41,29 +41,29 @@ async function play(tokens: string[], responseLength = 4) {
 describe('soft stop', () => {
   it('asks for a margin past responseLength', async () => {
     const { seen } = await play(['A.']);
-    expect(seen.request?.maxTokens).toBe(54);
+    expect(seen.request?.maxTokens).toBe(84);
   });
 
-  it('stops at the first sentence end after responseLength and keeps the stream stats', async () => {
-    const { seen, done, trace } = await play([' The', ' door', ' creaks', ' open', ' slowly', '.', ' Light', ' spills', ' out', '.', ' More']);
-    expect(done?.text).toBe(' The door creaks open slowly.');
-    expect(seen.read).toBe(7);
-    expect(done?.stats).toMatchObject({ stopReason: 'soft', promptTokens: 40, cachedTokens: 30, generatedTokens: 7 });
+  it('stops at the first paragraph break after responseLength and keeps the stream stats', async () => {
+    const { seen, done, trace } = await play([' The', ' door', ' creaks', ' open', '.', ' Light', ' spills', '.', '\n\n', ' More']);
+    expect(done?.text).toBe(' The door creaks open. Light spills.');
+    expect(seen.read).toBe(9);
+    expect(done?.stats).toMatchObject({ stopReason: 'soft', promptTokens: 40, cachedTokens: 30, generatedTokens: 9 });
     expect(trace?.stopReason).toBe('soft');
     expect(trace?.outcome).toBe('done');
   });
 
-  it('does not count a sentence end from before responseLength', async () => {
-    const { done } = await play([' Go', '.', ' The', ' door', ' opens', ' wide', '.', ' Then']);
-    expect(done?.text).toBe(' Go. The door opens wide.');
+  it('does not stop at a paragraph break from before responseLength', async () => {
+    const { done } = await play([' Go', '.', '\n\n', ' The', ' door', ' opens', '.', '\n\n', ' Then']);
+    expect(done?.text).toBe(' Go.\n\n The door opens.');
   });
 
-  it('does not stop inside open dialogue', async () => {
-    const { done } = await play([' She', ' says', ',', ' "', 'Wait', '.', ' Stay', '."', ' Then', ' silence']);
-    expect(done?.text).toBe(' She says, "Wait. Stay."');
+  it('does not stop at a sentence end alone', async () => {
+    const { seen } = await play([' One', ' two', ' three', ' four', '.', ' Five', ' six', '.', ' Seven']);
+    expect(seen.read).toBe(9);
   });
 
-  it('falls back to length and the trim when no boundary comes', async () => {
+  it('falls back to length and the sentence trim when no break comes', async () => {
     const { done } = await play([' One', ' two', '.', ' three', ' four', ' five']);
     expect(done?.text).toBe(' One two.');
     expect(done?.stats?.stopReason).toBe('length');

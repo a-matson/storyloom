@@ -40,6 +40,8 @@ export const ContextSettings = z.object({
   evictionChunk: z._default(z.int().check(z.gt(0)), 8),
   /** Include the raw model output (no sentence trimming). */
   rawOutput: z._default(z.boolean(), false),
+  /** Tell the model the reply length in the Author's note, derived from `responseLength`. [provisional] */
+  lengthHint: z._default(z.boolean(), true),
   /** Warn on the context meter when cards or plot components did not fit. */
   contextWarning: z._default(z.boolean(), true),
   /** After each turn, prefill the next turn's stable prefix. */

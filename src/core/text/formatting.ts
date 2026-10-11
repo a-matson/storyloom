@@ -80,13 +80,10 @@ export function trimUnfinishedSentence(output: string, stopReason?: CompletionSt
   return openQuote ? kept.slice(0, -1).trimEnd() : kept;
 }
 
-/**
- * Where a stream may stop: just past a sentence that ends after `from` and is
- * already followed by whitespace (so the "3." of "3.5" does not count), else 0.
- */
-export function sentenceEndAfter(s: string, from: number): number {
-  const end = lastSentenceEnd(s);
-  return end > from && /\s/.test(s.charAt(end)) ? end : 0;
+/** Where a stream may stop: the first paragraph break (`\n\n`) at or after `from`, once text precedes it, else 0. */
+export function paragraphEndAfter(s: string, from: number): number {
+  const at = s.indexOf('\n\n', from);
+  return at > 0 && s.slice(0, at).trim() !== '' ? at : 0;
 }
 
 /**

@@ -64,6 +64,8 @@ export interface ContextBuildSettings {
   pinnedFactsOnly?: boolean;
   /** The content clause, appended to the AI Instructions in the system prompt. */
   content?: string;
+  /** `Replies run about N words in P paragraphs.`, joined to the Author's note. Empty/absent sends nothing. */
+  lengthLine?: string;
 }
 
 export interface ContextBuildInput {
