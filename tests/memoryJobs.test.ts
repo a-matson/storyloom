@@ -109,6 +109,33 @@ describe('memory maintenance', () => {
     expect(due.kinds[0]).toBe('memory');
   });
 
+  it('rebuilds a dirty summary from every memory, without its old text, before it is due', async () => {
+    const adv = adventure(30);
+    adv.settings.memory.autoSummary = true;
+    const { deps, calls } = fakeDeps(adv);
+    await runMemoryMaintenance(adv, deps);
+    adv.plot.storySummary = 'OLD SUMMARY';
+    adv.scriptState = { ...adv.scriptState, __summaryAt: 30, __summaryDirty: true };
+    const report = await runMemoryMaintenance(adv, deps);
+    expect(report.summaryUpdated).toBe(true);
+    expect(calls.at(-1)).not.toContain('OLD SUMMARY');
+    expect(calls.at(-1)).toContain(`- ${adv.memories[0]?.text}`);
+    expect(adv.scriptState.__summaryDirty).toBe(false);
+  });
+
+  it('regenerates a stale memory before an overdue summary reads it', async () => {
+    const adv = adventure(30);
+    const { deps, calls } = fakeDeps(adv);
+    await runMemoryMaintenance(adv, deps);
+    adv.settings.memory.autoSummary = true;
+    adv.memories = adv.memories.map((m, i) => (i === 0 ? { ...m, stale: true } : m));
+    adv.actions = adv.actions.map((a, i) => (i === 3 ? { ...a, versions: ['EDITED'], active: 0 } : a));
+    const before = calls.length;
+    expect(await runMemoryMaintenance(adv, deps)).toMatchObject({ summaryFirst: true, memoriesRegenerated: 1 });
+    const summary = calls.slice(before).find((c) => c.includes('Write the updated summary'));
+    expect(summary).toContain('- sum:EDITED');
+  });
+
   it('never summarises an evicted range twice on a long adventure', async () => {
     const adv = adventure(400, 25);
     const { deps, calls } = fakeDeps(adv);

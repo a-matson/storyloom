@@ -56,5 +56,5 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps): Promis
   if (!reply) return none();
   // No speakers: the short reply leaves them to the client guess and the batch call.
   const cards = reply.map((e) => Object.assign(e, { facts: [] }));
-  return { touched: foldEntities(adventure, cards, passage, n - 1), speakers: new Map() };
+  return { touched: foldEntities(adventure, cards, passage, range), speakers: new Map() };
 }

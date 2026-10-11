@@ -52,6 +52,14 @@ async function seedEntities(page: Page, contextScript?: string, seedScene?: Scen
         r.addEventListener('success', () => ok((r.result as { id: string; plot: object }[])[0]));
         r.addEventListener('error', () => fail(r.error));
       });
+      // A fact's `sourceId: 'action:N'` names the imported action N; its real id is known only now.
+      const actionIds = await new Promise<string[]>((ok, fail) => {
+        const r = db.transaction('actions').objectStore('actions').getAll();
+        r.addEventListener('success', () => ok((r.result as { id: string; seq: number }[]).toSorted((a, b) => a.seq - b.seq).map((a) => a.id)));
+        r.addEventListener('error', () => fail(r.error));
+      });
+      for (const e of extra)
+        for (const f of e.facts ?? []) if (f.sourceId?.startsWith('action:')) f.sourceId = actionIds[Number(f.sourceId.slice(7))] ?? f.sourceId;
       const base = { adventureId: adv?.id, aliases: [], relations: [], firstSeen: 1, lastSeen: 2 };
       const tx = db.transaction(['entities', 'adventures'], 'readwrite');
       if ((context || scene) && adv)

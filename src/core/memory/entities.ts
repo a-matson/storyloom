@@ -1,6 +1,7 @@
 import type { Action, Adventure, Entity, EntityFact, ExtractedEntity, Speaker } from '../model/types';
 import { actionText, newId } from '../model/types';
 import { guessSpeakers } from '../text/speakers';
+import type { Source } from './invalidate';
 
 const isOutput = (a: Action) => a.type === 'continue' || a.type === 'start';
 
@@ -97,9 +98,9 @@ export function attributeSpeakers(
  * aliases union, a changed `state` value keeps the old one as a fact. Existing facts — the
  * player's and pinned ones included — and a non-empty description are never replaced. Canon:
  * a canon entity's description is never set, and a change to a `canonKeys` value is recorded as
- * a conflict fact instead of applied.
+ * a conflict fact instead of applied. `source` stamps new facts and a set appearance with the action they came from.
  */
-export function mergeEntity(existing: Entity | undefined, incoming: ExtractedEntity, atAction: number): Entity {
+export function mergeEntity(existing: Entity | undefined, incoming: ExtractedEntity, atAction: number, source?: (text: string) => Source | undefined): Entity {
   const base: Entity = existing ?? {
     id: newId('ent_'),
     kind: incoming.kind,
@@ -114,11 +115,13 @@ export function mergeEntity(existing: Entity | undefined, incoming: ExtractedEnt
   };
   const facts = [...base.facts];
   const known = new Set(facts.map((f) => norm(f.text)));
-  const addFact = (text: string, extra?: Partial<EntityFact>): void => {
+  // `from`: the words to find the source by; null when the value's source is already known (or unknown).
+  const addFact = (text: string, extra?: Partial<EntityFact>, from: string | null = text): void => {
     const key = norm(text);
     if (!key || known.has(key)) return;
     known.add(key);
-    facts.push({ id: newId('fact_'), text: text.trim(), fromAction: atAction, source: 'memory', ...extra } satisfies EntityFact);
+    const stamp = from === null ? undefined : source?.(from);
+    facts.push({ id: newId('fact_'), text: text.trim(), fromAction: atAction, source: 'memory', ...stamp, ...extra } satisfies EntityFact);
   };
 
   const state = { ...base.state };
@@ -126,9 +129,9 @@ export function mergeEntity(existing: Entity | undefined, incoming: ExtractedEnt
   for (const [key, value] of Object.entries(incoming.state ?? {})) {
     const old = state[key];
     if (old === undefined || norm(old) === norm(value)) state[key] = value;
-    else if (locked.has(key)) addFact(`the story says ${key} is ${value}, but canon says ${old}`, { conflict: true, claim: { key, value } });
+    else if (locked.has(key)) addFact(`the story says ${key} is ${value}, but canon says ${old}`, { conflict: true, claim: { key, value } }, value);
     else {
-      addFact(`${key} was ${old} until action ${atAction}`);
+      addFact(`${key} was ${old} until action ${atAction}`, undefined, value);
       state[key] = value;
     }
   }
@@ -154,9 +157,12 @@ export function mergeEntity(existing: Entity | undefined, incoming: ExtractedEnt
   // A fuller description of the looks wins over a sparse one; canon looks are the player's.
   const looks = incoming.appearance?.trim() ?? '';
   let appearance = base.appearance;
-  if (!appearance || (!base.canon && looks.length > appearance.length)) {
-    if (appearance && looks) addFact(`looked: ${appearance}`);
-    appearance = looks || appearance;
+  let appearanceFrom = base.appearanceFrom;
+  if (looks && (!appearance || (!base.canon && looks.length > appearance.length))) {
+    // The old looks keep the old source: an edit of that action drops them too.
+    if (appearance) addFact(`looked: ${appearance}`, appearanceFrom, null);
+    appearance = looks;
+    appearanceFrom = source?.(looks);
   }
 
   return {
@@ -164,6 +170,7 @@ export function mergeEntity(existing: Entity | undefined, incoming: ExtractedEnt
     aliases,
     description: base.canon ? base.description : base.description || (incoming.description ?? '').trim(),
     ...(appearance && { appearance }),
+    ...(appearanceFrom && { appearanceFrom }),
     facts,
     state,
     relations,

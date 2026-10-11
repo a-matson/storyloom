@@ -159,7 +159,7 @@ describe('entity extraction in memory maintenance', () => {
       true,
     );
     expect(await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider })).toMatchObject({ sceneUpdated: true });
-    expect(adv.plot.scene).toEqual({ location: 'the mill', present: ['Mira'] });
+    expect(adv.plot.scene).toEqual({ location: 'the mill', present: ['Mira'], sourceId: expect.any(String), sourceHash: expect.any(String) });
     const schema = reqs.find((r) => r.jsonSchema)?.jsonSchema;
     expect(JSON.stringify(schema)).not.toMatch(/timeDelta|timeOfDay/);
   });

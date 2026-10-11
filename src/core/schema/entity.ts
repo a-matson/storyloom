@@ -3,6 +3,16 @@ import { z } from 'zod/mini';
 export const EntityKind = z.enum(['character', 'place', 'item', 'faction']);
 
 const count = z.int().check(z.gte(0));
+
+/**
+ * Where a derived value came from: the action's id and either the supporting words (`evidence`) or a
+ * hash of the action's text. An edit that removes the words (or changes the text) drops the value.
+ */
+export const Provenance = z.object({
+  sourceId: z.string(),
+  sourceHash: z.optional(z.string()),
+  evidence: z.optional(z.string()),
+});
 export const Relation = z.object({ to: z.string(), label: z.string() });
 
 export const EntityFact = z.object({
@@ -16,6 +26,11 @@ export const EntityFact = z.object({
   conflict: z.optional(z.boolean()),
   /** On a conflict: the state value the story claimed, so "Accept the story" can apply it. */
   claim: z.optional(z.object({ key: z.string(), value: z.string() })),
+  sourceId: z.optional(z.string()),
+  sourceHash: z.optional(z.string()),
+  evidence: z.optional(z.string()),
+  /** Absent: `basisOf` derives it from `source`. */
+  basis: z.optional(z.enum(['stated', 'inferred', 'player'])),
 });
 
 /** A character, place, item or faction the story has named, built up from the memory cycle's helper call. */
@@ -27,6 +42,8 @@ export const Entity = z.object({
   description: z.string(),
   /** What they look like, for the portrait prompt; merged like `description`. */
   appearance: z.optional(z.string()),
+  /** The action that set `appearance`. */
+  appearanceFrom: z.optional(Provenance),
   facts: z.array(EntityFact),
   /** Current values (location, condition, ...); an overwrite keeps the old value as a fact. */
   state: z.record(z.string(), z.string()),

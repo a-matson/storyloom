@@ -1,5 +1,8 @@
 import { jsonrepair } from 'jsonrepair';
 import type { Adventure, ExtractionJson, Speaker } from '../model/types';
+import { actionText } from '../model/types';
+import { hashPrompt } from '../trace';
+import { sourceIn } from './invalidate';
 import { z } from 'zod/mini';
 import { ExtractedEntity, IntroducedEntity, MAX_ENTITIES, MAX_INTRODUCED, ExtractionJson as Schema } from '../schema/extraction';
 import { actionStoryText } from '../text/formatting';
@@ -117,10 +120,15 @@ export async function catchUpEntities(adventure: Adventure, deps: MaintenanceDep
   const last = due[ENTITY_BATCH - 1];
   if (!first || !last || (deps.signal?.aborted && !entitiesOverdue(adventure))) return none;
   const r = await updateEntities(adventure, { fromAction: first.fromAction, toAction: last.toAction }, deps);
-  // Here, not in `updateEntities`: "Update from story" re-reads old ranges and would move the scene back to them.
-  const scene = r.reply && nextScene(adventure.plot.scene, r.reply, (n) => n !== '' && !NOT_A_NAME.test(n));
-  const sceneUpdated = !!scene && scene !== adventure.plot.scene;
-  if (scene && sceneUpdated) adventure.plot = { ...adventure.plot, scene };
+  // Here, not in `updateEntities`: "Update from story" re-reads old ranges and would move the scene back to them;
+  // so would a re-read after an edit, hence the check against the scene's source.
+  const old = adventure.plot.scene;
+  const newer = old?.sourceId === undefined || adventure.actions.findIndex((a) => a.id === old.sourceId) < last.toAction;
+  const scene = newer && r.reply ? nextScene(old, r.reply, (n) => n !== '' && !NOT_A_NAME.test(n)) : undefined;
+  const sceneUpdated = scene !== undefined && scene !== old;
+  const from = adventure.actions[last.toAction - 1];
+  if (scene !== undefined && sceneUpdated)
+    adventure.plot = { ...adventure.plot, scene: from ? { ...scene, sourceId: from.id, sourceHash: hashPrompt(actionText(from)) } : scene };
   adventure.scriptState = { ...adventure.scriptState, __entitiesAt: last.toAction };
   return { touched: r.touched, speakers: r.speakers, sceneUpdated };
 }
@@ -147,14 +155,15 @@ export function passageOf(adventure: Adventure, range: MemoryRange): string {
     .join('\n');
 }
 
-/** Folds the helper's entities into `adventure.entities`; a new one only when the passage names it. Returns how many changed. */
-export function foldEntities(adventure: Adventure, incoming: readonly z.infer<typeof ExtractedEntity>[], passage: string, at: number): number {
+/** Folds the helper's entities read from `range` into `adventure.entities`; a new one only when the passage names it. Returns how many changed. */
+export function foldEntities(adventure: Adventure, incoming: readonly z.infer<typeof ExtractedEntity>[], passage: string, range: MemoryRange): number {
   let entities = adventure.entities;
+  const source = sourceIn(adventure.actions, range);
   for (const { appearance, ...rest } of incoming) {
     if (NOT_A_NAME.test(rest.name)) continue;
     const old = matchEntity(entities, rest.name);
     if (!old && !namedInPassage(rest.name, passage)) continue;
-    const merged = mergeEntity(old, appearance && !NO_LOOKS.test(appearance) ? { ...rest, appearance } : rest, at);
+    const merged = mergeEntity(old, appearance && !NO_LOOKS.test(appearance) ? { ...rest, appearance } : rest, range.toAction - 1, source);
     entities = old ? entities.map((e) => (e === old ? merged : e)) : [...entities, merged];
   }
   const touched = entities.filter((e, i) => e !== adventure.entities[i]).length;
@@ -173,6 +182,6 @@ export async function updateEntities(adventure: Adventure, range: MemoryRange, d
       )
     : null;
   if (!reply) return { touched: 0, speakers: new Map() };
-  const touched = foldEntities(adventure, reply.entities, passage, range.toAction - 1);
+  const touched = foldEntities(adventure, reply.entities, passage, range);
   return { touched, speakers: attributeSpeakers(adventure.actions, reply.speakers, adventure.entities), reply };
 }
