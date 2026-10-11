@@ -9,31 +9,20 @@ const READ_MS = 6000;
 const TURN_MS = 300_000;
 
 const send = (page: Page) => page.getByRole('button', { name: 'Send' });
-/** Turns whose stream stalled and had to be stopped and re-rolled; reported with the run. */
+/** Turns the app's first-token watchdog failed as stalled; reported with the run. */
 export const run = { stalls: 0 };
 
-const idle = (page: Page, ms: number) =>
-  send(page)
-    .waitFor({ state: 'visible', timeout: ms })
-    .then(() => true)
-    .catch(() => false);
-
-/**
- * One turn. A stream can stall indefinitely on this hardware (headers returned, no tokens;
- * seen twice in a 90-turn run), and the app has no generation timeout of its own, so a stalled
- * turn is stopped and re-rolled rather than losing an hour-long run.
- */
+/** One turn. A stalled turn leaves the player action without a reply, so the story is continued once. */
 export async function turn(page: Page, mode: 'Do' | 'Say', text: string, readMs = READ_MS): Promise<void> {
   await page.getByRole('button', { name: mode, exact: true }).click();
   await page.getByRole('textbox', { name: 'Take a turn' }).fill(text);
   await send(page).click();
-  const stop = page.getByRole('button', { name: 'Stop generating' });
-  await expect(stop).toBeVisible();
-  if (!(await idle(page, TURN_MS))) {
+  await expect(page.getByRole('button', { name: 'Stop generating' })).toBeVisible();
+  await expect(send(page)).toBeVisible({ timeout: TURN_MS });
+  const stalled = page.getByRole('alert').filter({ hasText: 'sent nothing' });
+  if (await stalled.isVisible()) {
     run.stalls++;
-    await stop.click();
-    await expect(send(page)).toBeVisible({ timeout: 60_000 });
-    await page.getByRole('button', { name: /^Retry/ }).click();
+    await page.getByRole('button', { name: 'Continue' }).click();
     await expect(send(page)).toBeVisible({ timeout: TURN_MS });
   }
   await page.waitForTimeout(readMs);

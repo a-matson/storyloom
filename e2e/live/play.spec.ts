@@ -244,6 +244,7 @@ test('scripted live play', async ({ page }) => {
     model: traces.at(-1)?.modelId,
     turns,
     stopReasons,
+    stalls: turns.filter((t) => t.errorKind === 'stalled').length,
     length,
     // Rows keep embeddings as Float32Array; the output does not need them.
     memories: z

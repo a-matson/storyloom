@@ -22,6 +22,12 @@ const JITTER: readonly (readonly [number, number])[] = [
 /** [provisional] wording from SPEC-scripting-api. */
 const SCRIPT_EMPTIED_OUTPUT = 'A custom script running on this scenario failed. Please try again or fix the script.';
 
+/** `kind` is what `errorKindOf` reads, so the turn fails as `stalled`. */
+function stalled(ms: number): Error {
+  const message = `The model sent nothing for ${Math.round(ms / 1000)} s; the server may be busy with another request.`;
+  return Object.assign(new Error(message), { kind: 'stalled' as const });
+}
+
 export function randomSeed(): number {
   return Math.floor(Math.random() * 2 ** 31);
 }
@@ -87,20 +93,33 @@ async function* stream(
   // One streamed chunk is about one token on llama-server and OpenAI-style streams.
   let tokens = 0;
   let softFrom: number | undefined;
-  for await (const chunk of deps.provider.complete(request, signal)) {
-    if (chunk.stats) stats = chunk.stats;
-    if (!chunk.text) continue;
-    ttftMs ??= Date.now() - startedAt;
-    if (before + ++tokens >= responseLength) softFrom ??= text.length;
-    text += chunk.text;
-    yield { type: 'token', text: chunk.text };
-    const end = softFrom === undefined ? 0 : paragraphEndAfter(text, softFrom);
-    if (end) {
-      // Leaving the loop cancels the stream, so the server stops generating.
-      text = text.slice(0, end);
-      stats = { ...stats, generatedTokens: stats?.generatedTokens ?? tokens, stopReason: 'soft' };
-      break;
+  // Only the first token is watched: a server busy with another slot sends nothing at all, while a
+  // stream that has started keeps going at a few tokens a second even on CPU.
+  const watch = new AbortController();
+  const limit = deps.ttftTimeoutMs;
+  const timer = limit === undefined ? undefined : setTimeout(() => watch.abort(), limit);
+  try {
+    for await (const chunk of deps.provider.complete(request, signal ? AbortSignal.any([signal, watch.signal]) : watch.signal)) {
+      if (chunk.stats) stats = chunk.stats;
+      if (!chunk.text) continue;
+      clearTimeout(timer);
+      ttftMs ??= Date.now() - startedAt;
+      if (before + ++tokens >= responseLength) softFrom ??= text.length;
+      text += chunk.text;
+      yield { type: 'token', text: chunk.text };
+      const end = softFrom === undefined ? 0 : paragraphEndAfter(text, softFrom);
+      if (end) {
+        // Leaving the loop cancels the stream, so the server stops generating.
+        text = text.slice(0, end);
+        stats = { ...stats, generatedTokens: stats?.generatedTokens ?? tokens, stopReason: 'soft' };
+        break;
+      }
     }
+  } catch (e) {
+    if (watch.signal.aborted && !signal?.aborted) throw stalled(limit ?? 0);
+    throw e;
+  } finally {
+    clearTimeout(timer);
   }
   return { text, stats, ttftMs, tokens };
 }
