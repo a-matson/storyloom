@@ -74,7 +74,7 @@ export function uncut(text: string, at = CUT_AT): string {
 export interface Rejected {
   entity: string;
   value: string;
-  reason: 'description-containment' | 'state-text' | 'no-shared-word' | 'wrong-subject' | 'entity-dropped';
+  reason: 'state-text' | 'no-shared-word' | 'wrong-subject' | 'entity-dropped';
   passageRange: MemoryRange;
 }
 
@@ -153,9 +153,9 @@ export function foldEntities(
       aliases,
       description,
       facts: facts.flatMap((f) => {
-        // The 12B restates a new card's description as its first fact, and writes a state ("location: the marsh") as a fact too.
-        if (within(f, card)) reject(f, 'description-containment');
-        else if (states.some((s) => within(f, s))) reject(f, 'state-text');
+        // The 12B restates a new card's description as its first fact (a duplicate, not a loss: not logged), and writes a state ("location: the marsh") as a fact too.
+        if (within(f, card)) return [];
+        if (states.some((s) => within(f, s))) reject(f, 'state-text');
         else return keep(f);
         return [];
       }),

@@ -10,9 +10,20 @@ const STOP = new Set(
   ),
 );
 
-/** Compared by their first five letters, so "blinded" meets "blind". [provisional] */
+/**
+ * One -ing, -ed or -s off, then a final -e, then the first five letters: "lean" meets "leans" and
+ * "eye" meets "eyes" (five letters alone missed both; no-shared-word 10 → 0 at d30).
+ * [measured: 2026-10-11-recall-m12-1-pr5-stem-d30.json]
+ * ponytail: a crude stemmer ("string" → "str" misses "strings"); a real lemmatiser if it costs facts.
+ */
+const stem = (w: string): string => {
+  const s = w.replace(/(?:ing|ed|(?<!s)s)$/, '');
+  const t = s.length >= 3 ? s : w;
+  return (t.length > 3 ? t.replace(/e$/, '') : t).slice(0, 5);
+};
+
 const contentWords = (s: string): string[] => [
-  ...new Set((s.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).filter((w) => w.length > 2 && !STOP.has(w)).map((w) => w.slice(0, 5))),
+  ...new Set((s.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).filter((w) => w.length > 2 && !STOP.has(w)).map(stem)),
 ];
 
 /** Share of a value's content words one sentence must hold for `stated`; fewer is `inferred`. [provisional] */

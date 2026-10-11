@@ -78,7 +78,6 @@ describe('foldEntities', () => {
     expect(log).toEqual({
       proposed: 6,
       rejected: [
-        { entity: 'Tamsin', value: 'works for the Iron Guild', reason: 'description-containment', passageRange: range },
         { entity: 'Tamsin', value: 'location: the ferry', reason: 'state-text', passageRange: range },
         { entity: 'Tamsin', value: 'She sings at night.', reason: 'no-shared-word', passageRange: range },
         { entity: 'Odo', value: 'He owes money.', reason: 'wrong-subject', passageRange: range },
@@ -86,6 +85,13 @@ describe('foldEntities', () => {
       ],
     });
     expect(adv.entities[1]?.facts.filter((f) => f.kind !== 'state').map((f) => f.text)).toEqual(['She works at the ferry.']);
+  });
+
+  it('meets a value word in another form of it', () => {
+    const [e] = fold(story(['You watch Tamsin. She leans on the pole, hunches over it and rubs her eyes.']), [
+      seen('Tamsin', { looks: { build: 'lean' }, facts: ['hunched', 'one eye'] }),
+    ]);
+    expect(e?.facts.map((f) => f.text)).toEqual(['build: lean', 'hunched', 'one eye']);
   });
 
   it('calls a fact inferred when its best sentence holds only some of its words', () => {
