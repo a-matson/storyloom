@@ -1,4 +1,5 @@
-import type { Scene } from '../model/types';
+import { heldBy, itemsHere, MAX_ITEMS, YOU } from '../memory/items';
+import type { Entity, Scene } from '../model/types';
 import type { ContextSection, SectionKind } from './types';
 
 export const HEADERS = {
@@ -13,14 +14,22 @@ export const HEADERS = {
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** `Blackmore's study · Present: Lena, Morrow · Here: the ledger · Rain`, leaving out what is unknown. An old saved `time` is not sent. */
-export function renderScene(scene: Scene | undefined): string {
-  if (!scene) return '';
+/**
+ * `Blackmore's study · Present: Lena, Morrow · You hold: Horn · Here: the ledger, Key (Lena) · Rain`,
+ * leaving out what is unknown; the item lists come from `entities` too. An old saved `time` is not sent.
+ * ponytail: a third-person player's items stay under their name, not `You hold`; map it when one plays so.
+ */
+export function renderScene(scene: Scene | undefined, entities: readonly Entity[] = []): string {
+  const held = heldBy(entities, YOU)
+    .slice(0, MAX_ITEMS)
+    .map((e) => e.name);
+  const here = scene ? itemsHere(scene, entities) : [];
   return [
-    scene.location?.trim(),
-    scene.present.length ? `Present: ${scene.present.join(', ')}` : '',
-    scene.items && scene.items.length > 0 ? `Here: ${scene.items.join(', ')}` : '',
-    scene.weather?.trim() ? cap(scene.weather.trim()) : '',
+    scene?.location?.trim(),
+    scene && scene.present.length > 0 ? `Present: ${scene.present.join(', ')}` : '',
+    held.length ? `You hold: ${held.join(', ')}` : '',
+    here.length ? `Here: ${here.join(', ')}` : '',
+    scene?.weather?.trim() ? cap(scene.weather.trim()) : '',
   ]
     .filter(Boolean)
     .join(' · ');

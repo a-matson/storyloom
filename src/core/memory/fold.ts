@@ -114,18 +114,21 @@ export function foldEntities(
   let entities = adventure.entities;
   const actions = adventure.actions.slice(range.fromAction, range.toAction);
   const fallback = sourceIn(adventure.actions, range);
-  const once = (name: string) => adventure.actions.slice(0, range.toAction).filter((a) => namedInPassage(name, actionText(a))).length < 2;
   const held: Held[] = [];
   for (const item of incoming) {
     const { looks, state, facts = [], ...e } = item;
     const description = uncut(e.description);
     if (opts.log) opts.log.proposed += facts.length;
+    // Items are often common nouns: "the horn" someone carries is the item "Horn".
+    const carried = e.kind === 'item' && !!state?.['holder'];
+    const named = (text: string) => namedInPassage(e.name, text) || (carried && within(`the ${e.name}`, text));
+    const once = () => adventure.actions.slice(0, range.toAction).filter((a) => named(actionText(a))).length < 2;
     const old = notAName(adventure.plot, e.name) ? undefined : knownAs(entities, e.name);
-    if (!old && (notAName(adventure.plot, e.name) || !namedInPassage(e.name, passage) || A_KIND.test(description))) {
+    if (!old && (notAName(adventure.plot, e.name) || !named(passage) || A_KIND.test(description))) {
       for (const f of facts) opts.log?.rejected.push({ entity: e.name, value: f, reason: 'entity-dropped', passageRange: range });
       continue;
     }
-    if (!old && opts.twice && once(e.name)) {
+    if (!old && opts.twice && once()) {
       held.push({ entity: { ...item, facts }, range });
       continue;
     }
@@ -133,10 +136,10 @@ export function foldEntities(
     const who = { name: old?.name ?? e.name, aliases: [...(old?.aliases ?? []), ...aliases] };
     const backed = new Map<string, Source>();
     const reject = (value: string, reason: Rejected['reason']) => opts.log?.rejected.push({ entity: who.name, value, reason, passageRange: range });
-    const keep = (value: string, cap?: number): string[] => {
+    const keep = (value: string, cap?: number, about = (v: string) => v): string[] => {
       const v = uncut(value, cap);
       if (!v || EMPTY_VALUE.test(v)) return [];
-      const s = supportOf(actions, who, v);
+      const s = supportOf(actions, who, about(v));
       if (typeof s === 'string') {
         reject(v, s);
         return [];
@@ -144,8 +147,12 @@ export function foldEntities(
       backed.set(v, s);
       return [v];
     };
-    const values = { ...((old?.kind ?? e.kind) === 'character' ? looks : {}), ...state };
-    const kept = Object.fromEntries(Object.entries(values).flatMap(([k, v = '']) => keep(v, LOOK_CHARS).map((t) => [k, t])));
+    const kind = old?.kind ?? e.kind;
+    const { holder, ...rest } = state ?? {};
+    const values = { ...(kind === 'character' ? looks : {}), ...rest, ...(kind === 'item' && { holder }) };
+    // A holder ("you") has no content word of its own: the sentence naming the item backs it.
+    const about = (k: string) => (k === 'holder' ? (v: string) => `${who.name} ${v}` : undefined);
+    const kept = Object.fromEntries(Object.entries(values).flatMap(([k, v = '']) => keep(v, LOOK_CHARS, about(k)).map((t) => [k, t])));
     const states = [...(old?.facts ?? []).filter((f) => f.kind === 'state').map((f) => f.text), ...Object.entries(kept).map(([k, v]) => `${k}: ${v}`)];
     const card = old?.description || description;
     const seen: Sighting = {

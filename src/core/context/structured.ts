@@ -44,7 +44,7 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
     return kept;
   };
 
-  const scene = renderScene(plot.scene);
+  const scene = renderScene(plot.scene, entities);
   if (scene && tokenizer.count(renderSection('scene', scene)) <= left) put('scene', renderSection('scene', scene));
 
   // The location counts as present, so the place the scene is in sends its card too.

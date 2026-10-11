@@ -50,7 +50,7 @@ export function SeeDetails({ id, image, busy, api }: Props) {
           </form>
         </details>
       )}
-      {opened && <EntityDrawer key={opened.id} entity={opened} adventure={adventure} api={api} onClose={() => setOpen(null)} />}
+      {opened && <EntityDrawer key={opened.id} entity={opened} adventure={adventure} api={api} onClose={() => setOpen(null)} onOpen={setOpen} />}
     </div>
   );
 }

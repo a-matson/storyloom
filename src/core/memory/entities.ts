@@ -2,7 +2,10 @@ import type { Action, Adventure, Entity, EntityFact, Speaker } from '../model/ty
 import { actionText, newId } from '../model/types';
 import { guessSpeakers } from '../text/speakers';
 import type { Source } from './invalidate';
-import { currentStates, isCurrentState } from './looks';
+import { currentStates, isCurrentState, rivalKey } from './looks';
+import { matchEntity, norm, words } from './names';
+
+export { knownAs, matchEntity } from './names';
 
 const isOutput = (a: Action) => a.type === 'continue' || a.type === 'start';
 
@@ -17,19 +20,6 @@ export function guessUnlabelled({ actions, entities }: Pick<Adventure, 'actions'
   if (!cast.length) return out;
   for (const a of actions) if (a.speakers === undefined && isOutput(a)) out.set(a.id, guessSpeakers(actionText(a), cast));
   return out;
-}
-
-const norm = (s: string): string =>
-  s
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .replace(/[.!?]+$/, '');
-
-/** The entity called `name`, by name or alias, ignoring case and spacing. */
-export function matchEntity(entities: readonly Entity[], name: string): Entity | undefined {
-  const n = norm(name);
-  return entities.find((e) => norm(e.name) === n || e.aliases.some((a) => norm(a) === n));
 }
 
 // What may precede a sentence's first word: its end, a quote, a colon or dash, the `]` of an action's `[n] `.
@@ -59,36 +49,6 @@ function wholeAt(passage: string, n: string): number[] {
   for (let i = n ? passage.indexOf(n) : -1; i >= 0; i = passage.indexOf(n, i + 1))
     if (!WORD.test(passage[i - 1] ?? '') && !WORD.test(passage[i + n.length] ?? '')) out.push(i);
   return out;
-}
-
-const words = (s: string): string =>
-  ` ${s
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim()} `;
-
-/** The words of a name without a leading "the", so "Ashen Order" is "The Ashen Order". */
-const bare = (name: string) => words(name).replace(/^ the /, ' ');
-const one = (hits: Entity[]) => (hits.length === 1 ? hits[0] : undefined);
-
-/**
- * The entity a name means: `matchEntity`, else the one entity whose name or alias holds it as
- * whole words ("Brannoch", "Ashen Order"), else the one whose name holds all but a leading title
- * its description opens with ("Captain Marr" for "Captain Ysolde Marr commands…", not for Aldric,
- * "…is Captain Ysolde Marr's brother"), else the one whose name opens it ("Gull Point lighthouse").
- * Two candidates: none.
- */
-export function knownAs(entities: readonly Entity[], name: string): Entity | undefined {
-  const exact = matchEntity(entities, name);
-  if (exact) return exact;
-  const n = bare(name);
-  const holds = (e: Entity, part: string) => part.trim() !== '' && [e.name, ...e.aliases].some((k) => bare(k).includes(part));
-  const [title = '', ...rest] = n.trim().split(' ');
-  return (
-    one(entities.filter((e) => holds(e, n))) ??
-    (rest.length ? one(entities.filter((e) => holds(e, ` ${rest.join(' ')} `) && words(e.description).startsWith(` ${title} `))) : undefined) ??
-    one(entities.filter((e) => n.startsWith(bare(e.name))))
-  );
 }
 
 /** The entity whose name or alias `text` contains as whole words; the longest wins, so "Lena Morrow" beats "Lena". */
@@ -188,7 +148,8 @@ export function mergeEntity(existing: Entity | undefined, incoming: Sighting, at
       addFact(`the story says ${key} is ${value}, but canon says ${old}`, { conflict: true, claim: { key, value } }, value);
       continue;
     }
-    for (const [i, f] of facts.entries()) if (isCurrentState(f) && f.key === key) facts[i] = { ...f, until: atAction };
+    const rival = rivalKey(base.kind, key);
+    for (const [i, f] of facts.entries()) if (isCurrentState(f) && (f.key === key || f.key === rival)) facts[i] = { ...f, until: atAction };
     facts.push(fact(`${key}: ${value.trim()}`, value, { kind: 'state', key, value: value.trim() }));
     current[key] = value;
   }
@@ -223,12 +184,13 @@ function unseen<T>(seen: Iterable<string>, extra: readonly T[], key: (t: T) => s
   });
 }
 
+const rel = (r: { to: string; label: string }) => `${norm(r.to)}|${norm(r.label)}`;
+
 /**
  * Fold the stored entity `from` into `into` (the player's Merge): facts, aliases, relations and
  * missing state values union in; `into` keeps its id, name, kind, description and portrait.
  */
 export function mergeEntities(into: Entity, from: Entity): Entity {
-  const rel = (r: { to: string; label: string }) => `${norm(r.to)}|${norm(r.label)}`;
   return {
     ...into,
     aliases: [...into.aliases, ...unseen([into.name, ...into.aliases].map(norm), [from.name, ...from.aliases], norm)],

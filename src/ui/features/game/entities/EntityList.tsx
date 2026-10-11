@@ -62,14 +62,14 @@ export function EntityList({ adventure, api, world }: { adventure: Adventure; ap
               </span>
               <span className="truncate text-caption font-normal text-muted-foreground">
                 {Object.entries(currentStates(e))
-                  .map(([k, v]) => `${k}: ${v}`)
+                  .map(([k, v]) => (k === 'holder' ? `held by ${v}` : `${k}: ${v}`))
                   .join(' · ') || e.description}
               </span>
             </span>
           </div>
         </button>
       ))}
-      {opened && <EntityDrawer key={opened.id} entity={opened} adventure={adventure} api={api} onClose={() => setOpen(null)} />}
+      {opened && <EntityDrawer key={opened.id} entity={opened} adventure={adventure} api={api} onClose={() => setOpen(null)} onOpen={setOpen} />}
     </>
   );
 }

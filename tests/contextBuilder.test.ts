@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildContext, chunkedStart, type ContextBuildInput } from '@core/context';
-import type { Action, Memory, StoryCard } from '@core/model/types';
+import type { Action, Entity, Memory, StoryCard } from '@core/model/types';
 import type { Tokenizer } from '@core/text/tokenizer';
 
 /** Deterministic tokenizer for tests: 1 token per 4 characters. */
@@ -235,6 +235,23 @@ describe('ordering', () => {
     expect(r.sections.filter((s) => s.cacheable).map((s) => s.kind)).toEqual(['instructions', 'plotEssentials', 'history']);
     expect(r.sections.find((s) => s.kind === 'scene')?.text).toBe('[Scene: the mill · Present: Amanda · Here: the ledger · Rain]');
     expect(r.body.startsWith('ESS\n\nRecent Story:\n')).toBe(true);
+  });
+
+  it('the scene line names confirmed items only', () => {
+    const item = (name: string, seen: number): Entity => ({
+      id: name,
+      kind: 'item',
+      name,
+      aliases: [],
+      description: '',
+      facts: [],
+      state: { holder: 'you' },
+      relations: [],
+      firstSeen: 0,
+      lastSeen: seen,
+    });
+    const r = buildContext(base({ actions, plot, entities: [item('Horn', 3), item('Rumour', 0)] }));
+    expect(r.sections.find((s) => s.kind === 'scene')?.text).toBe('[Scene: the mill · Present: Amanda · You hold: Horn · Here: the ledger · Rain]');
   });
 
   it('cache-stable history start only moves on chunk boundaries', () => {

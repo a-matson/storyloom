@@ -13,12 +13,15 @@ import { Textarea } from '@ui/components/ui/textarea';
 import { pickFile } from '@ui/transferUi';
 import { Avatar } from './Avatar';
 import { Appearances, Facts, StateRows, type Update } from './EntityDetails';
+import { Has, ItemRows } from './ItemRows';
 
 interface Props {
   entity: Entity;
   adventure: Adventure;
   api: GameApi;
   onClose: () => void;
+  /** Show another entity's card instead. */
+  onOpen: (id: string) => void;
 }
 
 const list = (s: string) =>
@@ -28,7 +31,7 @@ const list = (s: string) =>
     .filter(Boolean);
 
 /** One entity, edited in place: text fields commit on blur, an emptied state value removes it. */
-export function EntityDrawer({ entity: e, adventure, api, onClose }: Props) {
+export function EntityDrawer({ entity: e, adventure, api, onClose, onOpen }: Props) {
   const id = useId();
   const edits = entityEdits(api);
   const update: Update = (patch) => edits.update(e.id, patch);
@@ -65,6 +68,8 @@ export function EntityDrawer({ entity: e, adventure, api, onClose }: Props) {
           <SectionLabel>Also called (comma-separated)</SectionLabel>
         </label>
         <Input id={`${id}-aliases`} defaultValue={e.aliases.join(', ')} onBlur={(ev) => update({ aliases: list(ev.target.value) })} />
+        {e.kind === 'item' && <ItemRows entity={e} entities={adventure.entities} update={update} />}
+        {e.kind === 'character' && <Has entity={e} entities={adventure.entities} onOpen={onOpen} />}
         <StateRows entity={e} update={update} />
         <Appearances entity={e} adventure={adventure} onClose={onClose} edits={edits} />
         <Facts entity={e} update={update} onClose={onClose} />
