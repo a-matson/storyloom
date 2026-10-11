@@ -16,7 +16,7 @@ function recording() {
     async *complete(req) {
       requests.push(req);
       yield { text: 'The gate opens.', done: false };
-      yield { text: '', done: true, stats: { stopReason: 'stop' } };
+      yield { text: '', done: true, stats: { stopReason: 'length' } };
     },
   };
   return { provider, requests };
@@ -27,8 +27,6 @@ async function playTurns(dynamic: boolean, turns: number) {
   const adventure = createBlankAdventure('Test', 'You stand at the gate.');
   adventure.settings.model.dynamic = dynamic;
   adventure.settings.model.temperature = 0.42;
-  // The fake reply is short; keep it above the length floor so each turn is one request.
-  adventure.settings.model.responseLength = 2;
   const log = new ActionLog(adventure.actions);
   for (let i = 0; i < turns; i++) {
     for await (const _ of runTurn(adventure, log, { type: 'continue', text: '' }, { provider, tokenizer: createApproxTokenizer() })) {

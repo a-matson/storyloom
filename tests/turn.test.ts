@@ -12,7 +12,6 @@ function setup(scripts?: TurnDeps['scripts']) {
   const handler = createFakeLlama({ wordDelayMs: 0 });
   const provider = new LlamaServerProvider('demo', 'http://demo.invalid', (i, init) => handler(new Request(i, init)));
   const adventure = createBlankAdventure('Test', 'You stand at the gate.');
-  adventure.settings.model.responseLength = 2; // keeps the short fake reply above the length floor
   const deps: TurnDeps = { provider, tokenizer: createApproxTokenizer(), ...(scripts ? { scripts } : {}) };
   return { adventure, log: new ActionLog(adventure.actions), deps };
 }
