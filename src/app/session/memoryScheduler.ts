@@ -171,10 +171,11 @@ export class MemoryScheduler {
       const { runMemoryMaintenance } = await loadMemoryJobs();
       const deps = { ...(await this.host.helperModel()), embedder: await this.host.embedder() };
       const report = await runMemoryMaintenance(this.host.adventure(), { ...deps, signal: AbortSignal.any([idle, cancel.signal]), cancel: cancel.signal });
-      const { summaryUpdated, summaryFirst, cutCalls, finishedPastCut } = report;
-      // A live run reads these from the console: whether the summary keeps up and what typing cuts.
-      if (summaryUpdated || cutCalls || finishedPastCut)
-        console.info(`memory run ${JSON.stringify({ summaryUpdated, summaryFirst, cutCalls, finishedPastCut })}`);
+      const { summaryUpdated, summaryFirst, cutCalls, finishedPastCut, factsProposed, rejected } = report;
+      const entityCalls = (report.calls ?? []).filter((c) => c.job === 'entity');
+      // A live run reads these from the console: whether the summary keeps up, what typing cuts, what the entity call proposes and its guards drop.
+      if (summaryUpdated || cutCalls || finishedPastCut || entityCalls.length)
+        console.info(`memory run ${JSON.stringify({ summaryUpdated, summaryFirst, cutCalls, finishedPastCut, factsProposed, rejected, entityCalls })}`);
       if (
         report.memoriesWritten ||
         report.memoriesRegenerated ||

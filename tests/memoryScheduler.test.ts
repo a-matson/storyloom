@@ -124,7 +124,7 @@ describe('MemoryScheduler', () => {
       const held = new Promise<void>((r) => (release = r));
       const provider = fakeProvider(
         async function* (req, signal) {
-          const kind = req.prompt.includes('New here:') ? 'introduce' : req.prompt.includes(ENTITY_PROMPT) ? 'entity' : 'memory';
+          const kind = req.prompt.includes(ENTITY_PROMPT) ? 'entity' : req.prompt.includes('New here:') ? 'introduce' : 'memory';
           calls.push(kind);
           if (kind === 'introduce') await Promise.race([held, new Promise((r) => signal?.addEventListener('abort', r))]);
           if (signal?.aborted) return;

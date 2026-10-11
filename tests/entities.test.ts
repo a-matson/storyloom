@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { attributeSpeakers, entityNamedIn, matchEntity, mergeEntities, mergeEntity, namedInPassage } from '@core/memory/entities';
+import { attributeSpeakers, entityNamedIn, matchEntity, mergeEntities, mergeEntity, namedInPassage, type Sighting } from '@core/memory/entities';
 import { isConfirmed } from '@core/memory/facts';
 import { appearanceOf, currentStates, setState } from '@core/memory/looks';
 import { ENTITY_ENTRY_TOKENS, projectEntity } from '@core/memory/projection';
-import type { Action, Entity, ExtractedEntity } from '@core/model';
+import type { Action, Entity } from '@core/model';
 
-const seen = (over: Partial<ExtractedEntity> = {}): ExtractedEntity => ({ name: 'Tamsin', kind: 'character', description: '', facts: [], ...over });
+const seen = (over: Partial<Sighting> = {}): Sighting => ({ name: 'Tamsin', kind: 'character', description: '', facts: [], ...over });
 
 describe('entity merge rules', () => {
   it('creates an entity on first sighting', () => {
@@ -74,29 +74,15 @@ describe('entity merge rules', () => {
     expect(next.facts).toHaveLength(3);
   });
 
-  it('sets the free-text appearance once and never appends to it', () => {
-    const first = mergeEntity(undefined, seen({ appearance: 'Grey hair.' }), 1);
-    expect(first.appearance).toBe('Grey hair.');
-    expect(mergeEntity(first, seen(), 2).appearance).toBe('Grey hair.');
-    const next = mergeEntity(first, seen({ appearance: 'Grey hair and a patched blue coat.' }), 5);
-    expect(next.appearance).toBe('Grey hair.');
-    expect(next.facts).toEqual([]);
-    expect(mergeEntity(undefined, seen(), 1)).not.toHaveProperty('appearance');
-  });
-
-  it('reads looks from current look-key states in a fixed order, else the free text', () => {
-    const e = mergeEntity(undefined, seen({ appearance: 'Grey hair.', state: { wearing: 'a blue coat', eyes: 'green', mood: 'wary' } }), 1);
+  it('reads looks from current look-key states in a fixed order, else the legacy free text, which it never writes', () => {
+    const legacy: Entity = { ...mergeEntity(undefined, seen(), 1), appearance: 'Grey hair.' };
+    expect(appearanceOf(legacy)).toBe('Grey hair.');
+    const e = mergeEntity(legacy, seen({ state: { wearing: 'a blue coat', eyes: 'green', mood: 'wary' } }), 1);
     expect(appearanceOf(e)).toBe('eyes: green, wearing: a blue coat');
     const changed = mergeEntity(e, seen({ state: { wearing: 'a red cloak' } }), 3);
     expect(appearanceOf(changed)).toBe('eyes: green, wearing: a red cloak');
-    expect(appearanceOf(mergeEntity(undefined, seen({ appearance: 'Grey hair.' }), 1))).toBe('Grey hair.');
-  });
-
-  it('never replaces a canon appearance, but fills a missing one', () => {
-    const canon: Entity = { ...mergeEntity(undefined, seen(), 1), canon: true };
-    const filled = mergeEntity(canon, seen({ appearance: 'Grey hair.' }), 2);
-    expect(filled.appearance).toBe('Grey hair.');
-    expect(mergeEntity(filled, seen({ appearance: 'Grey hair and a patched blue coat.' }), 3).appearance).toBe('Grey hair.');
+    expect(changed.appearance).toBe('Grey hair.');
+    expect(mergeEntity(undefined, seen(), 1)).not.toHaveProperty('appearance');
   });
 
   it('matches a name or alias case-insensitively', () => {

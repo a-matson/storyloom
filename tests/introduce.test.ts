@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { mergeEntity } from '@core/memory/entities';
-import { candidateNames, introduce } from '@core/memory/introduce';
+import { candidateNames } from '@core/memory/fold';
+import { introduce } from '@core/memory/introduce';
+import { appearanceOf } from '@core/memory/looks';
 import type { Adventure } from '@core/model';
 import type { CompletionRequest } from '@core/ports';
 import { ENTITY_PROMPT, fakeProvider, memoryAdventure } from './fixtures/memoryJobs';
@@ -98,14 +100,14 @@ describe('introduce', () => {
     expect(reqs).toHaveLength(2);
   });
 
-  it('drops an appearance that says there is none', async () => {
+  it('keeps keyed looks, minus one that says there is none', async () => {
     const looks = {
       ...reply,
-      entities: [{ name: 'Tamsin', kind: 'character', description: 'A ferrywoman.', appearance: 'Not described in the passage.', facts: [] }],
+      entities: [{ name: 'Tamsin', kind: 'character', description: 'A ferrywoman.', looks: { build: 'tall', hair: 'Not described in the passage.' } }],
     };
-    const { adv, deps } = setup('You meet Tamsin at the ferry.', looks);
+    const { adv, deps } = setup('You meet Tamsin, tall and lean, at the ferry.', looks);
     await introduce(adv, deps);
-    expect(adv.entities[0]?.appearance).toBeUndefined();
+    expect(adv.entities[0] && appearanceOf(adv.entities[0])).toBe('build: tall');
   });
 
   it('reads from the last finished call when the turns between were cut', async () => {

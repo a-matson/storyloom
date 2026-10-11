@@ -2,17 +2,17 @@ import { jsonrepair } from 'jsonrepair';
 import type { Adventure, ExtractionJson, Speaker } from '../model/types';
 import { actionText } from '../model/types';
 import { hashPrompt } from '../trace';
-import { sourceIn } from './invalidate';
 import { z } from 'zod/mini';
-import { ExtractedEntity, FACT_CHARS, INTRODUCED_CHARS, IntroducedEntity, MAX_ENTITIES, MAX_INTRODUCED, ExtractionJson as Schema } from '../schema/extraction';
+import { ExtractedEntity, IntroducedEntity, MAX_ENTITIES, MAX_INTRODUCED, ExtractionJson as Schema, SpokenIn } from '../schema/extraction';
 import { actionStoryText } from '../text/formatting';
 import { parseJsonReply } from '../text/jsonReply';
 import { EXTRACT_SYSTEM, extractPrompt, introducePrompt } from '../text/prompts';
 import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
 import { helperCall } from './helperCall';
-import { attributeSpeakers, matchEntity, mergeEntity, namedInPassage } from './entities';
+import { attributeSpeakers } from './entities';
 import { EXTRACT_JSON_SCHEMA, INTRODUCE_JSON_SCHEMA } from './extractJsonSchema';
+import { foldEntities, notAName, type FoldLog } from './fold';
 import { entitiesOverdue, type MemoryRange } from './memoryBank';
 import { nextScene } from './scene';
 import type { MaintenanceDeps } from './memoryJobs';
@@ -20,33 +20,45 @@ import type { MaintenanceDeps } from './memoryJobs';
 /** The call needs no embedder, so the player's "Update from story" works without one. */
 export type ExtractDeps = Pick<MaintenanceDeps, 'provider' | 'template' | 'cancel' | 'cuts' | 'content'>;
 
-// Entities are checked one by one, so a bad one (a lowercase name without the grammar) costs only itself.
-const Envelope = z.looseObject({ entities: z.array(z.unknown()) });
+const Envelope = z.looseObject({});
+const List = z.array(z.unknown());
 
 /**
- * A reply cut at maxTokens loses `speakers` after repair (the entities before it are whole), and
- * repair closes its last entity mid-fact, so that one is dropped. Without the grammar a reply may
- * list more than `max` entities; the first ones are kept.
+ * The reply's lists, each item checked alone, so a bad one (a lowercase name without the grammar)
+ * costs only itself; without the grammar a list may run past `max`, and the first ones are kept.
+ * Repair closes a reply cut at maxTokens mid-item, so the last list it holds loses its last item.
  */
-const accepter =
-  <T, R>(item: z.ZodMiniType<T>, max: number, whole: (data: object, entities: T[]) => R | null) =>
-  (cut: boolean) =>
-  (data: unknown): R | null => {
-    const loose = Envelope.safeParse(data);
-    if (!loose.success) return null;
-    const kept = cut ? loose.data.entities.slice(0, -1) : loose.data.entities;
-    const entities = kept.slice(0, max).flatMap((e) => {
-      const one = item.safeParse(e);
-      return one.success ? [one.data] : [];
-    });
-    return whole(loose.data, entities);
+function lists(data: unknown, cut: boolean) {
+  const loose = Envelope.safeParse(data);
+  if (!loose.success) return null;
+  const d = loose.data;
+  const cutIn = cut ? Object.keys(d).findLast((k) => List.safeParse(d[k]).success) : undefined;
+  return {
+    data: d,
+    items: <T>(key: string, item: z.ZodMiniType<T>, max: number): T[] => {
+      const all = List.safeParse(d[key]).data ?? [];
+      return (key === cutIn ? all.slice(0, -1) : all).slice(0, max).flatMap((x) => {
+        const one = item.safeParse(x);
+        return one.success ? [one.data] : [];
+      });
+    },
   };
+}
 
-const extractAccepter = accepter(ExtractedEntity, MAX_ENTITIES, (data, entities) => {
-  const r = Schema.safeParse({ scene: {}, speakers: [], ...data, entities });
-  return r.success ? r.data : null;
-});
-const introduceAccepter = accepter(IntroducedEntity, MAX_INTRODUCED, (_, entities) => entities);
+const extractAccepter =
+  (cut: boolean) =>
+  (data: unknown): ExtractionJson | null => {
+    const l = lists(data, cut);
+    if (!l) return null;
+    const r = Schema.safeParse({
+      scene: {},
+      ...l.data,
+      entities: l.items('entities', ExtractedEntity, MAX_ENTITIES),
+      speakers: l.items('speakers', SpokenIn, Infinity),
+    });
+    return r.success ? r.data : null;
+  };
+const introduceAccepter = (cut: boolean) => (data: unknown) => lists(data, cut)?.items('entities', IntroducedEntity, MAX_INTRODUCED) ?? null;
 
 /** One helper call on slot 1 for a JSON reply: the grammar when the backend has one, else a `{` prefill. Null when unusable; a call typing cut throws. */
 async function helperJson<R>(
@@ -80,19 +92,21 @@ async function helperJson<R>(
   return parseJsonReply(caps.jsonSchema ? text : `{${text}`, accept(stats?.stopReason === 'length'), jsonrepair);
 }
 
+/** Keyed looks and state cost more than 300 tokens with five entities. [provisional] */
+const EXTRACT_TOKENS = 500;
+
 /**
- * The combined helper call: entities, speakers and scene for one passage
- * whose paragraphs are numbered by action index. Null when the reply is unusable or cut.
+ * The combined helper call: entities, speakers and scene for one passage whose paragraphs are
+ * numbered by action index. Null when the reply is unusable.
  */
-export function extractFromPassage(passage: string, knownNames: string[], deps: ExtractDeps): Promise<ExtractionJson | null> {
-  // 300 fits MAX_ENTITIES [measured: 2026-10-08-recall-wave2-run1.json]
-  return helperJson((g) => extractPrompt(passage, knownNames, g), EXTRACT_JSON_SCHEMA, 300, extractAccepter, deps);
+export function extractFromPassage(passage: string, knownNames: readonly string[], deps: ExtractDeps): Promise<ExtractionJson | null> {
+  return helperJson((g) => extractPrompt(passage, knownNames, g), EXTRACT_JSON_SCHEMA, EXTRACT_TOKENS, extractAccepter, deps);
 }
 
 /** Three entities of a description and a look each, with the JSON around them. [provisional] */
 const INTRODUCE_TOKENS = 200;
 
-/** The introduction call: kind, description and appearance for each new name. */
+/** The introduction call: kind, description and looks for each new name. */
 export function introduceFromPassage(passage: string, newNames: readonly string[], deps: ExtractDeps): Promise<z.infer<typeof IntroducedEntity>[] | null> {
   return helperJson((g) => introducePrompt(passage, newNames, g), INTRODUCE_JSON_SCHEMA, INTRODUCE_TOKENS, introduceAccepter, deps);
 }
@@ -103,16 +117,6 @@ export function introduceFromPassage(passage: string, newNames: readonly string[
  * [measured: 2026-10-08-recall-wave2-run1.json]
  */
 const ENTITY_BATCH = 2;
-
-/** The player and how the story addresses them, and a role the grammar let through by capitalising its article ("The creature"). */
-export const NOT_A_NAME = /^\s*(?:you|master|mistress|sir|madam|my lord|my lady)\s*$|^(the|a|an) \p{Ll}/iu;
-
-/** Not an entity: `NOT_A_NAME`, or the player's own name in a third-person adventure. */
-export const notAName = (plot: Adventure['plot'], name: string): boolean =>
-  NOT_A_NAME.test(name) || (!!plot.thirdPerson?.enabled && name.trim().toLowerCase() === plot.thirdPerson.name.trim().toLowerCase());
-
-/** A description that makes the name a kind of creature, not one of them ("Kobolds are a race of…"). */
-const A_KIND = /^(?:[^,.]* (?:is|are) )?(?:a|an|the) (?:species|race|kind|type) of\b/i;
 
 /**
  * One combined call over the oldest `ENTITY_BATCH` memories not yet extracted, as one passage.
@@ -137,7 +141,7 @@ export async function catchUpEntities(adventure: Adventure, deps: MaintenanceDep
   if (scene !== undefined && sceneUpdated)
     adventure.plot = { ...adventure.plot, scene: from ? { ...scene, sourceId: from.id, sourceHash: hashPrompt(actionText(from)) } : scene };
   adventure.scriptState = { ...adventure.scriptState, __entitiesAt: last.toAction };
-  return { touched: r.touched, speakers: r.speakers, sceneUpdated };
+  return { touched: r.touched, speakers: r.speakers, sceneUpdated, ...(r.log && { log: r.log }) };
 }
 
 export interface EntityUpdate {
@@ -147,22 +151,8 @@ export interface EntityUpdate {
   speakers: Map<string, Speaker[]>;
   /** The helper's reply, when there was a usable one. */
   reply?: ExtractionJson;
-}
-
-/** An appearance that says there is none: the 12B fills the field anyway ("Not described in the passage"). [measured: 2026-10-09-live-play-m11-2.json] */
-const NO_LOOKS = /\bnot (?:described|mentioned|stated|shown|given|specified)\b|^(?:unknown|none(?: specified| given)?|n\/a)\.?$/i;
-
-/** The shortest grammar cap: a value this long with no closing punctuation was cut by it. */
-const CUT_AT = Math.min(FACT_CHARS, INTRODUCED_CHARS);
-
-/** A value the grammar's cap cut, back to its last sentence end, else its last comma; `''` when nothing whole is left. */
-export function uncut(text: string): string {
-  const t = text.trim();
-  if (t.length < CUT_AT || /[.!?]["”’)]?$/u.test(t)) return t;
-  const end = Math.max(...['. ', '! ', '? '].map((p) => t.lastIndexOf(p)));
-  if (end > 0) return t.slice(0, end + 1);
-  const comma = t.lastIndexOf(',');
-  return comma > 0 ? t.slice(0, comma) : '';
+  /** What the fold proposed and dropped, for a batch call that had a reply. */
+  log?: FoldLog;
 }
 
 /** The range's actions, numbered by index, as the helper reads them. */
@@ -175,35 +165,16 @@ export function passageOf(adventure: Adventure, range: MemoryRange): string {
     .join('\n');
 }
 
-/** Folds the helper's entities read from `range` into `adventure.entities`; a new one only when the passage names it. Returns how many changed. */
-export function foldEntities(adventure: Adventure, incoming: readonly z.infer<typeof ExtractedEntity>[], passage: string, range: MemoryRange): number {
-  let entities = adventure.entities;
-  const source = sourceIn(adventure.actions, range);
-  for (const { appearance, ...cut } of incoming) {
-    const looks = uncut(appearance ?? '');
-    const rest = { ...cut, description: uncut(cut.description), facts: cut.facts.map(uncut).filter(Boolean) };
-    if (notAName(adventure.plot, rest.name)) continue;
-    const old = matchEntity(entities, rest.name);
-    if (!old && (!namedInPassage(rest.name, passage) || A_KIND.test(rest.description))) continue;
-    const merged = mergeEntity(old, looks && !NO_LOOKS.test(looks) ? { ...rest, appearance: looks } : rest, range.toAction - 1, source);
-    entities = old ? entities.map((e) => (e === old ? merged : e)) : [...entities, merged];
-  }
-  const touched = entities.filter((e, i) => e !== adventure.entities[i]).length;
-  adventure.entities = entities;
-  return touched;
-}
-
 /** Extract from the range's actions and fold the result into `adventure.entities`. */
 export async function updateEntities(adventure: Adventure, range: MemoryRange, deps: ExtractDeps): Promise<EntityUpdate> {
   const passage = passageOf(adventure, range);
-  const reply = passage
-    ? await extractFromPassage(
-        passage,
-        adventure.entities.map((e) => e.name),
-        deps,
-      )
-    : null;
+  const known = adventure.entities.map((e) => e.name);
+  const reply = passage ? await extractFromPassage(passage, known, deps) : null;
   if (!reply) return { touched: 0, speakers: new Map() };
-  const touched = foldEntities(adventure, reply.entities, passage, range);
-  return { touched, speakers: attributeSpeakers(adventure.actions, reply.speakers, adventure.entities), reply };
+  const log: FoldLog = { proposed: 0, rejected: [] };
+  const touched = foldEntities(adventure, reply.entities, passage, range, { twice: true, log });
+  // Calls are sequential: the last one logged is this one.
+  const call = deps.cuts?.calls?.at(-1);
+  if (call?.job === 'entity') call.factsProposed = log.proposed;
+  return { touched, speakers: attributeSpeakers(adventure.actions, reply.speakers, adventure.entities), reply, log };
 }

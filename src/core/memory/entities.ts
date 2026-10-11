@@ -1,4 +1,4 @@
-import type { Action, Adventure, Entity, EntityFact, ExtractedEntity, Speaker } from '../model/types';
+import type { Action, Adventure, Entity, EntityFact, Speaker } from '../model/types';
 import { actionText, newId } from '../model/types';
 import { guessSpeakers } from '../text/speakers';
 import type { Source } from './invalidate';
@@ -67,10 +67,32 @@ const words = (s: string): string =>
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .trim()} `;
 
+/** The words of a name without a leading "the", so "Ashen Order" is "The Ashen Order". */
+const bare = (name: string) => words(name).replace(/^ the /, ' ');
+const one = (hits: Entity[]) => (hits.length === 1 ? hits[0] : undefined);
+
+/**
+ * The entity a name means: `matchEntity`, else the one entity whose name or alias holds it as
+ * whole words ("Brannoch", "Ashen Order"), else the one whose name holds all but a leading title
+ * its description opens with ("Captain Marr" for "Captain Ysolde Marr commands…", not for Aldric,
+ * "…is Captain Ysolde Marr's brother"). Two candidates: none.
+ */
+export function knownAs(entities: readonly Entity[], name: string): Entity | undefined {
+  const exact = matchEntity(entities, name);
+  if (exact) return exact;
+  const n = bare(name);
+  const holds = (e: Entity, part: string) => part.trim() !== '' && [e.name, ...e.aliases].some((k) => bare(k).includes(part));
+  const [title = '', ...rest] = n.trim().split(' ');
+  return (
+    one(entities.filter((e) => holds(e, n))) ??
+    (rest.length ? one(entities.filter((e) => holds(e, ` ${rest.join(' ')} `) && words(e.description).startsWith(` ${title} `))) : undefined)
+  );
+}
+
 /** The entity whose name or alias `text` contains as whole words; the longest wins, so "Lena Morrow" beats "Lena". */
-export function entityNamedIn(entities: readonly Entity[], text: string): Entity | undefined {
+export function entityNamedIn<E extends Pick<Entity, 'name' | 'aliases'>>(entities: readonly E[], text: string): E | undefined {
   const t = words(text);
-  let best: { e: Entity; len: number } | undefined;
+  let best: { e: E; len: number } | undefined;
   for (const e of entities)
     for (const n of [e.name, ...e.aliases]) {
       const k = words(n);
@@ -103,17 +125,27 @@ export function attributeSpeakers(
 }
 
 /** Whether `inner` is `outer` or a run of its whole words. */
-const within = (inner: string, outer: string) => words(outer).includes(words(inner));
+export const within = (inner: string, outer: string) => words(outer).includes(words(inner));
+
+/** What one reply says about one entity: trait facts and state values (looks included). */
+export interface Sighting {
+  name: string;
+  kind: Entity['kind'];
+  aliases?: string[] | undefined;
+  description: string;
+  facts: string[];
+  state?: Record<string, string> | undefined;
+}
 
 /**
  * Fold one sighting into an entity (or create it). Facts append, deduped by text and by
  * containment (a model fact the new one contains is replaced by it); aliases union; a `state`
  * value becomes a state fact that ends (`until`) the key's current one. The player's and pinned
- * facts, the `state` map and a non-empty description or appearance are never replaced. Canon: a
- * canon entity's description is never set, and a change to a `canonKeys` value is recorded as a
- * conflict fact instead. `source` stamps new facts and a set appearance with the action they came from.
+ * facts, the `state` map and a non-empty description are never replaced. Canon: a canon entity's
+ * description is never set, and a change to a `canonKeys` value is recorded as a conflict fact
+ * instead. `source` stamps new facts with the action they came from.
  */
-export function mergeEntity(existing: Entity | undefined, incoming: ExtractedEntity, atAction: number, source?: (text: string) => Source | undefined): Entity {
+export function mergeEntity(existing: Entity | undefined, incoming: Sighting, atAction: number, source?: (text: string) => Source | undefined): Entity {
   const base: Entity = existing ?? {
     id: newId('ent_'),
     kind: incoming.kind,
@@ -168,28 +200,12 @@ export function mergeEntity(existing: Entity | undefined, incoming: ExtractedEnt
     aliases.push(a.trim());
   }
 
-  const relKey = (r: { to: string; label: string }) => `${norm(r.to)}|${norm(r.label)}`;
-  const rels = new Set(base.relations.map(relKey));
-  const relations = [...base.relations];
-  for (const r of incoming.relations ?? []) {
-    if (rels.has(relKey(r))) continue;
-    rels.add(relKey(r));
-    relations.push(r);
-  }
-
-  // Set once: appending fuller looks over sparse ones ran the See prompt long and kept stale clothes. Keyed looks come as state.
-  const looks = incoming.appearance?.trim() ?? '';
-  const setLooks = looks !== '' && !base.appearance;
-  const appearanceFrom = setLooks ? source?.(looks) : base.appearanceFrom;
-
   return {
     ...base,
     aliases,
-    description: base.canon ? base.description : base.description || (incoming.description ?? '').trim(),
-    ...(setLooks && { appearance: looks }),
-    ...(appearanceFrom && { appearanceFrom }),
+    // Frozen once set: a later one is a fact.
+    description: base.canon ? base.description : base.description || incoming.description.trim(),
     facts,
-    relations,
     lastSeen: Math.max(base.lastSeen, atAction),
   };
 }

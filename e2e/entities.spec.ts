@@ -98,7 +98,7 @@ test('a character the opening names has a card before the first turn', async ({ 
     const { prompt } = route.request().postDataJSON() as { prompt: string };
     const card = {
       scene: {},
-      entities: [{ name: 'Tamsin', kind: 'character', description: 'A ferrywoman.', appearance: 'Grey braid.', facts: [] }],
+      entities: [{ name: 'Tamsin', kind: 'character', description: 'A ferrywoman.', looks: { hair: 'grey braid' } }],
       speakers: [],
     };
     const content = prompt.includes('New here: Tamsin') && ++introductions ? JSON.stringify(card) : 'Merav found the map.';

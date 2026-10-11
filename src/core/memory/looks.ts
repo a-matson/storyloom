@@ -3,6 +3,9 @@ import type { Entity, EntityFact } from '../model/types';
 /** State keys that say how a character looks, in the order their tags are written. [provisional] */
 export const LOOK_KEYS = ['species', 'build', 'eyes', 'hair', 'horns', 'scales', 'marks', 'wearing'] as const;
 
+/** The other keys a model state change may set. [provisional] */
+export const STATE_KEYS = ['location', 'condition', 'posture', 'mood', 'role'] as const;
+
 export type CurrentState = EntityFact & { kind: 'state'; key: string; value: string; until?: undefined };
 
 export const isCurrentState = (f: EntityFact): f is CurrentState => f.kind === 'state' && f.key !== undefined && f.value !== undefined && f.until === undefined;

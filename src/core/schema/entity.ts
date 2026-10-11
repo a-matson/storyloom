@@ -4,15 +4,6 @@ export const EntityKind = z.enum(['character', 'place', 'item', 'faction']);
 
 const count = z.int().check(z.gte(0));
 
-/**
- * Where a derived value came from: the action's id and either the supporting words (`evidence`) or a
- * hash of the action's text. An edit that removes the words (or changes the text) drops the value.
- */
-export const Provenance = z.object({
-  sourceId: z.string(),
-  sourceHash: z.optional(z.string()),
-  evidence: z.optional(z.string()),
-});
 export const Relation = z.object({ to: z.string(), label: z.string() });
 
 export const EntityFact = z.object({
@@ -26,6 +17,7 @@ export const EntityFact = z.object({
   conflict: z.optional(z.boolean()),
   /** On a conflict: the state value the story claimed, so "Accept the story" can apply it. */
   claim: z.optional(z.object({ key: z.string(), value: z.string() })),
+  /** The action it came from: an edit that removes `evidence` (else changes the text, `sourceHash`) drops it. */
   sourceId: z.optional(z.string()),
   sourceHash: z.optional(z.string()),
   evidence: z.optional(z.string()),
@@ -48,8 +40,6 @@ export const Entity = z.object({
   description: z.string(),
   /** Legacy free-text looks, set once; current look facts (`LOOK_KEYS`) take its place in `appearanceOf`. */
   appearance: z.optional(z.string()),
-  /** The action that set `appearance`. */
-  appearanceFrom: z.optional(Provenance),
   facts: z.array(EntityFact),
   /** Values the player set (and legacy model ones); a current state fact of the same key overrides it (`currentStates`). */
   state: z.record(z.string(), z.string()),
