@@ -11,6 +11,7 @@ import {
   memoryOverdue,
   rankMemories,
   summaryDue,
+  summaryOverdue,
 } from '@core/memory/memoryBank';
 import { bm25, buildIndex, tokenise } from '@core/memory/lexical';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
@@ -59,6 +60,7 @@ describe('memory scheduling', () => {
     expect(summaryDue(15, 0)).toBe(true);
     expect(summaryDue(29, 15)).toBe(false);
     expect(summaryDue(30, 15)).toBe(true);
+    expect([summaryOverdue(29, 0), summaryOverdue(30, 0), summaryOverdue(44, 15), summaryOverdue(45, 15)]).toEqual([false, true, false, true]);
   });
 
   it('counts down to the next summary and the next memory', () => {

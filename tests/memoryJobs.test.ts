@@ -50,6 +50,7 @@ describe('memory maintenance', () => {
   it('lets a streaming memory call finish when aborted, then defers the rest and the summary', async () => {
     const adv = adventure(30);
     adv.settings.memory.autoSummary = true;
+    adv.scriptState = { ...adv.scriptState, __summaryAt: 15 };
     const { deps, calls } = fakeDeps(adv, { abortAfter: 1 });
     const report = await runMemoryMaintenance(adv, deps);
     expect(calls).toHaveLength(1);
@@ -59,11 +60,53 @@ describe('memory maintenance', () => {
   it('cuts a streaming memory call when cancelled and keeps nothing from it', async () => {
     const adv = adventure(30);
     adv.settings.memory.autoSummary = true;
+    adv.scriptState = { ...adv.scriptState, __summaryAt: 15 };
     const { deps, calls } = fakeDeps(adv, { cancelAfter: 1 });
     const report = await runMemoryMaintenance(adv, deps);
     expect(calls).toHaveLength(1);
-    expect(report).toMatchObject({ memoriesWritten: 0, summaryUpdated: false });
+    expect(report).toMatchObject({ memoriesWritten: 0, summaryUpdated: false, cutCalls: 1, finishedPastCut: 0 });
     expect(adv.memories).toHaveLength(0);
+  });
+
+  it('keeps a memory call typed over past half its tokens, and cuts one typed over at a fifth', async () => {
+    const run = async (cutAt: number) => {
+      const adv = adventure(12);
+      const cancel = new AbortController();
+      const provider = fakeProvider(async function* (req) {
+        for (let i = 1; i <= 10; i++) {
+          if (i === cutAt) cancel.abort();
+          yield { text: i === 1 ? 'Mira found the map.' : '', done: false, stats: { generatedTokens: (req.maxTokens * i) / 10 } };
+        }
+        yield { text: '', done: true };
+      });
+      const report = await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider, signal: cancel.signal, cancel: cancel.signal });
+      return { report, memories: adv.memories };
+    };
+    const late = await run(7);
+    expect(late.report).toMatchObject({ memoriesWritten: 1, cutCalls: 0, finishedPastCut: 1 });
+    expect(late.memories[0]?.text).toBe('Mira found the map.');
+    const early = await run(3);
+    expect(early.report).toMatchObject({ memoriesWritten: 0, cutCalls: 1, finishedPastCut: 0 });
+    expect(early.memories).toHaveLength(0);
+  });
+
+  it('runs an overdue summary before the memories, and a merely due one after them', async () => {
+    const order = async (summaryAt: number) => {
+      const adv = adventure(30);
+      adv.settings.memory.autoSummary = true;
+      adv.scriptState = { ...adv.scriptState, __summaryAt: summaryAt };
+      const { deps, calls } = fakeDeps(adv);
+      const report = await runMemoryMaintenance(adv, deps);
+      return { report, kinds: calls.map((c) => (c.includes('Write the updated summary') ? 'summary' : c.includes(ENTITY_PROMPT) ? 'entity' : 'memory')) };
+    };
+    const overdue = await order(0);
+    expect(overdue.report).toMatchObject({ summaryFirst: true, summaryUpdated: true });
+    expect(overdue.kinds[0]).toBe('summary');
+    expect(overdue.kinds.filter((k) => k === 'summary')).toHaveLength(1);
+    const due = await order(15);
+    expect(due.report).toMatchObject({ summaryFirst: false, summaryUpdated: true });
+    expect(due.kinds.at(-1)).toBe('summary');
+    expect(due.kinds[0]).toBe('memory');
   });
 
   it('never summarises an evicted range twice on a long adventure', async () => {

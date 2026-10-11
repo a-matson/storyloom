@@ -52,7 +52,6 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps): Promis
   const passage = passageOf(adventure, range);
   // ponytail: names past the grammar's cap wait for the batch call; raise MAX_INTRODUCED if openings name more.
   const reply = names.length ? await introduceFromPassage(passage, names.slice(0, MAX_INTRODUCED), deps) : null;
-  if (deps.cancel?.aborted) return none();
   adventure.scriptState = { ...adventure.scriptState, __introducedAt: n, __introducedHash: hash };
   if (!reply) return none();
   // No speakers: the short reply leaves them to the client guess and the batch call.

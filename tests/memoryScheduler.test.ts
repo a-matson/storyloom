@@ -177,6 +177,27 @@ describe('MemoryScheduler', () => {
     });
   });
 
+  it('keeps the memory of a call typing hits past half its tokens', async () => {
+    const adv = memoryAdventure(12);
+    let release = () => {};
+    const held = new Promise<void>((r) => (release = r));
+    let streamed = false;
+    const provider = fakeProvider(async function* (req) {
+      yield { text: 'Mira found the map.', done: false, stats: { generatedTokens: req.maxTokens / 2 } };
+      streamed = true;
+      await held;
+      yield { text: '', done: true };
+    });
+    const changed = vi.fn<() => void>();
+    const scheduler = new MemoryScheduler({ ...host(adv, provider), changed });
+    scheduler.start(new AbortController().signal);
+    await vi.waitFor(() => expect(streamed).toBe(true));
+    scheduler.setTyping(true);
+    release();
+    await vi.waitFor(() => expect(changed).toHaveBeenCalled());
+    expect(adv.memories.map((m) => m.text)).toEqual(['Mira found the map.']);
+  });
+
   // An import starts with no memories, so one idle run writes them all; the entity calls must not wait a turn per batch.
   it('drains an entity backlog within one idle period', async () => {
     const adv = memoryAdventure(80);

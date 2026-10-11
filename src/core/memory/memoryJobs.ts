@@ -1,14 +1,14 @@
 import type { Action, Adventure, Memory, Speaker } from '../model/types';
-import { actionText } from '../model/types';
-import { createMemory, currentRange, dueMemoryRanges, evictToSize, isPlayerAction, MEMORY_SPAN, summaryDue, type MemoryRange } from './memoryBank';
-import { MEMORY_SYSTEM, SUMMARY_SYSTEM, memoryPrompt, sentenceGrammar, summaryPrompt } from '../text/prompts';
+import { createMemory, currentRange, dueMemoryRanges, evictToSize, isPlayerAction, summaryOverdue, type MemoryRange } from './memoryBank';
+import { MEMORY_SYSTEM, memoryPrompt } from '../text/prompts';
 import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
-import { collect, type Provider } from '../ports/provider';
+import type { Provider } from '../ports/provider';
 import type { Embedder } from '../ports/embedder';
 import { joinStory, trimUnfinishedSentence } from '../text/formatting';
-import { trackJob } from '../trace';
 import { catchUpEntities } from './extract';
+import { helperCall, sentencesOnly, type CutCounts } from './helperCall';
+import { refreshSummary } from './summary';
 
 // For the player's entity edits, which load with these jobs.
 export { entityNamedIn, guessUnlabelled, mergeEntities } from './entities';
@@ -35,11 +35,12 @@ export interface MaintenanceDeps {
   content?: string | undefined;
   /** Stops before the next model call; a call already streaming finishes so its tokens are not wasted. */
   signal?: AbortSignal;
-  /** Cuts a streaming call too (the player started typing); its partial reply is dropped. Pass it inside `signal` as well. */
+  /** Cuts a streaming call too (the player started typing) until it is half done; a cut reply is dropped. Pass it inside `signal` as well. */
   cancel?: AbortSignal;
+  cuts?: CutCounts;
 }
 
-export interface MaintenanceReport {
+export interface MaintenanceReport extends CutCounts {
   memoriesWritten: number;
   memoriesForgotten: number;
   memoriesRegenerated: number;
@@ -54,6 +55,8 @@ export interface MaintenanceReport {
   /** `plot.scene` moved, from the same helper call. */
   sceneUpdated: boolean;
   summaryUpdated: boolean;
+  /** The summary was overdue and ran before the memories. */
+  summaryFirst: boolean;
 }
 
 /** A memory's text needs no embedder. */
@@ -61,9 +64,6 @@ type TextDeps = Omit<MaintenanceDeps, 'embedder'>;
 
 /** Stale memories rewritten per idle run, so a big edit does not hold slot 1. [provisional] */
 const REGENERATE_BATCH = 2;
-
-/** Actions the summary reads verbatim as its "most recent passage". */
-const RECENT_ACTIONS = MEMORY_SPAN;
 
 /** Memories re-embedded per idle run after an embedder change. [provisional] */
 const REEMBED_BATCH = 32;
@@ -92,22 +92,18 @@ export function isMemoryLike(text: string): boolean {
   return quoted <= text.length * MAX_QUOTED;
 }
 
-/** Grammar for at most `max` sentences when the backend supports one; the trim and validator cover the rest. */
-async function sentencesOnly(deps: TextDeps, max: number): Promise<string | undefined> {
-  return (await deps.provider.capabilities()).grammar ? sentenceGrammar(max) : undefined;
-}
-
 async function summarise(passage: string, deps: TextDeps): Promise<string> {
   const prompt = renderTemplate(deps.template, withContent(MEMORY_SYSTEM, deps.content), memoryPrompt(passage));
   // A memory is 1-4 sentences, so a player-stated trait fits beside the events; the extra stops end a reply that drifts into the next turn.
   const stop = [...new Set([...prompt.stop, '\n>', '<|im_start|>'])];
-  const grammar = await sentencesOnly(deps, 4);
-  const { text, stats } = await trackJob('memory', () =>
-    collect(
-      deps.provider.complete({ prompt: prompt.prompt, maxTokens: 120, temperature: 0.3, topP: 0.9, stop, cachePrompt: false, slotId: 1, grammar }, deps.cancel),
-    ),
+  const grammar = await sentencesOnly(deps.provider, 4);
+  const { text, stats } = await helperCall(
+    'memory',
+    120,
+    (signal) =>
+      deps.provider.complete({ prompt: prompt.prompt, maxTokens: 120, temperature: 0.3, topP: 0.9, stop, cachePrompt: false, slotId: 1, grammar }, signal),
+    deps,
   );
-  if (deps.cancel?.aborted) return '';
   return trimUnfinishedSentence(text, stats?.stopReason).trim();
 }
 
@@ -169,10 +165,25 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
     speakers: new Map(),
     sceneUpdated: false,
     summaryUpdated: false,
+    summaryFirst: false,
+    cutCalls: 0,
+    finishedPastCut: 0,
   };
+  try {
+    await maintain(adventure, { ...deps, cuts: report }, report);
+  } catch (e) {
+    // Typing cut a call: the run ends there, and what it finished stays.
+    if (!deps.cancel?.aborted) throw e;
+  }
+  return report;
+}
+
+async function maintain(adventure: Adventure, deps: MaintenanceDeps, report: MaintenanceReport): Promise<void> {
   const settings = adventure.settings.memory;
   const actions = adventure.actions;
-  const count = actions.length;
+  // Memory jobs filled every idle slot and the summary never ran (none in 44 actions); the gap is bridged by its recent passage.
+  report.summaryFirst = settings.autoSummary && summaryOverdue(actions.length, adventure.scriptState.__summaryAt ?? 0);
+  if (report.summaryFirst) report.summaryUpdated = await refreshSummary(adventure, deps);
 
   if (settings.memoryBank || settings.autoSummary) {
     // Memories feed both features (auto-summary uses them to bridge gaps).
@@ -192,41 +203,5 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
     report.memoriesForgotten = evicted.forgotten;
   }
 
-  if (settings.autoSummary) {
-    const lastAt = adventure.scriptState.__summaryAt ?? 0;
-    if (summaryDue(count, lastAt) && !deps.signal?.aborted) {
-      // Everything after the previous refresh's recent passage, so no action falls between two summaries.
-      const since = adventure.memories.filter((m) => !m.stale && m.toAction > lastAt - RECENT_ACTIONS).map((m) => m.text);
-      const recent = actions
-        .slice(Math.max(0, count - RECENT_ACTIONS))
-        .map(actionText)
-        .join('\n\n');
-      const prompt = renderTemplate(deps.template, withContent(SUMMARY_SYSTEM, deps.content), summaryPrompt(adventure.plot.storySummary ?? '', since, recent));
-      const grammar = await sentencesOnly(deps, 8);
-      const { text: raw, stats } = await trackJob('summary', () =>
-        collect(
-          deps.provider.complete(
-            {
-              prompt: prompt.prompt,
-              maxTokens: 400,
-              temperature: 0.3,
-              topP: 0.9,
-              stop: prompt.stop,
-              cachePrompt: false,
-              slotId: 1,
-              grammar,
-            },
-            deps.cancel,
-          ),
-        ),
-      );
-      const text = trimUnfinishedSentence(raw, stats?.stopReason).trim();
-      if (text && !deps.cancel?.aborted) {
-        adventure.plot = { ...adventure.plot, storySummary: text };
-        adventure.scriptState = { ...adventure.scriptState, __summaryAt: count };
-        report.summaryUpdated = true;
-      }
-    }
-  }
-  return report;
+  if (settings.autoSummary && !report.summaryFirst) report.summaryUpdated = await refreshSummary(adventure, deps);
 }

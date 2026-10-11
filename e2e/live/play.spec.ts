@@ -3,6 +3,7 @@ import { z } from 'zod/mini';
 import * as S from '@core/schema';
 import { writeMeasurement } from '../../bench/env';
 import { watchIntroductions } from '../../bench/introductions';
+import { watchMemoryRuns } from '../../bench/memoryRuns';
 import { portraits } from '../../bench/portraits';
 
 // `pnpm measure live <url>`: plays the real app against a real llama-server; never runs in CI.
@@ -161,6 +162,7 @@ test('scripted live play', async ({ page }) => {
   const introductions = await watchIntroductions(page, UTILITY ?? URL ?? '');
   const portraitLog: string[] = [];
   page.on('console', (m) => void (/portrait/i.test(m.text()) && portraitLog.push(m.text())));
+  const memoryRuns = watchMemoryRuns(page);
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Fantasy' }).click();
   await expect(page).toHaveURL(/#\/adventure\//);
@@ -245,6 +247,7 @@ test('scripted live play', async ({ page }) => {
     turns,
     stopReasons,
     stalls: turns.filter((t) => t.errorKind === 'stalled').length,
+    ...memoryRuns,
     length,
     // Rows keep embeddings as Float32Array; the output does not need them.
     memories: z
