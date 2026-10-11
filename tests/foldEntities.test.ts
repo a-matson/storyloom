@@ -111,14 +111,47 @@ describe('foldEntities', () => {
   it('merges a new name that is part of a known one, or a known one with a title its description has', () => {
     const adv = story(['Brannoch waves, the Ashen Order rides past, and Captain Marr nods.']);
     const known = (name: string, description = '') => mergeEntity(undefined, { name, kind: 'character', description, facts: [] }, 0);
-    adv.entities = [known('Old Brannoch'), known('The Ashen Order'), known('Ysolde Marr', 'Captain Ysolde Marr commands the watch.'), known('Aldric Marr')];
-    const out = fold(adv, [seen('Brannoch'), seen('Ashen Order'), seen('Captain Marr')]);
+    adv.entities = [
+      known('Old Brannoch'),
+      known('The Ashen Order'),
+      known('Ysolde Marr', 'Captain Ysolde Marr commands the watch.'),
+      known('Aldric Marr'),
+      known('Gull Point'),
+    ];
+    const out = fold(adv, [seen('Brannoch'), seen('Ashen Order'), seen('Captain Marr'), seen('Gull Point lighthouse')]);
     expect(out.map((e) => [e.name, e.aliases])).toEqual([
       ['Old Brannoch', ['Brannoch']],
       ['The Ashen Order', ['Ashen Order']],
       ['Ysolde Marr', ['Captain Marr']],
       ['Aldric Marr', []],
+      ['Gull Point', ['Gull Point lighthouse']],
     ]);
+  });
+
+  it('holds a name the batch call saw once and folds its facts, from its own range, when the second mention makes the card', () => {
+    const adv = story(['You meet Oriel Vance. He has a long scar on his left cheek.', 'Rain falls.', 'Then Oriel Vance draws his sword.']);
+    const log: FoldLog = { proposed: 0, rejected: [] };
+    const batch = (incoming: Incoming[], fromAction: number, toAction: number) =>
+      foldEntities(
+        adv,
+        incoming,
+        adv.actions
+          .slice(fromAction, toAction)
+          .map((a) => a.versions[0])
+          .join('\n'),
+        { fromAction, toAction },
+        { twice: true, log },
+      );
+    batch([seen('Oriel Vance', { facts: ['He has a long scar on his left cheek.'] })], 0, 2);
+    expect(adv.entities).toEqual([]);
+    expect(adv.scriptState.__pending?.map((p) => [p.entity.name, p.range])).toEqual([['Oriel Vance', { fromAction: 0, toAction: 2 }]]);
+    expect(batch([seen('Oriel Vance', { facts: ['He draws his sword.'] })], 2, 3)).toBe(2);
+    expect(adv.entities[0]?.facts.map((f) => [f.text, f.sourceId])).toEqual([
+      ['He draws his sword.', 'a2'],
+      ['He has a long scar on his left cheek.', 'a0'],
+    ]);
+    expect(adv.scriptState.__pending).toEqual([]);
+    expect(log).toEqual({ proposed: 2, rejected: [] });
   });
 });
 

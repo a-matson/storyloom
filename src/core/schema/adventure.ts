@@ -1,7 +1,7 @@
 import { z } from 'zod/mini';
 import { Action } from './action';
 import { StoryCard } from './card';
-import { Entity } from './entity';
+import { Entity, EntityKind } from './entity';
 import { Memory } from './memory';
 import { AdventureSettings } from './settings';
 
@@ -49,6 +49,22 @@ export const ScenarioScripts = z.object({ library: z.string(), input: z.string()
 
 const Placeholder = z.object({ question: z.string(), answer: z.string() });
 
+const Keyed = z.optional(z.record(z.string(), z.optional(z.string())));
+
+/** A reply entity as it arrived, with the range it was read from. Loose: the grammar's caps are not a stored record's. */
+const HeldEntity = z.object({
+  entity: z.object({
+    name: z.string(),
+    kind: EntityKind,
+    description: z.string(),
+    aliases: z.optional(z.array(z.string())),
+    facts: z.array(z.string()),
+    looks: Keyed,
+    state: Keyed,
+  }),
+  range: z.object({ fromAction: z.number(), toAction: z.number() }),
+});
+
 /** Persistent object scripts read/write (`state`); scripts may add any keys, so unknown keys are kept. */
 export const ScriptState = z.looseObject({
   memory: z.optional(ScriptMemory),
@@ -63,6 +79,8 @@ export const ScriptState = z.looseObject({
   __introducedHash: z.optional(z.string()),
   /** An action the summary read was edited or erased: rebuild it from the memories. */
   __summaryDirty: z.optional(z.boolean()),
+  /** Entities the batch call named once, held until a second mention makes their card (memory jobs). */
+  __pending: z.optional(z.array(HeldEntity)),
 });
 
 export const CardGeneratorSettings = z.object({
