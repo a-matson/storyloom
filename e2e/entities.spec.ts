@@ -200,7 +200,18 @@ test("the story's current state shows as a row, and the player's edit ends it", 
 });
 
 test('a fact goes when the action it came from is edited', async ({ page }) => {
-  const fact = { id: 'f9', text: 'Corrow sells salt.', fromAction: 1, source: 'memory' as const, sourceId: 'action:1', evidence: 'bends 1' };
+  // A state: the cast sends a present character's states, not model traits.
+  const fact = {
+    id: 'f9',
+    text: 'role: salt seller',
+    kind: 'state' as const,
+    key: 'role',
+    value: 'salt seller',
+    fromAction: 1,
+    source: 'memory' as const,
+    sourceId: 'action:1',
+    evidence: 'bends 1',
+  };
   await openSeededAdventure(page, 3, undefined, { scene: { present: ['Corrow'] }, entities: [{ id: 'ent_corrow', name: 'Corrow', facts: [fact] }] });
   await page.getByRole('tab', { name: 'Gameplay' }).click();
   await page.getByRole('switch', { name: 'Send entity facts and cards' }).click();
@@ -212,7 +223,7 @@ test('a fact goes when the action it came from is edited', async ({ page }) => {
     await dialog.getByRole('button', { name: 'Raw prompt' }).click();
     return dialog;
   };
-  await expect((await prompt()).getByText(/Corrow sells salt/)).toBeVisible();
+  await expect((await prompt()).getByText(/Corrow: role: salt seller/)).toBeVisible();
   await page.keyboard.press('Escape');
 
   const older = page.getByText('The road bends 1.');
@@ -226,9 +237,9 @@ test('a fact goes when the action it came from is edited', async ({ page }) => {
   await page.getByRole('tab', { name: 'Adventure' }).click();
   await page.getByRole('button', { name: /^Characters/ }).click();
   await page.getByRole('button', { name: 'Open Corrow' }).click();
-  await expect(page.getByRole('dialog', { name: 'Corrow' }).getByText('Corrow sells salt.')).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: 'Corrow' }).getByText(/salt seller/)).toHaveCount(0);
   await page.keyboard.press('Escape');
-  await expect((await prompt()).getByText(/Corrow sells salt/)).toHaveCount(0);
+  await expect((await prompt()).getByText(/salt seller/)).toHaveCount(0);
 });
 
 test('no portraits beside dialogue when the setting is off', async ({ page }) => {
