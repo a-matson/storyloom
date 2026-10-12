@@ -1,5 +1,6 @@
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import { correct } from '@app/session/correct';
+import { addRule } from '@app/session/rules';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
 import { StatusDot } from '@ui/components/ui/status-dot';
@@ -23,7 +24,7 @@ const chip =
 
 /**
  * Take-a-turn row. Enter sends, Ctrl/⌘+Enter continues, Ctrl/⌘+R retries,
- * Ctrl/⌘+Z undoes (input empty); `/do /say /story /see` switch mode, `/correct …` pins a fact.
+ * Ctrl/⌘+Z undoes (input empty); `/do /say /story /see` switch mode, `/correct …` pins a fact, `/rule …` adds a rule.
  */
 export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retryReady = false }: Props) {
   const [mode, setMode] = useState<Mode>('do');
@@ -35,9 +36,9 @@ export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retry
   const send = () => {
     if (busy) return;
     const slash = parseSlash(text);
-    if (slash?.kind === 'correct') {
+    if (slash && slash.kind !== 'mode') {
       if (slash.text.trim() !== '') setText('');
-      void correct(api, slash.text);
+      void (slash.kind === 'rule' ? addRule : correct)(api, slash.text);
       return;
     }
     if (slash) {
@@ -103,7 +104,7 @@ export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retry
           </Button>
         </div>
         <div className="font-mono text-label text-muted-foreground">
-          Enter send · Ctrl+Enter continue · Ctrl+R retry · Ctrl+Z undo · /do /say /story /see /correct
+          Enter send · Ctrl+Enter continue · Ctrl+R retry · Ctrl+Z undo · /do /say /story /see /correct /rule
         </div>
       </div>
     </footer>
