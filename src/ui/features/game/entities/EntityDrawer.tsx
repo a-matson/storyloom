@@ -72,7 +72,7 @@ export function EntityDrawer({ entity: e, adventure, api, onClose, onOpen }: Pro
         {e.kind === 'character' && <Has entity={e} entities={adventure.entities} onOpen={onOpen} />}
         <StateRows entity={e} update={update} />
         <Appearances entity={e} adventure={adventure} onClose={onClose} edits={edits} />
-        <Facts entity={e} update={update} onClose={onClose} />
+        <Facts entity={e} update={update} onClose={onClose} onEnd={(factId) => edits.endEffect(e.id, factId)} />
         {e.relations.length > 0 && <SectionLabel>Relations</SectionLabel>}
         {e.relations.map((r) => (
           <p key={`${r.to}|${r.label}`} className="m-0 text-control">

@@ -1,14 +1,17 @@
 // Only `loadMemoryJobs`: importing more from the barrel splits it out of the start-up chunk.
 import { loadImagePrompt } from '@core/image';
 import { loadMemoryJobs } from '@core/memory';
-import { newId, type Adventure, type Entity } from '@core/model';
+import { newId, type Adventure, type Entity, type EntityFact } from '@core/model';
 import { cropSquare, downscale } from '../image';
 import { withoutReference } from './images';
 import { clearPortrait, dropPortrait, PORTRAIT_PX, renderPortrait, setPortrait } from './portraits';
+import { repointGates } from './rules';
 import type { GameSession } from './session';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
+// A copy, not in place: the snapshot shares fact objects with `adv`.
+const ended = (f: EntityFact, until: number): EntityFact => ({ ...f, until });
 const withoutLook = ({ look: _l, ...e }: Entity): Entity => e;
 const patch = (adv: Adventure, id: string, p: Partial<Entity>) => (adv.entities = adv.entities.map((e) => (e.id === id ? { ...e, ...p } : e)));
 
@@ -22,7 +25,10 @@ export function entityEdits(host: GameSession) {
     update: (id: string, p: Partial<Entity>) => mutate((adv) => patch(adv, id, p)),
     delete: (id: string) => {
       const old = host.adv.entities.find((e) => e.id === id)?.portraitId;
-      mutate((adv) => (adv.entities = adv.entities.filter((e) => e.id !== id)));
+      mutate((adv) => {
+        adv.entities = adv.entities.filter((e) => e.id !== id);
+        repointGates(adv, id);
+      });
       if (old !== undefined) dropPortrait(host, old);
     },
     /** Player-asked, so unlike the idle queue a failure is shown. */
@@ -35,6 +41,12 @@ export function entityEdits(host: GameSession) {
       }
     },
     clearPortrait: (id: string) => clearPortrait(host, id),
+    /** The condition stops being true now; the fact stays as history. */
+    endEffect: (id: string, factId: string) =>
+      host.mutate((log, adv) => {
+        const facts = adv.entities.find((x) => x.id === id)?.facts ?? [];
+        patch(adv, id, { facts: facts.map((f) => (f.id === factId ? ended(f, log.actions.length) : f)) });
+      }),
     /** Freeze the character's current look and point at that See image; later Sees repeat the words and the seed. */
     setReference: async (id: string, imageId: string) => {
       const { looksOf } = await loadImagePrompt();
@@ -65,6 +77,7 @@ export function entityEdits(host: GameSession) {
         if (!into || !from || into === from) return;
         const merged = mergeEntities(into, from);
         adv.entities = adv.entities.flatMap((e) => (e === from ? [] : e === into ? [merged] : [e]));
+        repointGates(adv, fromId, intoId);
         if (from.portraitId !== undefined && from.portraitId !== merged.portraitId) dropPortrait(host, from.portraitId);
       });
     },

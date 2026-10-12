@@ -107,7 +107,7 @@ function Thumb({ adventureId, imageId }: { adventureId: string; imageId: string 
   return url === undefined ? null : <img src={url} alt="" className="size-full object-cover" />;
 }
 
-export function Facts({ entity: e, update, onClose }: { entity: Entity; update: Update; onClose: () => void }) {
+export function Facts({ entity: e, update, onClose, onEnd }: { entity: Entity; update: Update; onClose: () => void; onEnd: (factId: string) => void }) {
   const pin = (factId: string) => update({ facts: e.facts.map((f) => (f.id === factId ? { ...f, pinned: !f.pinned } : f)) });
   const without = (f: EntityFact) => e.facts.filter((x) => x.id !== f.id);
   // The player is the author: taking the story's side writes its value and unlocks the key.
@@ -135,7 +135,15 @@ export function Facts({ entity: e, update, onClose }: { entity: Entity; update: 
             </Button>
             {f.conflict && <Pill tone="see">conflict</Pill>}
             {f.until !== undefined && <Pill>until {f.until}</Pill>}
-            <span className="min-w-0 grow">{f.text}</span>
+            <span className="min-w-0 grow">
+              {f.text}
+              {f.cause && <span className="text-muted-foreground"> — {f.cause.text}</span>}
+            </span>
+            {f.kind === 'effect' && f.until === undefined && (
+              <Button variant="ghost" className="h-7 shrink-0" aria-label={`End: ${f.text}`} onClick={() => onEnd(f.id)}>
+                ✕
+              </Button>
+            )}
             {f.claim ? (
               <span className="flex gap-1">
                 <Button className="h-7" onClick={() => update({ facts: without(f) })}>

@@ -7,6 +7,7 @@ import { CardsTab } from './CardsTab';
 import { DetailsTab } from './DetailsTab';
 import { GameplayTab } from './GameplayTab';
 import { EntityList } from '../entities/EntityList';
+import { RuleList } from '../entities/RuleList';
 import { PlotTab } from './PlotTab';
 import { CHIP } from './Section';
 
@@ -21,7 +22,7 @@ interface Props {
 }
 
 type Tab = 'adventure' | 'gameplay';
-type SubTab = 'plot' | 'cards' | 'characters' | 'world' | 'details';
+type SubTab = 'plot' | 'cards' | 'characters' | 'world' | 'rules' | 'details';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'adventure', label: 'Adventure' },
@@ -44,6 +45,7 @@ export function Sidebar({ adventure, api, app, onAppChange, hidden, onClose }: P
     { id: 'cards', label: `Story cards · ${adventure.storyCards.length}` },
     { id: 'characters', label: `Characters · ${characters}` },
     { id: 'world', label: `World · ${adventure.entities.length - characters}` },
+    { id: 'rules', label: `Rules · ${adventure.rules.length}` },
     { id: 'details', label: 'Details' },
   ];
   return (
@@ -82,6 +84,7 @@ export function Sidebar({ adventure, api, app, onAppChange, hidden, onClose }: P
             {sub === 'plot' && <PlotTab adventure={adventure} api={api} utilityModel={utilityModel} />}
             {sub === 'cards' && <CardsTab adventure={adventure} api={api} />}
             {(sub === 'characters' || sub === 'world') && <EntityList key={sub} adventure={adventure} api={api} world={sub === 'world'} />}
+            {sub === 'rules' && <RuleList adventure={adventure} api={api} />}
             {sub === 'details' && <DetailsTab adventure={adventure} api={api} />}
           </div>
         </>

@@ -11,8 +11,13 @@ describe('parseSlash', () => {
     expect(parseSlash('/correct Lena has blue eyes, not green!')).toEqual({ kind: 'correct', text: 'Lena has blue eyes, not green!' });
   });
 
+  it('returns a rule with its text intact', () => {
+    expect(parseSlash('/rule Kobolds fear fire.')).toEqual({ kind: 'rule', text: 'Kobolds fear fire.' });
+  });
+
   it('ignores anything else', () => {
     expect(parseSlash('hello')).toBeNull();
     expect(parseSlash('/corrected')).toBeNull();
+    expect(parseSlash('/rules')).toBeNull();
   });
 });
