@@ -1,6 +1,6 @@
 import type { CardMatch } from '../cards/storyCards';
 import type { RankedMemory } from '../memory/memoryBank';
-import type { Action, Entity, Memory, PlotComponents, StoryCard } from '../model/types';
+import type { Action, Entity, Memory, PlotComponents, Rule, StoryCard } from '../model/types';
 import type { Tokenizer } from '../text/tokenizer';
 
 export type SectionKind =
@@ -13,6 +13,8 @@ export type SectionKind =
   | 'authorsNote'
   /** One retry's "keep to this" line; never stored. */
   | 'retryNote'
+  /** `[Rules: …]`: confirmed rules whose gates are in play. */
+  | 'rules'
   | 'scene'
   | 'facts'
   | 'entityCards'
@@ -42,7 +44,7 @@ interface ContextBudget {
   historyUsed: number;
   memoriesBudget: number;
   memoriesUsed: number;
-  /** Shared cap for scene, facts and entity cards; what they leave goes to the dynamic budget. */
+  /** Shared cap for rules, scene, facts and entity cards; what they leave goes to the dynamic budget. */
   structuredBudget: number;
   structuredUsed: number;
   used: number;
@@ -74,6 +76,8 @@ export interface ContextBuildInput {
   storyCards: StoryCard[];
   /** Sent as facts and projected cards under the structured cap, never through `storyCards`. */
   entities: Entity[];
+  /** Sent as `[Rules: …]` while relevant (`relevantRules`), first claim on the structured cap. */
+  rules?: readonly Rule[];
   /** Memories ranked by relevance to the most recent action, best first. */
   rankedMemories: RankedMemory[];
   /** Scripting: `state.memory.frontMemory`, appended after the last action. */
@@ -102,6 +106,8 @@ export interface ContextBuildResult {
   usedFacts: { entityId: string; factId: string }[];
   /** Entities with a card or a fact in the prompt. */
   usedEntityIds: string[];
+  /** Rules in the `[Rules: …]` line. */
+  usedRuleIds: string[];
   /** Action indices [from, to) included in the history block; null if none. */
   historyRange: { from: number; to: number } | null;
   /** Index of the action used as "last action"; -1 if none. */

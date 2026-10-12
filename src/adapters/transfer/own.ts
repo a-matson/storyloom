@@ -71,8 +71,11 @@ function renumber(a: Adventure): Adventure {
       ...e,
       id: id(e.id),
       relations: e.relations.map((r) => ({ ...r, to: id(r.to) })),
+      facts: e.facts.map((f) => (f.cause?.id ? { ...f, cause: { ...f.cause, id: id(f.cause.id) } } : f)),
       ...(e.cardId && { cardId: id(e.cardId) }),
     })),
+    // Rule ids are local to the adventure record, so only their gates follow the entities.
+    rules: a.rules.map((r) => ({ ...r, gates: r.gates.map(id) })),
     memories: [], // embeddings may come from another embedder; rebuilt lazily
     updatedAt: Date.now(),
   };

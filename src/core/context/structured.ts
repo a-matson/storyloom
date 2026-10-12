@@ -4,6 +4,7 @@ import { projectEntity } from '../memory/projection';
 import type { Entity } from '../model/types';
 import { actionStoryText } from '../text/formatting';
 import { HEADERS, renderScene, renderSection } from './render';
+import { relevantRules, renderRules } from './rules';
 import type { ContextBuildInput, RenderedSections, SectionKind } from './types';
 
 export interface StructuredResult {
@@ -12,6 +13,7 @@ export interface StructuredResult {
   usedFacts: { entityId: string; factId: string }[];
   /** Entities with a card or a fact in the prompt. */
   usedEntityIds: string[];
+  usedRuleIds: string[];
 }
 
 // "the Old Well" in the scene names the entity "Old Well".
@@ -19,7 +21,7 @@ const norm = (n: string) => n.trim().toLowerCase().replace(/^the /, '');
 const named = (e: Entity, names: ReadonlySet<string>) => [e.name, ...e.aliases].some((n) => names.has(norm(n)));
 
 /**
- * Scene line, then facts, then entity cards, inside one cap; whatever does not fit is skipped.
+ * Rules, scene line, facts, then entity cards, inside one cap; whatever does not fit is skipped.
  * An entity whose name a hand-written card holds, or whose promoted card still exists, sends facts only.
  */
 export function selectStructured(input: ContextBuildInput, lastActionIndex: number, budget: number, out: RenderedSections): StructuredResult {
@@ -44,9 +46,6 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
     return kept;
   };
 
-  const scene = renderScene(plot.scene, entities);
-  if (scene && tokenizer.count(renderSection('scene', scene)) <= left) put('scene', renderSection('scene', scene));
-
   // The location counts as present, so the place the scene is in sends its card too.
   const present = new Set([...(plot.scene?.present ?? []), plot.scene?.location ?? ''].map(norm));
   const window = lookbackWindow(budget);
@@ -54,6 +53,15 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
   const here = entities.filter((e) => named(e, present));
   const byId = new Map(entities.map((e) => [e.id, e]));
   const mentioned = matchCards(compileCards(entities.map(projectEntity)), recent.map(actionStoryText)).flatMap((m) => byId.get(m.card.id) ?? []);
+
+  // Rules first: the world's laws outrank what the scene holds. As many as fit, in order.
+  const ctx = { entities, scene: plot.scene, present: new Set(here.map((e) => e.id)), mentioned: new Set(mentioned.map((e) => e.id)) };
+  const rules = relevantRules(input.rules ?? [], ctx);
+  while (rules.length && tokenizer.count(renderSection('rules', renderRules(rules))) > left) rules.pop();
+  if (rules.length) put('rules', renderSection('rules', renderRules(rules)));
+
+  const scene = renderScene(plot.scene, entities);
+  if (scene && tokenizer.count(renderSection('scene', scene)) <= left) put('scene', renderSection('scene', scene));
   const only = input.settings.pinnedFactsOnly ?? false;
   const ranked = rankFacts(entities, new Set(here.map((e) => e.id)), new Set(mentioned.map((e) => e.id)));
   // The player's own facts (Correct, pins) and canon conflicts go in even with entity facts off.
@@ -69,5 +77,6 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
     structuredUsed: budget - left,
     usedFacts: facts.map((r) => ({ entityId: r.entity.id, factId: r.fact.id })),
     usedEntityIds: [...new Set([...cards.map((e) => e.id), ...facts.map((r) => r.entity.id)])],
+    usedRuleIds: rules.map((r) => r.id),
   };
 }

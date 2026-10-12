@@ -29,6 +29,8 @@ export const EntityFact = z.object({
   value: z.optional(z.string()),
   /** Action index the value stopped being true at; absent while current. */
   until: z.optional(count),
+  /** An effect's source: what put the condition (`value`) on the entity. */
+  cause: z.optional(z.object({ kind: z.enum(['item', 'rule', 'character', 'you']), id: z.optional(z.string()), text: z.string() })),
 });
 
 /** A character, place, item or faction the story has named, built up from the memory cycle's helper call. */

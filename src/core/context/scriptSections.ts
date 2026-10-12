@@ -12,6 +12,7 @@ const KINDS: Record<SectionKind, true> = {
   memories: true,
   authorsNote: true,
   retryNote: true,
+  rules: true,
   scene: true,
   facts: true,
   entityCards: true,

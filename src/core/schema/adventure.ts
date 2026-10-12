@@ -3,6 +3,7 @@ import { Action } from './action';
 import { StoryCard } from './card';
 import { Entity, EntityKind } from './entity';
 import { Memory } from './memory';
+import { Rule } from './rule';
 import { AdventureSettings } from './settings';
 
 /** Six parts of a day, not an hour clock: the model writes prose, not timestamps. [provisional] */
@@ -113,6 +114,8 @@ export const Adventure = z.object({
   memories: z.array(Memory),
   /** Characters, places, items and factions extracted by memory maintenance; stored records predating them parse as none. */
   entities: z.prefault(z.array(Entity), []),
+  /** Kept on the adventure record: a few dozen short lines, saved with it. */
+  rules: z.prefault(z.array(Rule), []),
   scriptState: ScriptState,
   /** Copied from the scenario at creation, so later scenario edits never change a running story. */
   scripts: z.optional(ScenarioScripts),
