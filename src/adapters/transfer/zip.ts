@@ -49,6 +49,7 @@ function fromText(name: string, text: string, settings: AdventureSettings): Adve
     storyCards: [],
     memories: [],
     entities: [],
+    rules: [],
     scriptState: {},
     placeholders: [],
     settings: structuredClone(settings),

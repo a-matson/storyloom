@@ -40,6 +40,7 @@ export function renderSection(kind: SectionKind, content: string): string {
   if (kind === 'authorsNote') return `[Author's note: ${content}]`;
   if (kind === 'retryNote') return `[Note: keep to this: ${content}]`;
   if (kind === 'scene') return `[Scene: ${content}]`;
+  if (kind === 'rules') return `[Rules: ${content}]`;
   const header = (HEADERS as Partial<Record<SectionKind, string>>)[kind];
   return header ? `${header}\n${content}` : content;
 }

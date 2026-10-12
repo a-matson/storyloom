@@ -80,6 +80,17 @@ describe('DexieStorage', () => {
     db.close();
   });
 
+  it('saves rules with the adventure record', async () => {
+    const name = freshName();
+    const s = await reopen(name);
+    const rules = [{ id: 'rule_1', text: 'Magic is rare', gates: [], source: 'player' as const, status: 'confirmed' as const, createdAt: 1, fromAction: 0 }];
+    const adv = { ...makeAdventure({ actions: 2, cards: 0 }), rules };
+    await s.putAdventure(adv);
+    expect((await (await reopen(name)).getAdventure(adv.id))?.rules).toEqual(rules);
+    await s.putAdventure({ ...adv, rules: [] });
+    expect((await (await reopen(name)).getAdventure(adv.id))?.rules).toEqual([]);
+  });
+
   it('migrates whole-adventure records from the old IndexedDB store', async () => {
     const name = freshName();
     const adv = makeAdventure({ actions: 6, cards: 2 });

@@ -3,6 +3,7 @@ export * from './adventure';
 export * from './card';
 export * from './entity';
 export * from './memory';
+export * from './rule';
 export * from './scenario';
 export * from './settings';
 export * from './trace';

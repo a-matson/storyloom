@@ -27,6 +27,7 @@ function contextInput(adventure: Adventure, actions: Action[], rankedMemories: R
     plot: adventure.plot,
     storyCards: adventure.storyCards,
     entities: adventure.entities,
+    rules: adventure.rules,
     rankedMemories,
     frontMemory: memory.frontMemory,
     overrides: { plotEssentials: memory.context, authorsNote: memory.authorsNote },

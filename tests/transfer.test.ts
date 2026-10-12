@@ -75,6 +75,33 @@ describe('adventure JSON', () => {
     expect(mira).not.toHaveProperty('cardId');
   });
 
+  it('keeps rules and repoints their gates and effect causes', () => {
+    const a = createBlankAdventure('T', 'You wake.');
+    const base = { kind: 'character' as const, aliases: [], description: '', state: {}, relations: [], firstSeen: 0, lastSeen: 0 };
+    const hex = {
+      id: 'f1',
+      text: 'cursed',
+      fromAction: 0,
+      source: 'player' as const,
+      kind: 'effect' as const,
+      cause: { kind: 'character' as const, id: 'ent_1', text: 'Lena' },
+    };
+    a.entities = [
+      { ...base, id: 'ent_1', name: 'Lena', facts: [] },
+      { ...base, id: 'ent_2', name: 'Mira', facts: [hex] },
+    ];
+    a.rules = [{ id: 'rule_1', text: 'Lena never lies', gates: ['ent_1', 'ent_gone'], source: 'player', status: 'confirmed', createdAt: 1, fromAction: 0 }];
+    const { adventure: b } = importAdventureJson(exportAdventureJson(a));
+    const [lena, mira] = b.entities;
+    expect(b.rules).toEqual([{ ...a.rules[0], gates: [lena?.id, 'ent_gone'] }]);
+    expect(mira?.facts[0]?.cause).toEqual({ kind: 'character', id: lena?.id, text: 'Lena' });
+  });
+
+  it('parses an export from before rules with none', () => {
+    const { rules: _rules, ...old } = createBlankAdventure('T', 'You wake.');
+    expect(importAdventureJson(JSON.stringify({ format: 'storyloom-adventure', version: 1, adventure: old })).adventure.rules).toEqual([]);
+  });
+
   it('repoints the characters a See image is tagged with', () => {
     const a = createBlankAdventure('T', 'You wake.');
     const base = { kind: 'character' as const, aliases: [], description: '', facts: [], state: {}, relations: [], firstSeen: 0, lastSeen: 0 };
