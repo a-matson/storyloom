@@ -16,6 +16,8 @@ export interface HelperCallLog {
   job: JobKind;
   cut: boolean;
   generatedTokens: number;
+  /** The raw reply, so a live run can read what the helper wrote before any guard. */
+  reply: string;
   /** Entity calls: trait facts the reply carried. */
   factsProposed?: number;
 }
@@ -66,7 +68,7 @@ export function helperCall(
     } finally {
       cancel?.removeEventListener('abort', follow);
     }
-    cuts?.calls?.push({ job, cut: call.signal.aborted, generatedTokens: stats?.generatedTokens ?? tokens });
+    cuts?.calls?.push({ job, cut: call.signal.aborted, generatedTokens: stats?.generatedTokens ?? tokens, reply: text });
     if (call.signal.aborted) {
       if (cuts) cuts.cutCalls += 1;
       call.signal.throwIfAborted();

@@ -14,13 +14,13 @@ const MemoryRun = z.object({
   finishedPastCut: z.number(),
   factsProposed: z.number(),
   rejected: z.array(Rejected),
-  entityCalls: z.array(z.object({ cut: z.boolean(), generatedTokens: z.number(), factsProposed: z.optional(z.number()) })),
+  entityCalls: z.array(z.object({ cut: z.boolean(), generatedTokens: z.number(), reply: z.optional(z.string()), factsProposed: z.optional(z.number()) })),
 });
 
 /**
  * Sums the scheduler's `memory run {…}` console lines: summaries written (and how many went first),
  * helper calls cut or kept past half, trait facts the entity call proposed and the values its guards
- * dropped (each, and a count by reason), and each entity call: cut, tokens, facts proposed.
+ * dropped (each, and a count by reason), and each entity call: cut, tokens, raw reply, facts proposed.
  */
 export function watchMemoryRuns(page: Page) {
   const rejectedBy: Record<string, number> = {};

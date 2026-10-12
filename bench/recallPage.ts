@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { z } from 'zod/mini';
 import * as S from '@core/schema';
+import { Rule } from '@core/schema/rule';
 import { appearanceOf, currentStates, LOOK_KEYS } from '@core/memory/looks';
 
 const LOOKS = new Set<string>(LOOK_KEYS);
@@ -127,5 +128,12 @@ export function costAndState(r: Rows) {
         facts: e.facts.filter((f) => (f.kind ?? 'trait') === 'trait' || f.conflict).map((f) => (f.conflict ? `CONFLICT ${f.text}` : f.text)),
       })),
     scene: (r.adventure['plot'] as { scene?: unknown } | undefined)?.scene,
+    // The adventure's rules, with their gates' names.
+    rules: (z.array(Rule).safeParse(r.adventure['rules']).data ?? []).map((rule) => ({
+      text: rule.text,
+      status: rule.status,
+      source: rule.source,
+      gates: rule.gates.map((g) => r.entities.find((e) => e['id'] === g)?.['name'] ?? g),
+    })),
   };
 }
