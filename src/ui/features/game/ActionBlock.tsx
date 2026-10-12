@@ -30,20 +30,15 @@ interface Props {
   cast?: readonly Entity[] | undefined;
   /** The scene's present characters, set only when this action replies to a `say`. */
   present?: readonly string[] | undefined;
+  onOpenEntity: (id: string) => void;
 }
 
 const quoted = (a: Action) => a.type === 'do' || a.type === 'say';
 
-interface ProseProps {
-  text: string;
-  action: Action;
-  cast: readonly Entity[] | undefined;
-  present: readonly string[] | undefined;
-  adventureId: string;
-}
+type ProseProps = Pick<Props, 'action' | 'cast' | 'present' | 'adventureId' | 'onOpenEntity'> & { text: string };
 
 /** The action text; when a paragraph has a face, one block per paragraph and the face in the gutter (above it on phones). Player text never has one. */
-function Prose({ text, action, cast, present, adventureId }: ProseProps) {
+function Prose({ text, action, cast, present, adventureId, onOpenEntity }: ProseProps) {
   if (!cast || quoted(action) || action.type === 'story') return text;
   const ps = paragraphs(text);
   const labels = ps.map((_, i) => action.speakers?.find((s) => s.paragraph === i)?.name);
@@ -58,7 +53,9 @@ function Prose({ text, action, cast, present, adventureId }: ProseProps) {
           <span className="block w-fit max-sm:mb-1 sm:absolute sm:top-0 sm:-inset-s-(--gutter)">
             {/* Only a labelled paragraph is speech; a named one already says the name. */}
             {labels[i] !== undefined && <span className="sr-only">{e.name} says</span>}
-            <Avatar name={e.name} adventureId={adventureId} portraitId={e.portraitId} />
+            <button type="button" aria-label={`Open ${e.name}`} className="block cursor-pointer rounded-full" onClick={() => onOpenEntity(e.id)}>
+              <Avatar name={e.name} adventureId={adventureId} portraitId={e.portraitId} />
+            </button>
           </span>
         )}
         {p}
@@ -85,7 +82,8 @@ export function ActionBlock(props: Props) {
   return <TextBlock {...props} />;
 }
 
-function TextBlock({ action, adventureId, isLast, busy, api, speech, onViewContext, onViewTrace, contextSummary, contradiction, cast, present }: Props) {
+function TextBlock(props: Props) {
+  const { action, isLast, busy, api, speech, onViewContext, onViewTrace, contextSummary, contradiction } = props;
   const [editing, setEditing] = useState(false);
   // Bumped when an edit ends: the paragraph remounts, so React never reconciles DOM the player rewrote.
   const [rev, setRev] = useState(0);
@@ -137,7 +135,7 @@ function TextBlock({ action, adventureId, isLast, busy, api, speech, onViewConte
       aria-keyshortcuts="Enter"
       title={editing ? 'Editing — click outside to save' : 'Double-click or press Enter to edit'}
     >
-      {editing ? display : <Prose text={display} action={action} cast={cast} present={present} adventureId={adventureId} />}
+      {editing ? display : <Prose {...props} text={display} />}
     </p>
   );
 

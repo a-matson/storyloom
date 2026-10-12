@@ -18,6 +18,8 @@ export interface GameSnapshot {
   canRedo: boolean;
   busy: boolean;
   streaming: string;
+  /** The running turn replaces the last output, so the view hides the old text meanwhile. */
+  retrying: boolean;
   context: { result: ContextBuildResult; prompt: string; scriptCache?: ScriptCache | undefined } | null;
   error: string | null;
   notice: string | null;
@@ -42,6 +44,7 @@ export type PortraitState =
 export const OPENED: Omit<GameSnapshot, 'adventure' | 'actions' | 'canUndo' | 'canRedo'> = {
   busy: false,
   streaming: '',
+  retrying: false,
   context: null,
   error: null,
   notice: null,

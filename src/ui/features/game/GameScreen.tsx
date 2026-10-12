@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { actionText, type Adventure, type AppSettings } from '@core/model';
 import { tokenizer } from '@app/services';
 import { useAdventureTheme } from '@ui/hooks/useCoverAccent';
-import { useGameSession } from '@ui/hooks/useGameSession';
+import { useGameSession, type GameApi } from '@ui/hooks/useGameSession';
 import { useImageBlob } from '@ui/hooks/useImageBlob';
 import { useReadAloud } from '@ui/hooks/useSpeech';
 import { Toast } from '@ui/components/ui/toast';
@@ -14,6 +14,7 @@ import { ContextMeter } from './ContextMeter';
 import { GameHeader } from './GameHeader';
 import { SelectionBar } from './SelectionBar';
 import { StoryView } from './StoryView';
+import { EntityDrawer } from './entities/EntityDrawer';
 import { overflowWarning, turnStatus } from './status';
 import { sidebarOpenByDefault, useGameKeys } from './useGameKeys';
 
@@ -26,16 +27,27 @@ interface Props {
   onExit: () => void;
 }
 
+/** A card opened from a face in the story; the sidebar lists open their own. */
+function FaceCard({ id, adventure, api, onOpen }: { id: string; adventure: Adventure; api: GameApi; onOpen: (id: string | null) => void }) {
+  const e = adventure.entities.find((x) => x.id === id);
+  return e ? <EntityDrawer key={e.id} entity={e} adventure={adventure} api={api} onClose={() => onOpen(null)} onOpen={onOpen} /> : null;
+}
+
+/** An error wins over a notice. */
+function Notices({ error, notice, api }: { error: string | null; notice: string | null; api: GameApi }) {
+  if (error !== null) return <Toast message={error} error onDismiss={api.clearError} />;
+  return notice !== null && <Toast message={notice} onDismiss={api.clearNotice} />;
+}
+
 export function GameScreen({ adventure: initial, app, onAppChange, backendLabel, onExit }: Props) {
   const [state, api] = useGameSession(initial, app);
   const [showSidebar, setShowSidebar] = useState(sidebarOpenByDefault);
   const [showContext, setShowContext] = useState(false);
   const [traceAction, setTraceAction] = useState<string | null>(null);
+  const [faceId, setFaceId] = useState<string | null>(null);
   const adv = state.adventure;
   useGameKeys(showContext, showSidebar, setShowContext, setShowSidebar);
-
-  const coverUrl = useImageBlob(adv.id, adv.coverId) ?? adv.coverUrl;
-  useAdventureTheme(app, adv.settings.textStyle, coverUrl);
+  useAdventureTheme(app, adv.settings.textStyle, useImageBlob(adv.id, adv.coverId) ?? adv.coverUrl);
 
   const ctx = state.context?.result;
   // Before the first turn there is no built context; estimate from the log.
@@ -78,6 +90,7 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
             adventureId={adv.id}
             streaming={state.streaming}
             busy={state.busy}
+            retrying={state.retrying}
             pendingImages={state.pendingImages}
             api={api}
             speech={app.speech}
@@ -87,6 +100,7 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
             contradiction={state.contradiction?.actionId === last?.id ? state.contradiction?.fact : undefined}
             cast={app.speakerAvatars ? adv.entities : undefined}
             present={adv.plot.scene?.present}
+            onOpenEntity={setFaceId}
           />
           {!state.busy && <SelectionBar api={api} entities={adv.entities} />}
           <CommandRow
@@ -102,9 +116,9 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
         <Sidebar adventure={adv} api={api} app={app} onAppChange={onAppChange} hidden={!showSidebar} onClose={() => setShowSidebar(false)} />
       </div>
       {showContext && state.context && <ContextViewer {...state.context} adventure={adv} stats={last?.stats} api={api} onClose={() => setShowContext(false)} />}
+      {faceId !== null && <FaceCard id={faceId} adventure={adv} api={api} onOpen={setFaceId} />}
       {traceAction !== null && <TraceViewer adventureId={adv.id} actionId={traceAction} onClose={() => setTraceAction(null)} />}
-      {state.error !== null && <Toast message={state.error} error onDismiss={api.clearError} />}
-      {state.notice !== null && state.error === null && <Toast message={state.notice} onDismiss={api.clearNotice} />}
+      <Notices error={state.error} notice={state.notice} api={api} />
     </div>
   );
 }

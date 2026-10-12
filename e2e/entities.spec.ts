@@ -112,6 +112,9 @@ test('a paragraph naming one character gets its face without a speaker label', a
   await expect(blocks.nth(1).locator('span[aria-hidden="true"]')).toHaveText('M');
   await expect(blocks.nth(0).locator('span[aria-hidden="true"]')).toHaveCount(0);
   await expect(page.locator('#story').getByText('Merav says', { exact: true })).toHaveCount(0);
+  // The face opens that character's card.
+  await page.locator('#story').getByRole('button', { name: 'Open Merav' }).click();
+  await expect(page.getByRole('dialog', { name: 'Merav' })).toBeVisible();
 });
 
 test('a character the opening names has a card before the first turn', async ({ page }) => {
@@ -135,7 +138,7 @@ test('a character the opening names has a card before the first turn', async ({ 
 
   await expect(page.getByRole('button', { name: 'Characters · 2' })).toBeVisible();
   await page.getByRole('button', { name: 'Characters · 2' }).click();
-  await expect(page.getByRole('button', { name: 'Open Tamsin' })).toBeVisible();
+  await expect(page.getByRole('complementary').getByRole('button', { name: 'Open Tamsin' })).toBeVisible();
 
   // The turn names only Merav, who has a card: no second call.
   await page.getByRole('textbox', { name: 'Take a turn' }).fill('wait');
