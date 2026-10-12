@@ -2,13 +2,34 @@ import { describe, expect, it } from 'vitest';
 import { mergeEntity } from '@core/memory/entities';
 import { newNamesIn } from '@core/memory/fold';
 import { createBlankAdventure } from '@core/model/scenario';
+import { EXTRACT_JSON_SCHEMA } from '@core/memory/extractJsonSchema';
+import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import { extractPrompt } from '@core/text/prompts';
+import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure } from './fixtures/memoryJobs';
 
 describe('the entity call’s prompt', () => {
   it('shows a worked example only when no grammar carries the shape', () => {
     expect(extractPrompt('[0] Mira waves.', [], true)).not.toMatch(/<Name>|Ysolde/);
     expect(extractPrompt('[0] Mira waves.', [], false)).toMatch(/"looks": \{"<key>": "<a few words>"\}/);
     expect(extractPrompt('[0] Mira waves.', [], false)).not.toMatch(/Ysolde|Brass Owl|timeDelta|cards|New here/);
+  });
+
+  it('asks for no rules: they took the reply to its cap', () => {
+    for (const g of [true, false]) expect(extractPrompt('[0] Mira waves.', [], g)).not.toMatch(/rules/);
+    expect(EXTRACT_JSON_SCHEMA).not.toHaveProperty('properties.rules');
+  });
+
+  it('logs each helper call with its raw reply', async () => {
+    const adv = memoryAdventure(30);
+    const provider = fakeProvider(
+      async function* (req) {
+        yield { text: req.prompt.includes(ENTITY_PROMPT) ? '{"entities": [], "speakers": []}' : 'Mira found the map.', done: true };
+      },
+      false,
+      true,
+    );
+    const report = await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
+    expect(report.calls?.find((c) => c.job === 'entity')?.reply).toBe('{"entities": [], "speakers": []}');
   });
 
   it('asks for the JSON on one line, grammar or not', () => {

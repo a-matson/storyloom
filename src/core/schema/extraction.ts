@@ -73,18 +73,13 @@ export const SceneJson = z.object({ scene: TurnScene });
  */
 export const IntroductionJson = z.object({ scene: TurnScene, entities: z.array(IntroducedEntity).check(z.maxLength(MAX_INTRODUCED)) });
 
-/** Story proposals per reply; each waits for the player's Confirm. [provisional] */
-export const MAX_PROPOSED_RULES = 2;
-/** A standing truth the passage states, with the names it concerns (resolved to gates). */
-export const ProposedRule = z.object({ text: sentence(FACT_CHARS), gates: z.array(z.string()) });
-
 /**
  * The combined helper call's reply. No scene: it reads memories back, so it would move the scene
  * into the past. Short fields come first so a reply cut at `maxTokens` still has them; a cut loses
- * the last item of the list it fell in (see `extract.ts`). `rules` last and optional: a cut costs it first.
+ * the last item of the list it fell in (see `extract.ts`). No rules: asking for them here took the
+ * reply to its cap in 2 of 4 calls and cut facts 39 → 22. [measured: 2026-10-12-recall-m12-8-pr3-rules-d30.json]
  */
 export const ExtractionJson = z.object({
   entities: z.array(ExtractedEntity).check(z.maxLength(MAX_ENTITIES)),
   speakers: z.array(SpokenIn),
-  rules: z.optional(z.array(ProposedRule).check(z.maxLength(MAX_PROPOSED_RULES))),
 });
