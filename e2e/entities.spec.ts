@@ -19,7 +19,9 @@ test('the Characters tab edits, pins and promotes an entity', async ({ page }) =
   expect(violations).toEqual([]);
   expect((await drawer.locator('span[aria-hidden="true"]', { hasText: /^M$/ }).boundingBox())?.width).toBe(32);
 
-  await drawer.getByRole('textbox', { name: 'location' }).fill('the gate');
+  await drawer.getByRole('button', { name: 'Edit location: the well' }).click();
+  await drawer.getByRole('textbox', { name: 'Edit: location: the well' }).fill('the gate');
+  await page.keyboard.press('Enter');
   await drawer.getByRole('button', { name: 'Pin: She keeps the needle map.' }).click();
   await expect(drawer.getByRole('button', { name: 'Pin: She keeps the needle map.' })).toHaveAttribute('aria-pressed', 'true');
   await drawer.getByRole('button', { name: 'Promote to story card' }).click();
@@ -31,11 +33,12 @@ test('the Characters tab edits, pins and promotes an entity', async ({ page }) =
   await page.getByRole('button', { name: 'Story cards · 1' }).click();
   await expect(page.getByRole('button', { name: 'Edit story card Merav' })).toBeVisible();
 
-  // A fact's action label scrolls the story there.
+  // A fact's evidence jumps to its passage.
   await page.getByRole('button', { name: /^Characters/ }).click();
   await page.getByRole('button', { name: 'Open Merav' }).click();
   await expect(page.getByText('The road bends 2.')).not.toBeInViewport();
-  await page.getByRole('button', { name: 'Show action 2 in the story' }).click();
+  await page.getByRole('button', { name: 'Evidence: She keeps the needle map.' }).click();
+  await page.getByRole('button', { name: 'Go to passage' }).click();
   await expect(page.getByText('The road bends 2.')).toBeInViewport();
 });
 
@@ -168,7 +171,7 @@ test('a canon conflict is shown on the fact and resolved from the drawer', async
   await drawer.getByRole('button', { name: 'Accept the story' }).click();
   await expect(drawer.getByText('conflict', { exact: true })).toHaveCount(0);
   await expect(drawer.getByRole('button', { name: 'Lock eyes as canon' })).toHaveAttribute('aria-pressed', 'false');
-  await expect(drawer.getByRole('textbox', { name: 'eyes' })).toHaveValue('blue');
+  await expect(drawer.getByRole('listitem').filter({ hasText: 'eyes: blue' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByText('eyes: blue')).toBeVisible();
 });
@@ -190,13 +193,44 @@ test("the story's current state shows as a row, and the player's edit ends it", 
   await page.getByRole('button', { name: 'Characters · 2' }).click();
   await page.getByRole('button', { name: 'Open Tamsin' }).click();
   const drawer = page.getByRole('dialog', { name: 'Tamsin' });
-  await expect(drawer.getByRole('textbox', { name: 'location' })).toHaveValue('the docks');
-  await expect(drawer.getByRole('listitem').filter({ hasText: 'location: the tavern' })).toContainText('until 2');
-  await drawer.getByRole('textbox', { name: 'location' }).fill('the ferry');
-  await drawer.getByRole('textbox', { name: 'location' }).blur();
-  await expect(drawer.getByRole('listitem').filter({ hasText: 'location: the docks' })).toContainText('until');
+  await expect(drawer.getByRole('button', { name: 'Edit location: the docks' })).toBeVisible();
+  await expect(drawer.getByRole('listitem').filter({ hasText: 'location: the tavern' })).toContainText('action 1');
+  await drawer.getByRole('button', { name: 'Edit location: the docks' }).click();
+  await drawer.getByRole('textbox', { name: 'Edit: location: the docks' }).fill('the ferry');
+  await drawer.getByRole('textbox', { name: 'Edit: location: the docks' }).blur();
+  // Ended: now under Happened with its action.
+  await expect(drawer.getByRole('listitem').filter({ hasText: 'location: the docks' })).toContainText('action 2');
   await page.keyboard.press('Escape');
   await expect(page.getByText('location: the ferry')).toBeVisible();
+});
+
+test('card lines: evidence, edit, delete and add', async ({ page }) => {
+  const fact = { id: 'f9', text: 'Sells salt.', fromAction: 1, source: 'memory' as const, sourceId: 'action:1', evidence: 'bends 1' };
+  await openSeededAdventure(page, 3, undefined, { entities: [{ id: 'ent_corrow', name: 'Corrow', facts: [fact, { ...fact, id: 'f8', text: 'Hums.' }] }] });
+  await page.getByRole('button', { name: 'Characters · 2' }).click();
+  await page.getByRole('button', { name: 'Open Corrow' }).click();
+  const drawer = page.getByRole('dialog', { name: 'Corrow' });
+
+  await drawer.getByRole('button', { name: 'Evidence: Sells salt.' }).click();
+  await expect(drawer.locator('mark')).toHaveText('bends 1');
+  await expect(drawer.getByText('action 1', { exact: true })).toBeVisible();
+  const { violations } = await new AxeBuilder({ page }).include('dialog').analyze();
+  expect(violations).toEqual([]);
+
+  await drawer.getByRole('button', { name: 'Edit Sells salt.' }).click();
+  await drawer.getByRole('textbox', { name: 'Edit: Sells salt.' }).fill('Sells rope.');
+  await page.keyboard.press('Enter');
+  // The player's words now: the basis is "yours", with no evidence to open.
+  await expect(drawer.getByRole('listitem').filter({ hasText: 'Sells rope.' })).toContainText('yours');
+  await expect(drawer.getByRole('button', { name: 'Evidence: Sells rope.' })).toHaveCount(0);
+
+  await drawer.getByRole('button', { name: 'Delete: Hums.' }).click();
+  await expect(drawer.getByText('Hums.')).toHaveCount(0);
+
+  await drawer.getByRole('combobox', { name: 'Add what' }).selectOption('state');
+  await drawer.getByRole('textbox', { name: 'New line' }).fill('mood: wary');
+  await drawer.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(drawer.getByRole('listitem').filter({ hasText: 'mood: wary' })).toContainText('yours');
 });
 
 test('a fact goes when the action it came from is edited', async ({ page }) => {

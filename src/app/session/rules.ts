@@ -32,6 +32,14 @@ export async function addRule(host: GameSession, text: string): Promise<void> {
 export function ruleEdits(host: GameSession) {
   const mutate = (fn: (adv: Adventure) => void) => host.mutate((_, adv) => fn(adv));
   return {
+    /** A confirmed player rule with the given gates (a card's "+ rule about <name>"). */
+    add: (text: string, gates: string[]) =>
+      host.mutate((log, adv) => {
+        adv.rules = [
+          ...adv.rules,
+          { id: newId('rule_'), text, gates, source: 'player', status: 'confirmed', createdAt: Date.now(), fromAction: log.actions.length },
+        ];
+      }),
     update: (id: string, p: Partial<Pick<Rule, 'text' | 'gates' | 'status'>>) => mutate((adv) => edit(adv, id, p)),
     delete: (id: string) => mutate((adv) => (adv.rules = adv.rules.filter((r) => r.id !== id))),
   };

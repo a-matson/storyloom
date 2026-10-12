@@ -71,6 +71,15 @@ test('game with characters tab', async ({ page }) => {
   await page.getByRole('button', { name: /^Characters/ }).click();
   await expect(page.getByRole('button', { name: 'Open Merav' })).toBeVisible();
   await shot(page, 'game-characters');
+  // The lazy drawer can make Vite re-optimise deps and reload on a cold cache (Docker), so open it again.
+  await expect(async () => {
+    if (!(await page.getByRole('button', { name: 'Open Merav' }).isVisible())) await page.getByRole('button', { name: /^Characters/ }).click();
+    await page.getByRole('button', { name: 'Open Merav' }).click();
+    await expect(page.getByRole('dialog', { name: 'Merav' })).toBeVisible({ timeout: 3000 });
+  }).toPass({ timeout: 30_000 });
+  await shot(page, 'entity-card');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await shot(page, 'entity-card-narrow');
 });
 
 test('context viewer', async ({ page }) => {
