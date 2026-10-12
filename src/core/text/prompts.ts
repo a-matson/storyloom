@@ -43,7 +43,8 @@ const EXTRACT_SKELETON =
   '{"entities": [{"name": "<Name>", "kind": "character", "aliases": ["<role>"], "description": "<one sentence>",\n' +
   '   "looks": {"<key>": "<a few words>"}, "facts": ["<fact>"], "state": {"<key>": "<a few words>"}},\n' +
   '  {"name": "<Name>", "kind": "place", "description": "<one sentence>", "facts": []}],\n' +
-  ' "speakers": [{"action": <number>, "name": "<Name>"}]}';
+  ' "speakers": [{"action": <number>, "name": "<Name>"}],\n' +
+  ' "rules": [{"text": "<a lasting truth>", "gates": ["<Name>"]}]}';
 
 /**
  * llama-server's schema grammar allows newlines and indentation; pretty-printed, 3 of 8 entity
@@ -66,8 +67,9 @@ export function extractPrompt(passage: string, knownNames: readonly string[], gr
     (knownNames.length ? `Already recorded (use these exact names when the passage means them): ${knownNames.join(', ')}.\n` : '') +
     'Give each entity a one-sentence description and 0–2 facts: short sentences about what lasts (who or what it is, what it owns, injuries, loyalties), not single actions or dialogue, and nothing the passage does not state. ' +
     `${LOOKS_ASK} state is where it is and how it is now (${STATE_KEYS.join(', ')}), a few words each, only what the passage shows; holder is who carries an item (a Name or "you"). ` +
-    'The player is "you", not an entity. speakers names who talks in each numbered paragraph.\n' +
-    (grammar ? 'Return {"entities": [...], "speakers": [...]}.' : EXTRACT_SKELETON) +
+    'The player is "you", not an entity. speakers names who talks in each numbered paragraph. ' +
+    'rules is at most 2 standing truths of how this world works that the passage states outright (what a kind of creature, a place or an item always does or cannot do), each with the Names it concerns as gates; usually there are none, so leave it empty.\n' +
+    (grammar ? 'Return {"entities": [...], "speakers": [...], "rules": [...]}.' : EXTRACT_SKELETON) +
     ONE_LINE
   );
 }

@@ -1,7 +1,19 @@
 import { jsonrepair } from 'jsonrepair';
 import type { Adventure, ExtractionJson, Speaker } from '../model/types';
+import { newId } from '../model/types';
 import { z } from 'zod/mini';
-import { ExtractedEntity, IntroducedEntity, MAX_ENTITIES, MAX_INTRODUCED, ExtractionJson as Schema, SpokenIn, TurnScene } from '../schema/extraction';
+import {
+  ExtractedEntity,
+  IntroducedEntity,
+  MAX_ENTITIES,
+  MAX_INTRODUCED,
+  MAX_PROPOSED_RULES,
+  ProposedRule,
+  ExtractionJson as Schema,
+  SpokenIn,
+  TurnScene,
+} from '../schema/extraction';
+import { matchEntity, norm } from './names';
 import { actionStoryText } from '../text/formatting';
 import { parseJsonReply } from '../text/jsonReply';
 import { EXTRACT_SYSTEM, extractPrompt, introducePrompt } from '../text/prompts';
@@ -51,6 +63,7 @@ const extractAccepter =
       ...l.data,
       entities: l.items('entities', ExtractedEntity, MAX_ENTITIES),
       speakers: l.items('speakers', SpokenIn, Infinity),
+      rules: l.items('rules', ProposedRule, MAX_PROPOSED_RULES),
     });
     return r.success ? r.data : null;
   };
@@ -171,6 +184,22 @@ export function passageOf(adventure: Adventure, range: MemoryRange): string {
     .join('\n');
 }
 
+/**
+ * Story proposals wait in the Rules tab, gated on the names the reply gave (unknown ones dropped).
+ * A text already there, in any status, is not proposed again.
+ * ponytail: a rule the player deleted can come back; keep deleted texts if that nags.
+ */
+function proposeRules(adventure: Adventure, proposed: readonly z.output<typeof ProposedRule>[], atAction: number): void {
+  const seen = new Set(adventure.rules.map((r) => norm(r.text)));
+  for (const p of proposed) {
+    if (!norm(p.text) || seen.has(norm(p.text))) continue;
+    seen.add(norm(p.text));
+    const gates = [...new Set(p.gates.flatMap((g) => matchEntity(adventure.entities, g)?.id ?? []))];
+    const rule = { id: newId('rule_'), text: p.text.trim(), gates, source: 'story', status: 'proposed', createdAt: Date.now(), fromAction: atAction } as const;
+    adventure.rules = [...adventure.rules, rule];
+  }
+}
+
 /** Extract from the range's actions and fold the result into `adventure.entities`. */
 export async function updateEntities(adventure: Adventure, range: MemoryRange, deps: ExtractDeps): Promise<EntityUpdate> {
   const passage = passageOf(adventure, range);
@@ -179,6 +208,7 @@ export async function updateEntities(adventure: Adventure, range: MemoryRange, d
   if (!reply) return { touched: 0, speakers: new Map() };
   const log: FoldLog = { proposed: 0, rejected: [] };
   const touched = foldEntities(adventure, reply.entities, passage, range, { twice: true, log });
+  proposeRules(adventure, reply.rules ?? [], range.toAction);
   // Calls are sequential: the last one logged is this one.
   const call = deps.cuts?.calls?.at(-1);
   if (call?.job === 'entity') call.factsProposed = log.proposed;

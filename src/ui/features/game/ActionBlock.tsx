@@ -142,7 +142,8 @@ function TextBlock({ action, adventureId, isLast, busy, api, speech, onViewConte
   );
 
   return (
-    <div className={cn('group', actionGrid)}>
+    // The id lets `SelectionBar` tell which action a selection is in.
+    <div className={cn('group', actionGrid)} data-action-id={action.id}>
       {isPlayer && (
         <Pill tone={action.type === 'story' ? 'story' : action.type === 'say' ? 'say' : 'do'} className="mt-[5px] justify-self-start font-sans">
           {action.type}

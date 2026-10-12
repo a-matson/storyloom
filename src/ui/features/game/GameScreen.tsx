@@ -12,6 +12,7 @@ import { TraceViewer } from './context/TraceViewer';
 import { CommandRow } from './CommandRow';
 import { ContextMeter } from './ContextMeter';
 import { GameHeader } from './GameHeader';
+import { SelectionBar } from './SelectionBar';
 import { StoryView } from './StoryView';
 import { overflowWarning, turnStatus } from './status';
 import { sidebarOpenByDefault, useGameKeys } from './useGameKeys';
@@ -87,6 +88,7 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
             cast={app.speakerAvatars ? adv.entities : undefined}
             present={adv.plot.scene?.present}
           />
+          {!state.busy && <SelectionBar api={api} entities={adv.entities} />}
           <CommandRow
             busy={state.busy}
             canRetry={last?.type === 'continue'}
