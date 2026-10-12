@@ -121,7 +121,7 @@ function MemorySystem({ s, update }: { s: Settings; update: Update }) {
       <SettingSwitch
         id="entity-facts"
         label="Send entity facts and cards"
-        title="Established facts and Known entities blocks under the structured cap; the scene line is sent either way"
+        title="Now-lines for who is in the scene and identities for who is named; rules, the scene line and pinned facts are sent either way"
         checked={s.memory.entityFacts}
         onChange={(on) => memory({ entityFacts: on })}
       />

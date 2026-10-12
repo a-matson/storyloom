@@ -14,8 +14,8 @@ import type { ContextBuildInput, ContextBuildResult, ContextSection, RenderedSec
  * cache-stable layout that keeps a byte-stable, append-only prefix so local
  * backends reuse their KV cache every turn.
  *
- * Stages, in budget order: required (70% cap) → structured (scene, facts,
- * entity cards; 10% cap) → cards (25% of the rest) → history → memories
+ * Stages, in budget order: required (70% cap) → structured (rules, scene,
+ * cast; 10% cap, 200 at most) → cards (25% of the rest) → history → memories
  * (whatever is left) → assemble in layout order.
  */
 export function buildContext(input: ContextBuildInput): ContextBuildResult {
@@ -84,17 +84,16 @@ export function buildContext(input: ContextBuildInput): ContextBuildResult {
 }
 
 // Cache-stable layout moves history up into the prefix and lore after it, so only the tail changes per turn.
-// Scene, facts and entity cards change every memory cycle, so they sit in the uncacheable tail in both layouts.
+// Rules, scene and cast change every memory cycle, so they sit in the uncacheable tail in both layouts.
 const STABLE_ORDER: SectionKind[] = [
   'plotEssentials',
   'history',
   'storyCards',
   'storySummary',
   'memories',
-  'entityCards',
-  'facts',
   'rules',
   'scene',
+  'cast',
   'authorsNote',
   'retryNote',
   'lastAction',
@@ -106,10 +105,9 @@ const AID_ORDER: SectionKind[] = [
   'storySummary',
   'memories',
   'history',
-  'entityCards',
-  'facts',
   'rules',
   'scene',
+  'cast',
   'authorsNote',
   'retryNote',
   'lastAction',

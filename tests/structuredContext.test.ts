@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildContext, type ContextBuildInput } from '@core/context';
-import type { Action, Entity } from '@core/model/types';
+import type { Action, Entity, EntityFact } from '@core/model/types';
 import type { Tokenizer } from '@core/text/tokenizer';
 
 /** 1 token per 4 characters, as in contextBuilder.test.ts. */
@@ -8,27 +8,38 @@ const tok: Tokenizer = { count: (t) => (t ? Math.ceil(t.length / 4) : 0) };
 let id = 0;
 const act = (type: Action['type'], text: string): Action => ({ id: `a${++id}`, type, versions: [text], active: 0, createdAt: id });
 const long = (words: number) => Array.from({ length: words }, (_, i) => `w${i}`).join(' ');
+const fact = (name: string, i: number, text: string, over: Partial<EntityFact> = {}): EntityFact => ({
+  id: `f-${name}-${i}`,
+  text,
+  fromAction: i,
+  source: 'memory',
+  ...over,
+});
 
-function entity(name: string, description: string, facts: string[], state: Record<string, string> = {}): Entity {
-  return {
-    id: `e-${name}`,
-    kind: 'character',
-    name,
-    aliases: [],
-    description,
-    facts: facts.map((text, i) => ({ id: `f-${name}-${i}`, text, fromAction: i, source: 'memory' as const })),
-    state,
-    relations: [],
-    firstSeen: 0,
-    lastSeen: 1,
-  };
+function entity(name: string, description: string, facts: EntityFact[], state: Record<string, string> = {}): Entity {
+  return { id: `e-${name}`, kind: 'character', name, aliases: [], description, facts, state, relations: [], firstSeen: 0, lastSeen: 1 };
 }
 
 const actions = [act('start', 'The mill.'), ...Array.from({ length: 30 }, (_, i) => act('continue', `${i} ${long(20)}`)), act('do', '> You call for Orrin.')];
 const scene = { location: 'the mill', present: ['Lena'], weather: 'cold rain at night' };
-const lena = entity('Lena', 'Lena keeps the mill.', ['She has blue eyes.', 'She owes Orrin money.'], { location: 'the loft' });
-const orrin = entity('Orrin', 'Orrin is a ferryman.', ['He fears water.']);
-const tamsin = entity('Tamsin', 'Tamsin is far away.', ['She left.']);
+const lena = entity(
+  'Lena',
+  'Lena keeps the mill, and has for years.',
+  [
+    fact('Lena', 0, 'She has blue eyes.'),
+    fact('Lena', 1, 'eyes: blue', { kind: 'state', key: 'eyes', value: 'blue' }),
+    fact('Lena', 2, 'mood: wary', { kind: 'state', key: 'mood', value: 'wary' }),
+    fact('Lena', 3, 'poisoned', { kind: 'effect', value: 'poisoned', cause: { kind: 'item', text: 'the green wine' } }),
+    fact('Lena', 4, 'distrusts you', { kind: 'relationship' }),
+    fact('Lena', 5, 'She hums.', { source: 'player' }),
+  ],
+  { location: 'the loft' },
+);
+const orrin = entity('Orrin', 'Orrin is a ferryman.', [
+  fact('Orrin', 0, 'He fears water.'),
+  fact('Orrin', 1, 'mood: calm', { kind: 'state', key: 'mood', value: 'calm' }),
+]);
+const tamsin = entity('Tamsin', 'Tamsin is far away.', [fact('Tamsin', 0, 'She left.')]);
 const settings = (contextLength: number, cacheStableLayout = false) => ({ contextLength, memoryBankEnabled: true, cacheStableLayout, evictionChunk: 8 });
 const input = (contextLength: number, cacheStableLayout = false): ContextBuildInput => ({
   actions,
@@ -39,60 +50,82 @@ const input = (contextLength: number, cacheStableLayout = false): ContextBuildIn
   settings: settings(contextLength, cacheStableLayout),
   tokenizer: tok,
 });
-const kinds = new Set(['scene', 'facts', 'entityCards']);
+const kinds = new Set(['rules', 'scene', 'cast']);
 const structured = (r: ReturnType<typeof buildContext>) => r.sections.filter((s) => kinds.has(s.kind));
+const cast = (r: ReturnType<typeof buildContext>) => r.sections.find((s) => s.kind === 'cast')?.text;
 
 describe('structured elements', () => {
-  it('sends present and mentioned entities as facts and cards after history, never cached', () => {
+  it('sends the scene, then a now-line for who is present and an identity for who is named, never cached', () => {
     for (const stable of [false, true]) {
-      const r = buildContext(input(2000, stable));
+      const r = buildContext(input(4000, stable));
       const order = r.sections.map((s) => s.kind);
-      expect(order.slice(order.indexOf('history') + 1)).toEqual(['entityCards', 'facts', 'scene', 'authorsNote', 'lastAction']);
+      expect(order.slice(order.indexOf('history') + 1)).toEqual(['scene', 'cast', 'authorsNote', 'lastAction']);
       expect(structured(r).every((s) => !s.cacheable)).toBe(true);
-      expect(r.sections.find((s) => s.kind === 'facts')?.text).toBe(
-        'Established facts:\nLena: She owes Orrin money.\nLena: She has blue eyes.\nOrrin: He fears water.',
+      expect(cast(r)).toBe(
+        ['Lena (keeps the mill): location: the loft, mood: wary; poisoned — the green wine; distrusts you; She hums.', 'Orrin (a ferryman).'].join('\n'),
       );
-      expect(r.sections.find((s) => s.kind === 'entityCards')?.text).toBe('Known entities:\nLena keeps the mill.\nlocation: the loft\n\nOrrin is a ferryman.');
       expect(r.usedEntityIds).toEqual([lena.id, orrin.id]);
+      expect(r.usedFacts.map((f) => f.factId)).toEqual(['f-Lena-2', 'f-Lena-3', 'f-Lena-4', 'f-Lena-5']);
       expect(r.budget.structuredUsed).toBe(structured(r).reduce((sum, s) => sum + s.tokens, 0));
-      expect(r.budget.structuredUsed).toBeLessThanOrEqual(r.budget.structuredBudget);
     }
   });
 
-  it('keeps the scene and drops entity cards first at a tight cap', () => {
-    // 10% of 450 = 45: scene 13 + facts 24 fit; the smallest card needs 12 of the 8 left.
-    const r = buildContext(input(450));
-    expect(r.budget.structuredBudget).toBe(45);
-    expect(structured(r).map((s) => s.kind)).toEqual(['facts', 'scene']);
-    expect(r.usedFacts).toHaveLength(3);
-    expect(r.budget.structuredUsed).toBeLessThanOrEqual(45);
+  it('sends nothing for an absent entity but its pinned facts', () => {
+    const pinned = { ...tamsin, facts: [...tamsin.facts, fact('Tamsin', 1, 'She owes Lena.', { pinned: true })] };
+    expect(cast(buildContext({ ...input(4000), entities: [lena, orrin, pinned] }))).toMatch(/\nTamsin: She owes Lena\.$/);
+    expect(cast(buildContext(input(4000)))).not.toContain('Tamsin');
+  });
+
+  it('gives a present character its stance to another present one', () => {
+    const toOrrin = { ...lena, facts: [fact('Lena', 9, 'owes him money', { kind: 'relationship', key: 'Orrin' })] };
+    const r = buildContext({ ...input(4000), entities: [toOrrin, orrin], plot: { scene: { ...scene, present: ['Orrin', 'Lena'] } } });
+    expect(cast(r)).toBe('Orrin (a ferryman): mood: calm.\nLena (keeps the mill): location: the loft. With Orrin: owes him money.');
+  });
+
+  it('reads the same whatever order the entities come in', () => {
+    const a = buildContext(input(4000));
+    const b = buildContext({ ...input(4000), entities: [tamsin, orrin, lena] });
+    expect(cast(b)).toBe(cast(a));
+  });
+
+  it('never passes 200 tokens and drops whole lines from the end', () => {
+    const crowd = Array.from({ length: 40 }, (_, i) =>
+      entity(`P${i}`, `P${i} is a guard of the long hall.`, [fact(`P${i}`, 0, `mood: tense ${i}`, { kind: 'state', key: 'mood', value: `tense ${i}` })]),
+    );
+    const r = buildContext({ ...input(40000), entities: crowd, plot: { scene: { present: crowd.map((e) => e.name) } } });
+    expect(r.budget.structuredBudget).toBe(200);
+    expect(r.budget.structuredUsed).toBeLessThanOrEqual(200);
+    const lines = cast(r)?.split('\n') ?? [];
+    expect(lines.length).toBeLessThan(40);
+    expect(lines.at(-1)).toBe(`P${lines.length - 1} (a guard of the long hall): mood: tense ${lines.length - 1}.`);
   });
 
   it('never goes over the share and returns what it leaves to the dynamic budget', () => {
     const r = buildContext({ ...input(400), settings: { ...settings(400), structuredShare: 0.05 } });
     expect(r.budget.structuredBudget).toBe(20);
-    expect(structured(r).map((s) => s.kind)).toEqual(['scene']);
+    expect(structured(r).map((s) => s.kind)).toEqual(['scene', 'cast']);
+    expect(cast(r)).toBe('Orrin (a ferryman).');
+    expect(r.budget.structuredUsed).toBeLessThanOrEqual(20);
     expect(r.budget.dynamicAvailable).toBe(r.budget.total - r.budget.requiredUsed - r.budget.structuredUsed);
   });
 
-  it('sends facts but no card for an entity a story card already covers', () => {
+  it('gives no identity to an entity a story card already covers', () => {
     const card = { id: 'c-orrin', type: 'Character', name: 'Orrin', entry: 'The hand-written Orrin.', triggers: ['Orrin'] };
-    const r = buildContext({ ...input(2000), storyCards: [card] });
-    expect(r.sections.find((s) => s.kind === 'entityCards')?.text).not.toContain('ferryman');
-    expect(r.sections.find((s) => s.kind === 'facts')?.text).toContain('Orrin: He fears water.');
+    const r = buildContext({ ...input(4000), storyCards: [card], plot: { scene: { present: ['Orrin'] } } });
+    expect(cast(r)).toBe('Orrin: mood: calm.');
     expect(r.triggeredCards.map((m) => m.card.id)).toEqual(['c-orrin']);
   });
 
   it('sends nothing for an entity seen in one range only', () => {
-    const r = buildContext({ ...input(2000), entities: [{ ...lena, lastSeen: 0 }, orrin] });
-    expect(r.sections.find((s) => s.kind === 'facts')?.text).toBe('Established facts:\nOrrin: He fears water.');
-    expect(r.usedEntityIds).toEqual([orrin.id]);
+    const r = buildContext({ ...input(4000), entities: [lena, { ...orrin, lastSeen: 0 }] });
+    expect(cast(r)).not.toContain('Orrin');
+    expect(r.usedEntityIds).toEqual([lena.id]);
   });
 
-  it('with entity facts off, sends the scene and only pinned facts, no cards', () => {
-    const pinned = { ...orrin, facts: [...orrin.facts, { id: 'f-pin', text: 'He is bald.', fromAction: 2, source: 'player' as const, pinned: true }] };
-    const r = buildContext({ ...input(2000), entities: [lena, pinned], settings: { ...settings(2000), pinnedFactsOnly: true } });
-    expect(structured(r).map((s) => s.kind)).toEqual(['facts', 'scene']);
-    expect(r.sections.find((s) => s.kind === 'facts')?.text).toBe('Established facts:\nOrrin: He is bald.');
+  it('with entity facts off, sends the scene and only pinned facts', () => {
+    const pinned = { ...orrin, facts: [...orrin.facts, fact('Orrin', 2, 'He is bald.', { source: 'player', pinned: true })] };
+    const r = buildContext({ ...input(4000), entities: [lena, pinned], settings: { ...settings(4000), pinnedFactsOnly: true } });
+    expect(structured(r).map((s) => s.kind)).toEqual(['scene', 'cast']);
+    expect(cast(r)).toBe('Orrin: He is bald.');
   });
 });

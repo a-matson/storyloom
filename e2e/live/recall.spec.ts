@@ -24,6 +24,8 @@ const SETTLED_MS = 30_000;
 const CATCH_UP_CAP_MS = 35 * 60_000;
 // `MEASURE_DEPTHS=30,60` shortens a run; a single small depth smoke-tests the path.
 const DEPTHS = (process.env['MEASURE_DEPTHS'] ?? '30,60,90').split(',').map(Number);
+// `MEASURE_ENTITY_FACTS=1` replays with the cast's now-lines on; otherwise the recording's setting.
+const ENTITY_FACTS = process.env['MEASURE_ENTITY_FACTS'] === '1';
 
 const warnings: string[] = [];
 
@@ -122,7 +124,9 @@ async function importHistory(page: Page, h: RecallHistory, depth: number): Promi
   if (page.url().includes('#/adventure/')) await page.goto('/');
   const chooser = page.waitForEvent('filechooser');
   await page.getByTitle('Storyloom JSON, or an AI Dungeon adventure export (JSON or zip)').click();
-  const file = { format: 'storyloom-adventure', version: 1, adventure: sliceHistory(h, depth, SEED) };
+  const adventure = sliceHistory(h, depth, SEED);
+  if (ENTITY_FACTS) adventure.settings.memory.entityFacts = true;
+  const file = { format: 'storyloom-adventure', version: 1, adventure };
   await (await chooser).setFiles({ name: `recall-d${depth}.json`, mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
   await page
     .getByRole('button', { name: new RegExp(`^Continue Recall d${depth} `) })
@@ -232,6 +236,7 @@ test('recall benchmark', async ({ page }) => {
     recordedAt: history.recordedAt,
     seed: SEED,
     judgeBatched: true,
+    entityFacts: ENTITY_FACTS,
     depths: DEPTHS,
     stalls: run.stalls,
     catchUpMs,

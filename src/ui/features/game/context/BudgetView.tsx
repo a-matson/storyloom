@@ -20,7 +20,7 @@ function SectionRow({ s, result }: { s: ContextSection; result: ContextBuildResu
         )}
         {s.kind === 'storyCards' && <span className={muted}> · {result.triggeredCards.length} triggered</span>}
         {s.kind === 'memories' && <span className={muted}> · {result.usedMemories.length} retrieved</span>}
-        {s.kind === 'facts' && <span className={muted}> · {result.usedFacts.length} facts</span>}
+        {s.kind === 'cast' && <span className={muted}> · {result.usedFacts.length} facts</span>}
       </span>
       {s.cacheable && <Pill tone="auto">cached prefix</Pill>}
       {s.trimmed && <Pill>trimmed</Pill>}

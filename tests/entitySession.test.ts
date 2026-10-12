@@ -28,12 +28,16 @@ function withGate(...more: Entity[]) {
 const count = (text: string, needle: string) => text.split(needle).length - 1;
 
 describe('GameSession derived values follow log edits', () => {
+  // A state on the scene's place: the cast sends present states, not model traits.
   const sourced = (text: string, opening: string): Entity => ({
     ...gate,
-    facts: [{ id: 'f9', text, fromAction: 0, source: 'memory', sourceId: 'x', sourceHash: hashPrompt(opening) }],
+    id: 'ent_old_gate',
+    name: 'Old Gate',
+    facts: [{ id: 'f9', text, fromAction: 0, source: 'memory', sourceId: 'x', sourceHash: hashPrompt(opening), kind: 'state', key: 'condition', value: text }],
   });
   const open = (fact: string, from = 'You stand at the gate.') => {
     const s = withGate(sourced(fact, from));
+    s.session.adv.plot.scene = { location: 'Old Gate', present: [] };
     const first = s.session.getSnapshot().actions[0];
     if (!first) throw new Error('no opening');
     const e = s.session.adv.entities[1]?.facts[0];
