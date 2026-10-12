@@ -115,6 +115,44 @@ describe('GameSession entity edits', () => {
     expect(only?.facts.map((f) => f.text)).toEqual(['It is locked at dusk.', 'It creaks.']);
   });
 
+  it("editFact makes the line the player's and drops its evidence", () => {
+    const { session } = withGate();
+    session.adv.entities = [
+      { ...gate, facts: [{ id: 'f1', text: 'Mood is grim.', fromAction: 0, source: 'memory', evidence: 'grim', kind: 'effect', value: 'grim' }] },
+    ];
+    entityEdits(session).editFact(gate.id, 'f1', 'cheerful');
+    const f = session.getSnapshot().adventure.entities[0]?.facts[0];
+    expect(f).toMatchObject({ text: 'cheerful', value: 'cheerful', basis: 'player', kind: 'effect' });
+    expect(f?.evidence).toBeUndefined();
+  });
+
+  it('deleteFact removes the fact; endEffect keeps it with until', () => {
+    const { session } = withGate();
+    const edits = entityEdits(session);
+    edits.addFact(gate.id, { text: 'Bleeding', kind: 'effect', value: 'Bleeding' });
+    const added = session.getSnapshot().adventure.entities[0]?.facts.at(-1);
+    edits.endEffect(gate.id, added?.id ?? '');
+    expect(session.getSnapshot().adventure.entities[0]?.facts.at(-1)?.until).toBe(session.getSnapshot().actions.length);
+    edits.deleteFact(gate.id, 'f1');
+    expect(session.getSnapshot().adventure.entities[0]?.facts.map((f) => f.text)).toEqual(['Bleeding']);
+  });
+
+  it('addFact records a player line per kind; addItem makes a held item', () => {
+    const { session } = withGate();
+    const edits = entityEdits(session);
+    edits.addFact(gate.id, { text: 'Hates rust', kind: 'trait' });
+    edits.addFact(gate.id, { text: 'Rusted shut', kind: 'effect', value: 'Rusted shut' });
+    edits.addFact(gate.id, { text: 'wary', kind: 'relationship', key: 'you', value: 'wary' });
+    const facts = session.getSnapshot().adventure.entities[0]?.facts.slice(1) ?? [];
+    expect(facts.map((f) => [f.kind, f.source, f.basis, f.sourceId])).toEqual([
+      ['trait', 'player', 'player', undefined],
+      ['effect', 'player', 'player', undefined],
+      ['relationship', 'player', 'player', undefined],
+    ]);
+    edits.addItem('Gate', 'Brass key');
+    expect(session.getSnapshot().adventure.entities.at(-1)).toMatchObject({ kind: 'item', name: 'Brass key', state: { holder: 'Gate' } });
+  });
+
   it('correct pins a player fact on the named entity, adds no action and sends it next turn', async () => {
     const { session } = withGate();
     const actions = session.getSnapshot().adventure.actions.length;

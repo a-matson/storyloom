@@ -12,8 +12,9 @@ import { Pill } from '@ui/components/ui/pill';
 import { Textarea } from '@ui/components/ui/textarea';
 import { pickFile } from '@ui/transferUi';
 import { Avatar } from './Avatar';
-import { Appearances, Facts, StateRows, type Update } from './EntityDetails';
-import { Has, ItemRows } from './ItemRows';
+import { CardSections } from './cards/CardSections';
+import { Appearances, type Update } from './EntityDetails';
+import { ItemRows } from './ItemRows';
 
 interface Props {
   entity: Entity;
@@ -69,16 +70,8 @@ export function EntityDrawer({ entity: e, adventure, api, onClose, onOpen }: Pro
         </label>
         <Input id={`${id}-aliases`} defaultValue={e.aliases.join(', ')} onBlur={(ev) => update({ aliases: list(ev.target.value) })} />
         {e.kind === 'item' && <ItemRows entity={e} entities={adventure.entities} update={update} />}
-        {e.kind === 'character' && <Has entity={e} entities={adventure.entities} onOpen={onOpen} />}
-        <StateRows entity={e} update={update} />
+        <CardSections entity={e} adventure={adventure} api={api} edits={edits} onClose={onClose} onOpen={onOpen} />
         <Appearances entity={e} adventure={adventure} onClose={onClose} edits={edits} />
-        <Facts entity={e} update={update} onClose={onClose} onEnd={(factId) => edits.endEffect(e.id, factId)} />
-        {e.relations.length > 0 && <SectionLabel>Relations</SectionLabel>}
-        {e.relations.map((r) => (
-          <p key={`${r.to}|${r.label}`} className="m-0 text-control">
-            {r.label} → {r.to}
-          </p>
-        ))}
         <Actions entity={e} adventure={adventure} edits={edits} />
       </DrawerBody>
     </Drawer>

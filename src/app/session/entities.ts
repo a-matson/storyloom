@@ -14,6 +14,53 @@ const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const ended = (f: EntityFact, until: number): EntityFact => ({ ...f, until });
 const withoutLook = ({ look: _l, ...e }: Entity): Entity => e;
 const patch = (adv: Adventure, id: string, p: Partial<Entity>) => (adv.entities = adv.entities.map((e) => (e.id === id ? { ...e, ...p } : e)));
+const mapFacts = (adv: Adventure, id: string, fn: (facts: EntityFact[]) => EntityFact[]) =>
+  patch(adv, id, { facts: fn(adv.entities.find((x) => x.id === id)?.facts ?? []) });
+// The player's words now: the story's evidence no longer backs them.
+const rewritten = ({ evidence: _e, ...f }: EntityFact, text: string): EntityFact => ({
+  ...f,
+  text,
+  ...(f.value !== undefined && { value: text }),
+  basis: 'player',
+});
+
+export type NewFact = Pick<EntityFact, 'text'> & Partial<Pick<EntityFact, 'kind' | 'key' | 'value' | 'cause'>>;
+
+/** A card's per-line edits; the player's lines carry `basis: 'player'` and no source. */
+function factEdits(host: GameSession) {
+  const mutate = (fn: (adv: Adventure) => void) => host.mutate((_, adv) => fn(adv));
+  return {
+    /** The condition stops being true now; the fact stays as history. */
+    endEffect: (id: string, factId: string) =>
+      host.mutate((log, adv) => mapFacts(adv, id, (facts) => facts.map((f) => (f.id === factId ? ended(f, log.actions.length) : f)))),
+    editFact: (id: string, factId: string, text: string) =>
+      mutate((adv) => mapFacts(adv, id, (facts) => facts.map((f) => (f.id === factId ? rewritten(f, text) : f)))),
+    /** No undo: the log's undo does not cover entity edits. */
+    deleteFact: (id: string, factId: string) => mutate((adv) => mapFacts(adv, id, (facts) => facts.filter((f) => f.id !== factId))),
+    addFact: (id: string, fact: NewFact) =>
+      host.mutate((log, adv) =>
+        mapFacts(adv, id, (facts) => [...facts, { ...fact, id: newId('fact_'), fromAction: log.actions.length, source: 'player', basis: 'player' }]),
+      ),
+    /** A new item card held by `holder` (a name). */
+    addItem: (holder: string, name: string) =>
+      host.mutate((log, adv) => {
+        const at = log.actions.length;
+        const item: Entity = {
+          id: newId('ent_'),
+          kind: 'item',
+          name,
+          aliases: [],
+          description: '',
+          facts: [],
+          state: { holder },
+          relations: [],
+          firstSeen: at,
+          lastSeen: at,
+        };
+        adv.entities = [...adv.entities, item];
+      }),
+  };
+}
 
 /**
  * The player's edits to `adv.entities`, through the session's `mutate`. Not session methods, so
@@ -41,12 +88,7 @@ export function entityEdits(host: GameSession) {
       }
     },
     clearPortrait: (id: string) => clearPortrait(host, id),
-    /** The condition stops being true now; the fact stays as history. */
-    endEffect: (id: string, factId: string) =>
-      host.mutate((log, adv) => {
-        const facts = adv.entities.find((x) => x.id === id)?.facts ?? [];
-        patch(adv, id, { facts: facts.map((f) => (f.id === factId ? ended(f, log.actions.length) : f)) });
-      }),
+    ...factEdits(host),
     /** Freeze the character's current look and point at that See image; later Sees repeat the words and the seed. */
     setReference: async (id: string, imageId: string) => {
       const { looksOf } = await loadImagePrompt();

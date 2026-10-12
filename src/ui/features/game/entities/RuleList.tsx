@@ -12,7 +12,7 @@ import { SECTION, SECTION_BODY } from '../sidebar/Section';
 type Edits = ReturnType<typeof ruleEdits>;
 
 /** One rule: text edited in place, gate chips, and Confirm for a story proposal. */
-function RuleRow({ rule: r, adventure, edits, sent }: { rule: Rule; adventure: Adventure; edits: Edits; sent: boolean }) {
+export function RuleRow({ rule: r, adventure, edits, sent }: { rule: Rule; adventure: Adventure; edits: Edits; sent: boolean }) {
   const name = (id: string) => adventure.entities.find((e) => e.id === id)?.name ?? id;
   const free = adventure.entities.filter((e) => !r.gates.includes(e.id));
   return (
