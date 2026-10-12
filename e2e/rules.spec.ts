@@ -10,6 +10,49 @@ async function rawPrompt(page: Page) {
   return context;
 }
 
+/** Selects `text` inside the story's action `n`, as a mouse drag would. */
+async function select(page: Page, n: number, text: string) {
+  await page.locator('#story [data-action-id]').nth(n).getByText(text).waitFor();
+  await page.evaluate(
+    ({ i, words }) => {
+      const block = document.querySelectorAll('#story [data-action-id]')[i];
+      const walker = document.createTreeWalker(block ?? document.body, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const at = node.textContent?.indexOf(words) ?? -1;
+        if (at < 0) continue;
+        const range = document.createRange();
+        range.setStart(node, at);
+        range.setEnd(node, at + words.length);
+        document.getSelection()?.removeAllRanges();
+        document.getSelection()?.addRange(range);
+        return;
+      }
+      throw new Error(`no "${words}" in action ${i}`);
+    },
+    { i: n, words: text },
+  );
+  return page.getByRole('toolbar', { name: 'Pin selection' });
+}
+
+test('selected story text pins as a rule, a fact about a character, or an item', async ({ page }) => {
+  await openSeededAdventure(page, 3);
+
+  await (await select(page, 1, 'The road bends 1.')).getByRole('button', { name: 'Pin as rule' }).click();
+  await expect(page.getByText('Rule added, always sent')).toBeVisible();
+  await page.getByRole('button', { name: 'Rules · 1' }).click();
+  await expect(page.getByRole('textbox', { name: 'Rule text' })).toHaveValue('The road bends 1.');
+  const context = await rawPrompt(page);
+  await expect(context.getByText('[Rules: The road bends 1]')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await (await select(page, 2, 'road bends')).getByRole('combobox', { name: 'Pin as fact about' }).selectOption('Merav');
+  await expect(page.getByText('Pinned to Merav')).toBeVisible();
+
+  await (await select(page, 0, 'road')).getByRole('button', { name: 'Make item' }).click();
+  await expect(page.getByText('road added as an item')).toBeVisible();
+  await expect(page.getByRole('toolbar', { name: 'Pin selection' })).toHaveCount(0);
+});
+
 test('/rule adds a rule; a gate on an absent place takes it out of the prompt', async ({ page }) => {
   await openSeededAdventure(page, 3);
   const input = page.getByRole('textbox', { name: 'Take a turn' });
