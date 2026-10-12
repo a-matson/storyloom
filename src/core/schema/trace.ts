@@ -43,6 +43,8 @@ export const TurnTrace = z.object({
     presencePenalty: z.optional(z.number()),
     frequencyPenalty: z.optional(z.number()),
     repetitionPenalty: z.optional(z.number()),
+    repeatLastN: z.optional(z.number()),
+    dryMultiplier: z.optional(z.number()),
     seed: z.optional(z.number()),
     stop: z.array(z.string()),
   }),

@@ -46,6 +46,10 @@ export interface CompletionRequest {
   presencePenalty?: number | undefined;
   frequencyPenalty?: number | undefined;
   repetitionPenalty?: number | undefined;
+  /** Look-back window of the penalties, in tokens. */
+  repeatLastN?: number | undefined;
+  /** DRY ("don't repeat yourself") strength; 0 or absent = off. */
+  dryMultiplier?: number | undefined;
   seed?: number | undefined;
   stop?: string[] | undefined;
   /** Ask the backend to reuse its KV cache for the common prefix. */

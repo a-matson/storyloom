@@ -9,7 +9,18 @@ describe('schemas', () => {
     expect(DEFAULT_ADVENTURE_SETTINGS).toEqual({
       providerId: 'local',
       template: 'chatml',
-      model: { contextLength: 8192, responseLength: 200, temperature: 1.0, topK: 250, topP: 0.95, presencePenalty: 0.25, frequencyPenalty: 0, dynamic: false },
+      model: {
+        contextLength: 8192,
+        responseLength: 200,
+        temperature: 1.0,
+        topK: 250,
+        topP: 0.95,
+        presencePenalty: 0.25,
+        frequencyPenalty: 0,
+        repeatLastN: 1536,
+        dryMultiplier: 0.8,
+        dynamic: false,
+      },
       memory: { autoSummary: true, memoryBank: true, bankSize: 200, contradictionCheck: false, entityFacts: false, introductions: true, sceneEachTurn: true },
       context: {
         cacheStableLayout: true,

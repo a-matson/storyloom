@@ -57,6 +57,13 @@ describe('dynamic samplers', () => {
     expect(new Set(requests.map((r) => r.seed)).size).toBe(4);
   });
 
+  it('leaves the repeat window and DRY alone, on or off', async () => {
+    for (const dynamic of [false, true]) {
+      const [r] = await playTurns(dynamic, 1);
+      expect(r).toMatchObject({ repeatLastN: 1536, dryMultiplier: 0.8 });
+    }
+  });
+
   it('on: the prompt is the same as off, so the KV cache is unaffected', async () => {
     const [on] = await playTurns(true, 1);
     const [off] = await playTurns(false, 1);

@@ -23,7 +23,8 @@ import { brotliCompressSync } from 'node:zlib';
 // js: 143.77 measured 2026-10-11 (M12-1 PR 4: the one-line JSON ask in the entity prompts); user raised 143.7 -> 144.5.
 // js: 144.98 measured 2026-10-11 (M12-5: items in the scene line); user raised 144.5 -> 145.5.
 // js: 145.76 measured 2026-10-12 (M12-2: cast lines in the context builder); user raised 145.5 -> 146.0.
-const BUDGET_KB = { js: 146.0, css: 6.6 };
+// js: 146.01 measured 2026-10-12 (M12-10: repeat window and DRY); user raised 146.0 -> 146.5.
+const BUDGET_KB = { js: 146.5, css: 6.6 };
 
 const html = readFileSync('dist/index.html', 'utf8');
 const files = [...html.matchAll(/(?:src|href)="[^"]*?(assets\/[^"]+\.(js|css))"/g)].map(

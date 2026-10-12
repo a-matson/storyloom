@@ -21,6 +21,9 @@ import { type CompletionChunk, type CompletionRequest, type Provider, type Provi
 /** Min matching chunk (tokens) llama-server may shift into place. Evicted turn: 46 -> 2225 of 2398 cached. [measured: 2026-10-02-gate-v.md] */
 const CACHE_REUSE_CHUNK = 64;
 
+/** DRY's other knobs, from the Wayfarer community preset. Its window is the repeat window: the server rejects -1 and falls back to 64. [provisional] */
+const DRY = { dry_base: 1.75, dry_allowed_length: 2, dry_sequence_breakers: ['\n', ':', '"', '*'] };
+
 export class LlamaServerProvider implements Provider {
   readonly kind = 'llama-server';
   private caps: ProviderCapabilities | null = null;
@@ -122,6 +125,8 @@ export class LlamaServerProvider implements Provider {
       // A soft stop cancels the stream before the final event, so stats must ride on every chunk.
       timings_per_token: true,
     };
+    if (req.repeatLastN !== undefined) body['repeat_last_n'] = req.repeatLastN;
+    if ((req.dryMultiplier ?? 0) > 0) Object.assign(body, { dry_multiplier: req.dryMultiplier, dry_penalty_last_n: req.repeatLastN ?? 0, ...DRY });
     if (req.seed !== undefined) body['seed'] = req.seed;
     if (req.slotId !== undefined) body['id_slot'] = req.slotId;
     if (req.grammar) body['grammar'] = req.grammar;

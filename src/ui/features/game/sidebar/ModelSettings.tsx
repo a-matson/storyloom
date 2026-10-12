@@ -13,6 +13,8 @@ const NUMBERS: { label: string; key: NumKey; step: number; min: number; max?: nu
   { label: 'Presence penalty', key: 'presencePenalty', step: 0.05, min: -2, max: 2 },
   { label: 'Frequency penalty', key: 'frequencyPenalty', step: 0.05, min: -2, max: 2 },
   { label: 'Repetition penalty', key: 'repetitionPenalty', step: 0.01, min: 0.5, max: 2 },
+  { label: 'Repeat window (tokens)', key: 'repeatLastN', step: 64, min: 0, max: 8192 },
+  { label: 'DRY multiplier (0 = off)', key: 'dryMultiplier', step: 0.05, min: 0, max: 2 },
   { label: 'Seed (blank = random)', key: 'seed', step: 1, min: 0 },
 ];
 
