@@ -10,7 +10,7 @@ import { mmr, rrf, RRF_K } from './fusion';
  *    covers actions 0–5; the next covers 6–11 once there are 18 actions, and
  *    so on. The most recent six actions are never summarised, so they stay
  *    freely editable. A range that would end on a player action stops one short.
- *  - the Story Summary is refreshed every 15 actions.
+ *  - the Story Summary takes in memories as their text leaves the context (AID: every 15 actions).
  *
  * Retrieval: memories are embedded; the most recent action is embedded as the
  * query; cosine similarity and BM25 rank the bank, fused by RRF, the head diversified
@@ -26,8 +26,6 @@ import { mmr, rrf, RRF_K } from './fusion';
 export const MEMORY_SPAN = 6;
 /** [AID-doc] */
 export const MEMORY_LAG = 12;
-/** [AID-doc] */
-export const SUMMARY_INTERVAL = 15;
 
 export interface MemoryRange {
   fromAction: number;
@@ -64,17 +62,14 @@ export function currentRange(actions: Action[], m: Memory): MemoryRange | null {
   return { fromAction: from, toAction: from + m.actionIds.length };
 }
 
-/** True when the running Story Summary should be refreshed at this count. */
-export function summaryDue(actionCount: number, lastSummarisedAt: number): boolean {
-  if (actionCount < SUMMARY_INTERVAL) return false;
-  return actionCount - lastSummarisedAt >= SUMMARY_INTERVAL;
-}
+/**
+ * True when the summary should take in evicted text: its covered end moved a whole eviction chunk past
+ * the last refresh. Nothing evicted, nothing due: the history still holds that text verbatim.
+ */
+export const summaryDue = (coveredEnd: number, lastAt: number, chunk: number): boolean => coveredEnd - lastAt >= chunk;
 
-/** Two intervals without a refresh: memory jobs kept starving the summary, so it goes first. [provisional] */
-export const summaryOverdue = (actionCount: number, lastSummarisedAt: number): boolean => actionCount - lastSummarisedAt >= 2 * SUMMARY_INTERVAL;
-
-/** Actions until `summaryDue` turns true; 0 when it already is. */
-export const actionsUntilSummary = (actionCount: number, lastSummarisedAt: number): number => Math.max(0, lastSummarisedAt + SUMMARY_INTERVAL - actionCount);
+/** Two chunks behind: memory jobs kept starving the summary, so it goes first. [provisional] */
+export const summaryOverdue = (coveredEnd: number, lastAt: number, chunk: number): boolean => coveredEnd - lastAt >= 2 * chunk;
 
 /** Actions until `dueMemoryRanges` is non-empty; 0 when a range is already due. */
 export function actionsUntilMemory(actionCount: number, existing: Pick<Memory, 'toAction'>[]): number {

@@ -6,6 +6,14 @@ const MAX_PHRASES = 10;
 
 const grams = (words: string[], n: number) => words.slice(0, Math.max(0, words.length - n + 1)).map((_, i) => words.slice(i, i + n).join(' '));
 
+/** Share of `a`'s word n-grams that also occur in `b`; 0 when `a` has none. */
+export function ngramOverlap(a: string, b: string, n: number): number {
+  const ours = grams(tokenise(a), n);
+  if (!ours.length) return 0;
+  const theirs = new Set(grams(tokenise(b), n));
+  return ours.filter((g) => theirs.has(g)).length / ours.length;
+}
+
 /**
  * Word n-grams of `output` already seen in `previous`, merged into maximal runs so one copied
  * sentence reports once, longest first. Lower-cased, punctuation ignored, no stemming.

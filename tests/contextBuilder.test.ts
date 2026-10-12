@@ -133,25 +133,31 @@ describe('dynamic elements', () => {
     expect(r.usedMemories).toHaveLength(0);
   });
 
-  it('retrieves memories only when history overflows, skipping ranges still in history', () => {
+  it('retrieves memories only when history overflows, skipping ranges mostly still in history', () => {
     const actions = [
       act('start', 'Opening.'),
       ...Array.from({ length: 40 }, (_, i) => act('continue', `Paragraph ${i} ${long(20)}`)),
       act('do', '> You wait.'),
     ];
+    const settings = { contextLength: 600, memoryBankEnabled: true, cacheStableLayout: false, evictionChunk: 8 };
+    const from = buildContext(base({ actions, settings })).historyRange!.from;
     const r = buildContext(
       base({
         actions,
-        settings: { contextLength: 600, memoryBankEnabled: true, cacheStableLayout: false, evictionChunk: 8 },
+        settings,
         rankedMemories: [
           { memory: mem('Very old memory', 0, 6), score: 0.9 },
           { memory: mem('Memory of the recent past', 36, 42), score: 0.8 },
+          // a straddling memory counts once at least half its range is evicted
+          { memory: mem('Half evicted', from - 3, from + 3), score: 0.7 },
+          { memory: mem('Mostly in history', from - 2, from + 4), score: 0.6 },
         ],
       }),
     );
     expect(r.historyFullyIncluded).toBe(false);
-    expect(r.usedMemories.map((m) => m.text)).toEqual(['Very old memory']);
-    expect(r.sections.find((s) => s.kind === 'memories')?.text).toBe('Memories:\nVery old memory');
+    expect(r.historyRange!.from).toBe(from);
+    expect(r.usedMemories.map((m) => m.text)).toEqual(['Very old memory', 'Half evicted']);
+    expect(r.sections.find((s) => s.kind === 'memories')?.text).toBe('Memories:\nVery old memory\nHalf evicted');
   });
 });
 

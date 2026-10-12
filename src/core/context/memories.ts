@@ -12,7 +12,7 @@ export interface MemoriesResult {
 
 /**
  * Best-ranked memories in whatever budget cards and history left. Only used when history
- * overflowed, and never for ranges still present verbatim in [historyStart, end).
+ * overflowed, and never for ranges mostly still present verbatim in [historyStart, end).
  */
 export function selectMemories(
   ranked: RankedMemory[],
@@ -25,7 +25,9 @@ export function selectMemories(
   const usedMemories: Memory[] = [];
   let used = tokenizer.count(HEADERS.memories) + 1;
   for (const { memory } of ranked) {
-    if (memory.toAction > historyStart && memory.fromAction < end) continue;
+    // A memory straddling the history's start counts once at least half its range has left; that half is then sent twice.
+    const evicted = Math.min(historyStart, memory.toAction) - memory.fromAction;
+    if (memory.toAction > historyStart && memory.fromAction < end && 2 * evicted < memory.toAction - memory.fromAction) continue;
     const cost = tokenizer.count(memory.text) + 1;
     if (used + cost > budget) continue;
     usedMemories.push(memory);

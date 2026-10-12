@@ -128,6 +128,10 @@ export function costAndState(r: Rows) {
         facts: e.facts.filter((f) => (f.kind ?? 'trait') === 'trait' || f.conflict).map((f) => (f.conflict ? `CONFLICT ${f.text}` : f.text)),
       })),
     scene: (r.adventure['plot'] as { scene?: unknown } | undefined)?.scene,
+    // What the summary and the bank cover, read by hand for the coverage bar.
+    summary: (r.adventure['plot'] as { storySummary?: unknown } | undefined)?.storySummary,
+    summaryAt: (r.adventure['scriptState'] as { __summaryAt?: unknown } | undefined)?.__summaryAt,
+    memories: (r.memories as { text: string; fromAction: number; toAction: number }[]).map((m) => `${m.fromAction}-${m.toAction}: ${m.text}`),
     // The adventure's rules, with their gates' names.
     rules: (z.array(Rule).safeParse(r.adventure['rules']).data ?? []).map((rule) => ({
       text: rule.text,

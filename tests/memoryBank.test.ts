@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   actionsUntilMemory,
-  actionsUntilSummary,
   cosine,
   dueMemoryRanges,
   entitiesOverdue,
@@ -55,19 +54,16 @@ describe('memory scheduling', () => {
     expect(ranges.at(-1)!.toAction).toBeLessThanOrEqual(30 - MEMORY_SPAN);
   });
 
-  it('refreshes the summary every 15 actions', () => {
-    expect(summaryDue(14, 0)).toBe(false);
-    expect(summaryDue(15, 0)).toBe(true);
-    expect(summaryDue(29, 15)).toBe(false);
-    expect(summaryDue(30, 15)).toBe(true);
-    expect([summaryOverdue(29, 0), summaryOverdue(30, 0), summaryOverdue(44, 15), summaryOverdue(45, 15)]).toEqual([false, true, false, true]);
+  it('refreshes the summary once a whole eviction chunk left the history, never before eviction', () => {
+    expect(summaryDue(0, 0, 8)).toBe(false);
+    expect(summaryDue(7, 0, 8)).toBe(false);
+    expect(summaryDue(8, 0, 8)).toBe(true);
+    expect(summaryDue(15, 8, 8)).toBe(false);
+    expect(summaryDue(16, 8, 8)).toBe(true);
+    expect([summaryOverdue(15, 0, 8), summaryOverdue(16, 0, 8), summaryOverdue(23, 8, 8), summaryOverdue(24, 8, 8)]).toEqual([false, true, false, true]);
   });
 
-  it('counts down to the next summary and the next memory', () => {
-    expect(actionsUntilSummary(15, 0)).toBe(0);
-    expect(actionsUntilSummary(10, 0)).toBe(5);
-    expect(actionsUntilSummary(20, 15)).toBe(10);
-    expect(actionsUntilSummary(50, 15)).toBe(0);
+  it('counts down to the next memory', () => {
     expect(actionsUntilMemory(11, [])).toBe(1);
     expect(actionsUntilMemory(12, [])).toBe(0);
     expect(actionsUntilMemory(13, [mem('m0', 0)])).toBe(5);
