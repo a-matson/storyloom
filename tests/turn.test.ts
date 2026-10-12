@@ -237,7 +237,7 @@ describe('turn traces', () => {
     expect(traces(await collect(runTurn(adventure, log, { type: 'do', text: 'x' }, deps)))).toEqual([]);
   });
 
-  it('sends a mentioned entity as a card under the structured cap, not through story cards, unless a story card has its name', async () => {
+  it('sends a mentioned entity as an identity line under the structured cap, not through story cards, unless a story card has its name', async () => {
     const { adventure, log, deps } = setup();
     log.append('do', '> You hail the ferrywoman.');
     const entity = {
@@ -249,13 +249,13 @@ describe('turn traces', () => {
     const prepared = await prepareContext(adventure, log.actions, deps);
     if ('stopped' in prepared) throw new Error('context build stopped');
     expect(prepared.result.triggeredCards).toEqual([]);
-    expect(prepared.result.sections.find((s) => s.kind === 'entityCards')?.text).toBe('Known entities:\nTamsin rows the night ferry.');
+    expect(prepared.result.sections.find((s) => s.kind === 'cast')?.text).toBe('Tamsin (rows the night ferry).');
     expect(prepared.result.usedEntityIds).toEqual([entity.id]);
     adventure.storyCards = [{ id: 'c1', type: 'Character', name: 'tamsin', entry: 'The hand-written Tamsin.', triggers: ['ferrywoman'] }];
     const withCard = await prepareContext(adventure, log.actions, deps);
     if ('stopped' in withCard) throw new Error('context build stopped');
     expect(withCard.result.triggeredCards.map((m) => m.card.id)).toEqual(['c1']);
-    expect(withCard.result.sections.some((s) => s.kind === 'entityCards')).toBe(false);
+    expect(withCard.result.sections.some((s) => s.kind === 'cast')).toBe(false);
   });
 
   it('traces a prefetched alternative against the action it would re-roll', async () => {

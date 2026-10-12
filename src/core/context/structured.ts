@@ -1,31 +1,38 @@
 import { compileCards, lookbackWindow, matchCards } from '../cards/storyCards';
-import { isConfirmed, rankFacts } from '../memory/facts';
+import { isConfirmed } from '../memory/facts';
 import { projectEntity } from '../memory/projection';
 import type { Entity } from '../model/types';
 import { actionStoryText } from '../text/formatting';
-import { HEADERS, renderScene, renderSection } from './render';
+import { type CastLine, mentionedLine, pinnedLines, presentLine } from './cast';
+import { renderScene, renderSection } from './render';
 import { relevantRules, renderRules } from './rules';
 import type { ContextBuildInput, RenderedSections, SectionKind } from './types';
+
+/** Hard ceiling on rules, scene and cast together, under the `structuredShare` cap. [provisional] */
+export const STRUCTURED_CAP = 200;
 
 export interface StructuredResult {
   structuredBudget: number;
   structuredUsed: number;
   usedFacts: { entityId: string; factId: string }[];
-  /** Entities with a card or a fact in the prompt. */
+  /** Entities with a cast line in the prompt. */
   usedEntityIds: string[];
   usedRuleIds: string[];
 }
 
 // "the Old Well" in the scene names the entity "Old Well".
 const norm = (n: string) => n.trim().toLowerCase().replace(/^the /, '');
-const named = (e: Entity, names: ReadonlySet<string>) => [e.name, ...e.aliases].some((n) => names.has(norm(n)));
+const named = (e: Entity, n: string) => [e.name, ...e.aliases].some((k) => norm(k) === norm(n));
+const ids = (es: Entity[]) => new Set(es.map((e) => e.id));
 
 /**
- * Rules, scene line, facts, then entity cards, inside one cap; whatever does not fit is skipped.
- * An entity whose name a hand-written card holds, or whose promoted card still exists, sends facts only.
+ * Rules, the scene line, then the cast: a now-line per present character (and the scene's place),
+ * an identity line per entity the recent text names, the player's pins for everyone else. In that
+ * order inside one cap; a line that does not fit is skipped whole. Absent entities send nothing.
  */
-export function selectStructured(input: ContextBuildInput, lastActionIndex: number, budget: number, out: RenderedSections): StructuredResult {
+export function selectStructured(input: ContextBuildInput, lastActionIndex: number, cap: number, out: RenderedSections): StructuredResult {
   const { tokenizer, plot } = input;
+  const budget = Math.min(cap, STRUCTURED_CAP);
   const entities = input.entities.filter(isConfirmed);
   let left = budget;
   const put = (kind: SectionKind, text: string) => {
@@ -33,50 +40,52 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
     out.set(kind, { text, tokens, trimmed: false });
     left -= tokens;
   };
-  // Header plus as many lines as fit; per-line cost +1 for the separator is an upper bound.
-  const fill = <T>(kind: 'facts' | 'entityCards', items: T[], line: (t: T) => string, sep: string): T[] => {
-    let cost = tokenizer.count(HEADERS[kind]) + 1;
-    const kept = items.filter((t) => {
-      const c = tokenizer.count(line(t)) + sep.length;
-      if (cost + c > left) return false;
-      cost += c;
-      return true;
-    });
-    if (kept.length) put(kind, renderSection(kind, kept.map(line).join(sep)));
-    return kept;
-  };
 
-  // The location counts as present, so the place the scene is in sends its card too.
-  const present = new Set([...(plot.scene?.present ?? []), plot.scene?.location ?? ''].map(norm));
-  const window = lookbackWindow(budget);
-  const recent = lastActionIndex >= 0 ? input.actions.slice(Math.max(0, lastActionIndex - window + 1), lastActionIndex + 1) : [];
-  const here = entities.filter((e) => named(e, present));
+  // The location counts as present, so the place the scene is in gets its identity line too.
+  const names = [...(plot.scene?.present ?? []), plot.scene?.location ?? ''].filter((n) => n.trim());
   const byId = new Map(entities.map((e) => [e.id, e]));
-  const mentioned = matchCards(compileCards(entities.map(projectEntity)), recent.map(actionStoryText)).flatMap((m) => byId.get(m.card.id) ?? []);
+  const here = [...ids(names.flatMap((n) => entities.find((e) => named(e, n)) ?? []))].flatMap((i) => byId.get(i) ?? []);
+  const window = lookbackWindow(cap);
+  const recent = lastActionIndex >= 0 ? input.actions.slice(Math.max(0, lastActionIndex - window + 1), lastActionIndex + 1) : [];
+  const inText = matchCards(compileCards(entities.map(projectEntity)), recent.map(actionStoryText)).flatMap((m) => byId.get(m.card.id) ?? []);
+  const present = ids(here);
+  const mentioned = [...ids(inText)].filter((i) => !present.has(i)).flatMap((i) => byId.get(i) ?? []);
 
   // Rules first: the world's laws outrank what the scene holds. As many as fit, in order.
-  const ctx = { entities, scene: plot.scene, present: new Set(here.map((e) => e.id)), mentioned: new Set(mentioned.map((e) => e.id)) };
+  const ctx = { entities, scene: plot.scene, present, mentioned: ids(mentioned) };
   const rules = relevantRules(input.rules ?? [], ctx);
   while (rules.length && tokenizer.count(renderSection('rules', renderRules(rules))) > left) rules.pop();
   if (rules.length) put('rules', renderSection('rules', renderRules(rules)));
 
   const scene = renderScene(plot.scene, entities);
   if (scene && tokenizer.count(renderSection('scene', scene)) <= left) put('scene', renderSection('scene', scene));
-  const only = input.settings.pinnedFactsOnly ?? false;
-  const ranked = rankFacts(entities, new Set(here.map((e) => e.id)), new Set(mentioned.map((e) => e.id)));
-  // The player's own facts (Correct, pins) and canon conflicts go in even with entity facts off.
-  const facts = fill('facts', only ? ranked.filter((r) => r.fact.pinned || r.fact.conflict) : ranked, (r) => `${r.entity.name}: ${r.fact.text}`, '\n');
 
+  // A hand-written card already says who they are, so a carded entity keeps its now-line but no identity.
   const cardNames = new Set(input.storyCards.flatMap((c) => [c.id, c.name.trim().toLowerCase()]));
-  const carded = (e: Entity) => (e.cardId && cardNames.has(e.cardId)) || cardNames.has(e.name.trim().toLowerCase());
-  const candidates = [...new Set([...here, ...mentioned])].filter((e) => !carded(e));
-  const cards = only ? [] : fill('entityCards', candidates, (e) => projectEntity(e).entry, '\n\n');
+  const carded = (e: Entity) => (e.cardId !== undefined && cardNames.has(e.cardId)) || cardNames.has(e.name.trim().toLowerCase());
+  // The player's own facts (Correct, pins) and canon conflicts go in even with entity facts off.
+  const lines: CastLine[] = input.settings.pinnedFactsOnly
+    ? pinnedLines(entities)
+    : [
+        ...here.map((e) => presentLine(e, here, carded(e))),
+        ...mentioned.flatMap((e) => mentionedLine(e, carded(e))),
+        ...pinnedLines(entities.filter((e) => !present.has(e.id))),
+      ];
+  // Per-line cost +1 for the newline is an upper bound.
+  let cost = 0;
+  const kept = lines.filter((l) => {
+    const c = tokenizer.count(l.text) + 1;
+    if (cost + c > left) return false;
+    cost += c;
+    return true;
+  });
+  if (kept.length) put('cast', kept.map((l) => l.text).join('\n'));
 
   return {
     structuredBudget: budget,
     structuredUsed: budget - left,
-    usedFacts: facts.map((r) => ({ entityId: r.entity.id, factId: r.fact.id })),
-    usedEntityIds: [...new Set([...cards.map((e) => e.id), ...facts.map((r) => r.entity.id)])],
+    usedFacts: kept.flatMap((l) => l.factIds.map((factId) => ({ entityId: l.entity.id, factId }))),
+    usedEntityIds: [...new Set(kept.map((l) => l.entity.id))],
     usedRuleIds: rules.map((r) => r.id),
   };
 }

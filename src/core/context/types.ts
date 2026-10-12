@@ -16,8 +16,8 @@ export type SectionKind =
   /** `[Rules: …]`: confirmed rules whose gates are in play. */
   | 'rules'
   | 'scene'
-  | 'facts'
-  | 'entityCards'
+  /** Now-lines for who is in the scene, identities for who is named, the player's pins. */
+  | 'cast'
   | 'lastAction'
   | 'frontMemory'
   /** Inserted by a script through `sections`; never part of the cacheable prefix. */
@@ -44,7 +44,7 @@ interface ContextBudget {
   historyUsed: number;
   memoriesBudget: number;
   memoriesUsed: number;
-  /** Shared cap for rules, scene, facts and entity cards; what they leave goes to the dynamic budget. */
+  /** Shared cap for rules, scene and cast; what they leave goes to the dynamic budget. */
   structuredBudget: number;
   structuredUsed: number;
   used: number;
@@ -60,9 +60,9 @@ export interface ContextBuildSettings {
   evictionChunk: number;
   /** Share of the budget reserved for Required elements. AID: 0.7. */
   requiredShare?: number;
-  /** Cap on scene + facts + entity cards, as a share of `contextLength`. Default 0.1. [provisional] */
+  /** Cap on rules + scene + cast, as a share of `contextLength`, never over `STRUCTURED_CAP`. Default 0.1. [provisional] */
   structuredShare?: number;
-  /** Send only pinned and conflicting facts, no entity cards; the scene line is unaffected. */
+  /** The cast sends only pinned and conflicting facts; rules and the scene line are unaffected. */
   pinnedFactsOnly?: boolean;
   /** The content clause, appended to the AI Instructions in the system prompt. */
   content?: string;
@@ -74,7 +74,7 @@ export interface ContextBuildInput {
   actions: Action[];
   plot: PlotComponents;
   storyCards: StoryCard[];
-  /** Sent as facts and projected cards under the structured cap, never through `storyCards`. */
+  /** Sent as cast lines under the structured cap, never through `storyCards`. */
   entities: Entity[];
   /** Sent as `[Rules: …]` while relevant (`relevantRules`), first claim on the structured cap. */
   rules?: readonly Rule[];
@@ -104,7 +104,7 @@ export interface ContextBuildResult {
   /** The ranking the memories were picked from, so the viewer can show scores as sent. */
   rankedMemories: RankedMemory[];
   usedFacts: { entityId: string; factId: string }[];
-  /** Entities with a card or a fact in the prompt. */
+  /** Entities with a cast line in the prompt. */
   usedEntityIds: string[];
   /** Rules in the `[Rules: …]` line. */
   usedRuleIds: string[];

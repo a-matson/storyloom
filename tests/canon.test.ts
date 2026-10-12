@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { pinnedLines } from '@core/context/cast';
 import { seedCanonEntities } from '@core/memory/canon';
 import { mergeEntity, type Sighting } from '@core/memory/entities';
-import { rankFacts } from '@core/memory/facts';
 import { currentStates } from '@core/memory/looks';
 import { createAdventureFromScenario, newScenario } from '@core/model/scenario';
 import type { Entity, StoryCard } from '@core/model';
@@ -67,9 +67,8 @@ describe('canon lock', () => {
     expect(next.facts.some((f) => f.conflict)).toBe(false);
   });
 
-  it('a conflicted fact ranks with the pinned facts', () => {
+  it('a conflicted fact goes out with the pinned facts', () => {
     const e = mergeEntity(canon({ state: { eyes: 'grey' }, canonKeys: ['eyes'] }), seen({ state: { eyes: 'blue' }, facts: ['She sings.'] }), 7);
-    const ranked = rankFacts([e], new Set(), new Set());
-    expect(ranked.map((r) => r.fact.text)).toEqual(['the story says eyes is blue, but canon says grey']);
+    expect(pinnedLines([e]).map((l) => l.text)).toEqual([`${e.name}: the story says eyes is blue, but canon says grey`]);
   });
 });
