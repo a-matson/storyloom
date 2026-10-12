@@ -7,6 +7,7 @@
  *   memory-keep <url> [label]  does the memory for each planted Do/Say keep the fact? (recorded history, ~16 calls)
  *   contradiction <url> [label]  precision/recall of the contradiction check on 40 hand-labelled outputs
  *   live <url> [label]   plays 20 scripted turns in the real app; per-turn stats, memories, summary
+ *   repetition <url> [label]  the live turns alone: repeated phrases per turn, distinct 4-grams (MEASURE_SAMPLERS=64,0 for the "before")
  *   images <image-url> <url>  See mode and a cover against a real A1111 server
  *   recall-record <url>   plays the 24-fact scenario to turn 90 once and saves the history (bench/recall-history.json)
  *   recall <url> [label]  replays the recorded history and generates only the probes at turns 30/60/90 (~75 min); the memory recall baseline
@@ -29,6 +30,10 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
   },
   // `--project=live`, not `--project live`: the flag is variadic and would swallow the file.
   live: { cmd: ['pnpm', 'exec', 'playwright', 'test', '--project=live', 'e2e/live/play.spec.ts'], env: { MEASURE_URL: a, MEASURE_LABEL: b } },
+  repetition: {
+    cmd: ['pnpm', 'exec', 'playwright', 'test', '--project=live', 'e2e/live/repetition.spec.ts'],
+    env: { MEASURE_URL: a, MEASURE_LABEL: b },
+  },
   images: { cmd: ['pnpm', 'exec', 'playwright', 'test', '--project=live', 'e2e/live/images.spec.ts'], env: { MEASURE_IMAGES: a, MEASURE_URL: b } },
   'recall-record': {
     cmd: ['pnpm', 'exec', 'playwright', 'test', '--project=live', 'e2e/live/recall.spec.ts'],

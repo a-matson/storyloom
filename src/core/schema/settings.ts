@@ -114,6 +114,8 @@ export const AdventureSettings = z.object({
   /** The content clause every system prompt carries; `custom` sends `contentText` instead (blank = none). */
   content: z._default(z.enum(['unrestricted', 'custom']), 'unrestricted'),
   contentText: z.optional(z.string()),
+  /** Lines of the "Never write" box; an output containing one is flagged for a retry. Not a sampler: llama-server's string bias bans every token of a phrase. */
+  bannedPhrases: z._default(z.array(z.string()), []),
 });
 
 export const ProviderConfig = z.object({

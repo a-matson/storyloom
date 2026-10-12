@@ -3,6 +3,7 @@ import { z } from 'zod/mini';
 import * as S from '@core/schema';
 import { writeMeasurement } from '../../bench/env';
 import { watchIntroductions } from '../../bench/introductions';
+import { readDb, TURNS } from '../../bench/livePlay';
 import { watchMemoryRuns } from '../../bench/memoryRuns';
 import { portraits } from '../../bench/portraits';
 
@@ -19,29 +20,6 @@ const READ_MS = Number(process.env['MEASURE_READ_MS'] ?? 6000);
 // Then types key by key, so typing-aware deferral of memory jobs is exercised. [provisional]
 const TYPE_MS = 4000;
 const TURN_MS = 180_000;
-
-const TURNS: [mode: 'Do' | 'Say', text: string][] = [
-  ['Do', 'look around'],
-  ['Do', 'walk to the nearest door'],
-  ['Do', 'ask the ferrywoman Tamsin about the road ahead'],
-  ['Say', 'What happened to the last traveller who came this way?'],
-  ['Do', 'pay Tamsin a silver coin and step onto the ferry'],
-  ['Do', 'watch the far bank as the ferry crosses'],
-  ['Do', 'climb the bank and follow the path into the woods'],
-  ['Do', 'search the abandoned camp by the path'],
-  ['Do', 'read the letter found in the camp'],
-  ['Say', 'Is anyone out there? Show yourself.'],
-  ['Do', 'draw my sword and wait'],
-  ['Do', 'follow the tracks deeper into the woods'],
-  ['Do', 'climb a tree to look over the canopy'],
-  ['Do', 'head toward the smoke on the horizon'],
-  ['Do', 'approach the village gate carefully'],
-  ['Say', 'I come in peace. I am looking for shelter.'],
-  ['Do', 'follow the guard to the inn'],
-  ['Do', 'ask the innkeeper about the ferrywoman'],
-  ['Do', 'go upstairs and rest for the night'],
-  ['Do', 'wake at dawn and check my pack'],
-];
 
 const send = (page: Page) => page.getByRole('button', { name: 'Send' });
 
@@ -83,33 +61,6 @@ async function eraseUndoRedo(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Erase to here' }).click();
   await page.getByRole('button', { name: 'Undo' }).first().click();
   await page.getByRole('button', { name: 'Redo' }).first().click();
-}
-
-/** Every row of the stores this run reads; the app has one adventure. */
-function readDb(page: Page) {
-  return page.evaluate(async () => {
-    const req = indexedDB.open('storyloom');
-    const db = await new Promise<IDBDatabase>((ok, fail) => {
-      req.addEventListener('success', () => ok(req.result));
-      req.addEventListener('error', () => fail(req.error));
-    });
-    const all = (store: string) =>
-      new Promise<Record<string, unknown>[]>((ok, fail) => {
-        const r = db.transaction(store).objectStore(store).getAll();
-        r.addEventListener('success', () => ok(r.result as Record<string, unknown>[]));
-        r.addEventListener('error', () => fail(r.error));
-      });
-    const out = {
-      adventures: await all('adventures'),
-      actions: await all('actions'),
-      memories: await all('memories'),
-      entities: await all('entities'),
-      traces: await all('traces'),
-      cards: await all('storyCards'),
-    };
-    db.close();
-    return out;
-  });
 }
 
 /** Memory jobs run on idle; wait until the bank and summary stop changing. */
@@ -173,7 +124,7 @@ test('scripted live play', async ({ page }) => {
     await page.getByRole('textbox', { name: 'Take a turn' }).pressSequentially(text, { delay: TYPE_MS / text.length });
     await generated(page, () => send(page).click());
     if (i === 2) await addCards(page);
-    if (i === 5) for (let r = 0; r < 2; r++) await generated(page, () => page.getByRole('button', { name: /^Retry/ }).click());
+    if (i === 5) for (let r = 0; r < 2; r++) await generated(page, () => page.getByRole('button', { name: /^Retry( ·)?$/ }).click());
     if (i === 9) await editLast(page);
     if (i === 14) await eraseUndoRedo(page);
   }

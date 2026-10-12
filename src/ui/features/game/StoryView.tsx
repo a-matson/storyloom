@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { Action, AppSettings, Entity } from '@core/model';
+import type { OutputFlag } from '@core/trace';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { ActionBlock, PROSE } from './ActionBlock';
 import { Caret } from './Caret';
@@ -17,7 +18,7 @@ interface Props {
   onViewContext: () => void;
   onViewTrace: () => void;
   contextSummary?: string | undefined;
-  contradiction?: string | undefined;
+  flag?: OutputFlag | undefined;
   cast?: readonly Entity[] | undefined;
   /** The scene's present characters: the face of a reply to a `say` that names nobody. */
   present?: readonly string[] | undefined;
@@ -38,7 +39,7 @@ export function StoryView({
   onViewContext,
   onViewTrace,
   contextSummary,
-  contradiction,
+  flag,
   cast,
   present,
   onOpenEntity,
@@ -68,7 +69,7 @@ export function StoryView({
             onViewContext={onViewContext}
             onViewTrace={onViewTrace}
             contextSummary={contextSummary}
-            contradiction={i === lastIdx ? contradiction : undefined}
+            flag={i === lastIdx ? flag : undefined}
             cast={cast}
             present={actions[i - 1]?.type === 'say' ? present : undefined}
             onOpenEntity={onOpenEntity}
