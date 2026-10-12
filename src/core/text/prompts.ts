@@ -109,14 +109,15 @@ export function checkPrompt(output: string, lines: readonly string[]): string {
 }
 
 export const SUMMARY_SYSTEM =
-  'You maintain a running summary of an interactive story. Keep it information-dense and chronological, ' +
-  'under 250 words, dropping details that no longer matter. Output only the summary.';
+  'You maintain a running summary of an interactive story. Extend the summary with the new memories; ' +
+  'keep every earlier event; do not drop details. Keep it information-dense and chronological, in two parts: ' +
+  '"Long ago:" (at most 6 sentences) then "Recently:" (at most 6 sentences). When Recently would pass 6 sentences, ' +
+  'fold its oldest sentences into Long ago. Output only the summary.';
 
-export function summaryPrompt(previousSummary: string, newMemories: string[], recentPassage: string): string {
+export function summaryPrompt(previousSummary: string, newMemories: string[]): string {
   return (
     (previousSummary ? `Current summary:\n${previousSummary}\n\n` : '') +
     (newMemories.length ? `New memories since then:\n${newMemories.map((m) => `- ${m}`).join('\n')}\n\n` : '') +
-    (recentPassage ? `Most recent passage:\n${recentPassage}\n\n` : '') +
     'Write the updated summary:'
   );
 }

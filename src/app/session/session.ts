@@ -49,6 +49,7 @@ export class GameSession {
     adventure: () => this.adv,
     helperModel: () => this.helperModel(),
     embedder: () => this.resolveEmbedder(),
+    historyStart: () => this.lastPrepared?.result.historyRange?.from,
     changed: () => this.changed(),
     annotate: (s) => this.log.annotate(s),
     portraits: async (idle) => (await import('./portraits')).queuePortraits(this, idle),

@@ -7,6 +7,8 @@ interface Host {
   adventure: () => Adventure;
   helperModel: () => Promise<HelperModel>;
   embedder: () => Promise<Embedder>;
+  /** First action of the history in the last built context: the summary covers what came before. */
+  historyStart?: () => number | undefined;
   /** The adventure changed in place: publish and save. */
   changed: () => void;
   /** Speaker labels by action id, onto the log. */
@@ -169,7 +171,7 @@ export class MemoryScheduler {
     try {
       // Memories are embedded on the story side so they compare with the query vectors in `prepareContext`.
       const { runMemoryMaintenance } = await loadMemoryJobs();
-      const deps = { ...(await this.host.helperModel()), embedder: await this.host.embedder() };
+      const deps = { ...(await this.host.helperModel()), embedder: await this.host.embedder(), historyStart: this.host.historyStart?.() };
       const report = await runMemoryMaintenance(this.host.adventure(), { ...deps, signal: AbortSignal.any([idle, cancel.signal]), cancel: cancel.signal });
       const { summaryUpdated, summaryFirst, cutCalls, finishedPastCut, factsProposed, rejected } = report;
       const entityCalls = (report.calls ?? []).filter((c) => c.job === 'entity');

@@ -1,5 +1,5 @@
 import type { Action, Adventure, Memory, Speaker } from '../model/types';
-import { createMemory, currentRange, dueMemoryRanges, evictToSize, isPlayerAction, summaryOverdue, type MemoryRange } from './memoryBank';
+import { createMemory, currentRange, dueMemoryRanges, evictToSize, isPlayerAction, type MemoryRange } from './memoryBank';
 import { MEMORY_SYSTEM, memoryPrompt } from '../text/prompts';
 import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
@@ -10,7 +10,8 @@ import { catchUpEntities } from './extract';
 import type { Rejected } from './fold';
 import { dropUnsupported } from './invalidate';
 import { helperCall, sentencesOnly, type CutCounts } from './helperCall';
-import { refreshSummary } from './summary';
+import { refreshSummary, summaryFirst } from './summary';
+import { ngramOverlap } from '../text/repetition';
 
 // For the player's entity edits, which load with these jobs.
 export { entityNamedIn, guessUnlabelled, mergeEntities } from './entities';
@@ -40,6 +41,8 @@ export interface MaintenanceDeps {
   /** Cuts a streaming call too (the player started typing) until it is half done; a cut reply is dropped. Pass it inside `signal` as well. */
   cancel?: AbortSignal;
   cuts?: CutCounts;
+  /** First action of the history in the last built context; undefined before the first turn (nothing evicted). */
+  historyStart?: number | undefined;
 }
 
 export interface MaintenanceReport extends CutCounts {
@@ -87,12 +90,14 @@ async function reembed(adventure: Adventure, deps: MaintenanceDeps): Promise<voi
 
 /** Above this share of quoted dialogue the "memory" is a scene, not a summary. [provisional] */
 const MAX_QUOTED = 0.3;
+/** Above this share of word 6-grams copied from the passage the "memory" is the passage itself. [provisional] */
+const MAX_COPIED = 0.3;
 
-/** False when the model continued the story instead of summarising it. */
-export function isMemoryLike(text: string): boolean {
+/** False when the model continued or copied the story instead of summarising it. */
+export function isMemoryLike(text: string, passage: string): boolean {
   if (text.includes('> You') || /^["“]/.test(text)) return false;
   const quoted = (text.match(/"[^"]*"|“[^”]*”/g) ?? []).join('').length;
-  return quoted <= text.length * MAX_QUOTED;
+  return quoted <= text.length * MAX_QUOTED && ngramOverlap(text, passage, 6) <= MAX_COPIED;
 }
 
 async function summarise(passage: string, deps: TextDeps): Promise<string> {
@@ -118,11 +123,12 @@ export async function memoryText(slice: Action[], deps: TextDeps, report: Pick<M
   const passage = joinStory(slice);
   if (!passage.trim()) return '';
   const text = await summarise(passage, deps);
-  if (!text || isMemoryLike(text)) return text;
+  if (!text || isMemoryLike(text, passage)) return text;
   if (deps.signal?.aborted) return '';
   const lastAi = slice.findLastIndex((a) => !isPlayerAction(a));
-  const retry = await summarise(joinStory(slice.slice(0, lastAi + 1)) || passage, deps);
-  if (!retry || isMemoryLike(retry)) return retry;
+  const cut = joinStory(slice.slice(0, lastAi + 1)) || passage;
+  const retry = await summarise(cut, deps);
+  if (!retry || isMemoryLike(retry, cut)) return retry;
   console.warn('memory rejected twice:', retry);
   report.memoriesRejected += 1;
   return '';
@@ -189,8 +195,8 @@ async function maintain(adventure: Adventure, deps: MaintenanceDeps, report: Mai
   // Memories feed both features (auto-summary uses them to bridge gaps).
   const memoriesOn = settings.memoryBank || settings.autoSummary;
   dropUnsupported(adventure, actions);
-  // Memory jobs filled every idle slot and the summary never ran (none in 44 actions); the gap is bridged by its recent passage.
-  report.summaryFirst = settings.autoSummary && summaryOverdue(actions.length, adventure.scriptState.__summaryAt ?? 0);
+  // Memory jobs filled every idle slot and the summary never ran (none in 44 actions).
+  report.summaryFirst = settings.autoSummary && summaryFirst(adventure, deps.historyStart);
   // An edited range must not feed the summary its old text.
   const regenerateFirst = report.summaryFirst && memoriesOn && adventure.memories.some((m) => m.stale);
   if (regenerateFirst) await regenerateStale(adventure, deps, report);

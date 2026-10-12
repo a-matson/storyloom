@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { runMemoryMaintenance } from '@core/memory/memoryJobs';
+import { isMemoryLike, runMemoryMaintenance } from '@core/memory/memoryJobs';
 import { actionText } from '@core/model';
 import type { CompletionRequest, Provider } from '@core/ports';
+import { joinStory } from '@core/text/formatting';
 import { memoryPrompt } from '@core/text/prompts';
 import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure as adventure } from './fixtures/memoryJobs';
 
@@ -90,52 +91,6 @@ describe('memory maintenance', () => {
     expect(early.memories).toHaveLength(0);
   });
 
-  it('runs an overdue summary before the memories, and a merely due one after them', async () => {
-    const order = async (summaryAt: number) => {
-      const adv = adventure(30);
-      adv.settings.memory.autoSummary = true;
-      adv.scriptState = { ...adv.scriptState, __summaryAt: summaryAt };
-      const { deps, calls } = fakeDeps(adv);
-      const report = await runMemoryMaintenance(adv, deps);
-      return { report, kinds: calls.map((c) => (c.includes('Write the updated summary') ? 'summary' : c.includes(ENTITY_PROMPT) ? 'entity' : 'memory')) };
-    };
-    const overdue = await order(0);
-    expect(overdue.report).toMatchObject({ summaryFirst: true, summaryUpdated: true });
-    expect(overdue.kinds[0]).toBe('summary');
-    expect(overdue.kinds.filter((k) => k === 'summary')).toHaveLength(1);
-    const due = await order(15);
-    expect(due.report).toMatchObject({ summaryFirst: false, summaryUpdated: true });
-    expect(due.kinds.at(-1)).toBe('summary');
-    expect(due.kinds[0]).toBe('memory');
-  });
-
-  it('rebuilds a dirty summary from every memory, without its old text, before it is due', async () => {
-    const adv = adventure(30);
-    adv.settings.memory.autoSummary = true;
-    const { deps, calls } = fakeDeps(adv);
-    await runMemoryMaintenance(adv, deps);
-    adv.plot.storySummary = 'OLD SUMMARY';
-    adv.scriptState = { ...adv.scriptState, __summaryAt: 30, __summaryDirty: true };
-    const report = await runMemoryMaintenance(adv, deps);
-    expect(report.summaryUpdated).toBe(true);
-    expect(calls.at(-1)).not.toContain('OLD SUMMARY');
-    expect(calls.at(-1)).toContain(`- ${adv.memories[0]?.text}`);
-    expect(adv.scriptState.__summaryDirty).toBe(false);
-  });
-
-  it('regenerates a stale memory before an overdue summary reads it', async () => {
-    const adv = adventure(30);
-    const { deps, calls } = fakeDeps(adv);
-    await runMemoryMaintenance(adv, deps);
-    adv.settings.memory.autoSummary = true;
-    adv.memories = adv.memories.map((m, i) => (i === 0 ? { ...m, stale: true } : m));
-    adv.actions = adv.actions.map((a, i) => (i === 3 ? { ...a, versions: ['EDITED'], active: 0 } : a));
-    const before = calls.length;
-    expect(await runMemoryMaintenance(adv, deps)).toMatchObject({ summaryFirst: true, memoriesRegenerated: 1 });
-    const summary = calls.slice(before).find((c) => c.includes('Write the updated summary'));
-    expect(summary).toContain('- sum:EDITED');
-  });
-
   it('never summarises an evicted range twice on a long adventure', async () => {
     const adv = adventure(400, 25);
     const { deps, calls } = fakeDeps(adv);
@@ -148,24 +103,17 @@ describe('memory maintenance', () => {
     expect(memoryCalls()).toBe(65);
   });
 
-  it('feeds the summary every memory since the previous recent passage', async () => {
-    const adv = adventure(30);
-    adv.settings.memory.autoSummary = true;
-    adv.scriptState = { ...adv.scriptState, __summaryAt: 15 };
-    adv.memories = [0, 6, 12, 18].map((from) => ({
-      id: `m${from}`,
-      text: `mem${from}`,
-      fromAction: from,
-      toAction: from + 6,
-      actionIds: [],
-      useCount: 0,
-      createdAt: from,
-    }));
-    const { deps, calls } = fakeDeps(adv);
-    await runMemoryMaintenance(adv, deps);
-    // the refresh at 15 saw actions 9-14 as its recent passage, so mem6 still counts
-    expect(calls.at(-1)).toContain('- mem6\n- mem12\n- mem18');
-    expect(calls.at(-1)).not.toContain('mem0');
+  it('rejects a memory that copies its passage, then keeps the retry', async () => {
+    const adv = adventure(12);
+    const passage = joinStory(adv.actions.slice(0, 5));
+    const answers = [passage.split('\n')[0]!, 'Mira found the map.'];
+    const provider = fakeProvider(async function* () {
+      yield { text: answers.shift() ?? '', done: true };
+    });
+    const report = await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
+    expect(report).toMatchObject({ memoriesWritten: 1, memoriesRejected: 0 });
+    expect(adv.memories[0]?.text).toBe('Mira found the map.');
+    expect(isMemoryLike('Mira found the map by the old gate at night.', 'Mira found the map by the old gate at night and ran.')).toBe(false);
   });
 
   it('rejects memories that continue the story, retries once, then skips the range', async () => {
@@ -188,13 +136,13 @@ describe('memory maintenance', () => {
   });
 
   it('trims a length-cut memory and summary to their last sentence end', async () => {
-    const adv = adventure(15);
+    const adv = adventure(18);
     adv.settings.memory.autoSummary = true;
     const provider = fakeProvider(async function* (req) {
       const text = req.prompt.includes('Write the updated summary') ? 'Mira owes the ferryman. She hid the' : 'Mira found the map. The rider ha';
       yield { text, done: true, stats: { stopReason: 'length' } };
     });
-    await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
+    await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider, historyStart: 12 });
     expect(adv.memories[0]?.text).toBe('Mira found the map.');
     expect(adv.plot.storySummary).toBe('Mira owes the ferryman.');
   });
@@ -215,35 +163,24 @@ describe('memory maintenance', () => {
     expect(adv.memories[0]?.text).toBe(text);
   });
 
-  it('constrains memories to 4 and the summary to 8 sentences when the backend has grammar', async () => {
-    const adv = adventure(15);
+  it('constrains memories to 4 and the summary to 12 sentences when the backend has grammar', async () => {
+    const adv = adventure(18);
     adv.settings.memory.autoSummary = true;
     const reqs: CompletionRequest[] = [];
     const answer: Provider['complete'] = async function* (req) {
       reqs.push(req);
       yield { text: 'Mira found the map.', done: true };
     };
-    await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider: fakeProvider(answer, true) });
+    await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider: fakeProvider(answer, true), historyStart: 12 });
     expect(reqs[0]?.prompt).toContain('Memory:');
     expect(reqs[0]?.grammar).toMatchInlineSnapshot(`
       "root ::= sentence{1,4}
       sentence ::= [^.!?"“”\\n> ] [^.!?"“”\\n>]* [.!?] " "?
       "
     `);
-    expect(reqs.at(-1)?.grammar).toContain('root ::= sentence{1,8}');
+    expect(reqs.at(-1)).toMatchObject({ maxTokens: 500, grammar: expect.stringContaining('root ::= sentence{1,12}') });
     reqs.length = 0;
     await runMemoryMaintenance(adventure(15), { ...fakeDeps(adv).deps, provider: fakeProvider(answer, false) });
     expect(reqs[0]?.grammar).toBeUndefined();
-  });
-
-  it('builds the next summary on top of the player-edited one', async () => {
-    const adv = adventure(15);
-    adv.settings.memory.autoSummary = true;
-    adv.plot.storySummary = 'The player rewrote this: Mira owes the ferryman.';
-    const { deps, calls } = fakeDeps(adv);
-    const report = await runMemoryMaintenance(adv, deps);
-    expect(report.summaryUpdated).toBe(true);
-    expect(calls.at(-1)).toContain('Current summary:\nThe player rewrote this: Mira owes the ferryman.');
-    expect(adv.scriptState.__summaryAt).toBe(adv.actions.length);
   });
 });

@@ -49,7 +49,7 @@ test('an edited Story Summary persists and shows when it refreshes', async ({ pa
   const summary = page.getByRole('textbox', { name: 'Story Summary' });
   await page.getByText('Story Summary', { exact: true }).click();
   await summary.fill('Mira owes the ferryman a silver coin.');
-  await expect(page.getByText(/Next refresh in \d+ actions\. Your edits are kept as the base for the next summary\./)).toBeVisible();
+  await expect(page.getByText('Updates when older text leaves the context. Your edits are kept as the base for the next summary.')).toBeVisible();
 
   // Reloading straight away is the regression: the edit is still inside the save debounce.
   await page.reload();
