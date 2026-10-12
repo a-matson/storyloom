@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { actionText, type Action, type Adventure, type AppSettings } from '@core/model';
-import { outputFlag, type OutputFlag } from '@core/text';
+import { outputFlag, type OutputFlag } from '@core/trace';
 import { tokenizer } from '@app/services';
-import type { GameSnapshot } from '@app/session';
 import { useAdventureTheme } from '@ui/hooks/useCoverAccent';
 import { useGameSession, type GameApi } from '@ui/hooks/useGameSession';
 import { useImageBlob } from '@ui/hooks/useImageBlob';
@@ -42,7 +41,7 @@ function Notices({ error, notice, api }: { error: string | null; notice: string 
 }
 
 /** The contradiction check's verdict wins; otherwise the cheap checks on the last output's text. */
-function lastFlag(contradiction: GameSnapshot['contradiction'], last: Action | undefined, banned: readonly string[]): OutputFlag | undefined {
+function lastFlag(contradiction: { actionId: string; fact: string } | null, last: Action | undefined, banned: readonly string[]): OutputFlag | undefined {
   if (contradiction && contradiction.actionId === last?.id)
     return { label: `May contradict: ${contradiction.fact}`, button: 'Retry with note', note: contradiction.fact };
   return last?.type === 'continue' ? outputFlag(actionText(last), banned) : undefined;

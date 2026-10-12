@@ -1,6 +1,6 @@
 import type { Action, AppSettings } from '@core/model';
 import { actionText } from '@core/model';
-import type { OutputFlag } from '@core/text';
+import type { OutputFlag } from '@core/trace';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { useSpeech } from '@ui/hooks/useSpeech';
 import { Button } from '@ui/components/ui/button';

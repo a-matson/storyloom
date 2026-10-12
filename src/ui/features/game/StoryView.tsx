@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { Action, AppSettings, Entity } from '@core/model';
-import type { OutputFlag } from '@core/text';
+import type { OutputFlag } from '@core/trace';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { ActionBlock, PROSE } from './ActionBlock';
 import { Caret } from './Caret';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { outputFlag, pastTense } from '@core/text';
+import { outputFlag, pastTense } from '@core/trace';
 
 const PRESENT = 'You walk to the door. It is locked, and the wind feels cold. You look back; the road is empty and Tamsin waves.';
 const PAST = 'You walked to the door. It was locked, and the wind felt cold. You looked back; the road was empty and Tamsin had gone.';

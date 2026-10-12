@@ -1,3 +1,5 @@
+// Here, not in `@core/text`: exported from that barrel it reshuffled the start-up chunks (+4 kB brotli).
+
 /** Narration verbs that give the tense away; both lists [provisional]. */
 const PAST = /\b(was|were|had|did|said|asked|looked|turned|walked|felt|saw|took|made|went|came|stood|knew|thought|seemed|began)\b/gi;
 const PRESENT =

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Action, AppSettings, Entity } from '@core/model';
 import { actionText } from '@core/model';
-import { paragraphs, type OutputFlag } from '@core/text';
+import { paragraphs } from '@core/text';
+import type { OutputFlag } from '@core/trace';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Pill } from '@ui/components/ui/pill';
 import { cn } from '@ui/lib/utils';

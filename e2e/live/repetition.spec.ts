@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { z } from 'zod/mini';
 import * as S from '@core/schema';
-import { pastTense } from '@core/text';
+import { pastTense } from '@core/trace';
 import { writeMeasurement } from '../../bench/env';
 import { readDb, TURNS } from '../../bench/livePlay';
 
