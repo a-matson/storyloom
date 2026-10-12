@@ -96,9 +96,10 @@ describe('llama-server streaming', () => {
       bodies.push(typeof init?.body === 'string' ? JSON.parse(init.body) : null);
       return Promise.resolve(chunked(['data: {"content":"","stop":true,"stop_type":"eos"}\n\n']));
     });
-    await all(p.complete({ ...req, repeatLastN: 1536, dryMultiplier: 0.8 }));
-    await all(p.complete({ ...req, repeatLastN: 1536, dryMultiplier: 0 }));
-    expect(bodies[0]).toMatchObject({ repeat_last_n: 1536, dry_multiplier: 0.8, dry_penalty_last_n: 1536, dry_sequence_breakers: ['\n', ':', '"', '*'] });
+    await all(p.complete({ ...req, repeatLastN: 64, dryMultiplier: 0.8 }));
+    await all(p.complete({ ...req, repeatLastN: 64, dryMultiplier: 0 }));
+    // DRY keeps its own long window: a long repeat window starved function words (2026-10-12 runs).
+    expect(bodies[0]).toMatchObject({ repeat_last_n: 64, dry_multiplier: 0.8, dry_penalty_last_n: 1536, dry_sequence_breakers: ['\n', ':', '"', '*'] });
     expect(bodies[1]).not.toHaveProperty('dry_multiplier');
   });
 

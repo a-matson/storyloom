@@ -15,8 +15,8 @@ export const ModelSettings = z.object({
   frequencyPenalty: z._default(z.number(), 0),
   minP: z.optional(z.number()),
   repetitionPenalty: z.optional(z.number()),
-  /** Tokens the penalties look back over; llama-server's own default of 64 let replies repeat the turn before. [provisional] */
-  repeatLastN: z._default(z.int(), 1536),
+  /** Tokens the presence/frequency penalties look back over. 1536 starved function words into word salad; DRY covers the turn before. [measured: 2026-10-12-repetition-window-only.json] */
+  repeatLastN: z._default(z.int(), 64),
   /** DRY strength (0 = off); the Wayfarer community preset. [provisional] */
   dryMultiplier: z._default(z.number().check(z.gte(0)), 0.8),
   seed: z.optional(z.number()),

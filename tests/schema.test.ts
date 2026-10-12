@@ -17,7 +17,7 @@ describe('schemas', () => {
         topP: 0.95,
         presencePenalty: 0.25,
         frequencyPenalty: 0,
-        repeatLastN: 1536,
+        repeatLastN: 64,
         dryMultiplier: 0.8,
         dynamic: false,
       },
