@@ -60,7 +60,7 @@ describe('dynamic samplers', () => {
   it('leaves the repeat window and DRY alone, on or off', async () => {
     for (const dynamic of [false, true]) {
       const [r] = await playTurns(dynamic, 1);
-      expect(r).toMatchObject({ repeatLastN: 1536, dryMultiplier: 0.8 });
+      expect(r).toMatchObject({ repeatLastN: 64, dryMultiplier: 0.8 });
     }
   });
 
