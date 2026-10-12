@@ -15,6 +15,10 @@ export const ModelSettings = z.object({
   frequencyPenalty: z._default(z.number(), 0),
   minP: z.optional(z.number()),
   repetitionPenalty: z.optional(z.number()),
+  /** Tokens the penalties look back over; llama-server's own default of 64 let replies repeat the turn before. [provisional] */
+  repeatLastN: z._default(z.int(), 1536),
+  /** DRY strength (0 = off); the Wayfarer community preset. [provisional] */
+  dryMultiplier: z._default(z.number().check(z.gte(0)), 0.8),
   seed: z.optional(z.number()),
   /** AID's "Dynamic" without weight swaps: each turn takes the next model preset's samplers instead of these. */
   dynamic: z._default(z.boolean(), false),

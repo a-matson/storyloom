@@ -90,6 +90,18 @@ describe('llama-server streaming', () => {
     expect(sent).toMatchObject({ cache_prompt: true, n_cache_reuse: 64 });
   });
 
+  it('sends the repeat window and DRY, and leaves DRY out at 0', async () => {
+    const bodies: unknown[] = [];
+    const p = new LlamaServerProvider('l', 'http://x', (_url, init) => {
+      bodies.push(typeof init?.body === 'string' ? JSON.parse(init.body) : null);
+      return Promise.resolve(chunked(['data: {"content":"","stop":true,"stop_type":"eos"}\n\n']));
+    });
+    await all(p.complete({ ...req, repeatLastN: 1536, dryMultiplier: 0.8 }));
+    await all(p.complete({ ...req, repeatLastN: 1536, dryMultiplier: 0 }));
+    expect(bodies[0]).toMatchObject({ repeat_last_n: 1536, dry_multiplier: 0.8, dry_penalty_last_n: 1536, dry_sequence_breakers: ['\n', ':', '"', '*'] });
+    expect(bodies[1]).not.toHaveProperty('dry_multiplier');
+  });
+
   it('fails loudly on a malformed event instead of dropping it', async () => {
     const p = new LlamaServerProvider('l', 'http://x', fetchOnce(chunked(['data: {not json}\n\n'])));
     await expect(all(p.complete(req))).rejects.toThrow(ProviderError);

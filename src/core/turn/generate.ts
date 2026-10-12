@@ -62,6 +62,8 @@ export function buildRequest(
     presencePenalty: s.presencePenalty,
     frequencyPenalty: s.frequencyPenalty,
     repetitionPenalty: s.repetitionPenalty,
+    repeatLastN: s.repeatLastN,
+    dryMultiplier: s.dryMultiplier,
     seed,
     stop: [...prepared.stop, '\n> '],
     cachePrompt: true,

@@ -82,6 +82,8 @@ export function buildTrace(i: TraceInput): TurnTrace {
       presencePenalty: r.presencePenalty,
       frequencyPenalty: r.frequencyPenalty,
       repetitionPenalty: r.repetitionPenalty,
+      repeatLastN: r.repeatLastN,
+      dryMultiplier: r.dryMultiplier,
       seed: r.seed,
       stop: r.stop ?? [],
     },
