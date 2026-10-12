@@ -45,6 +45,7 @@ describe('schemas', () => {
       },
       textStyle: 'print',
       content: 'unrestricted',
+      bannedPhrases: [],
     });
   });
 

@@ -1,5 +1,6 @@
 import type { Action, AppSettings } from '@core/model';
 import { actionText } from '@core/model';
+import type { OutputFlag } from '@core/text';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { useSpeech } from '@ui/hooks/useSpeech';
 import { Button } from '@ui/components/ui/button';
@@ -15,8 +16,8 @@ interface Props {
   onViewContext: () => void;
   onViewTrace: () => void;
   contextSummary?: string | undefined;
-  /** The fact the contradiction check says this output breaks. */
-  contradiction?: string | undefined;
+  /** Why this output is offered a retry with a note (contradiction, banned phrase, tense). */
+  flag?: OutputFlag | undefined;
 }
 
 const tool = 'h-7 bg-transparent px-2.5 text-caption';
@@ -73,21 +74,21 @@ function RetryStack({ action, api }: { action: Action; api: GameApi }) {
   );
 }
 
-/** Under the last output: the contradiction mark (always shown), then retry stack, edit, erase, context. */
-export function OutputTools({ action, api, speech, onEdit, onViewContext, onViewTrace, contextSummary, contradiction }: Props) {
+/** Under the last output: the flag (always shown), then retry stack, edit, erase, context. */
+export function OutputTools({ action, api, speech, onEdit, onViewContext, onViewTrace, contextSummary, flag }: Props) {
   const voice = useSpeech();
   return (
     <div className="mt-1.5 flex items-center gap-2 font-sans text-caption text-muted-foreground">
-      {contradiction !== undefined && (
+      {flag !== undefined && (
         <output className="min-w-0">
-          <Pill tone="warning" className="block max-w-[40ch] truncate normal-case tracking-normal" title={contradiction}>
-            May contradict: {contradiction}
+          <Pill tone="warning" className="block max-w-[40ch] truncate normal-case tracking-normal" title={flag.label}>
+            {flag.label}
           </Pill>
         </output>
       )}
-      {contradiction !== undefined && (
-        <Button className={tool} onClick={() => api.retry(contradiction)}>
-          Retry with note
+      {flag !== undefined && (
+        <Button className={tool} onClick={() => api.retry(flag.note)}>
+          {flag.button}
         </Button>
       )}
       <div className={cn('flex grow items-center gap-2', revealOnHover)}>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Action, AppSettings, Entity } from '@core/model';
 import { actionText } from '@core/model';
-import { paragraphs } from '@core/text';
+import { paragraphs, type OutputFlag } from '@core/text';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Pill } from '@ui/components/ui/pill';
 import { cn } from '@ui/lib/utils';
@@ -24,8 +24,8 @@ interface Props {
   onViewContext: () => void;
   onViewTrace: () => void;
   contextSummary?: string | undefined;
-  /** For the last output: the fact the contradiction check says it breaks. */
-  contradiction?: string | undefined;
+  /** For the last output: why it is offered a retry with a note. */
+  flag?: OutputFlag | undefined;
   /** The adventure's entities when speaker portraits are on. */
   cast?: readonly Entity[] | undefined;
   /** The scene's present characters, set only when this action replies to a `say`. */
@@ -83,7 +83,7 @@ export function ActionBlock(props: Props) {
 }
 
 function TextBlock(props: Props) {
-  const { action, isLast, busy, api, speech, onViewContext, onViewTrace, contextSummary, contradiction } = props;
+  const { action, isLast, busy, api, speech, onViewContext, onViewTrace, contextSummary, flag } = props;
   const [editing, setEditing] = useState(false);
   // Bumped when an edit ends: the paragraph remounts, so React never reconciles DOM the player rewrote.
   const [rev, setRev] = useState(0);
@@ -158,7 +158,7 @@ function TextBlock(props: Props) {
             onViewContext={onViewContext}
             onViewTrace={onViewTrace}
             contextSummary={contextSummary}
-            contradiction={contradiction}
+            flag={flag}
           />
         )}
       </div>

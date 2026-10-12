@@ -5,6 +5,7 @@ import { Input, Select } from '@ui/components/ui/field';
 import { TEMPLATES } from '@ui/features/setup/backends';
 import { ImagesSection } from './ImagesSection';
 import { ModelSettings } from './ModelSettings';
+import { NeverWrite } from './NeverWrite';
 import { NumberInput } from './NumberInput';
 import { Section, Setting } from './Section';
 import { SettingSwitch } from './SettingSwitch';
@@ -86,6 +87,7 @@ function StoryGenerator({ s, update }: { s: Settings; update: Update }) {
           onChange={(e) => update({ contentText: e.target.value })}
         />
       )}
+      <NeverWrite value={s.bannedPhrases} onChange={(bannedPhrases) => update({ bannedPhrases })} />
       <p className="text-caption text-muted-foreground">Model: {s.modelId ?? 'as loaded in the backend'}. Change backends in Settings.</p>
     </Section>
   );
