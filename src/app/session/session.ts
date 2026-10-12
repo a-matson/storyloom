@@ -127,8 +127,8 @@ export class GameSession {
   }
 
   // ---- turns ------------------------------------------------------------------
-  private async drive(gen: AsyncGenerator<TurnEvent>): Promise<void> {
-    this.emit({ busy: true, error: null, streaming: '' });
+  private async drive(gen: AsyncGenerator<TurnEvent>, retrying = false): Promise<void> {
+    this.emit({ busy: true, retrying, error: null, streaming: '' });
     const before = this.log.actions;
     let ok = false;
     try {
@@ -137,7 +137,7 @@ export class GameSession {
       this.pending = '';
       // A retry replaced the last action's text.
       if (ok) followLog(this.adv, before, this.log.actions);
-      this.emit({ busy: false, streaming: '' });
+      this.emit({ busy: false, retrying: false, streaming: '' });
       this.save();
       if (ok) this.afterTurn();
     }
@@ -244,7 +244,7 @@ export class GameSession {
       return;
     }
     this.abort = new AbortController();
-    void this.drive(retryLast(this.adv, this.log, this.deps(), this.abort.signal, note));
+    void this.drive(retryLast(this.adv, this.log, this.deps(), this.abort.signal, note), true);
   };
 
   readonly onError = (error: string): void => this.emit({ error });
