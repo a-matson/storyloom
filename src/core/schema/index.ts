@@ -1,5 +1,6 @@
 export * from './action';
 export * from './adventure';
+export * from './assertion';
 export * from './card';
 export * from './entity';
 export * from './memory';

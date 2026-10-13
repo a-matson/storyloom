@@ -1,6 +1,6 @@
 import { Dexie, type EntityTable, type Table } from 'dexie';
 import type { AppSettings, HelperCall, Scenario, TurnTrace } from '@core/model';
-import { splitAdventure, type ActionRow, type AdventureRow, type CardRow, type EntityRow, type ImageRow, type MemoryRow } from './rows';
+import { splitAdventure, type ActionRow, type AdventureRow, type AssertionRow, type CardRow, type EntityRow, type ImageRow, type MemoryRow } from './rows';
 import type { Adventure } from '@core/model';
 
 export class StoryloomDb extends Dexie {
@@ -9,6 +9,7 @@ export class StoryloomDb extends Dexie {
   storyCards!: Table<CardRow, [string, string]>;
   memories!: Table<MemoryRow, [string, string]>;
   entities!: Table<EntityRow, [string, string]>;
+  assertions!: Table<AssertionRow, [string, string]>;
   scenarios!: EntityTable<Scenario, 'id'>;
   settings!: Table<AppSettings, string>;
   traces!: Table<TurnTrace, string>;
@@ -31,7 +32,7 @@ export class StoryloomDb extends Dexie {
         const whole = await tx.table<Adventure, string>('adventures').toArray();
         for (const a of whole) {
           if (!Array.isArray(a.actions)) continue; // already split
-          const rows = splitAdventure({ ...a, entities: [] }); // v1 records predate entities
+          const rows = splitAdventure({ ...a, entities: [], assertions: [] }); // v1 records predate entities
           await tx.table('actions').bulkPut(rows.actions);
           await tx.table('storyCards').bulkPut(rows.cards);
           await tx.table('memories').bulkPut(rows.memories);
@@ -46,5 +47,7 @@ export class StoryloomDb extends Dexie {
     this.version(4).stores({ entities: '[adventureId+id], adventureId' });
     // Version 5 only adds the (empty) helper call log.
     this.version(5).stores({ helperCalls: '[adventureId+id], adventureId, [adventureId+createdAt]' });
+    // Version 6 only adds the (empty) assertions table; `getAdventure` derives them for an adventure that has none.
+    this.version(6).stores({ assertions: '[adventureId+id], adventureId, [adventureId+subject]' });
   }
 }

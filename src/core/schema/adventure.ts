@@ -1,5 +1,6 @@
 import { z } from 'zod/mini';
 import { Action } from './action';
+import { Assertion } from './assertion';
 import { StoryCard } from './card';
 import { Entity, EntityKind } from './entity';
 import { Memory } from './memory';
@@ -118,6 +119,8 @@ export const Adventure = z.object({
   entities: z.prefault(z.array(Entity), []),
   /** Kept on the adventure record: a few dozen short lines, saved with it. */
   rules: z.prefault(z.array(Rule), []),
+  /** Typed facts about the entities; derived from their `facts` until those are dropped. */
+  assertions: z.prefault(z.array(Assertion), []),
   scriptState: ScriptState,
   /** Copied from the scenario at creation, so later scenario edits never change a running story. */
   scripts: z.optional(ScenarioScripts),

@@ -87,6 +87,8 @@ export function createAdventureFromScenario(
     memories: [],
     entities: seedCanonEntities(cards, 0),
     rules: [],
+    // Derived from the canon entities on the first save.
+    assertions: [],
     scriptState: { placeholders: Object.entries(answers).map(([question, answer]) => ({ question, answer })) },
     placeholders: Object.entries(answers).map(([question, answer]) => ({ question, answer })),
     settings: structuredClone(settings),

@@ -26,6 +26,7 @@ export type Memory = z.output<typeof S.Memory>;
 export type Entity = z.output<typeof S.Entity>;
 export type EntityFact = z.output<typeof S.EntityFact>;
 export type Rule = z.output<typeof S.Rule>;
+export type Assertion = z.output<typeof S.Assertion>;
 export type ExtractedEntity = z.output<typeof X.ExtractedEntity>;
 export type ExtractionJson = z.output<typeof X.ExtractionJson>;
 export type TemplateId = z.output<typeof S.TemplateId>;
