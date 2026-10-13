@@ -50,6 +50,7 @@ function fromText(name: string, text: string, settings: AdventureSettings): Adve
     memories: [],
     entities: [],
     rules: [],
+    assertions: [],
     scriptState: {},
     placeholders: [],
     settings: structuredClone(settings),

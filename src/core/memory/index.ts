@@ -6,3 +6,4 @@ export type { MaintenanceDeps } from './memoryJobs';
 export type { CutCounts, HelperCallLog } from './helperCall';
 /** Idle-only work, loaded on first use to keep it off the start-up bundle. */
 export const loadMemoryJobs = () => import('./memoryJobs');
+export const loadAssertions = () => import('./assertions');

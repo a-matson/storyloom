@@ -79,7 +79,6 @@ describe('DexieStorage', () => {
     expect(await db.table('entities').count()).toBe(0);
     db.close();
   });
-
   it('saves rules with the adventure record', async () => {
     const name = freshName();
     const s = await reopen(name);

@@ -77,6 +77,7 @@ export function mapAidJson(data: unknown, warnings: string[], settings: Adventur
     memories: [],
     entities: [],
     rules: [],
+    assertions: [],
     scriptState: {},
     placeholders: [],
     settings: structuredClone(settings),

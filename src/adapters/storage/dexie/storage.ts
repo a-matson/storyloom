@@ -1,16 +1,30 @@
-import type { Action, Adventure, AppSettings, Entity, HelperCall, Memory, Scenario, StoryCard, TurnTrace } from '@core/model';
+import type { Action, Adventure, AppSettings, Assertion, Entity, HelperCall, Memory, Scenario, StoryCard, TurnTrace } from '@core/model';
 import { HELPER_CALL_CAP_PER_ADVENTURE, StorageError, summarise, TRACE_CAP_PER_ADVENTURE, type AdventureSummary, type Storage } from '@core/ports';
+import { loadAssertions } from '@core/memory';
 import * as S from '@core/schema';
 import type { Table } from 'dexie';
 import { clearPending, takePending } from '../pending';
 import { StoryloomDb } from './db';
-import { joinAdventure, splitAdventure, toActionRow, toCardRow, toEntityRow, toMemoryRow } from './rows';
+import { joinAdventure, splitAdventure, toActionRow, toAssertionRow, toCardRow, toEntityRow, toMemoryRow } from './rows';
 
 interface Saved {
   actions: readonly Action[];
   cards: readonly StoryCard[];
   memories: readonly Memory[];
   entities: readonly Entity[];
+  assertions: readonly Assertion[];
+}
+
+// Loaded on first save or open, off the start-up bundle.
+const derive = async (a: Adventure) => (await loadAssertions()).deriveAssertions(a);
+
+/** `next` with each value equal to its `prev` namesake swapped for it, so `syncById` writes only what changed. */
+function stable(prev: readonly Assertion[], next: Assertion[]): Assertion[] {
+  const before = new Map(prev.map((x) => [x.id, x]));
+  return next.map((x) => {
+    const old = before.get(x.id);
+    return old && JSON.stringify(old) === JSON.stringify(x) ? old : x;
+  });
 }
 
 type Logged = { adventureId: string; createdAt: number };
@@ -18,7 +32,13 @@ type Logged = { adventureId: string; createdAt: number };
 const byAge = <T extends Logged, K>(table: Table<T, K>, adventureId: string) =>
   table.where('[adventureId+createdAt]').between([adventureId, -Infinity], [adventureId, Infinity]);
 
-const saved = (a: Adventure): Saved => ({ actions: a.actions, cards: a.storyCards, memories: a.memories, entities: a.entities });
+const saved = (a: Adventure, assertions = a.assertions): Saved => ({
+  actions: a.actions,
+  cards: a.storyCards,
+  memories: a.memories,
+  entities: a.entities,
+  assertions,
+});
 
 function parseOrThrow<T>(
   schema: { safeParse: (v: unknown) => { success: true; data: T } | { success: false; error: { issues: { path: PropertyKey[]; message: string }[] } } },
@@ -52,7 +72,7 @@ export class DexieStorage implements Storage {
     const metas = (await this.db.adventures.orderBy('updatedAt').toArray()).toReversed();
     return Promise.all(
       metas.map(async (m) => {
-        const summary = summarise({ ...m, actions: [], memories: [], storyCards: [], entities: [] });
+        const summary = summarise({ ...m, actions: [], memories: [], storyCards: [], entities: [], assertions: [] });
         summary.actionCount = await this.db.actions.where('adventureId').equals(m.id).count();
         return summary;
       }),
@@ -61,15 +81,17 @@ export class DexieStorage implements Storage {
 
   async getAdventure(id: string): Promise<Adventure | undefined> {
     const db = this.db;
-    const rows = await db.transaction('r', [db.adventures, db.actions, db.storyCards, db.memories, db.entities], async () => {
+    const rows = await db.transaction('r', [db.adventures, db.actions, db.storyCards, db.memories, db.entities, db.assertions], async () => {
       const meta = await db.adventures.get(id);
       if (!meta) return undefined;
       const by = <T>(t: { where: (k: string) => { equals: (v: string) => { toArray: () => Promise<T[]> } } }) => t.where('adventureId').equals(id).toArray();
-      return joinAdventure(meta, await by(db.actions), await by(db.storyCards), await by(db.memories), await by(db.entities));
+      return joinAdventure(meta, await by(db.actions), await by(db.storyCards), await by(db.memories), await by(db.entities), await by(db.assertions));
     });
     if (rows === undefined) return undefined;
     const adventure = parseOrThrow(S.Adventure, rows, `Adventure "${id}"`);
     this.saved.set(id, saved(adventure));
+    // Saved before the table existed: the next save writes them.
+    if (!adventure.assertions.length && adventure.entities.length) adventure.assertions = await derive(adventure);
     // Edits made inside the save debounce before the tab hid: replay them before anyone sees the adventure.
     const pending = takePending(adventure);
     if (!pending) return adventure;
@@ -81,34 +103,38 @@ export class DexieStorage implements Storage {
   async putAdventure(a: Adventure): Promise<void> {
     const db = this.db;
     const prev = this.saved.get(a.id);
-    await db.transaction('rw', [db.adventures, db.actions, db.storyCards, db.memories, db.entities], async () => {
+    // Derived from the entities until writers make them (M13-2b); outside the transaction, which an import would end.
+    const assertions = stable(prev?.assertions ?? [], await derive(a));
+    await db.transaction('rw', [db.adventures, db.actions, db.storyCards, db.memories, db.entities, db.assertions], async () => {
       if (!prev) {
         // Unknown baseline: replace everything for this adventure.
-        const rows = splitAdventure(a);
-        await Promise.all([db.actions, db.storyCards, db.memories, db.entities].map((t) => t.where('adventureId').equals(a.id).delete()));
+        const rows = splitAdventure({ ...a, assertions });
+        await Promise.all([db.actions, db.storyCards, db.memories, db.entities, db.assertions].map((t) => t.where('adventureId').equals(a.id).delete()));
         await Promise.all([
           db.adventures.put(rows.meta),
           db.actions.bulkPut(rows.actions),
           db.storyCards.bulkPut(rows.cards),
           db.memories.bulkPut(rows.memories),
           db.entities.bulkPut(rows.entities),
+          db.assertions.bulkPut(rows.assertions),
         ]);
         return;
       }
-      const { meta } = splitAdventure({ ...a, actions: [], storyCards: [], memories: [], entities: [] });
+      const { meta } = splitAdventure({ ...a, actions: [], storyCards: [], memories: [], entities: [], assertions: [] });
       await db.adventures.put(meta);
       await db.actions.bulkPut(a.actions.flatMap((x, i) => (prev.actions[i] === x ? [] : [toActionRow(a.id, x, i)])));
       if (prev.actions.length > a.actions.length) await db.actions.where('[adventureId+seq]').between([a.id, a.actions.length], [a.id, Infinity]).delete();
       await syncById(db.storyCards, a.id, prev.cards, a.storyCards, (c) => toCardRow(a.id, c));
       await syncById(db.memories, a.id, prev.memories, a.memories, (m) => toMemoryRow(a.id, m));
       await syncById(db.entities, a.id, prev.entities, a.entities, (e) => toEntityRow(a.id, e));
+      await syncById(db.assertions, a.id, prev.assertions, assertions, (x) => toAssertionRow(a.id, x));
     });
-    this.saved.set(a.id, saved(a));
+    this.saved.set(a.id, saved(a, assertions));
   }
 
   async deleteAdventure(id: string): Promise<void> {
     const db = this.db;
-    const owned = [db.actions, db.storyCards, db.memories, db.entities, db.traces, db.images, db.helperCalls];
+    const owned = [db.actions, db.storyCards, db.memories, db.entities, db.assertions, db.traces, db.images, db.helperCalls];
     await db.transaction('rw', [db.adventures, ...owned], async () => {
       await db.adventures.delete(id);
       await Promise.all(owned.map((t) => t.where('adventureId').equals(id).delete()));
