@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { sceneNames } from '@core/memory';
 import { actionText, type Action, type Adventure, type AppSettings } from '@core/model';
 import { outputFlag, type OutputFlag } from '@core/trace';
 import { tokenizer } from '@app/services';
@@ -107,7 +108,7 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
             contextSummary={ctx ? `${ctx.triggeredCards.length} story cards · ${ctx.usedMemories.length} memories used` : undefined}
             flag={lastFlag(state.contradiction, last, adv.settings.bannedPhrases)}
             cast={app.speakerAvatars ? adv.entities : undefined}
-            present={adv.plot.scene?.present}
+            present={adv.plot.scene && sceneNames(adv.plot.scene, adv.entities).present}
             onOpenEntity={setFaceId}
           />
           {!state.busy && <SelectionBar api={api} entities={adv.entities} />}

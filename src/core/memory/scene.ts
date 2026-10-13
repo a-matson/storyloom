@@ -1,6 +1,6 @@
 import type { Entity, PlotComponents, Scene } from '../model/types';
 import { NOBODY, type SceneRead } from '../schema/extraction';
-import { knownAs, norm } from './names';
+import { knownAs, norm, sceneIds, sceneNames } from './names';
 
 /** Location changes the Plot tab can show. [provisional] */
 export const SCENE_LOG_CAP = 50;
@@ -61,18 +61,25 @@ export function nextScene(
   return { scene: JSON.stringify(next) === JSON.stringify(rest) ? scene : next, moved };
 }
 
-/** `plot` with the scene a turn read gives, read from `source`; a change of place is logged. Unchanged: `plot` itself. */
+/**
+ * `plot` with the scene a turn read gives, read from `source`, stored as ids (`sceneIds`, so a name
+ * that got a card since resolves too); a change of place is logged by name. Unchanged: `plot` itself.
+ */
 export function withScene(
   plot: PlotComponents,
   read: SceneRead,
   name: (s: string) => string | undefined,
   at: number,
   source: { sourceId: string; sourceHash: string },
-  places: readonly Entity[],
+  entities: readonly Entity[],
 ): PlotComponents {
   const old = plot.scene;
-  const { scene, moved } = nextScene(old, read, name, at, places);
-  if (!scene || scene === old) return plot;
-  const log = moved && scene.location ? [...(plot.sceneLog ?? []), { at, location: scene.location }].slice(-SCENE_LOG_CAP) : plot.sceneLog;
+  const named = old && sceneNames(old, entities);
+  const places = entities.filter((e) => e.kind === 'place');
+  const r = nextScene(named, read, name, at, places);
+  const scene = r.scene && sceneIds(r.scene, entities);
+  if (!scene || (r.scene === named && JSON.stringify(scene) === JSON.stringify(old))) return plot;
+  const where = r.scene?.location;
+  const log = r.moved && where ? [...(plot.sceneLog ?? []), { at, location: where }].slice(-SCENE_LOG_CAP) : plot.sceneLog;
   return { ...plot, scene: { ...scene, ...source }, ...(log && { sceneLog: log }) };
 }

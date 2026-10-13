@@ -1,5 +1,6 @@
 import { indexAssertions } from '../memory/assertionIndex';
 import { heldBy, itemsHere, MAX_ITEMS, YOU } from '../memory/items';
+import { sceneNames } from '../memory/names';
 import type { Entity, Scene } from '../model/types';
 import type { ContextSection, SectionKind } from './types';
 
@@ -17,7 +18,8 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
  * leaving out what is unknown; the item lists come from `entities` too. An old saved `time` is not sent.
  * ponytail: a third-person player's items stay under their name, not `You hold`; map it when one plays so.
  */
-export function renderScene(scene: Scene | undefined, entities: readonly Entity[] = [], ix = indexAssertions([])): string {
+export function renderScene(stored: Scene | undefined, entities: readonly Entity[] = [], ix = indexAssertions([])): string {
+  const scene = stored && sceneNames(stored, entities);
   const held = heldBy(entities, ix, YOU)
     .slice(0, MAX_ITEMS)
     .map((e) => e.name);

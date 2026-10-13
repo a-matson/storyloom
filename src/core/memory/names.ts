@@ -1,4 +1,4 @@
-import type { Entity } from '../model/types';
+import type { Entity, Scene } from '../model/types';
 import { identityText, type AssertionIndex } from './assertionIndex';
 
 // Apart from `entities.ts` so the scene line's item lookup stays light in the start-up chunk.
@@ -47,3 +47,24 @@ export function knownAs(entities: readonly Entity[], name: string, ix?: Assertio
     one(entities.filter((e) => n.startsWith(bare(e.name))))
   );
 }
+
+// A scene reference is an entity id, else a plain name: someone the turn read named without a card (M13-2d).
+const refFor = (pool: readonly Entity[], ref: string): string => (!ref.trim() || pool.some((e) => e.id === ref) ? ref : (knownAs(pool, ref)?.id ?? ref));
+const nameOf = (entities: readonly Entity[], ref: string): string => entities.find((e) => e.id === ref)?.name ?? ref;
+
+/** `scene` with each name `knownAs` resolves (a place for the location, a character for the present) as its id; unchanged: `scene` itself. */
+export function sceneIds(scene: Scene, entities: readonly Entity[]): Scene {
+  const places = entities.filter((e) => e.kind === 'place');
+  const location = scene.location === undefined ? undefined : refFor(places, scene.location);
+  const people = entities.filter((e) => e.kind === 'character');
+  const present = [...new Set(scene.present.map((p) => refFor(people, p)))];
+  const same = location === scene.location && present.length === scene.present.length && present.every((p, i) => p === scene.present[i]);
+  return same ? scene : { ...scene, ...(location !== undefined && { location }), present };
+}
+
+/** `scene` with its ids as the entities' current names, for the prompt and the player. */
+export const sceneNames = (scene: Scene, entities: readonly Entity[]): Scene => ({
+  ...scene,
+  ...(scene.location !== undefined && { location: nameOf(entities, scene.location) }),
+  present: scene.present.map((p) => nameOf(entities, p)),
+});

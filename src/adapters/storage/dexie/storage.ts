@@ -1,6 +1,6 @@
 import type { Action, Adventure, AppSettings, Assertion, Entity, HelperCall, Memory, Scenario, StoryCard, TurnTrace } from '@core/model';
 import { HELPER_CALL_CAP_PER_ADVENTURE, StorageError, summarise, TRACE_CAP_PER_ADVENTURE, type AdventureSummary, type Storage } from '@core/ports';
-import { isLegacy, loadAssertions } from '@core/memory';
+import { isLegacy, loadAssertions, sceneIds } from '@core/memory';
 import * as S from '@core/schema';
 import type { Table } from 'dexie';
 import { clearPending, takePending } from '../pending';
@@ -81,6 +81,12 @@ export class DexieStorage implements Storage {
     if (adventure.entities.some(isLegacy)) {
       // Saved before the assertion store: moved once and written, so the next open finds nothing to move.
       adventure = { ...adventure, ...(await loadAssertions()).migrateEntities(adventure.entities, adventure.actions, adventure.assertions) };
+      await this.putAdventure(adventure);
+    }
+    // A scene saved as names (before M13-2d) or naming someone carded since: its names become ids, written once.
+    const scene = adventure.plot.scene && sceneIds(adventure.plot.scene, adventure.entities);
+    if (scene !== adventure.plot.scene) {
+      adventure = { ...adventure, plot: { ...adventure.plot, scene } };
       await this.putAdventure(adventure);
     }
     // Edits made inside the save debounce before the tab hid: replay them before anyone sees the adventure.

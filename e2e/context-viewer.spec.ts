@@ -121,7 +121,7 @@ test('a present entity sends its now-line under the structured cap', async ({ pa
   // Off by default: the scene line goes, the cast does not.
   let dialog = await takeTurnAndViewContext(page);
   await dialog.getByRole('button', { name: 'Raw prompt' }).click();
-  await expect(dialog.getByText(/\[Scene: the Old Well/)).toBeVisible();
+  await expect(dialog.getByText(/\[Scene: Old Well/)).toBeVisible();
   await expect(dialog.getByText(/Merav \(/)).toHaveCount(0);
   await page.keyboard.press('Escape');
   await page.getByRole('tab', { name: 'Gameplay' }).click();

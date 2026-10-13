@@ -1,5 +1,6 @@
 import { renderScene } from '@core/context';
-import type { PlotComponents, Scene, ScriptState } from '@core/model';
+import { sceneIds, sceneNames } from '@core/memory';
+import type { Entity, PlotComponents, Scene, ScriptState } from '@core/model';
 import { WEATHERS } from '@core/schema';
 import { tokenizer } from '@app/services';
 import type { GameApi } from '@ui/hooks/useGameSession';
@@ -30,25 +31,30 @@ const answer = (api: GameApi, ask: PlaceAsk, yes: boolean) =>
 
 /** The turn read's scene, shown once it has written one. Edits last until a later passage says otherwise. */
 export function SceneSection({
-  scene,
+  scene: stored,
+  entities,
   log,
   ask,
   api,
 }: {
   scene: Scene;
+  entities: readonly Entity[];
   log: NonNullable<PlotComponents['sceneLog']>;
   ask: PlaceAsk | undefined;
   api: GameApi;
 }) {
-  const set = (patch: Partial<Scene>) => api.updatePlot({ scene: { ...scene, ...patch } });
+  // Shown and edited as names; stored as ids where a card matches, so a rename carries over.
+  const scene = sceneNames(stored, entities);
+  const set = (patch: Partial<Scene>) => api.updatePlot({ scene: sceneIds({ ...scene, ...patch }, entities) });
   return (
     <Section title="Scene" tokens={tokenizer.count(renderScene(scene))} badge={<Pill tone="auto">auto</Pill>}>
       <Input
+        key={`location:${scene.location ?? ''}`}
         aria-label="Scene location"
         className="text-control"
         placeholder="Where the story is"
-        value={scene.location ?? ''}
-        onChange={(e) => set({ location: e.target.value })}
+        defaultValue={scene.location ?? ''}
+        onBlur={(e) => set({ location: e.target.value })}
       />
       <Input
         key={scene.present.join(',')}

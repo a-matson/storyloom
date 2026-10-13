@@ -126,6 +126,16 @@ describe('GameSession entity edits', () => {
     expect(of(session, door.id)).toEqual([]);
   });
 
+  it('merge and delete repoint the scene: to the kept id, then back to a plain name', async () => {
+    const door = { ...gate, id: 'ent_door', name: 'Iron door' };
+    const { session } = withGate([door]);
+    session.adv.plot.scene = { location: door.id, present: [] };
+    await entityEdits(session).merge(gate.id, door.id);
+    expect(session.getSnapshot().adventure.plot.scene?.location).toBe(gate.id);
+    entityEdits(session).delete(gate.id);
+    expect(session.getSnapshot().adventure.plot.scene?.location).toBe('Gate');
+  });
+
   it("editLine makes the line the player's and drops its span", () => {
     const { session } = withGate([], [line('f3', { kind: 'effect', condition: 'grim' }, { span: 'grim' })]);
     entityEdits(session).editLine('f3', 'cheerful');

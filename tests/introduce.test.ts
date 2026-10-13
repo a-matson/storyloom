@@ -156,16 +156,25 @@ describe('introduce', () => {
       expect(reqs[0]?.maxTokens).toBe(80);
       expect(reqs[0]?.prompt).not.toContain('New here:');
       expect(JSON.stringify(reqs[0]?.jsonSchema)).not.toContain('entities');
-      expect(adv.plot.scene).toMatchObject({ location: 'the ferry', present: ['Tamsin'], weather: 'fog', since: n - 1, sourceId: adv.actions.at(-1)?.id });
+      const ferry = adv.entities.find((e) => e.kind === 'place');
+      // Stored as ids, logged by name.
+      expect(adv.plot.scene).toMatchObject({
+        location: ferry?.id,
+        present: [adv.entities[0]?.id],
+        weather: 'fog',
+        since: n - 1,
+        sourceId: adv.actions.at(-1)?.id,
+      });
       expect(adv.plot.sceneLog).toEqual([{ at: n - 1, location: 'the ferry' }]);
       // The first place has no previous one to be part of.
-      expect(adv.entities.find((e) => e.kind === 'place')).toMatchObject({ name: 'the ferry', firstSeen: n - 1 });
+      expect(ferry).toMatchObject({ name: 'the ferry', firstSeen: n - 1 });
       expect(adv.scriptState.__placeAsk).toBeUndefined();
     });
 
     it('asks the cast as an enum with aliases, `nobody` when there is none, and tells the previous scene', async () => {
       const { adv, reqs, deps } = sceneOnly('You wait at the ferry.', at);
-      adv.plot.scene = { location: 'the ferry', present: ['Tamsin'] };
+      // An id and a plain name: the prompt names both.
+      adv.plot.scene = { location: 'the ferry', present: [adv.entities[0]?.id ?? ''] };
       await introduce(adv, deps);
       const schema = JSON.stringify(reqs[0]?.jsonSchema);
       expect(schema).toContain('"enum":["Tamsin","the ferrywoman"]');
@@ -180,10 +189,11 @@ describe('introduce', () => {
       expect(empty.reqs[0]?.prompt).toContain('Previous scene: not known yet. Known characters: none yet.');
     });
 
-    it('resolves an alias to the character’s name', async () => {
+    it('resolves an alias to the character’s id, and keeps a name nothing is known as', async () => {
       const { adv, deps } = sceneOnly('You wait at the ferry.', { ...at, present: ['the ferrywoman'] });
+      adv.plot.scene = { location: 'the ferry', present: ['Corwin'] };
       await introduce(adv, deps);
-      expect(adv.plot.scene?.present).toEqual(['Tamsin']);
+      expect(adv.plot.scene?.present).toEqual(['Corwin', adv.entities[0]?.id]);
     });
 
     it('makes a place card for an unknown location and asks whether it is inside the previous place', async () => {
@@ -204,7 +214,7 @@ describe('introduce', () => {
       // New names join the cast: one met this turn can be there.
       expect(JSON.stringify(reqs[0]?.jsonSchema)).toMatch(/"present":\{[^}]*"enum":\[[^\]]*"Tamsin"/);
       expect(adv.entities.map((e) => e.name)).toEqual(['Tamsin', 'the ferry']);
-      expect(adv.plot.scene?.present).toEqual(['Tamsin']);
+      expect(adv.plot.scene?.present).toEqual([adv.entities[0]?.id]);
     });
 
     it('is not touched by the turn read when its setting is off', async () => {

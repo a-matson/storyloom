@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderScene } from '@core/context/render';
 import { mergeEntity } from '@core/memory/entities';
+import { sceneIds, sceneNames } from '@core/memory/names';
 import { nextScene, SCENE_LOG_CAP, withScene } from '@core/memory/scene';
 import type { Entity, PlotComponents, Scene } from '@core/model/types';
 import type { SceneRead } from '@core/schema/extraction';
@@ -87,6 +88,35 @@ describe('withScene', () => {
     expect(moved.sceneLog).toHaveLength(SCENE_LOG_CAP);
     expect(moved.sceneLog?.at(-1)).toEqual({ at: 99, location: 'the road' });
     expect(moved.sceneLog?.[0]).toEqual({ at: 1, location: 'p1' });
+  });
+});
+
+describe('scene ids (M13-2d option B)', () => {
+  const mill_ = place('the mill');
+  const lena = mergeEntity(undefined, { name: 'Lena Morrow', kind: 'character', description: '' }, 0);
+
+  it('stores the id `knownAs` resolves, keeps a name nothing matches, and returns an unchanged scene itself', () => {
+    const ids = sceneIds({ location: 'The Mill', present: ['Lena', 'Corwin'] }, [mill_, lena]);
+    expect(ids).toEqual({ location: mill_.id, present: [lena.id, 'Corwin'] });
+    expect(sceneIds(ids, [mill_, lena])).toBe(ids);
+    // A place name is not a character, nor the reverse.
+    expect(sceneIds({ location: 'Lena Morrow', present: ['the mill'] }, [mill_, lena])).toEqual({ location: 'Lena Morrow', present: ['the mill'] });
+  });
+
+  it('shows the current name, so a rename carries over', () => {
+    const renamed = { ...lena, name: 'Lena Ashby' };
+    expect(renderScene({ location: mill_.id, present: [lena.id, 'Corwin'] }, [mill_, renamed])).toBe('the mill · Present: Lena Ashby, Corwin');
+    expect(sceneNames({ present: [lena.id] }, [renamed])).toEqual({ present: ['Lena Ashby'] });
+  });
+
+  it('a turn read resolves a plain name that got a card since, and logs the place by name', () => {
+    const plot = withScene({ scene: { location: 'the mill', present: ['Lena'] } }, read({}), name, 4, source, [mill_, lena]);
+    expect(plot.scene).toMatchObject({ location: mill_.id, present: [lena.id] });
+    expect(withScene(plot, read({}), name, 5, source, [mill_, lena])).toBe(plot);
+    const road = place('the road');
+    const moved = withScene(plot, read({ location: 'the road', present: ['Lena'] }), name, 6, source, [mill_, road, lena]);
+    expect(moved.scene).toMatchObject({ location: road.id, present: [lena.id], since: 6 });
+    expect(moved.sceneLog).toEqual([{ at: 6, location: 'the road' }]);
   });
 });
 
