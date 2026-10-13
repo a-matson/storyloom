@@ -1,5 +1,6 @@
 import { ActionLog } from '@core/log';
 import { followLog } from '@core/memory';
+import { deriveAssertions } from '@core/memory/assertions';
 import { utilityProvider, type Adventure, type AdventureSettings, type AppSettings, type PlotComponents, type TurnTrace } from '@core/model';
 import type { Embedder, ScriptRunner } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
@@ -92,8 +93,15 @@ export class GameSession {
   readonly subscribe = (fn: () => void): (() => void) => (this.listeners.add(fn), () => this.listeners.delete(fn));
   readonly getSnapshot = (): GameSnapshot => this.snapshot;
 
+  /** The entities and actions `adv.assertions` were derived from. */
+  private derived: [unknown, unknown] = [null, null];
   private build(rest: Omit<GameSnapshot, 'adventure' | 'actions' | 'canUndo' | 'canRedo'>): GameSnapshot {
     this.adv.actions = this.log.actions;
+    // ponytail: every entity edit emits, so readers see fresh assertions; goes once the writers make them (M13-2b).
+    if (this.derived[0] !== this.adv.entities || this.derived[1] !== this.adv.actions) {
+      this.adv.assertions = deriveAssertions(this.adv);
+      this.derived = [this.adv.entities, this.adv.actions];
+    }
     return { ...rest, adventure: { ...this.adv }, actions: this.log.actions, canUndo: this.log.canUndo, canRedo: this.log.canRedo };
   }
   emit(patch: Partial<GameSnapshot> = {}): void {
