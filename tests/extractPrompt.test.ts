@@ -33,6 +33,16 @@ describe('the entity call’s prompt', () => {
     expect(report.calls?.find((c) => c.job === 'entity')?.reply).toBe('{"entities": [], "speakers": []}');
   });
 
+  it('asks for relationships and no state: the state read writes that each turn', () => {
+    for (const g of [true, false]) {
+      const p = extractPrompt('[0] Mira waves.', [], g);
+      expect(p).toMatch(/relationships/);
+      expect(p).toMatch(/read each turn/);
+      expect(p).not.toMatch(/"state"|state is|\bholder\b/);
+    }
+    expect(EXTRACT_JSON_SCHEMA).not.toHaveProperty('properties.entities.items.properties.state');
+  });
+
   it('asks for the JSON on one line, grammar or not', () => {
     for (const g of [true, false]) expect(extractPrompt('[0] Mira waves.', [], g)).toMatch(/on one line, with no line breaks/);
   });

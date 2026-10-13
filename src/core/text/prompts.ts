@@ -5,7 +5,7 @@
  * instruct model), otherwise on the story model between turns.
  */
 
-import { LOOK_KEYS, STATE_KEYS } from '../memory/looks';
+import { LOOK_KEYS } from '../memory/looks';
 
 export const MEMORY_SYSTEM =
   'You compress story passages into dense factual memories. Output only the memory: 1–4 sentences, past tense, ' +
@@ -41,7 +41,7 @@ export const EXTRACT_SYSTEM = 'You keep a record of the people, places, items an
 const EXTRACT_SKELETON =
   'Return JSON in this shape (<...> are placeholders):\n' +
   '{"entities": [{"name": "<Name>", "kind": "character", "aliases": ["<role>"], "description": "<one sentence>",\n' +
-  '   "looks": {"<key>": "<a few words>"}, "facts": ["<fact>"], "state": {"<key>": "<a few words>"}},\n' +
+  '   "facts": ["<fact>"], "looks": {"<key>": "<a few words>"}, "relationships": [{"to": "<Name>", "stance": "<a few words>"}]},\n' +
   '  {"name": "<Name>", "kind": "place", "description": "<one sentence>", "facts": []}],\n' +
   ' "speakers": [{"action": <number>, "name": "<Name>"}]}';
 
@@ -61,11 +61,12 @@ export const LOOKS_ASK = `looks is only for characters: a few words for each of 
 export function extractPrompt(passage: string, knownNames: readonly string[], grammar: boolean): string {
   return (
     'List every named character, place, item and faction in this passage, with what it tells about each. ' +
-    'Only things with a proper name; skip common nouns like "the path" or "wolves", except an item someone carries ("the horn" is the item Horn). An unnamed role ("the ferrywoman") is an alias of the named person it refers to.' +
+    'Only things with a proper name; skip common nouns like "the path" or "wolves". An unnamed role ("the ferrywoman") is an alias of the named person it refers to.' +
     `\n\n---\n${passage}\n---\n\n` +
     (knownNames.length ? `Already recorded (use these exact names when the passage means them): ${knownNames.join(', ')}.\n` : '') +
     'Give each entity a one-sentence description and 0–2 facts: short sentences about what lasts (who or what it is, what it owns, injuries, loyalties), not single actions or dialogue, and nothing the passage does not state. ' +
-    `${LOOKS_ASK} state is where it is and how it is now (${STATE_KEYS.join(', ')}), a few words each, only what the passage shows; holder is who carries an item (a Name or "you"). ` +
+    `${LOOKS_ASK} relationships: 0–2, to whom (a Name, or "You" for the player) and the stance in a few words. ` +
+    'No location, posture, condition or mood: those are read each turn. ' +
     'The player is "you", not an entity. speakers names who talks in each numbered paragraph.\n' +
     (grammar ? 'Return {"entities": [...], "speakers": [...]}.' : EXTRACT_SKELETON) +
     ONE_LINE

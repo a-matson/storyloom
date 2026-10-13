@@ -70,6 +70,7 @@ const HeldEntity = z.object({
     facts: z.array(z.string()),
     looks: Keyed,
     state: Keyed,
+    relationships: z.optional(z.array(z.object({ to: z.string(), stance: z.string() }))),
   }),
   range: z.object({ fromAction: z.number(), toAction: z.number() }),
 });
@@ -95,6 +96,8 @@ export const ScriptState = z.looseObject({
   __placeAsk: z.optional(z.object({ place: z.string(), inside: z.string() })),
   /** Entities the batch call named once, held until a second mention makes their card (memory jobs). */
   __pending: z.optional(z.array(HeldEntity)),
+  /** A new name a known one's spelling (Weaver for Weever): the player says whether it is that entity (`of`, an id). Its reply waits in `__pending`. */
+  __aliasProposals: z.optional(z.array(z.object({ name: z.string(), of: z.string(), at: z.number() }))),
 });
 
 export const CardGeneratorSettings = z.object({

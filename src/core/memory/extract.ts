@@ -121,7 +121,11 @@ export async function helperJson<R>(
   return parseJsonReply(caps.jsonSchema ? text : `{${text}`, accept(stats?.stopReason === 'length'), jsonrepair);
 }
 
-/** Keyed looks and state cost more than 300 tokens with five entities. [provisional] */
+/**
+ * Without `state` the reply still ran past 300 and 500 in 3 of 3 calls: the grammar lets the 12B
+ * pretty-print, and it fills every look key ("none"). At 300 the cut fell in `entities`, at 500 in
+ * `speakers`, so 500 stays. [measured: 2026-10-13-batch-m13-4.json, 2026-10-13-batch-m13-4-at500.json]
+ */
 const EXTRACT_TOKENS = 500;
 
 /**

@@ -40,10 +40,24 @@ const SENTENCE = /[^.!?\n]+[.!?]*/g;
  */
 export function supportOf(actions: readonly Action[], subject: Pick<Entity, 'name' | 'aliases'>, value: string): Source | 'wrong-subject' | 'no-shared-word' {
   if (!actions.some((a) => entityNamedIn([subject], actionText(a)))) return 'wrong-subject';
-  const want = contentWords(value);
+  return bestOf(actions, contentWords(value), () => true);
+}
+
+/**
+ * `supportOf` from the sentences that name the subject only, its name's own words left out of
+ * `value`: Weever's identity once came from the sentence about Vorthak beside it (read D).
+ */
+export function supportNaming(actions: readonly Action[], subject: Pick<Entity, 'name' | 'aliases'>, value: string): Source | 'no-shared-word' {
+  const own = new Set(contentWords([subject.name, ...subject.aliases].join(' ')));
+  const want = contentWords(value).filter((w) => !own.has(w));
+  return bestOf(actions, want, (s) => !!entityNamedIn([subject], s));
+}
+
+function bestOf(actions: readonly Action[], want: readonly string[], counts: (sentence: string) => boolean): Source | 'no-shared-word' {
   let best: { a: Action; sentence: string; hits: number } | undefined;
   for (const a of actions)
     for (const [s] of actionText(a).matchAll(SENTENCE)) {
+      if (!counts(s)) continue;
       const have = new Set(contentWords(s));
       const hits = want.filter((w) => have.has(w)).length;
       if (hits > (best?.hits ?? 0)) best = { a, sentence: s.trim(), hits };

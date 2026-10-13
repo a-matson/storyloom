@@ -1,5 +1,5 @@
 import { z } from 'zod/mini';
-import { LOOK_KEYS, STATE_KEYS } from '../memory/looks';
+import { LOOK_KEYS } from '../memory/looks';
 import { EntityKind } from './entity';
 import { WEATHERS } from './weather';
 
@@ -16,7 +16,7 @@ export const MAX_ENTITIES = 5;
  */
 export const FACT_CHARS = 100;
 export const DESCRIPTION_CHARS = 120;
-/** A look or state is a few words per key ("long grey braid"). [provisional] */
+/** A look, state or stance is a few words ("long grey braid"). [provisional] */
 export const LOOK_CHARS = 40;
 const sentence = (chars: number) => z.string().check(z.maxLength(chars));
 
@@ -38,7 +38,8 @@ export const ExtractedEntity = z.object({
   facts: z.array(sentence(FACT_CHARS)).check(z.maxLength(2)),
   /** Optional: required, every entity wrote looks (factions too) and each reply hit the 300-token cap. [provisional] */
   looks: z.optional(keyed(LOOK_KEYS)),
-  state: z.optional(keyed(STATE_KEYS)),
+  // No `state`: the state read writes it each turn (M13-3). `to` is a name, or "You" for the player.
+  relationships: z.optional(z.array(z.object({ to: Name, stance: sentence(LOOK_CHARS) })).check(z.maxLength(2))),
 });
 
 /** Who speaks in which numbered action. */

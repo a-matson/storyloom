@@ -26,7 +26,7 @@ const common = {
 
 /**
  * One typed thing the story says about an entity. Keys stay free strings: stored facts carry keys
- * outside `LOOK_KEYS`/`STATE_KEYS`, and a stricter enum would make those saves unreadable.
+ * outside `LOOK_KEYS`/`STATE_READ_KEYS`, and a stricter enum would make those saves unreadable.
  */
 export const Assertion = z.discriminatedUnion('kind', [
   z.object({ ...common, kind: z.literal('identity'), text: z.string() }),

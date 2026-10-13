@@ -26,7 +26,12 @@ export interface Rest {
 export function mergeAssertions(
   e: Pick<Entity, 'id' | 'kind' | 'canon' | 'cardId' | 'canonKeys'>,
   own: readonly Assertion[],
-  incoming: { description: string; facts: readonly string[]; state?: Record<string, string> | undefined },
+  incoming: {
+    description: string;
+    facts: readonly string[];
+    state?: Record<string, string> | undefined;
+    relationships?: readonly { to: string; stance: string }[] | undefined;
+  },
   atAction: number,
   opts: { producer: Assertion['producer']; source?: ((text: string) => Rest | undefined) | undefined },
 ): Assertion[] {
@@ -65,6 +70,15 @@ export function mergeAssertions(
     for (const [i, a] of list.entries()) if (isCurrent(a) && isValue(a) && (a.key === key || a.key === rival)) list[i] = { ...a, until: atAction };
     list.push(make(v, valueOf(key, v)));
     now[key] = v;
+  }
+
+  // A new stance towards someone ends the old one towards them.
+  for (const { to, stance } of incoming.relationships ?? []) {
+    const old = list.findIndex((a) => a.kind === 'relationship' && isCurrent(a) && norm(a.to) === norm(to));
+    const was = list[old];
+    if (was?.kind === 'relationship' && norm(was.stance) === norm(stance)) continue;
+    if (was) list[old] = { ...was, until: atAction };
+    list.push(make(stance, { kind: 'relationship', to, stance }));
   }
 
   for (const t of incoming.facts) {
