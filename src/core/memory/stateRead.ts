@@ -2,7 +2,7 @@ import { z } from 'zod/mini';
 import type { Action, Adventure, Entity } from '../model/types';
 import { actionText, newId } from '../model/types';
 import { NOW_CHARS, stateChange, stateRead, type StateChange } from '../schema/extraction';
-import { statePrompt } from '../text/prompts';
+import { statePrompt } from '../text/statePrompt';
 import { hashPrompt } from '../trace';
 import { indexAssertions } from './assertionIndex';
 import { mergeAssertions, type Rest } from './assertionWrites';

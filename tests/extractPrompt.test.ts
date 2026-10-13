@@ -4,7 +4,8 @@ import { newNamesIn } from '@core/memory/fold';
 import { createBlankAdventure } from '@core/model/scenario';
 import { EXTRACT_JSON_SCHEMA } from '@core/memory/extractJsonSchema';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
-import { extractPrompt, statePrompt } from '@core/text/prompts';
+import { extractPrompt } from '@core/text/prompts';
+import { statePrompt } from '@core/text/statePrompt';
 import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure } from './fixtures/memoryJobs';
 
 describe('the entity call’s prompt', () => {
