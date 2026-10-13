@@ -13,6 +13,14 @@ const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 const withoutLook = ({ look: _l, ...e }: Entity): Entity => e;
 
+/** The scene's `from` reference as `to`: the kept entity's id on a merge, the name on a delete (the person is still there). */
+function repointScene(adv: Adventure, from: string, to: string): void {
+  const s = adv.plot.scene;
+  if (!s || (s.location !== from && !s.present.includes(from))) return;
+  const swap = (r: string) => (r === from ? to : r);
+  adv.plot = { ...adv.plot, scene: { ...s, ...(s.location !== undefined && { location: swap(s.location) }), present: [...new Set(s.present.map(swap))] } };
+}
+
 /**
  * The player's edits to `adv.entities`, through the session's `mutate`. Not session methods, so
  * this stays out of the start-up bundle: only the lazy entity drawer imports it.
@@ -24,6 +32,8 @@ export function entityEdits(host: GameSession) {
     delete: (id: string) => {
       const old = host.adv.entities.find((e) => e.id === id)?.portraitId;
       mutate((adv) => {
+        const gone = adv.entities.find((e) => e.id === id);
+        if (gone) repointScene(adv, id, gone.name);
         adv.entities = adv.entities.filter((e) => e.id !== id);
         adv.assertions = adv.assertions.filter((a) => a.subject !== id);
         repointGates(adv, id);
@@ -74,6 +84,7 @@ export function entityEdits(host: GameSession) {
         const own = (id: string) => adv.assertions.filter((a) => a.subject === id);
         adv.assertions = [...adv.assertions.filter((a) => a.subject !== intoId && a.subject !== fromId), ...mergeOwn(into, own(intoId), own(fromId))];
         repointGates(adv, fromId, intoId);
+        repointScene(adv, fromId, intoId);
         if (from.portraitId !== undefined && from.portraitId !== merged.portraitId) dropPortrait(host, from.portraitId);
       });
     },

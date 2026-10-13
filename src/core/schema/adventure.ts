@@ -12,8 +12,9 @@ export const DayPart = z.enum(['dawn', 'morning', 'midday', 'afternoon', 'evenin
 
 /** Where the story is now: maintained by memory jobs from the helper call, player-editable. */
 export const Scene = z.object({
+  /** A place's entity id, else the place as written (`sceneIds`). */
   location: z.optional(z.string()),
-  /** Names, not entity ids: the player edits them as text. */
+  /** Character entity ids, else names nothing is known as; `sceneNames` shows them. */
   present: z.array(z.string()),
   /** Absent until a passage states the time of day; then it moves only by stated elapsed time. */
   time: z.optional(z.object({ day: z.int(), part: DayPart })),

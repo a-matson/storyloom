@@ -9,6 +9,7 @@ import { renderTemplate } from '../text/templates';
 import { indexAssertions, textOf } from './assertionIndex';
 import { entityNamedIn } from './entities';
 import { helperCall } from './helperCall';
+import { sceneNames } from './names';
 import type { MaintenanceDeps } from './memoryJobs';
 
 const CheckJson = z.object({ contradicts: z.boolean(), fact: z.string() });
@@ -24,7 +25,7 @@ const CHECK_TOKENS = 60;
  * description of every canon entity the output or the scene names. Empty means no call.
  */
 export function checkInputs(adv: Pick<Adventure, 'entities' | 'assertions' | 'plot'>, output: string): string[] {
-  const scene = renderScene(adv.plot.scene);
+  const scene = renderScene(adv.plot.scene && sceneNames(adv.plot.scene, adv.entities));
   const named = `${output}\n${scene}`;
   const ix = indexAssertions(adv.assertions);
   return [

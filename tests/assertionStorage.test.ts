@@ -34,6 +34,17 @@ it('saves the assertions the writers made, edits and removals included', async (
   await s.deleteAdventure(adv.id);
 });
 
+it('resolves a scene saved as names to ids on open, keeping a name nothing matches, and writes it', async () => {
+  const tam = mergeEntity(undefined, { name: 'Tamsin', kind: 'character', description: '' }, 2);
+  const adv = { ...makeAdventure({ actions: 4, cards: 0 }), entities: [tam], assertions: told(tam, { description: 'A ferrywoman.' }, 2) };
+  adv.plot = { ...adv.plot, scene: { location: 'the ferry', present: ['Tamsin', 'Corwin'] } };
+  await (await reopen()).putAdventure(adv);
+  const want = { location: 'the ferry', present: [tam.id, 'Corwin'] };
+  expect((await (await reopen()).getAdventure(adv.id))?.plot.scene).toEqual(want);
+  expect(await raw((db) => db.table('adventures').get(adv.id))).toMatchObject({ plot: { scene: want } });
+  await (await reopen()).deleteAdventure(adv.id);
+});
+
 it('moves entity facts to assertions once, on open, for an adventure saved before the store', async () => {
   const tam = {
     ...mergeEntity(undefined, { name: 'Tamsin', kind: 'character', description: '' }, 2),

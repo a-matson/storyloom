@@ -186,7 +186,7 @@ describe('MemoryScheduler', () => {
       // Two starts while the first read runs share it.
       scheduler.start(new AbortController().signal);
       scheduler.start(new AbortController().signal);
-      await vi.waitFor(() => expect(adv.plot.scene?.location).toBe('the ferry'));
+      await vi.waitFor(() => expect(adv.entities.find((e) => e.id === adv.plot.scene?.location)?.name).toBe('the ferry'));
       await vi.waitFor(() => expect(changed).toHaveBeenCalled());
       expect(asks).toHaveLength(1);
     });

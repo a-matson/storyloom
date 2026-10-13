@@ -45,7 +45,8 @@ test('a new place asks whether it is inside the last one, and Yes records it', a
 test('a seeded scene shows in the Plot tab and an edit persists', async ({ page }) => {
   await openSeededAdventure(page, 3, undefined, { scene: { location: 'the Old Well', present: ['Merav'], time: { day: 2, part: 'evening' } } });
   await page.getByText('Scene', { exact: true }).click();
-  await expect(page.getByRole('textbox', { name: 'Scene location' })).toHaveValue('the Old Well');
+  // The saved names resolve to the cards on open, so the place reads as its card name.
+  await expect(page.getByRole('textbox', { name: 'Scene location' })).toHaveValue('Old Well');
   await expect(page.getByRole('textbox', { name: 'Present' })).toHaveValue('Merav');
   await page.getByRole('combobox', { name: 'Weather' }).selectOption('storm');
 
@@ -58,7 +59,7 @@ test('a seeded scene shows in the Plot tab and an edit persists', async ({ page 
   await page.getByRole('button', { name: 'View context' }).last().click();
   const context = page.getByRole('dialog', { name: 'Context sent to the model' });
   await context.getByRole('button', { name: 'Raw prompt' }).click();
-  await expect(context.getByText('[Scene: the Old Well · Present: Merav · Storm]')).toBeVisible();
+  await expect(context.getByText('[Scene: Old Well · Present: Merav · Storm]')).toBeVisible();
 });
 
 test('an edited Story Summary persists and shows when it refreshes', async ({ page }) => {

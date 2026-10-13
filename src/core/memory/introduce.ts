@@ -6,6 +6,7 @@ import { knownAs, matchEntity, mergeEntity } from './entities';
 import { passageOf, readTurn, type EntityUpdate, type ExtractDeps } from './extract';
 import { foldEntities, newNamesIn, notAName } from './fold';
 import { MEMORY_SPAN } from './memoryBank';
+import { sceneNames } from './names';
 import { withScene } from './scene';
 
 /** Actions an introduction reads at least: the last AI output and the player line before it. [provisional] */
@@ -22,9 +23,9 @@ function notePlace(adventure: Adventure, location: string, at: number): boolean 
   const said = location.trim();
   const places = adventure.entities.filter((e) => e.kind === 'place');
   if (!said || knownAs(places, said)) return false;
-  adventure.entities = [...adventure.entities, mergeEntity(undefined, { name: said, kind: 'place', description: '' }, at)];
   const was = adventure.plot.scene?.location;
-  const inside = was === undefined ? undefined : knownAs(places, was);
+  const inside = was === undefined ? undefined : (places.find((e) => e.id === was) ?? knownAs(places, was));
+  adventure.entities = [...adventure.entities, mergeEntity(undefined, { name: said, kind: 'place', description: '' }, at)];
   if (inside) adventure.scriptState = { ...adventure.scriptState, __placeAsk: { place: said, inside: inside.name } };
   return true;
 }
@@ -52,7 +53,8 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps): Promis
   const passage = passageOf(adventure, range);
   // Aliases too, so a character the text calls "the dragon" resolves (the two P7c misses); new names, so one met this turn can be there.
   const cast = [...new Set([...adventure.entities.flatMap((e) => (e.kind === 'character' ? [e.name, ...e.aliases] : [])), ...names])];
-  const prev = { location: adventure.plot.scene?.location, present: adventure.plot.scene?.present ?? [] };
+  const now = adventure.plot.scene && sceneNames(adventure.plot.scene, adventure.entities);
+  const prev = { location: now?.location, present: now?.present ?? [] };
   const reply = names.length || sceneEachTurn ? await readTurn(passage, names, prev, cast, deps) : null;
   adventure.scriptState = { ...adventure.scriptState, __introducedAt: n, __introducedHash: hash };
   if (!reply) return none();
@@ -66,8 +68,7 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps): Promis
   };
   const scene = sceneEachTurn ? reply.scene : undefined;
   if (scene && notePlace(adventure, scene.location, n - 1)) touched++;
-  const places = adventure.entities.filter((e) => e.kind === 'place');
-  const plot = scene ? withScene(adventure.plot, scene, name, n - 1, { sourceId: last.id, sourceHash: hash }, places) : adventure.plot;
+  const plot = scene ? withScene(adventure.plot, scene, name, n - 1, { sourceId: last.id, sourceHash: hash }, adventure.entities) : adventure.plot;
   const sceneUpdated = plot !== adventure.plot;
   adventure.plot = plot;
   const call = deps.cuts?.calls?.at(-1);

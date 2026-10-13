@@ -1,6 +1,7 @@
 import { compileCards, lookbackWindow, matchCards } from '../cards/storyCards';
 import { indexAssertions } from '../memory/assertionIndex';
 import { isConfirmed } from '../memory/facts';
+import { sceneNames } from '../memory/names';
 import { projectEntity } from '../memory/projection';
 import type { Entity } from '../model/types';
 import { actionStoryText } from '../text/formatting';
@@ -44,9 +45,11 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
   };
 
   // The location counts as present, so the place the scene is in gets its identity line too.
-  const names = [...(plot.scene?.present ?? []), plot.scene?.location ?? ''].filter((n) => n.trim());
+  const refs = [...(plot.scene?.present ?? []), plot.scene?.location ?? ''].filter((n) => n.trim());
   const byId = new Map(entities.map((e) => [e.id, e]));
-  const here = [...ids(names.flatMap((n) => entities.find((e) => named(e, n)) ?? []))].flatMap((i) => byId.get(i) ?? []);
+  const here = [...ids(refs.flatMap((n) => byId.get(n) ?? entities.find((e) => named(e, n)) ?? []))].flatMap((i) => byId.get(i) ?? []);
+  // Named through every entity: an unconfirmed one present still reads as its name, not its id.
+  const shown = plot.scene && sceneNames(plot.scene, input.entities);
   const window = lookbackWindow(cap);
   const recent = lastActionIndex >= 0 ? input.actions.slice(Math.max(0, lastActionIndex - window + 1), lastActionIndex + 1) : [];
   const inText = matchCards(compileCards(entities.map((e) => projectEntity(e, ix.of(e.id)))), recent.map(actionStoryText)).flatMap(
@@ -56,12 +59,12 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
   const mentioned = [...ids(inText)].filter((i) => !present.has(i)).flatMap((i) => byId.get(i) ?? []);
 
   // Rules first: the world's laws outrank what the scene holds. As many as fit, in order.
-  const ctx = { entities, ix, scene: plot.scene, present, mentioned: ids(mentioned) };
+  const ctx = { entities, ix, scene: shown, present, mentioned: ids(mentioned) };
   const rules = relevantRules(input.rules ?? [], ctx);
   while (rules.length && tokenizer.count(renderSection('rules', renderRules(rules))) > left) rules.pop();
   if (rules.length) put('rules', renderSection('rules', renderRules(rules)));
 
-  const scene = renderScene(plot.scene, entities, ix);
+  const scene = renderScene(shown, entities, ix);
   if (scene && tokenizer.count(renderSection('scene', scene)) <= left) put('scene', renderSection('scene', scene));
 
   // A hand-written card already says who they are, so a carded entity keeps its now-line but no identity.
