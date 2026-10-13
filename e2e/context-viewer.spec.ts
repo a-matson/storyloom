@@ -161,7 +161,8 @@ test("the turn's trace lists the turn read that ran after it", async ({ page }) 
     const dialog = page.getByRole('dialog', { name: 'Turn trace' });
     try {
       await expect(dialog.getByText('Helper calls')).toBeVisible({ timeout: 1000 });
-      await expect(dialog.getByText(/^entity · .* \d+ tok · .*kept \d+/)).toBeVisible();
+      // The opening's read may still be running when the turn starts, so it can land here too.
+      await expect(dialog.getByText(/^entity · .* \d+ tok · .*kept \d+/).first()).toBeVisible();
     } finally {
       await page.keyboard.press('Escape');
     }

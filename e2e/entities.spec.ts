@@ -176,7 +176,8 @@ test('a canon conflict is shown on the fact and resolved from the drawer', async
   await expect(drawer.getByRole('button', { name: 'Lock eyes as canon' })).toHaveAttribute('aria-pressed', 'false');
   await expect(drawer.getByRole('listitem').filter({ hasText: 'eyes: blue' })).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(page.getByText('eyes: blue')).toBeVisible();
+  // On the card: once a background read places Tamsin in the scene, the cast panel shows the same line.
+  await expect(page.getByRole('button', { name: 'Open Tamsin' })).toContainText('eyes: blue');
 });
 
 test("the story's current state shows as a row, and the player's edit ends it", async ({ page }) => {
@@ -204,7 +205,7 @@ test("the story's current state shows as a row, and the player's edit ends it", 
   // Ended: now under Happened with its action.
   await expect(drawer.getByRole('listitem').filter({ hasText: 'location: the docks' })).toContainText('action 2');
   await page.keyboard.press('Escape');
-  await expect(page.getByText('location: the ferry')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open Tamsin' })).toContainText('location: the ferry');
 });
 
 test('card lines: evidence, edit, delete and add', async ({ page }) => {
