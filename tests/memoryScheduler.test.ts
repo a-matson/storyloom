@@ -173,7 +173,12 @@ describe('MemoryScheduler', () => {
       const provider = fakeProvider(
         async function* (req) {
           if (req.prompt.includes('Where does the passage end')) asks.push(req.prompt);
-          yield { text: req.prompt.includes('Where does the passage end') ? '{"scene": {"location": "the ferry"}}' : 'Mira found the map.', done: true };
+          yield {
+            text: req.prompt.includes('Where does the passage end')
+              ? '{"scene": {"moved": true, "location": "the ferry", "present": [], "left": [], "weather": "unchanged"}}'
+              : 'Mira found the map.',
+            done: true,
+          };
         },
         false,
         true,

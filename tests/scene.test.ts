@@ -1,68 +1,92 @@
 import { describe, expect, it } from 'vitest';
 import { renderScene } from '@core/context/render';
+import { mergeEntity } from '@core/memory/entities';
 import { nextScene, SCENE_LOG_CAP, withScene } from '@core/memory/scene';
-import type { PlotComponents, Scene } from '@core/model/types';
+import type { Entity, PlotComponents, Scene } from '@core/model/types';
+import type { SceneRead } from '@core/schema/extraction';
 
-const name = (n: string) => (n.toLowerCase() === 'you' ? undefined : n === 'morrow' ? 'Morrow' : n);
+const name = (n: string) => (n.toLowerCase() === 'you' ? undefined : n === 'the dragon' ? 'Weever' : n);
 const mill: Scene = { location: 'the mill', present: ['Lena'] };
 // An adventure saved while the clock existed.
 const oldSave: Scene = { ...mill, time: { day: 3, part: 'night' } };
 const source = { sourceId: 'a9', sourceHash: 'h' };
+const read = (r: Partial<SceneRead>): SceneRead => ({ moved: false, location: 'the mill', present: [], left: [], weather: 'unchanged', ...r });
+const place = (n: string, partOf?: Entity) => ({
+  ...mergeEntity(undefined, { name: n, kind: 'place', description: '', facts: [] }, 0),
+  ...(partOf && { partOf: partOf.id }),
+});
+const next = (scene: Scene | undefined, r: Partial<SceneRead>, places: Entity[] = [], at = 7) => nextScene(scene, read(r), name, at, places);
 
 describe('nextScene', () => {
-  it('moves to a named place with the cast the reply names, dropping the player and resolving entity names', () => {
-    const next = nextScene(mill, { location: "Blackmore's study", present: ['morrow', 'You', ' '] }, name, 7);
-    expect(next).toEqual({ location: "Blackmore's study", present: ['Morrow'], since: 7 });
+  it('keeps everyone not in `left`: a sleeper the reply leaves out stays, the listed join, the left go', () => {
+    const scene: Scene = { location: 'the mill', present: ['Lena', 'Minos'] };
+    expect(next(scene, { present: ['Lena', 'the dragon', 'You'] }).scene?.present).toEqual(['Lena', 'Minos', 'Weever']);
+    expect(next(scene, { present: ['Lena'], left: ['Minos'] }).scene?.present).toEqual(['Lena']);
+    expect(next(scene, { present: ['Lena', 'Minos'], left: ['Minos'] }).scene?.present).toEqual(['Lena']);
   });
 
-  it('keeps the place, the player-set cast and weather when the reply omits them', () => {
-    const scene: Scene = { ...mill, weather: 'Fog' };
-    expect(nextScene(scene, { location: ' ', present: [] }, name, 3)).toBe(scene);
-    expect(nextScene(scene, { weather: 'rain' }, name, 3)).toEqual({ ...scene, weather: 'rain' });
+  it('ignores `left` for someone who was not there, and returns an unchanged scene itself', () => {
+    expect(next(mill, { present: ['Lena'], left: ['Corwin'] })).toEqual({ scene: mill, moved: false });
   });
 
-  it('drops a value that says there is none, in any field', () => {
-    const none = { location: 'Not specified', present: ['None specified', 'Lena'], items: ['None'], weather: 'Not specified' };
-    expect(nextScene(mill, none, name, 3)).toBe(mill);
+  it('resets to the listed names on a change of place, and stamps `since` only then', () => {
+    expect(next({ ...mill, since: 2 }, { location: 'the road', present: ['Corwin'] })).toEqual({
+      scene: { location: 'the road', present: ['Corwin'], since: 7 },
+      moved: true,
+    });
+    expect(next({ ...mill, since: 2 }, { present: ['Corwin'] }).scene?.since).toBe(2);
   });
 
-  it('keeps weather only when it is weather', () => {
-    expect(nextScene(mill, { weather: 'late-night traffic' }, name, 3)).toBe(mill);
-    expect(nextScene(mill, { weather: 'windy' }, name, 3)).toEqual({ ...mill, weather: 'windy' });
+  it('takes place identity from the place cards, not the `moved` flag, and stores the card name', () => {
+    const cottage = place('Cottage');
+    const scene: Scene = { location: 'Cottage', present: ['Lena'] };
+    expect(next(scene, { moved: true, location: 'the cottage', present: [] }, [cottage])).toEqual({ scene, moved: false });
+    expect(next({ ...scene, location: 'cottage in the woods' }, { location: 'the cottage' }, [cottage]).scene?.location).toBe('Cottage');
   });
 
-  it('clears the cast in a new place that names nobody, keeps it in the same place', () => {
-    expect(nextScene(mill, { location: 'the road', present: [] }, name, 4)).toEqual({ location: 'the road', present: [], since: 4 });
-    expect(nextScene(mill, { location: 'the mill', present: [] }, name, 4)).toBe(mill);
+  it('logs no move for a room inside the current place', () => {
+    const cottage = place('Cottage');
+    const bedroom = place('Bedroom', cottage);
+    const r = next({ location: 'Cottage', present: ['Lena'], since: 1 }, { location: 'the bedroom', present: [] }, [cottage, bedroom]);
+    expect(r).toEqual({ scene: { location: 'Bedroom', present: ['Lena'], since: 1 }, moved: false });
   });
 
-  it('keeps `since` until the location changes, and reads named items', () => {
-    const scene: Scene = { ...mill, since: 2 };
-    expect(nextScene(scene, { items: ['the ledger', 'the ledger'] }, name, 5)).toEqual({ ...scene, items: ['the ledger'] });
+  it('keeps the weather on `unchanged`, clears it on `none`, else takes the word', () => {
+    const wet: Scene = { ...mill, weather: 'rain' };
+    expect(next(wet, { present: ['Lena'] }).scene).toBe(wet);
+    expect(next(wet, { weather: 'none' }).scene).toEqual(mill);
+    expect(next(mill, { weather: 'fog' }).scene).toEqual({ ...mill, weather: 'fog' });
+  });
+
+  it('keeps the player’s items in the same place and drops them on a move; drops `nobody`', () => {
+    const scene: Scene = { ...mill, items: ['the ledger'] };
+    expect(next(scene, { present: ['nobody'] }).scene).toBe(scene);
+    expect(next(scene, { location: 'the road', present: ['nobody'] }).scene).toEqual({ location: 'the road', present: [], since: 7 });
   });
 
   it('writes no time, and drops an old save’s clock on the next change', () => {
-    expect(nextScene(undefined, { location: 'the mill' }, name, 0)).toEqual({ location: 'the mill', present: [], since: 0 });
-    expect(nextScene(oldSave, { weather: 'rain' }, name, 3)).toEqual({ ...mill, weather: 'rain' });
+    expect(next(undefined, {}, [], 0).scene).toEqual({ location: 'the mill', present: [], since: 0 });
+    expect(next(oldSave, { weather: 'rain' }).scene).toEqual({ ...mill, weather: 'rain' });
   });
 });
 
 describe('withScene', () => {
-  it('logs a location change and stamps the source; an unchanged scene leaves the plot alone', () => {
-    const plot: PlotComponents = { scene: mill };
-    const next = withScene(plot, { location: 'the road' }, name, 6, source);
-    expect(next.scene).toMatchObject({ location: 'the road', since: 6, ...source });
-    expect(next.sceneLog).toEqual([{ at: 6, location: 'the road' }]);
-    expect(withScene(next, { location: 'the road' }, name, 8, source)).toBe(next);
-    expect(withScene(next, { weather: 'rain' }, name, 8, source).sceneLog).toEqual([{ at: 6, location: 'the road' }]);
+  const w = (plot: PlotComponents, r: Partial<SceneRead>, at: number) => withScene(plot, read(r), name, at, source, []);
+
+  it('logs a change of place and stamps the source; an unchanged scene leaves the plot alone', () => {
+    const moved = w({ scene: mill }, { location: 'the road' }, 6);
+    expect(moved.scene).toMatchObject({ location: 'the road', since: 6, ...source });
+    expect(moved.sceneLog).toEqual([{ at: 6, location: 'the road' }]);
+    expect(w(moved, { location: 'the road' }, 8)).toBe(moved);
+    expect(w(moved, { location: 'the road', weather: 'rain' }, 8).sceneLog).toEqual([{ at: 6, location: 'the road' }]);
   });
 
   it('caps the log', () => {
     const sceneLog = Array.from({ length: SCENE_LOG_CAP }, (_, i) => ({ at: i, location: `p${i}` }));
-    const next = withScene({ scene: mill, sceneLog }, { location: 'the road' }, name, 99, source);
-    expect(next.sceneLog).toHaveLength(SCENE_LOG_CAP);
-    expect(next.sceneLog?.at(-1)).toEqual({ at: 99, location: 'the road' });
-    expect(next.sceneLog?.[0]).toEqual({ at: 1, location: 'p1' });
+    const moved = w({ scene: mill, sceneLog }, { location: 'the road' }, 99);
+    expect(moved.sceneLog).toHaveLength(SCENE_LOG_CAP);
+    expect(moved.sceneLog?.at(-1)).toEqual({ at: 99, location: 'the road' });
+    expect(moved.sceneLog?.[0]).toEqual({ at: 1, location: 'p1' });
   });
 });
 

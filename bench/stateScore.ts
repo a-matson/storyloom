@@ -29,13 +29,6 @@ export function placeOf(location: string, placeWords: LabelSet['placeWords']): s
 
 export const presentOk = (want: readonly string[], got: readonly string[]) => want.length === got.length && want.every((w) => got.includes(w));
 
-/** Nobody leaves without `left`, except that a move resets the scene to the listed names (C3: 27/30 on P7c's replies). */
-export function nextPresent(prev: readonly string[], read: { moved: boolean; present: readonly string[]; left: readonly string[] }): string[] {
-  const left = new Set(read.left);
-  const listed = read.present.filter((p) => p !== 'nobody' && !left.has(p));
-  return read.moved ? listed : [...new Set([...listed, ...prev.filter((p) => !left.has(p))])];
-}
-
 /** One replayed turn: action index, the cast known by then, and what the reads made of it. */
 export interface StateRow {
   i: number;

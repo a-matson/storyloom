@@ -31,7 +31,7 @@ const LINES = [
 ] as const;
 const NAMES = ['Merav', 'The Needle Map', 'Well-wardens', 'Ashen Flats'] as const;
 const MEMORY = 'The caravan crossed the flats; Merav hid her blindness; a needle-pricked map surfaced.';
-const LIGHTHOUSE = { location: 'the lighthouse', present: ['Merav'], items: ['the Needle Map'], weather: 'fog' };
+const LIGHTHOUSE = { moved: true, location: 'the lighthouse', present: ['Merav'], left: [], weather: 'fog' };
 const PROPS = { default_generation_settings: { n_ctx: 8192 }, total_slots: 2, model_path: '/models/Fake-12B-Q4_K_M.gguf', build_info: 'fake' };
 
 const json = (obj: unknown, status = 200): Response => new Response(JSON.stringify(obj), { status, headers: { ...CORS, 'content-type': 'application/json' } });

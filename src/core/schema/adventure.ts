@@ -86,6 +86,8 @@ export const ScriptState = z.looseObject({
   __introducedHash: z.optional(z.string()),
   /** An action the summary read was edited or erased: rebuild it from the memories. */
   __summaryDirty: z.optional(z.boolean()),
+  /** A place the turn read made while the scene was at `inside`: the Scene section asks whether it is part of it. */
+  __placeAsk: z.optional(z.object({ place: z.string(), inside: z.string() })),
   /** Entities the batch call named once, held until a second mention makes their card (memory jobs). */
   __pending: z.optional(z.array(HeldEntity)),
 });
