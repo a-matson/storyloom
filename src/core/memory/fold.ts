@@ -1,7 +1,7 @@
 import type { Action, Adventure, ExtractedEntity } from '../model/types';
 import { actionText } from '../model/types';
 import { FACT_CHARS, INTRODUCED_CHARS, LOOK_CHARS } from '../schema/extraction';
-import { identityText, textOf } from './assertionIndex';
+import { identityText, indexAssertions, textOf } from './assertionIndex';
 import { mergeAssertions, type Rest } from './assertionWrites';
 import { knownAs, matchEntity, mergeEntity, namedInPassage, within, type Sighting } from './entities';
 import { sourceIn, type Source } from './invalidate';
@@ -49,7 +49,8 @@ export function newNamesIn(adventure: Adventure, range: MemoryRange): string[] {
   const player = adventure.plot.thirdPerson?.enabled ? [adventure.plot.thirdPerson.name] : [];
   const known = [...player, ...adventure.entities.flatMap((e) => [e.name, ...e.aliases])];
   const names = [...new Set(adventure.actions.slice(range.fromAction, range.toAction).flatMap((a) => candidateNames(actionText(a), known)))];
-  return names.filter((n) => !knownAs(adventure.entities, n) && !names.some((k) => partOf(n, k)));
+  const ix = indexAssertions(adventure.assertions);
+  return names.filter((n) => !knownAs(adventure.entities, n, ix) && !names.some((k) => partOf(n, k)));
 }
 
 /** A description that makes the name a kind of creature, not one of them ("Kobolds are a race of…"). */
@@ -136,7 +137,7 @@ export function foldEntities(
     const carried = e.kind === 'item' && !!state?.['holder'];
     const named = (text: string) => namedInPassage(e.name, text) || (carried && within(`the ${e.name}`, text));
     const once = () => adventure.actions.slice(0, range.toAction).filter((a) => named(actionText(a))).length < 2;
-    const old = notAName(adventure.plot, e.name) ? undefined : knownAs(entities, e.name);
+    const old = notAName(adventure.plot, e.name) ? undefined : knownAs(entities, e.name, indexAssertions(assertions));
     if (!old && (notAName(adventure.plot, e.name) || !named(passage) || A_KIND.test(description))) {
       for (const f of facts) opts.log?.rejected.push({ entity: e.name, value: f, reason: 'entity-dropped', passageRange: range });
       continue;
@@ -192,7 +193,7 @@ export function foldEntities(
   adventure.entities = entities;
   adventure.assertions = assertions;
   const pending = [...(adventure.scriptState.__pending ?? []), ...held];
-  const due = pending.filter((p) => knownAs(entities, p.entity.name));
+  const due = pending.filter((p) => knownAs(entities, p.entity.name, indexAssertions(assertions)));
   if (!held.length && !due.length) return touched;
   adventure.scriptState = { ...adventure.scriptState, __pending: pending.filter((p) => !due.includes(p)).slice(-MAX_HELD) };
   // Each was counted as proposed when it arrived; its rejections still log.

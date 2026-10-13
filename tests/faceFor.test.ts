@@ -8,8 +8,6 @@ const ent = (name: string, aliases: string[] = [], kind: Entity['kind'] = 'chara
   name,
   aliases,
   description: '',
-  facts: [],
-  state: {},
   relations: [],
   firstSeen: 0,
   lastSeen: 1,

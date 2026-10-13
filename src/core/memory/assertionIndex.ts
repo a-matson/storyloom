@@ -31,6 +31,10 @@ export const current = <K extends Assertion['kind']>(as: readonly Assertion[], k
 export const identityText = (e: Pick<Entity, 'canon' | 'cardId' | 'description'>, as: readonly Assertion[]): string =>
   e.canon || e.cardId ? e.description : (current(as, 'identity').at(-1)?.text ?? '');
 
+/** An entity with fields the assertion store replaced: `migrateEntities` (lazy) has work. */
+export const isLegacy = (e: Entity): boolean =>
+  'facts' in e || 'state' in e || 'appearance' in e || (!e.canon && e.cardId === undefined && e.description !== '');
+
 /** The line a fact used to be: what pins, the contradiction check and the BM25 corpus read. */
 export function textOf(a: Assertion): string {
   if (a.kind === 'identity' || a.kind === 'trait') return a.text;

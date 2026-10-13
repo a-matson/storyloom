@@ -25,6 +25,7 @@ export type StoryCard = z.output<typeof S.StoryCard>;
 export type Memory = z.output<typeof S.Memory>;
 export type Entity = z.output<typeof S.Entity>;
 export type EntityFact = z.output<typeof S.EntityFact>;
+export type LegacyEntity = z.output<typeof S.LegacyEntity>;
 export type Rule = z.output<typeof S.Rule>;
 export type Assertion = z.output<typeof S.Assertion>;
 export type ExtractedEntity = z.output<typeof X.ExtractedEntity>;

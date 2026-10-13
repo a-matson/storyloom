@@ -2,15 +2,16 @@ import { describe, expect, it, vi } from 'vitest';
 import { entityEdits } from '@app/session/entities';
 import { PORTRAIT_PX, PORTRAIT_RETRY_TURNS, queuePortraits, renderPortrait } from '@app/session/portraits';
 import { portraitPrompt, portraitStyle } from '@app/session/portraitPrompt';
-import { createBlankAdventure, type Entity } from '@core/model';
+import { migrateEntities } from '@core/memory/assertions';
+import { createBlankAdventure, type LegacyEntity } from '@core/model';
 import type { ImageProvider, ImageRequest } from '@core/ports';
-import { derived, own } from './fixtures/assertions';
+import { own } from './fixtures/assertions';
 import { settled, setup } from './fixtures/session';
 
 // No canvas under vitest; the re-encode is the browser's job.
 vi.mock('@app/image', () => ({ downscale: (b: Blob) => Promise.resolve(b), cropSquare: (b: Blob) => Promise.resolve(b) }));
 
-const lena: Entity = {
+const lena: LegacyEntity = {
   id: 'ent_lena',
   kind: 'character',
   name: 'Lena',
@@ -28,13 +29,12 @@ const lena: Entity = {
   firstSeen: 0,
   lastSeen: 0,
 };
-const gate: Entity = { ...lena, id: 'ent_gate', kind: 'place', name: 'Gate', facts: [] };
+const gate: LegacyEntity = { ...lena, id: 'ent_gate', kind: 'place', name: 'Gate', facts: [] };
 
-function withImages(txt2img: ImageProvider['txt2img'] | null, ...entities: Entity[]) {
+function withImages(txt2img: ImageProvider['txt2img'] | null, ...entities: LegacyEntity[]) {
   const adventure = createBlankAdventure('Test', 'You stand at the gate.');
-  adventure.entities = entities;
-  // As an old save opens: its looks and facts derived.
-  adventure.assertions = derived(adventure).assertions;
+  // As an old save opens: its looks and facts moved to assertions.
+  Object.assign(adventure, migrateEntities(entities, adventure.actions, []));
   // Model-card settings on, so every test also proves portraits skip the hires pass.
   adventure.settings.image = { ...adventure.settings.image, sampler: 'DPM++ 2M Karras', clipSkip: 2, hires: true };
   const images: ImageProvider | undefined = txt2img

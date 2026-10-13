@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { buildContext } from '@core/context';
 import { relevantRules, renderRules, type RuleContext } from '@core/context/rules';
 import { mergeEntity } from '@core/memory/entities';
-import type { Entity, EntityFact, Rule } from '@core/model';
+import type { Entity, EntityFact, LegacyEntity, Rule } from '@core/model';
 import { ixOf } from './fixtures/assertions';
 
-const ent = (name: string, kind: Entity['kind'], over: Partial<Entity> = {}): Entity => ({
+const ent = (name: string, kind: Entity['kind'], over: Partial<LegacyEntity> = {}): LegacyEntity => ({
   ...mergeEntity(undefined, { name, kind, description: '' }, 0),
   id: `ent_${name}`,
   ...over,

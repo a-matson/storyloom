@@ -11,7 +11,8 @@ const seen = (over: Partial<Sighting> = {}): Sighting => ({ name: 'Tamsin', kind
 describe('entity merge rules', () => {
   it('creates an entity on first sighting', () => {
     const e = mergeEntity(undefined, seen({ description: 'A ferrywoman.', aliases: ['the ferrywoman'] }), 4);
-    expect(e).toMatchObject({ kind: 'character', name: 'Tamsin', aliases: ['the ferrywoman'], description: 'A ferrywoman.', firstSeen: 4, lastSeen: 4 });
+    // Who it is goes to an identity assertion (`mergeAssertions`), not the card-text field.
+    expect(e).toMatchObject({ kind: 'character', name: 'Tamsin', aliases: ['the ferrywoman'], description: '', firstSeen: 4, lastSeen: 4 });
     expect(e.id).toMatch(/^ent_/);
     expect(mergeEntity(e, seen(), 10)).toMatchObject({ id: e.id, firstSeen: 4, lastSeen: 10 });
   });
@@ -22,9 +23,9 @@ describe('entity merge rules', () => {
     expect(next.aliases).toEqual(['the ferrywoman', 'Tam']);
   });
 
-  it('keeps the existing description over model output, and a canon one even when empty', () => {
+  it('never takes a description from model output', () => {
     const base = mergeEntity(undefined, seen({ description: 'A ferrywoman.' }), 1);
-    expect(mergeEntity(base, seen({ description: 'A smuggler.' }), 9).description).toBe('A ferrywoman.');
+    expect(mergeEntity({ ...base, description: 'Card text.', canon: true }, seen({ description: 'A smuggler.' }), 9).description).toBe('Card text.');
     expect(mergeEntity({ ...base, description: '', canon: true }, seen({ description: 'A smuggler.' }), 9).description).toBe('');
     expect(mergeEntity(undefined, seen(), 1)).not.toHaveProperty('appearance');
   });
@@ -55,7 +56,7 @@ describe('mergeEntities', () => {
       portraitId: 'p2',
     };
     const merged = mergeEntities(into, from);
-    expect(merged).toMatchObject({ id: into.id, name: 'Tamsin', portraitId: 'p1', description: 'Rows the night ferry.', firstSeen: 2, lastSeen: 9 });
+    expect(merged).toMatchObject({ id: into.id, name: 'Tamsin', portraitId: 'p1', description: '', firstSeen: 2, lastSeen: 9 });
     expect(merged.aliases).toEqual(['The ferrywoman']);
     expect(merged.relations).toEqual([{ to: 'Odo', label: 'rival' }]);
   });

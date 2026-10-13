@@ -5,6 +5,7 @@ import { foldEntities, uncut, type FoldLog, type Incoming } from '@core/memory/f
 import { appearanceOf, currentStates } from '@core/memory/looks';
 import { createBlankAdventure } from '@core/model/scenario';
 import type { Action, Adventure, Entity } from '@core/model';
+import { told } from './fixtures/assertions';
 
 const act = (id: string, text: string): Action => ({ id, type: 'continue', versions: [text], active: 0, createdAt: 0 });
 const seen = (name: string, over: Partial<Incoming> = {}): Incoming => ({ name, kind: 'character', description: '', facts: [], ...over });
@@ -117,16 +118,12 @@ describe('foldEntities', () => {
     expect(currentStates(lines(adv, e))).toEqual({ hair: 'grey braid', location: 'the dock' });
   });
 
-  it('merges a new name that is part of a known one, or a known one with a title its description has', () => {
+  it('merges a new name that is part of a known one, or a known one with a title its identity has', () => {
     const adv = story(['Brannoch waves, the Ashen Order rides past, and Captain Marr nods.']);
-    const known = (name: string, description = '') => mergeEntity(undefined, { name, kind: 'character', description }, 0);
-    adv.entities = [
-      known('Old Brannoch'),
-      known('The Ashen Order'),
-      known('Ysolde Marr', 'Captain Ysolde Marr commands the watch.'),
-      known('Aldric Marr'),
-      known('Gull Point'),
-    ];
+    const known = (name: string) => mergeEntity(undefined, { name, kind: 'character', description: '' }, 0);
+    const marr = known('Ysolde Marr');
+    adv.entities = [known('Old Brannoch'), known('The Ashen Order'), marr, known('Aldric Marr'), known('Gull Point')];
+    adv.assertions = told(marr, { description: 'Captain Ysolde Marr commands the watch.' });
     const out = fold(adv, [seen('Brannoch'), seen('Ashen Order'), seen('Captain Marr'), seen('Gull Point lighthouse')]);
     expect(out.map((e) => [e.name, e.aliases])).toEqual([
       ['Old Brannoch', ['Brannoch']],

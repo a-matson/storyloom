@@ -86,7 +86,7 @@ describe('introduce', () => {
     expect(reqs[0]?.jsonSchema).toMatchObject({ required: ['scene', 'entities'] });
     expect(JSON.stringify(reqs[0]?.jsonSchema)).not.toMatch(/speakers|facts/);
     // The fixture reply carries facts the short shape drops.
-    expect(adv.entities[0]?.facts).toEqual([]);
+    expect(adv.assertions.filter((a) => a.kind === 'trait')).toEqual([]);
   });
 
   it('makes no call without a new name, nor twice for the same text, and re-runs for a retried one', async () => {

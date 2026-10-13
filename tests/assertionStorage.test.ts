@@ -34,20 +34,27 @@ it('saves the assertions the writers made, edits and removals included', async (
   await s.deleteAdventure(adv.id);
 });
 
-it('derives them once on open for an adventure saved before the table', async () => {
+it('moves entity facts to assertions once, on open, for an adventure saved before the store', async () => {
   const tam = {
-    ...mergeEntity(undefined, { name: 'Tamsin', kind: 'character', description: 'A ferrywoman.' }, 2),
+    ...mergeEntity(undefined, { name: 'Tamsin', kind: 'character', description: '' }, 2),
+    description: 'A ferrywoman.',
     facts: [{ id: 'fact_1', text: 'She rows.', fromAction: 2, source: 'memory' as const }],
   };
   const adv = { ...makeAdventure({ actions: 4, cards: 0 }), entities: [tam] };
   await (await reopen()).putAdventure(adv);
   expect(await raw((db) => db.table('assertions').count())).toBe(0); // as a v5 save left it
-  const s = await reopen();
-  const opened = await s.getAdventure(adv.id);
+  const opened = await (await reopen()).getAdventure(adv.id);
   expect(texts(opened)).toEqual(['A ferrywoman.', 'She rows.']);
-  if (!opened) throw new Error('missing');
-  await s.putAdventure(opened);
+  // Written on that open: the rows hold the store, the entity row no legacy field.
   expect(await raw((db) => db.table('assertions').count())).toBe(2);
+  expect(await raw((db) => db.table('entities').toArray())).toEqual([expect.not.objectContaining({ facts: expect.anything() })]);
+  expect(await raw((db) => db.table('entities').toArray())).toEqual([expect.objectContaining({ description: '' })]);
+  // A player who then deletes every line gets none back on the next open.
+  if (!opened) throw new Error('missing');
+  const s = await reopen();
+  await s.getAdventure(adv.id);
+  await s.putAdventure({ ...opened, assertions: [] });
+  expect(texts(await (await reopen()).getAdventure(adv.id))).toEqual([]);
   await s.deleteAdventure(adv.id);
   expect(await raw((db) => db.table('assertions').count())).toBe(0);
 });

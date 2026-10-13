@@ -245,7 +245,7 @@ describe('turn traces', () => {
       ...mergeEntity(undefined, { name: 'Tamsin', kind: 'character', aliases: ['ferrywoman'], description: 'Tamsin rows the night ferry.' }, 0),
       lastSeen: 1,
     };
-    [adventure.entities, adventure.assertions] = [[entity], told(entity, { description: entity.description })];
+    [adventure.entities, adventure.assertions] = [[entity], told(entity, { description: 'Tamsin rows the night ferry.' })];
     adventure.settings.memory.entityFacts = true;
     const prepared = await prepareContext(adventure, log.actions, deps);
     if ('stopped' in prepared) throw new Error('context build stopped');

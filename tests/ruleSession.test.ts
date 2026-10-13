@@ -10,8 +10,6 @@ const ent = (id: string, name: string, over: Partial<Entity> = {}): Entity => ({
   name,
   aliases: [],
   description: '',
-  facts: [],
-  state: {},
   relations: [],
   firstSeen: 0,
   lastSeen: 0,

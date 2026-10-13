@@ -34,7 +34,11 @@ export function appearanceOf(as: readonly Assertion[]): string {
 }
 
 /** The entity as the image prompts read it: who it is as `description`, its current looks as `appearance`. */
-export const withLooks = <E extends Entity>(e: E, as: readonly Assertion[]): E => ({ ...e, description: identityText(e, as), appearance: appearanceOf(as) });
+export const withLooks = <E extends Entity>(e: E, as: readonly Assertion[]): E & { appearance: string } => ({
+  ...e,
+  description: identityText(e, as),
+  appearance: appearanceOf(as),
+});
 
 /** `wearing` changes scene to scene, so it is a state, not a look; `legacy` is the old free-text look. */
 export const isLook = (key: string): boolean => key === 'legacy' || (key !== 'wearing' && (LOOK_KEYS as readonly string[]).includes(key));

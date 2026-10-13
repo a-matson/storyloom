@@ -69,7 +69,7 @@ describe('the recorded history', () => {
       actions: a.actions.map((x) => ({ ...x, speakers: [{ paragraph: 0, name: 'Merav' }] })),
       plot: { ...a.plot, storySummary: 'so far', scene: { present: ['Merav'] } },
       scriptState: { ...a.scriptState, __summaryAt: 4, __entitiesAt: 6 },
-      entities: [{ id: 'e', kind: 'character', name: 'Merav', aliases: [], description: '', facts: [], state: {}, relations: [], firstSeen: 1, lastSeen: 3 }],
+      entities: [{ id: 'e', kind: 'character', name: 'Merav', aliases: [], description: '', relations: [], firstSeen: 1, lastSeen: 3 }],
     };
   };
   const history = (a: Adventure): RecallHistory => ({
@@ -88,10 +88,8 @@ describe('the recorded history', () => {
     expect(Object.keys(s.scriptState).filter((k) => k.startsWith('__'))).toEqual([]);
     expect(s.actions.some((x) => x.speakers)).toBe(false);
     // The two Location cards seed canon entities again; the extracted character is gone.
-    expect(s.entities.map((e) => [e.canon, e.facts.length])).toEqual([
-      [true, 0],
-      [true, 0],
-    ]);
+    expect(s.entities.map((e) => e.canon)).toEqual([true, true]);
+    expect(s.assertions).toEqual([]);
   });
 
   it('cuts at a story turn boundary and refuses a depth past the recording', () => {

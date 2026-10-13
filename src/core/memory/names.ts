@@ -1,4 +1,5 @@
 import type { Entity } from '../model/types';
+import { identityText, type AssertionIndex } from './assertionIndex';
 
 // Apart from `entities.ts` so the scene line's item lookup stays light in the start-up chunk.
 
@@ -28,11 +29,11 @@ const one = (hits: Entity[]) => (hits.length === 1 ? hits[0] : undefined);
 /**
  * The entity a name means: `matchEntity`, else the one entity whose name or alias holds it as
  * whole words ("Brannoch", "Ashen Order"), else the one whose name holds all but a leading title
- * its description opens with ("Captain Marr" for "Captain Ysolde Marr commands…", not for Aldric,
+ * its identity (`ix`) opens with ("Captain Marr" for "Captain Ysolde Marr commands…", not for Aldric,
  * "…is Captain Ysolde Marr's brother"), else the one whose name opens it ("Gull Point lighthouse").
  * Two candidates: none.
  */
-export function knownAs(entities: readonly Entity[], name: string): Entity | undefined {
+export function knownAs(entities: readonly Entity[], name: string, ix?: AssertionIndex): Entity | undefined {
   const exact = matchEntity(entities, name);
   if (exact) return exact;
   const n = bare(name);
@@ -40,7 +41,9 @@ export function knownAs(entities: readonly Entity[], name: string): Entity | und
   const [title = '', ...rest] = n.trim().split(' ');
   return (
     one(entities.filter((e) => holds(e, n))) ??
-    (rest.length ? one(entities.filter((e) => holds(e, ` ${rest.join(' ')} `) && words(e.description).startsWith(` ${title} `))) : undefined) ??
+    (rest.length
+      ? one(entities.filter((e) => holds(e, ` ${rest.join(' ')} `) && words(identityText(e, ix?.of(e.id) ?? [])).startsWith(` ${title} `)))
+      : undefined) ??
     one(entities.filter((e) => n.startsWith(bare(e.name))))
   );
 }

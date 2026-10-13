@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { z } from 'zod/mini';
+import { textOf } from '@core/memory/assertionIndex';
 import * as S from '@core/schema';
 import { writeMeasurement } from '../../bench/env';
 import { watchIntroductions } from '../../bench/introductions';
@@ -171,6 +172,7 @@ test('scripted live play', async ({ page }) => {
     };
   });
   const entities = z.array(S.Entity).parse(db.entities);
+  const lines = z.array(S.Assertion).parse(db.assertions);
   const entityIds = new Set(entities.map((e) => e.id));
   // The newest prompt that carried a projected entity: the Raw prompt a prompt-construction PR shows.
   const entityPrompt = traces.findLast((t) => t.triggeredCardIds.some((id) => entityIds.has(id)))?.prompt;
@@ -207,9 +209,9 @@ test('scripted live play', async ({ page }) => {
       .map(({ fromAction, toAction, text: t, stale, forgotten }) => ({ fromAction, toAction, text: t, stale, forgotten })),
     introductions: introductions.calls,
     // Ids, timestamps and portraits are noise here; `firstSeen` checks a card came the turn after its name.
-    entities: entities.map(({ id: _i, portraitId: _p, relations: _r, lastSeen: _l, facts, ...e }) => ({
+    entities: entities.map(({ id, portraitId: _p, relations: _r, lastSeen: _l, ...e }) => ({
       ...e,
-      facts: facts.map((f) => f.text),
+      facts: lines.flatMap((a) => (a.subject === id ? [textOf(a)] : [])),
     })),
     entityPrompt,
     ...(IMAGES && { images: IMAGES, renders, mostRendering, portraitLog, portraits: await portraits(page, entities) }),

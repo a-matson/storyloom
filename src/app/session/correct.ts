@@ -54,8 +54,6 @@ export function makeItem(host: GameSession, name: string, actionId: string): voi
       name: n,
       aliases: [],
       description: '',
-      facts: [],
-      state: {},
       relations: [],
       firstSeen: at,
       lastSeen: at,
