@@ -16,8 +16,9 @@ export default defineConfig({
     // Measurement builds need React's profiling build, or <Profiler> reports nothing.
     alias: process.env['VITE_MEASURE_RENDERS'] === '1' ? { 'react-dom/client': 'react-dom/profiling' } : {},
   },
-  // Lazy-chunk deps found on first use make the dev server reload the page; the memory jobs now load as an adventure opens.
-  optimizeDeps: { include: ['jsonrepair'] },
+  // Lazy-chunk deps found on first use make the dev server reload the page; the memory jobs now load as an adventure opens,
+  // and an import loads fflate (a reload there closed a drawer in the first e2e spec on a cold server).
+  optimizeDeps: { include: ['jsonrepair', 'fflate'] },
   server: {
     port: 5173,
     // Local inference servers are called directly from the browser at
