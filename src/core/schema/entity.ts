@@ -60,7 +60,9 @@ export const Entity = z.object({
 });
 
 /** An entity as stored before the assertion store (M13-2): only the migration reads these fields. */
-export const LegacyEntity = z.extend(Entity, {
+// Not `z.extend(Entity, …)`: React Refresh reads `Name = f(Name, …)` as a component HOC and breaks the script worker.
+export const LegacyEntity = z.object({
+  ...Entity.shape,
   /** Free-text looks, set once. */
   appearance: z.optional(z.string()),
   facts: z.optional(z.array(EntityFact)),

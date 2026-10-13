@@ -134,4 +134,4 @@ export const Adventure = z.object({
 });
 
 /** A stored or exported adventure that may predate the assertion store: `migrateEntities` moves its entity facts. */
-export const LegacyAdventure = z.extend(Adventure, { entities: z.prefault(z.array(LegacyEntity), []) });
+export const LegacyAdventure = z.object({ ...Adventure.shape, entities: z.prefault(z.array(LegacyEntity), []) });
