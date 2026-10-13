@@ -54,7 +54,8 @@ export function StateLine({ card: c, k, v }: { card: Card; k: string; v: string 
         if (line) c.edits.deleteLine(line.id);
         if (locked) c.edits.unlock(e.id, k);
       }}
-      onPin={() => line && c.edits.pinLine(line.id)}
+      // The player's own value already wins over the story's; only the story's is pinned.
+      onPin={line && line.basis !== 'player' ? () => c.edits.pinLine(line.id) : undefined}
     >
       <Button
         variant="ghost"
