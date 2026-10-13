@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { correct } from '@app/session/correct';
 import { entityEdits } from '@app/session/entities';
-import { actionText, createBlankAdventure, type Entity } from '@core/model';
-import { hashPrompt } from '@core/trace';
+import { textOf } from '@core/memory/assertionIndex';
+import type { Fields } from '@core/memory/looks';
+import { createBlankAdventure, type Assertion, type Entity } from '@core/model';
 import { settled, setup } from './fixtures/session';
 
 const gate: Entity = {
@@ -11,79 +12,89 @@ const gate: Entity = {
   name: 'Gate',
   aliases: [],
   description: 'An iron gate older than the town.',
-  facts: [{ id: 'f1', text: 'It is locked at dusk.', fromAction: 0, source: 'memory' }],
+  facts: [],
   state: {},
   relations: [],
   firstSeen: 0,
   lastSeen: 1,
 };
 
-function withGate(...more: Entity[]) {
+type Over = Partial<Pick<Assertion, 'subject' | 'at' | 'span' | 'basis'>>;
+const line = (id: string, f: Fields, over: Over = {}): Assertion => ({
+  id,
+  subject: gate.id,
+  producer: 'turn',
+  at: 0,
+  basis: 'stated',
+  since: 0,
+  ...f,
+  ...over,
+});
+// Read before sources were kept: no edit drops them.
+const gateLines = [
+  line('as_id_gate', { kind: 'identity', text: gate.description }, { basis: 'legacy' }),
+  line('f1', { kind: 'trait', text: 'It is locked at dusk.' }, { basis: 'legacy' }),
+];
+
+function withGate(more: Entity[] = [], lines: Assertion[] = []) {
   const adventure = createBlankAdventure('Test', 'You stand at the gate.');
   adventure.entities = [gate, ...more];
+  adventure.assertions = [...gateLines, ...lines];
   adventure.settings.memory.entityFacts = true;
   return setup({ adventure });
 }
 
 const count = (text: string, needle: string) => text.split(needle).length - 1;
+const of = (s: ReturnType<typeof setup>['session'], id: string) => s.getSnapshot().adventure.assertions.filter((a) => a.subject === id);
 
 describe('GameSession derived values follow log edits', () => {
   // A state on the scene's place: the cast sends present states, not model traits.
-  const sourced = (text: string, opening: string): Entity => ({
-    ...gate,
-    id: 'ent_old_gate',
-    name: 'Old Gate',
-    facts: [{ id: 'f9', text, fromAction: 0, source: 'memory', sourceId: 'x', sourceHash: hashPrompt(opening), kind: 'state', key: 'condition', value: text }],
-  });
-  const open = (fact: string, from = 'You stand at the gate.') => {
-    const s = withGate(sourced(fact, from));
+  const oldGate: Entity = { ...gate, id: 'ent_old_gate', name: 'Old Gate' };
+  const open = (value: string, span?: string) => {
+    const s = withGate([oldGate], [line('f9', { kind: 'state', key: 'condition', value }, { subject: oldGate.id, ...(span && { span }) })]);
     s.session.adv.plot.scene = { location: 'Old Gate', present: [] };
     const first = s.session.getSnapshot().actions[0];
     if (!first) throw new Error('no opening');
-    const e = s.session.adv.entities[1]?.facts[0];
-    if (e) e.sourceId = first.id;
     return { ...s, id: first.id };
   };
 
-  it('edit drops a fact its action no longer supports, from the drawer and the prompt', async () => {
+  it('edit drops a line its action no longer supports, from the drawer and the prompt', async () => {
     const { session, id } = open('The gate hums at night.');
     await session.previewContext();
     expect(session.getSnapshot().context?.prompt).toContain('hums at night');
     session.edit(id, 'You stand at a hedge.');
-    expect(session.getSnapshot().adventure.entities[1]?.facts).toEqual([]);
+    expect(of(session, oldGate.id)).toEqual([]);
     await session.previewContext();
     expect(session.getSnapshot().context?.prompt).not.toContain('hums at night');
   });
 
-  it('retry drops a fact sourced from the output it replaced', async () => {
+  it('retry drops a line read from the output it replaced', async () => {
     const { session } = withGate();
     session.submit('continue', '');
     await settled(session);
-    const last = session.getSnapshot().actions.at(-1);
-    if (!last) throw new Error('no output');
-    const said = { id: 'f9', text: 'Said once.', fromAction: 1, source: 'memory' as const, sourceId: last.id, sourceHash: hashPrompt(actionText(last)) };
-    session.adv.entities = [{ ...gate, facts: [...gate.facts, said] }];
+    const at = session.getSnapshot().actions.length - 1;
+    session.adv.assertions = [...session.adv.assertions, line('f9', { kind: 'trait', text: 'Said once.' }, { at })];
     session.retry();
     await settled(session);
-    expect(session.getSnapshot().adventure.entities[0]?.facts.map((f) => f.id)).toEqual(['f1']);
+    expect(of(session, gate.id).map((a) => a.id)).toEqual(['as_id_gate', 'f1']);
   });
 
   it('a version switch drops what the other version said', () => {
-    const { session, id } = open('A hedge grows here.', 'You stand at a hedge.');
+    const { session, id } = open('A hedge grows here.', 'a hedge');
     session.edit(id, 'You stand at a hedge.');
-    expect(session.getSnapshot().adventure.entities[1]?.facts).toHaveLength(1);
+    expect(of(session, oldGate.id)).toHaveLength(1);
     session.setVersion(id, 0);
-    expect(session.getSnapshot().adventure.entities[1]?.facts).toEqual([]);
+    expect(of(session, oldGate.id)).toEqual([]);
   });
 });
 
 describe('GameSession entity edits', () => {
   it('entity.update publishes and persists', async () => {
     const { session, saved } = withGate();
-    entityEdits(session).update(gate.id, { state: { lock: 'open' } });
-    expect(session.getSnapshot().adventure.entities[0]?.state).toEqual({ lock: 'open' });
+    entityEdits(session).update(gate.id, { aliases: ['the old gate'] });
+    expect(session.getSnapshot().adventure.entities[0]?.aliases).toEqual(['the old gate']);
     await session.flush();
-    expect(saved.at(-1)?.entities[0]?.state).toEqual({ lock: 'open' });
+    expect(saved.at(-1)?.entities[0]?.aliases).toEqual(['the old gate']);
   });
 
   it('entity.promote adds one story card and stops the projection', async () => {
@@ -106,60 +117,93 @@ describe('GameSession entity edits', () => {
     expect(count(session.getSnapshot().context?.prompt ?? '', 'older than the town')).toBe(1);
   });
 
-  it('entity.merge folds one entity into another and deletes it', async () => {
-    const { session } = withGate({ ...gate, id: 'ent_door', name: 'Iron door', facts: [{ id: 'f2', text: 'It creaks.', fromAction: 0, source: 'memory' }] });
-    await entityEdits(session).merge(gate.id, 'ent_door');
+  it('entity.merge folds one entity into another, its lines too, and deletes it', async () => {
+    const door = { ...gate, id: 'ent_door', name: 'Iron door' };
+    const { session } = withGate([door], [line('f2', { kind: 'trait', text: 'It creaks.' }, { subject: door.id })]);
+    await entityEdits(session).merge(gate.id, door.id);
     const [only, ...rest] = session.getSnapshot().adventure.entities;
     expect(rest).toEqual([]);
     expect(only?.aliases).toEqual(['Iron door']);
-    expect(only?.facts.map((f) => f.text)).toEqual(['It is locked at dusk.', 'It creaks.']);
+    expect(of(session, gate.id).flatMap((a) => (a.kind === 'trait' ? [a.text] : []))).toEqual(['It is locked at dusk.', 'It creaks.']);
+    expect(of(session, door.id)).toEqual([]);
   });
 
-  it("editFact makes the line the player's and drops its evidence", () => {
-    const { session } = withGate();
-    session.adv.entities = [
-      { ...gate, facts: [{ id: 'f1', text: 'Mood is grim.', fromAction: 0, source: 'memory', evidence: 'grim', kind: 'effect', value: 'grim' }] },
-    ];
-    entityEdits(session).editFact(gate.id, 'f1', 'cheerful');
-    const f = session.getSnapshot().adventure.entities[0]?.facts[0];
-    expect(f).toMatchObject({ text: 'cheerful', value: 'cheerful', basis: 'player', kind: 'effect' });
-    expect(f?.evidence).toBeUndefined();
+  it("editLine makes the line the player's and drops its span", () => {
+    const { session } = withGate([], [line('f3', { kind: 'effect', condition: 'grim' }, { span: 'grim' })]);
+    entityEdits(session).editLine('f3', 'cheerful');
+    const a = of(session, gate.id).find((x) => x.id === 'f3');
+    expect(a).toMatchObject({ kind: 'effect', condition: 'cheerful', basis: 'player', producer: 'player' });
+    expect(a?.span).toBeUndefined();
   });
 
-  it('deleteFact removes the fact; endEffect keeps it with until', () => {
+  it('deleteLine removes the line; endEffect keeps it with until', () => {
     const { session } = withGate();
     const edits = entityEdits(session);
-    edits.addFact(gate.id, { text: 'Bleeding', kind: 'effect', value: 'Bleeding' });
-    const added = session.getSnapshot().adventure.entities[0]?.facts.at(-1);
-    edits.endEffect(gate.id, added?.id ?? '');
-    expect(session.getSnapshot().adventure.entities[0]?.facts.at(-1)?.until).toBe(session.getSnapshot().actions.length);
-    edits.deleteFact(gate.id, 'f1');
-    expect(session.getSnapshot().adventure.entities[0]?.facts.map((f) => f.text)).toEqual(['Bleeding']);
+    edits.addLine(gate.id, { kind: 'effect', condition: 'Bleeding' });
+    const added = of(session, gate.id).at(-1);
+    edits.endEffect(added?.id ?? '');
+    expect(of(session, gate.id).at(-1)?.until).toBe(session.getSnapshot().actions.length);
+    edits.deleteLine('f1');
+    expect(of(session, gate.id).map(textOf)).toEqual([gate.description, 'Bleeding']);
   });
 
-  it('addFact records a player line per kind; addItem makes a held item', () => {
+  it('addLine records a player line per kind; addItem makes a held item', () => {
     const { session } = withGate();
     const edits = entityEdits(session);
-    edits.addFact(gate.id, { text: 'Hates rust', kind: 'trait' });
-    edits.addFact(gate.id, { text: 'Rusted shut', kind: 'effect', value: 'Rusted shut' });
-    edits.addFact(gate.id, { text: 'wary', kind: 'relationship', key: 'you', value: 'wary' });
-    const facts = session.getSnapshot().adventure.entities[0]?.facts.slice(1) ?? [];
-    expect(facts.map((f) => [f.kind, f.source, f.basis, f.sourceId])).toEqual([
+    edits.addLine(gate.id, { kind: 'trait', text: 'Hates rust' });
+    edits.addLine(gate.id, { kind: 'effect', condition: 'Rusted shut' });
+    edits.addLine(gate.id, { kind: 'relationship', to: 'you', stance: 'wary' });
+    expect(
+      of(session, gate.id)
+        .slice(2)
+        .map((a) => [a.kind, a.producer, a.basis, a.span]),
+    ).toEqual([
       ['trait', 'player', 'player', undefined],
       ['effect', 'player', 'player', undefined],
       ['relationship', 'player', 'player', undefined],
     ]);
     edits.addItem('Gate', 'Brass key');
-    expect(session.getSnapshot().adventure.entities.at(-1)).toMatchObject({ kind: 'item', name: 'Brass key', state: { holder: 'Gate' } });
+    const key = session.getSnapshot().adventure.entities.at(-1);
+    expect(key).toMatchObject({ kind: 'item', name: 'Brass key' });
+    expect(of(session, key?.id ?? '')).toEqual([expect.objectContaining({ kind: 'state', key: 'holder', value: 'Gate', basis: 'player' })]);
   });
 
-  it('correct pins a player fact on the named entity, adds no action and sends it next turn', async () => {
+  it('setValue, lock, accept and unlock: the player is the author of a key', () => {
+    const { session } = withGate();
+    const edits = entityEdits(session);
+    edits.lock(gate.id, 'eyes', 'grey');
+    expect(session.getSnapshot().adventure.entities[0]?.canonKeys).toEqual(['eyes']);
+    session.adv.assertions = [...session.adv.assertions, line('c1', { kind: 'conflict', key: 'eyes', claimed: 'blue', canon: 'grey' })];
+    edits.accept('c1');
+    expect(of(session, gate.id).filter((a) => a.kind === 'look' && a.until === undefined)).toEqual([expect.objectContaining({ key: 'eyes', value: 'blue' })]);
+    expect(session.getSnapshot().adventure.entities[0]?.canonKeys).toEqual([]);
+    edits.lock(gate.id, 'eyes', 'blue');
+    session.adv.assertions = [...session.adv.assertions, line('c2', { kind: 'conflict', key: 'eyes', claimed: 'red', canon: 'blue' })];
+    edits.unlock(gate.id, 'eyes');
+    expect(of(session, gate.id).some((a) => a.kind === 'conflict')).toBe(false);
+  });
+
+  it('setIdentity: a non-canon entity gets the player’s identity line, a canon one its card text', () => {
+    const { session } = withGate();
+    entityEdits(session).setIdentity(gate.id, 'A rusted gate.');
+    expect(of(session, gate.id).filter((a) => a.kind === 'identity')).toEqual([expect.objectContaining({ text: 'A rusted gate.', basis: 'player' })]);
+    session.adv.entities = [{ ...gate, canon: true }];
+    entityEdits(session).setIdentity(gate.id, 'The town gate.');
+    expect(session.getSnapshot().adventure.entities[0]?.description).toBe('The town gate.');
+    expect(
+      of(session, gate.id)
+        .filter((a) => a.kind === 'identity')
+        .map(textOf),
+    ).toEqual(['A rusted gate.']);
+  });
+
+  it('correct pins a player line on the named entity, adds no action and sends it next turn', async () => {
     const { session } = withGate();
     const actions = session.getSnapshot().adventure.actions.length;
     await correct(session, 'The gate is painted red.');
     const snap = session.getSnapshot();
     expect(snap.adventure.actions).toHaveLength(actions);
-    expect(snap.adventure.entities[0]?.facts.at(-1)).toMatchObject({ text: 'The gate is painted red.', source: 'player', pinned: true });
+    expect(of(session, gate.id).at(-1)).toMatchObject({ kind: 'trait', text: 'The gate is painted red.', producer: 'player', pinned: true });
     expect(snap.notice).toBe('Pinned to Gate');
     await session.previewContext();
     expect(session.getSnapshot().context?.prompt).toContain('Gate: The gate is painted red.');
@@ -171,7 +215,7 @@ describe('GameSession entity edits', () => {
     await correct(session, 'It is winter.');
     const snap = session.getSnapshot();
     expect(snap.adventure.plot.plotEssentials).toBe('You are a courier.\nIt is winter.');
-    expect(snap.adventure.entities[0]?.facts).toHaveLength(1);
+    expect(of(session, gate.id)).toHaveLength(2);
     expect(snap.notice).toBe('Added to Plot Essentials');
   });
 });

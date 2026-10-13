@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { mergeEntity } from '@core/memory/entities';
 import { extractFromPassage } from '@core/memory/extract';
 import { EXTRACT_JSON_SCHEMA } from '@core/memory/extractJsonSchema';
+import { indexAssertions } from '@core/memory/assertionIndex';
 import { appearanceOf } from '@core/memory/looks';
 import { extractPrompt } from '@core/text/prompts';
 import { entitiesOverdue } from '@core/memory/memoryBank';
@@ -10,6 +11,9 @@ import type { CompletionRequest } from '@core/ports';
 import { MAX_ENTITIES } from '@core/schema/extraction';
 import type { Adventure } from '@core/model';
 import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure } from './fixtures/memoryJobs';
+
+/** The first entity's traits. */
+const traits = (adv: Adventure) => adv.assertions.flatMap((a) => (a.kind === 'trait' && a.subject === adv.entities[0]?.id ? [a.text] : []));
 
 const none: string[] = [];
 
@@ -26,7 +30,7 @@ function adventure(actions: number, text = 'You wave and Mira waves back.'): Adv
 describe('entity extraction in memory maintenance', () => {
   it('keeps a new entity only when its passage names it, and merges a known one regardless', async () => {
     const adv = adventure(18, 'You wave and mira waves back.');
-    adv.entities = [mergeEntity(undefined, { name: 'Mira', kind: 'character', description: '', facts: [] }, 0)];
+    adv.entities = [mergeEntity(undefined, { name: 'Mira', kind: 'character', description: '' }, 0)];
     const reply = {
       entities: [
         { name: 'Brass Owl', kind: 'place', description: 'Copied from the example.', facts: [] },
@@ -43,7 +47,7 @@ describe('entity extraction in memory maintenance', () => {
     );
     await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
     expect(adv.entities.map((e) => e.name)).toEqual(['Mira']);
-    expect(adv.entities[0]?.facts.map((f) => f.text)).toEqual(['She waves.']);
+    expect(traits(adv)).toEqual(['She waves.']);
   });
 
   it('makes one entity call per two written memories over both ranges and folds its reply in', async () => {
@@ -85,7 +89,7 @@ describe('entity extraction in memory maintenance', () => {
     expect(adv.scriptState.__entitiesAt).toBe(adv.memories[3]?.toAction);
     expect(adv.entities).toHaveLength(1);
     expect(adv.entities[0]).toMatchObject({ name: 'Mira', aliases: ['the courier'], firstSeen: 11, lastSeen: 23 });
-    expect(adv.entities[0]?.facts).toHaveLength(1);
+    expect(traits(adv)).toHaveLength(1);
   });
 
   it('keeps the memory and the entities when the entity reply is malformed', async () => {
@@ -188,7 +192,7 @@ describe('entity extraction in memory maintenance', () => {
       true,
     );
     await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
-    expect(adv.entities.map((e) => [e.name, appearanceOf(e)])).toEqual([
+    expect(adv.entities.map((e) => [e.name, appearanceOf(indexAssertions(adv.assertions).of(e.id))])).toEqual([
       ['Mira', 'build: short, hair: shaved head'],
       ['Tobin', ''],
     ]);

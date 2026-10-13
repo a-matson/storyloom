@@ -15,29 +15,20 @@ interface Saved {
   assertions: readonly Assertion[];
 }
 
-// Loaded on first save or open, off the start-up bundle.
+// Loaded on the first open of an adventure saved before the store, off the start-up bundle.
 const derive = async (a: Adventure) => (await loadAssertions()).deriveAssertions(a);
-
-/** `next` with each value equal to its `prev` namesake swapped for it, so `syncById` writes only what changed. */
-function stable(prev: readonly Assertion[], next: Assertion[]): Assertion[] {
-  const before = new Map(prev.map((x) => [x.id, x]));
-  return next.map((x) => {
-    const old = before.get(x.id);
-    return old && JSON.stringify(old) === JSON.stringify(x) ? old : x;
-  });
-}
 
 type Logged = { adventureId: string; createdAt: number };
 /** Oldest first. */
 const byAge = <T extends Logged, K>(table: Table<T, K>, adventureId: string) =>
   table.where('[adventureId+createdAt]').between([adventureId, -Infinity], [adventureId, Infinity]);
 
-const saved = (a: Adventure, assertions = a.assertions): Saved => ({
+const saved = (a: Adventure): Saved => ({
   actions: a.actions,
   cards: a.storyCards,
   memories: a.memories,
   entities: a.entities,
-  assertions,
+  assertions: a.assertions,
 });
 
 function parseOrThrow<T>(
@@ -103,12 +94,10 @@ export class DexieStorage implements Storage {
   async putAdventure(a: Adventure): Promise<void> {
     const db = this.db;
     const prev = this.saved.get(a.id);
-    // Derived from the entities until writers make them (M13-2b); outside the transaction, which an import would end.
-    const assertions = stable(prev?.assertions ?? [], await derive(a));
     await db.transaction('rw', [db.adventures, db.actions, db.storyCards, db.memories, db.entities, db.assertions], async () => {
       if (!prev) {
         // Unknown baseline: replace everything for this adventure.
-        const rows = splitAdventure({ ...a, assertions });
+        const rows = splitAdventure(a);
         await Promise.all([db.actions, db.storyCards, db.memories, db.entities, db.assertions].map((t) => t.where('adventureId').equals(a.id).delete()));
         await Promise.all([
           db.adventures.put(rows.meta),
@@ -127,9 +116,9 @@ export class DexieStorage implements Storage {
       await syncById(db.storyCards, a.id, prev.cards, a.storyCards, (c) => toCardRow(a.id, c));
       await syncById(db.memories, a.id, prev.memories, a.memories, (m) => toMemoryRow(a.id, m));
       await syncById(db.entities, a.id, prev.entities, a.entities, (e) => toEntityRow(a.id, e));
-      await syncById(db.assertions, a.id, prev.assertions, assertions, (x) => toAssertionRow(a.id, x));
+      await syncById(db.assertions, a.id, prev.assertions, a.assertions, (x) => toAssertionRow(a.id, x));
     });
-    this.saved.set(a.id, saved(a, assertions));
+    this.saved.set(a.id, saved(a));
   }
 
   async deleteAdventure(id: string): Promise<void> {

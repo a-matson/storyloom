@@ -1,66 +1,17 @@
-// Only `loadMemoryJobs`: importing more from the barrel splits it out of the start-up chunk.
+// Only start-up members of the barrel: importing a lazy one splits it out of the start-up chunk.
 import { loadImagePrompt } from '@core/image';
-import { loadMemoryJobs } from '@core/memory';
-import { newId, type Adventure, type Entity, type EntityFact } from '@core/model';
+import { indexAssertions, loadMemoryJobs, withLooks } from '@core/memory';
+import { newId, type Adventure, type Entity } from '@core/model';
 import { cropSquare, downscale } from '../image';
 import { withoutReference } from './images';
+import { lineEdits, patch } from './lines';
 import { clearPortrait, dropPortrait, PORTRAIT_PX, renderPortrait, setPortrait } from './portraits';
 import { repointGates } from './rules';
 import type { GameSession } from './session';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-// A copy, not in place: the snapshot shares fact objects with `adv`.
-const ended = (f: EntityFact, until: number): EntityFact => ({ ...f, until });
 const withoutLook = ({ look: _l, ...e }: Entity): Entity => e;
-const patch = (adv: Adventure, id: string, p: Partial<Entity>) => (adv.entities = adv.entities.map((e) => (e.id === id ? { ...e, ...p } : e)));
-const mapFacts = (adv: Adventure, id: string, fn: (facts: EntityFact[]) => EntityFact[]) =>
-  patch(adv, id, { facts: fn(adv.entities.find((x) => x.id === id)?.facts ?? []) });
-// The player's words now: the story's evidence no longer backs them.
-const rewritten = ({ evidence: _e, ...f }: EntityFact, text: string): EntityFact => ({
-  ...f,
-  text,
-  ...(f.value !== undefined && { value: text }),
-  basis: 'player',
-});
-
-export type NewFact = Pick<EntityFact, 'text'> & Partial<Pick<EntityFact, 'kind' | 'key' | 'value' | 'cause'>>;
-
-/** A card's per-line edits; the player's lines carry `basis: 'player'` and no source. */
-function factEdits(host: GameSession) {
-  const mutate = (fn: (adv: Adventure) => void) => host.mutate((_, adv) => fn(adv));
-  return {
-    /** The condition stops being true now; the fact stays as history. */
-    endEffect: (id: string, factId: string) =>
-      host.mutate((log, adv) => mapFacts(adv, id, (facts) => facts.map((f) => (f.id === factId ? ended(f, log.actions.length) : f)))),
-    editFact: (id: string, factId: string, text: string) =>
-      mutate((adv) => mapFacts(adv, id, (facts) => facts.map((f) => (f.id === factId ? rewritten(f, text) : f)))),
-    /** No undo: the log's undo does not cover entity edits. */
-    deleteFact: (id: string, factId: string) => mutate((adv) => mapFacts(adv, id, (facts) => facts.filter((f) => f.id !== factId))),
-    addFact: (id: string, fact: NewFact) =>
-      host.mutate((log, adv) =>
-        mapFacts(adv, id, (facts) => [...facts, { ...fact, id: newId('fact_'), fromAction: log.actions.length, source: 'player', basis: 'player' }]),
-      ),
-    /** A new item card held by `holder` (a name). */
-    addItem: (holder: string, name: string) =>
-      host.mutate((log, adv) => {
-        const at = log.actions.length;
-        const item: Entity = {
-          id: newId('ent_'),
-          kind: 'item',
-          name,
-          aliases: [],
-          description: '',
-          facts: [],
-          state: { holder },
-          relations: [],
-          firstSeen: at,
-          lastSeen: at,
-        };
-        adv.entities = [...adv.entities, item];
-      }),
-  };
-}
 
 /**
  * The player's edits to `adv.entities`, through the session's `mutate`. Not session methods, so
@@ -74,6 +25,7 @@ export function entityEdits(host: GameSession) {
       const old = host.adv.entities.find((e) => e.id === id)?.portraitId;
       mutate((adv) => {
         adv.entities = adv.entities.filter((e) => e.id !== id);
+        adv.assertions = adv.assertions.filter((a) => a.subject !== id);
         repointGates(adv, id);
       });
       if (old !== undefined) dropPortrait(host, old);
@@ -88,13 +40,13 @@ export function entityEdits(host: GameSession) {
       }
     },
     clearPortrait: (id: string) => clearPortrait(host, id),
-    ...factEdits(host),
+    ...lineEdits(host),
     /** Freeze the character's current look and point at that See image; later Sees repeat the words and the seed. */
     setReference: async (id: string, imageId: string) => {
       const { looksOf } = await loadImagePrompt();
       mutate((adv) => {
         const e = adv.entities.find((x) => x.id === id);
-        if (e) patch(adv, id, { referenceImageId: imageId, look: looksOf(e) });
+        if (e) patch(adv, id, { referenceImageId: imageId, look: looksOf(withLooks(e, indexAssertions(adv.assertions).of(id))) });
       });
     },
     clearReference: (id: string) => mutate((adv) => (adv.entities = adv.entities.map((e) => (e.id === id ? withoutReference(e) : e)))),
@@ -112,13 +64,15 @@ export function entityEdits(host: GameSession) {
     },
     /** `fromId` is folded into `intoId` and deleted; no undo. */
     merge: async (intoId: string, fromId: string) => {
-      const { mergeEntities } = await loadMemoryJobs();
+      const { mergeEntities, mergeOwn } = await loadMemoryJobs();
       mutate((adv) => {
         const into = adv.entities.find((e) => e.id === intoId);
         const from = adv.entities.find((e) => e.id === fromId);
         if (!into || !from || into === from) return;
         const merged = mergeEntities(into, from);
         adv.entities = adv.entities.flatMap((e) => (e === from ? [] : e === into ? [merged] : [e]));
+        const own = (id: string) => adv.assertions.filter((a) => a.subject === id);
+        adv.assertions = [...adv.assertions.filter((a) => a.subject !== intoId && a.subject !== fromId), ...mergeOwn(into, own(intoId), own(fromId))];
         repointGates(adv, fromId, intoId);
         if (from.portraitId !== undefined && from.portraitId !== merged.portraitId) dropPortrait(host, from.portraitId);
       });
@@ -129,7 +83,7 @@ export function entityEdits(host: GameSession) {
       mutate((adv) => {
         const e = adv.entities.find((x) => x.id === id);
         if (!e) return;
-        const card = { ...projectEntity(e), id: newId('card_') };
+        const card = { ...projectEntity(e, indexAssertions(adv.assertions).of(id)), id: newId('card_') };
         adv.storyCards = [...adv.storyCards, card];
         patch(adv, id, { cardId: card.id });
       });

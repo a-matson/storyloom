@@ -3,6 +3,7 @@ import { checkInputs, checkOutput } from '@core/memory/contradiction';
 import type { Adventure, Entity } from '@core/model';
 import type { CompletionRequest } from '@core/ports';
 import { makeAdventure } from './fixtures/adventure';
+import { derived } from './fixtures/assertions';
 import { fakeProvider } from './fixtures/memoryJobs';
 
 const entity = (name: string, extra: Partial<Entity> = {}): Entity => ({
@@ -23,7 +24,7 @@ function adventure(entities: Entity[], scene?: Adventure['plot']['scene']): Adve
   const adv = makeAdventure({ actions: 2, cards: 0 });
   adv.entities = entities;
   adv.plot = { ...adv.plot, scene };
-  return adv;
+  return derived(adv);
 }
 
 describe('checkInputs', () => {
@@ -43,9 +44,18 @@ describe('checkInputs', () => {
     const adv = adventure(
       [
         entity('Mira', {
+          state: { hair: 'grey' },
+          canonKeys: ['hair'],
           facts: [
             { id: 'f1', text: 'She is afraid of horses.', fromAction: 0, source: 'player', pinned: true },
-            { id: 'f2', text: 'the story says hair is red, but canon says grey', fromAction: 0, source: 'memory', conflict: true },
+            {
+              id: 'f2',
+              text: 'the story says hair is red, but canon says grey',
+              fromAction: 0,
+              source: 'memory',
+              conflict: true,
+              claim: { key: 'hair', value: 'red' },
+            },
             { id: 'f3', text: 'She waves.', fromAction: 0, source: 'memory' },
           ],
         }),

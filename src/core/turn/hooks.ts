@@ -1,7 +1,26 @@
 import type { Action, Adventure, StoryCard } from '../model/types';
+import { identityText, indexAssertions, isCurrent, textOf } from '../memory/assertionIndex';
+import { currentStates } from '../memory/looks';
 import { actionText } from '../model/types';
-import { NoopScriptRunner, toScriptCards, toScriptEntities, type HookInput, type HookName, type HookResult, type ScriptStoryCard } from '../ports/scripting';
+import { NoopScriptRunner, toScriptCards, type HookInput, type HookName, type HookResult, type ScriptEntity, type ScriptStoryCard } from '../ports/scripting';
 import type { TurnDeps } from './types';
+
+/** What scripts see of the entities. `facts`: the current traits, effects, relationships and conflicts; `state`: the current values. */
+function toScriptEntities({ entities, assertions }: Pick<Adventure, 'entities' | 'assertions'>): ScriptEntity[] {
+  const ix = indexAssertions(assertions);
+  return entities.map((e) => {
+    const as = ix.of(e.id);
+    return {
+      id: e.id,
+      kind: e.kind,
+      name: e.name,
+      aliases: e.aliases,
+      description: identityText(e, as),
+      facts: as.flatMap((a) => (isCurrent(a) && a.kind !== 'identity' && a.kind !== 'state' && a.kind !== 'look' ? [textOf(a)] : [])),
+      state: currentStates(as),
+    };
+  });
+}
 
 function scriptCardsToCore(cards: ScriptStoryCard[], existing: StoryCard[]): StoryCard[] {
   const byId = new Map(existing.map((c) => [c.id, c]));
@@ -41,7 +60,7 @@ export async function runHook(
     storyCards: toScriptCards(adventure.storyCards),
     state: adventure.scriptState,
     // onInput has no context to read them against.
-    ...(hook !== 'onInput' && { entities: toScriptEntities(adventure.entities) }),
+    ...(hook !== 'onInput' && { entities: toScriptEntities(adventure) }),
     ...extra,
   };
   // A runner that rejects (a crashed or restarted worker) must not fail the turn either; the trace keeps the reason.

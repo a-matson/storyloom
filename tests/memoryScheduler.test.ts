@@ -61,9 +61,7 @@ describe('MemoryScheduler', () => {
     function setup(check: boolean) {
       const adv = memoryAdventure(19); // odd, so the last action is AI output
       adv.settings.memory = { ...adv.settings.memory, contradictionCheck: check };
-      adv.entities = [
-        { ...mergeEntity(undefined, { name: 'Mira', kind: 'character', description: '', facts: [] }, 0), canon: true, description: 'Mira is bald.' },
-      ];
+      adv.entities = [{ ...mergeEntity(undefined, { name: 'Mira', kind: 'character', description: '' }, 0), canon: true, description: 'Mira is bald.' }];
       const last = adv.actions.at(-1);
       if (last) last.versions = ['Mira shakes out her long hair.'];
       const calls: string[] = [];

@@ -1,4 +1,5 @@
 import { applyScriptSections, buildContext, renderBody, type ContextBuildInput, type ContextBuildResult, type ScriptCache } from '../context';
+import { textOf } from '../memory/assertionIndex';
 import { bm25, buildIndex, tokenise } from '../memory/lexical';
 import { isActive, rankMemories, touchUsed, type RankedMemory } from '../memory/memoryBank';
 import type { Action, Adventure } from '../model/types';
@@ -27,6 +28,7 @@ function contextInput(adventure: Adventure, actions: Action[], rankedMemories: R
     plot: adventure.plot,
     storyCards: adventure.storyCards,
     entities: adventure.entities,
+    assertions: adventure.assertions,
     rules: adventure.rules,
     rankedMemories,
     frontMemory: memory.frontMemory,
@@ -61,7 +63,11 @@ async function buildExact(input: ContextBuildInput): Promise<ContextBuildResult>
 async function rankForQuery(adventure: Adventure, query: string, embedder?: Embedder): Promise<RankedMemory[]> {
   const bank = adventure.settings.memory.memoryBank ? adventure.memories.filter(isActive) : [];
   if (!bank.length) return [];
-  const facts = adventure.entities.flatMap((e) => e.facts.map((f) => ({ id: f.id, text: `${e.name}: ${f.text}` })));
+  // What used to be facts: not the identity nor the old free-text looks.
+  const name = new Map(adventure.entities.map((e) => [e.id, e.name]));
+  const facts = adventure.assertions.flatMap((a) =>
+    a.kind === 'identity' || (a.kind === 'look' && a.key === 'legacy') ? [] : [{ id: a.id, text: `${name.get(a.subject) ?? a.subject}: ${textOf(a)}` }],
+  );
   const hits = bm25(buildIndex([...bank, ...facts]), tokenise(query));
   let queryVec: number[] | undefined;
   if (embedder && query) {

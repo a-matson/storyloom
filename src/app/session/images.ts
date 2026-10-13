@@ -1,5 +1,6 @@
 import { imageRequest, loadImagePrompt } from '@core/image';
 import type { ActionLog } from '@core/log';
+import { indexAssertions, withLooks } from '@core/memory';
 import { newId, type Action, type Adventure, type AppSettings, type Entity } from '@core/model';
 import { trackJob } from '@core/trace';
 import { storyModel } from './helperModel';
@@ -50,12 +51,13 @@ async function composed(host: SeeHost, brief: string): Promise<Composed | undefi
   try {
     const { seePrompt } = await loadImagePrompt();
     const { adv } = host;
+    const ix = indexAssertions(adv.assertions);
     const req = {
       brief,
       actions: host.log.actions,
       plotEssentials: adv.plot.plotEssentials,
       scene: adv.plot.scene,
-      entities: adv.entities,
+      entities: adv.entities.map((e) => withLooks(e, ix.of(e.id))),
       style: adv.settings.image.portraitStyle ?? portraitStyle(adv.tags),
     };
     const { prompt, entityIds, seed } = await seePrompt(req, async () => storyModel(host));

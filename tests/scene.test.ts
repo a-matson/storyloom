@@ -12,7 +12,7 @@ const oldSave: Scene = { ...mill, time: { day: 3, part: 'night' } };
 const source = { sourceId: 'a9', sourceHash: 'h' };
 const read = (r: Partial<SceneRead>): SceneRead => ({ moved: false, location: 'the mill', present: [], left: [], weather: 'unchanged', ...r });
 const place = (n: string, partOf?: Entity) => ({
-  ...mergeEntity(undefined, { name: n, kind: 'place', description: '', facts: [] }, 0),
+  ...mergeEntity(undefined, { name: n, kind: 'place', description: '' }, 0),
   ...(partOf && { partOf: partOf.id }),
 });
 const next = (scene: Scene | undefined, r: Partial<SceneRead>, places: Entity[] = [], at = 7) => nextScene(scene, read(r), name, at, places);

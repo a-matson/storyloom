@@ -1,9 +1,14 @@
 import type { Action, Adventure, Assertion, Entity, EntityFact } from '../model/types';
 import { basisOf, holds } from './invalidate';
-import { currentStates, isCurrentState, LOOK_KEYS } from './looks';
+import { isLook } from './looks';
 
-/** `wearing` changes scene to scene, so it is a state, not a look. */
-const isLook = (key: string) => key !== 'wearing' && (LOOK_KEYS as readonly string[]).includes(key);
+const isCurrentState = (f: EntityFact) => f.kind === 'state' && f.key !== undefined && f.value !== undefined && f.until === undefined;
+
+/** The `state` map with each current state fact over it. */
+const factStates = (e: Entity): Record<string, string> => ({
+  ...e.state,
+  ...Object.fromEntries(e.facts.flatMap((f) => (isCurrentState(f) && f.key !== undefined ? [[f.key, f.value ?? '']] : []))),
+});
 
 const PRODUCER = { memory: 'legacy', player: 'player', card: 'card' } as const;
 
@@ -25,7 +30,7 @@ function fromFact(e: Entity, f: EntityFact, actions: readonly Action[]): Asserti
   if (f.conflict) {
     const key = f.claim?.key;
     if (!f.claim || key === undefined || !e.canonKeys?.includes(key)) return undefined;
-    return { ...common, kind: 'conflict', key, claimed: f.claim.value, canon: currentStates(e)[key] ?? '' };
+    return { ...common, kind: 'conflict', key, claimed: f.claim.value, canon: factStates(e)[key] ?? '' };
   }
   if (f.kind === 'state' && f.key !== undefined) return { ...common, kind: isLook(f.key) ? 'look' : 'state', key: f.key, value: f.value ?? f.text };
   if (f.kind === 'effect') return { ...common, kind: 'effect', condition: f.value ?? f.text, ...(f.cause && { cause: f.cause }) };

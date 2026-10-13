@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildContext, type ContextBuildInput } from '@core/context';
+import { buildContext as build, type ContextBuildInput } from '@core/context';
 import type { Action, Entity, EntityFact } from '@core/model/types';
 import type { Tokenizer } from '@core/text/tokenizer';
+import { derived } from './fixtures/assertions';
+
+const buildContext = (i: ContextBuildInput) => build(derived(i));
 
 /** 1 token per 4 characters, as in contextBuilder.test.ts. */
 const tok: Tokenizer = { count: (t) => (t ? Math.ceil(t.length / 4) : 0) };
@@ -65,7 +68,7 @@ describe('structured elements', () => {
         ['Lena (keeps the mill): location: the loft, mood: wary; poisoned — the green wine; distrusts you; She hums.', 'Orrin (a ferryman).'].join('\n'),
       );
       expect(r.usedEntityIds).toEqual([lena.id, orrin.id]);
-      expect(r.usedFacts.map((f) => f.factId)).toEqual(['f-Lena-2', 'f-Lena-3', 'f-Lena-4', 'f-Lena-5']);
+      expect(r.usedFacts.map((f) => f.factId)).toEqual(['as_st_e-Lena_location', 'as_f-Lena-2', 'as_f-Lena-3', 'as_f-Lena-4', 'as_f-Lena-5']);
       expect(r.budget.structuredUsed).toBe(structured(r).reduce((sum, s) => sum + s.tokens, 0));
     }
   });

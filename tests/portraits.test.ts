@@ -4,6 +4,7 @@ import { PORTRAIT_PX, PORTRAIT_RETRY_TURNS, queuePortraits, renderPortrait } fro
 import { portraitPrompt, portraitStyle } from '@app/session/portraitPrompt';
 import { createBlankAdventure, type Entity } from '@core/model';
 import type { ImageProvider, ImageRequest } from '@core/ports';
+import { derived, own } from './fixtures/assertions';
 import { settled, setup } from './fixtures/session';
 
 // No canvas under vitest; the re-encode is the browser's job.
@@ -32,6 +33,8 @@ const gate: Entity = { ...lena, id: 'ent_gate', kind: 'place', name: 'Gate', fac
 function withImages(txt2img: ImageProvider['txt2img'] | null, ...entities: Entity[]) {
   const adventure = createBlankAdventure('Test', 'You stand at the gate.');
   adventure.entities = entities;
+  // As an old save opens: its looks and facts derived.
+  adventure.assertions = derived(adventure).assertions;
   // Model-card settings on, so every test also proves portraits skip the hires pass.
   adventure.settings.image = { ...adventure.settings.image, sampler: 'DPM++ 2M Karras', clipSkip: 2, hires: true };
   const images: ImageProvider | undefined = txt2img
@@ -52,19 +55,19 @@ const portraitOf = (s: ReturnType<typeof setup>['session'], id: string) => s.get
 
 describe('portraitPrompt', () => {
   it('carries the description, at most two appearance facts and the style', () => {
-    expect(portraitPrompt(lena, 'oil painting')).toBe(
+    expect(portraitPrompt(lena, own(lena), 'oil painting')).toBe(
       'portrait, head and shoulders, A ferrywoman., She has grey hair., She wears a patched coat., oil painting',
     );
   });
 
   it('opens with the appearance when there is one', () => {
-    expect(portraitPrompt({ ...lena, appearance: 'A wiry woman with cropped grey hair.' }, 'oil painting')).toMatch(
+    expect(portraitPrompt(lena, own({ ...lena, appearance: 'A wiry woman with cropped grey hair.' }), 'oil painting')).toMatch(
       /^portrait, head and shoulders, A wiry woman with cropped grey hair\., A ferrywoman\.,/,
     );
   });
 
   it('still makes a prompt for an entity with nothing known', () => {
-    expect(portraitPrompt({ description: '', facts: [] }, 'oil painting')).toBe('portrait, head and shoulders, oil painting');
+    expect(portraitPrompt({ description: '' }, [], 'oil painting')).toBe('portrait, head and shoulders, oil painting');
   });
 
   it('takes the style from the first genre tag, else a neutral one', () => {

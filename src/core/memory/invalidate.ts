@@ -1,6 +1,7 @@
-import type { Action, Adventure, EntityFact } from '../model/types';
+import type { Action, Adventure, Assertion, EntityFact } from '../model/types';
 import { actionText } from '../model/types';
 import { hashPrompt } from '../trace';
+import type { AssertionOf } from './assertionIndex';
 import { markStale, type MemoryRange } from './memoryBank';
 
 export interface Source {
@@ -36,7 +37,8 @@ export function sourceIn(actions: readonly Action[], range: MemoryRange): (text:
   };
 }
 
-const withoutUntil = ({ until: _u, ...f }: EntityFact): EntityFact => f;
+const withoutUntil = ({ until: _u, ...a }: Assertion): Assertion => a;
+const isValue = (a: Assertion): a is AssertionOf<'state' | 'look'> => a.kind === 'state' || a.kind === 'look';
 
 export interface Dropped {
   facts: number;
@@ -44,27 +46,29 @@ export interface Dropped {
 }
 
 /**
- * Drop the model's facts (looks included) whose source text changed or is gone (the player's and
- * pinned facts stay), and forget the scene's source. When a dropped value's action still exists,
- * the batch extraction is rewound to it so the next idle run re-reads the new text.
+ * Drop the model's assertions (looks and identity included) the story no longer says: their action
+ * is gone, lost their `span`, or, with no span, is among the `changed` indexes. The player's,
+ * pinned and unsourced legacy ones stay. A dropped value hands its key back to the value it ended;
+ * a dropped identity clears a non-canon description. The scene's source is checked likewise. When
+ * a dropped value's action still exists, the batch extraction is rewound to it so the next idle run
+ * re-reads the new text.
  */
-export function dropUnsupported(adventure: Adventure, actions: readonly Action[]): Dropped {
+export function dropUnsupported(adventure: Adventure, actions: readonly Action[], changed: ReadonlySet<number> = new Set()): Dropped {
   const byId = new Map(actions.map((a) => [a.id, a]));
   const out: Dropped = { facts: 0, scene: false };
-  let rewind = Infinity;
-  const reread = (id: string) => {
-    const i = actions.findIndex((a) => a.id === id);
-    if (i >= 0) rewind = Math.min(rewind, i);
+  const unsupported = (a: Assertion) => {
+    if (a.pinned || (a.basis !== 'stated' && a.basis !== 'inferred')) return false;
+    const action = actions[a.at];
+    return !action || (a.span ? !holds(action, a.span) : changed.has(a.at));
   };
-  adventure.entities = adventure.entities.map((e) => {
-    const gone = e.facts.filter((f) => f.sourceId !== undefined && f.pinned !== true && basisOf(f) !== 'player' && !supported(f, byId));
-    if (!gone.length) return e;
-    for (const f of gone) if (f.sourceId) reread(f.sourceId);
-    out.facts += gone.length;
-    // A dropped state value hands its key back to the value it ended.
-    const ended = (f: EntityFact) => gone.some((g) => g.kind === 'state' && g.until === undefined && g.key === f.key && g.fromAction === f.until);
-    return { ...e, facts: e.facts.filter((f) => !gone.includes(f)).map((f) => (f.kind === 'state' && ended(f) ? withoutUntil(f) : f)) };
-  });
+  const gone = adventure.assertions.filter(unsupported);
+  out.facts = gone.length;
+  const handedBack = (a: Assertion) =>
+    isValue(a) && gone.some((g) => isValue(g) && g.subject === a.subject && g.until === undefined && g.key === a.key && g.since === a.until);
+  if (gone.length) adventure.assertions = adventure.assertions.filter((a) => !gone.includes(a)).map((a) => (handedBack(a) ? withoutUntil(a) : a));
+  const unnamed = new Set(gone.flatMap((g) => (g.kind === 'identity' ? [g.subject] : [])));
+  if (unnamed.size) adventure.entities = adventure.entities.map((e) => (unnamed.has(e.id) && !e.canon && !e.cardId ? { ...e, description: '' } : e));
+  const rewind = Math.min(...gone.flatMap((g) => (g.at < actions.length ? [g.at] : [])));
   const scene = adventure.plot.scene;
   if (scene?.sourceId && !supported(scene, byId)) {
     const { sourceId: _id, sourceHash: _hash, ...rest } = scene;
@@ -91,7 +95,7 @@ export function followLog(adventure: Adventure, before: readonly Action[], after
       changed.map((c) => c.i),
     );
   }
-  dropUnsupported(adventure, after);
+  dropUnsupported(adventure, after, new Set(changed.map((c) => c.i)));
 }
 
 /** An edit or erase of an action the summary already read: the next refresh rebuilds it from the memories. */

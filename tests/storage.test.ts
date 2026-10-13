@@ -60,17 +60,13 @@ describe('DexieStorage', () => {
   it('saves entities: round-trip, edit, removal, and delete with the adventure', async () => {
     const name = freshName();
     const s = await reopen(name);
-    const tam = mergeEntity(
-      undefined,
-      { name: 'Tamsin', kind: 'character', description: 'A ferrywoman.', facts: ['She rows.'], state: { location: 'the docks' } },
-      2,
-    );
-    const odo = mergeEntity(undefined, { name: 'Odo', kind: 'character', description: 'A captain.', facts: [] }, 3);
+    const tam = mergeEntity(undefined, { name: 'Tamsin', kind: 'character', description: 'A ferrywoman.' }, 2);
+    const odo = mergeEntity(undefined, { name: 'Odo', kind: 'character', description: 'A captain.' }, 3);
     const adv = { ...makeAdventure({ actions: 4, cards: 1 }), entities: [tam, odo] };
     await s.putAdventure(adv);
     // Rows come back in key order, not insertion order.
     expect((await (await reopen(name)).getAdventure(adv.id))?.entities).toEqual([tam, odo].toSorted((a, b) => a.id.localeCompare(b.id)));
-    const moved = mergeEntity(tam, { name: 'Tamsin', kind: 'character', description: '', facts: [], state: { location: 'the inn' } }, 5);
+    const moved = mergeEntity(tam, { name: 'Tamsin', kind: 'character', description: '', aliases: ['the ferrywoman'] }, 5);
     await s.putAdventure({ ...adv, entities: [moved] });
     expect((await (await reopen(name)).getAdventure(adv.id))?.entities).toEqual([moved]);
     await s.deleteAdventure(adv.id);

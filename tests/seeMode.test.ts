@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createBlankAdventure } from '@core/model';
 import type { ImageProvider, ImageRequest } from '@core/ports';
+import { derived } from './fixtures/assertions';
 import { setup } from './fixtures/session';
 
 const fakeImages = (txt2img: ImageProvider['txt2img']): ImageProvider => ({
@@ -131,6 +132,7 @@ describe('See mode', () => {
       { ...base, id: 'ent_t', name: 'Tamsin', description: 'Tamsin is a ferrywoman.', appearance: 'grey braid' },
       { ...base, id: 'ent_b', name: 'Bram', description: 'A toll keeper.' },
     ];
+    adventure.assertions = derived(adventure).assertions;
     adventure.plot.scene = { location: 'the jetty', present: ['Bram'] };
     const { session } = setup({ adventure, images: fakeImages(async (r) => (prompts.push(r.prompt), new Blob(['png']))) });
     session.see('Tamsin at the ferry');

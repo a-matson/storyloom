@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
+import { textOf } from '@core/memory/assertionIndex';
 import { mergeEntity } from '@core/memory/entities';
 import { foldEntities, uncut, type FoldLog, type Incoming } from '@core/memory/fold';
 import { appearanceOf, currentStates } from '@core/memory/looks';
 import { createBlankAdventure } from '@core/model/scenario';
-import type { Action, Adventure } from '@core/model';
+import type { Action, Adventure, Entity } from '@core/model';
 
 const act = (id: string, text: string): Action => ({ id, type: 'continue', versions: [text], active: 0, createdAt: 0 });
 const seen = (name: string, over: Partial<Incoming> = {}): Incoming => ({ name, kind: 'character', description: '', facts: [], ...over });
+/** What the story says about `e` but who it is. */
+const lines = (adv: Adventure, e: Entity | undefined) => adv.assertions.filter((a) => a.subject === e?.id && a.kind !== 'identity');
+const said = (adv: Adventure, e: Entity | undefined) => lines(adv, e).map(textOf);
 
 function story(texts: string[], thirdPerson?: string): Adventure {
   const adv = createBlankAdventure('T', '');
@@ -41,25 +45,26 @@ describe('foldEntities', () => {
 
   it('trims a value the grammar cap cut, and drops a cut fact with nothing whole in it', () => {
     const cutDesc = `A ferrywoman who rows the dead. She is depicted as a stern and silent figure, often shown wea`.padEnd(120, 'x');
-    const [e] = fold(story(['You meet Tamsin. She rows.']), [seen('Tamsin', { description: cutDesc, facts: ['x'.repeat(100), 'She rows.'] })]);
-    expect(e?.description).toBe('A ferrywoman who rows the dead.');
-    expect(e?.facts.map((f) => f.text)).toEqual(['She rows.']);
+    const adv = story(['You meet Tamsin. She rows.']);
+    const [e] = fold(adv, [seen('Tamsin', { description: cutDesc, facts: ['x'.repeat(100), 'She rows.'] })]);
+    expect(adv.assertions.filter((a) => a.kind === 'identity').map(textOf)).toEqual(['A ferrywoman who rows the dead.']);
+    expect(said(adv, e)).toEqual(['She rows.']);
   });
 
-  it('keeps a fact only where the passage names its subject and a sentence backs it, which becomes its evidence', () => {
+  it('keeps a fact only where the passage names its subject and a sentence backs it, which becomes its span', () => {
     const adv = story(['You meet Tamsin at the ferry.', 'She owes the Iron Guild money. Rain falls.']);
     const [e] = fold(adv, [seen('Tamsin', { facts: ['She owes money to the Iron Guild.', 'She sings at night.'] })]);
-    expect(e?.facts.map((f) => [f.text, f.sourceId, f.evidence, f.basis])).toEqual([
-      ['She owes money to the Iron Guild.', 'a1', 'She owes the Iron Guild money.', 'stated'],
+    expect(lines(adv, e).map((a) => [textOf(a), a.at, a.span, a.basis, a.producer])).toEqual([
+      ['She owes money to the Iron Guild.', 1, 'She owes the Iron Guild money.', 'stated', 'turn'],
     ]);
-    adv.entities = [...adv.entities, mergeEntity(undefined, { name: 'Odo', kind: 'character', description: '', facts: [] }, 0)];
+    adv.entities = [...adv.entities, mergeEntity(undefined, { name: 'Odo', kind: 'character', description: '' }, 0)];
     fold(adv, [seen('Odo', { facts: ['He owes the Iron Guild money.'] })]);
-    expect(adv.entities[1]?.facts).toEqual([]);
+    expect(lines(adv, adv.entities[1])).toEqual([]);
   });
 
   it('logs every fact it proposed and every value a guard dropped, with the reason', () => {
     const adv = story(['You meet Tamsin at the ferry, where she works for the Iron Guild.', 'Rain falls.']);
-    adv.entities = [mergeEntity(undefined, { name: 'Odo', kind: 'character', description: '', facts: [] }, 0)];
+    adv.entities = [mergeEntity(undefined, { name: 'Odo', kind: 'character', description: '' }, 0)];
     const log: FoldLog = { proposed: 0, rejected: [] };
     fold(
       adv,
@@ -84,21 +89,19 @@ describe('foldEntities', () => {
         { entity: 'Vael', value: 'They live in the river.', reason: 'entity-dropped', passageRange: range },
       ],
     });
-    expect(adv.entities[1]?.facts.filter((f) => f.kind !== 'state').map((f) => f.text)).toEqual(['She works at the ferry.']);
+    expect(lines(adv, adv.entities[1]).flatMap((a) => (a.kind === 'trait' ? [a.text] : []))).toEqual(['She works at the ferry.']);
   });
 
   it('meets a value word in another form of it', () => {
-    const [e] = fold(story(['You watch Tamsin. She leans on the pole, hunches over it and rubs her eyes.']), [
-      seen('Tamsin', { looks: { build: 'lean' }, facts: ['hunched', 'one eye'] }),
-    ]);
-    expect(e?.facts.map((f) => f.text)).toEqual(['build: lean', 'hunched', 'one eye']);
+    const adv = story(['You watch Tamsin. She leans on the pole, hunches over it and rubs her eyes.']);
+    const [e] = fold(adv, [seen('Tamsin', { looks: { build: 'lean' }, facts: ['hunched', 'one eye'] })]);
+    expect(said(adv, e)).toEqual(['build: lean', 'hunched', 'one eye']);
   });
 
   it('calls a fact inferred when its best sentence holds only some of its words', () => {
-    const [e] = fold(story(['You watch Tamsin row the ferry across the river.']), [
-      seen('Tamsin', { facts: ['She earns her living as a ferrywoman on the river.'] }),
-    ]);
-    expect(e?.facts[0]?.basis).toBe('inferred');
+    const adv = story(['You watch Tamsin row the ferry across the river.']);
+    const [e] = fold(adv, [seen('Tamsin', { facts: ['She earns her living as a ferrywoman on the river.'] })]);
+    expect(lines(adv, e)[0]?.basis).toBe('inferred');
   });
 
   it('keeps a character’s backed looks, never a place’s, and lets a state replace its key', () => {
@@ -107,16 +110,16 @@ describe('foldEntities', () => {
       seen('Tamsin', { looks: { hair: 'grey braid', eyes: 'not described', wearing: 'oilskin coat' }, state: { location: 'Gull Point' } }),
       seen('Gull Point', { kind: 'place', looks: { build: 'grey stone tower' } }),
     ]);
-    expect(appearanceOf(e ?? { facts: [] })).toBe('hair: grey braid');
-    expect(place?.facts).toEqual([]);
+    expect(appearanceOf(lines(adv, e))).toBe('hair: grey braid');
+    expect(lines(adv, place)).toEqual([]);
     adv.actions.push(act('a1', 'Tamsin walks down to the dock.'));
     fold(adv, [seen('Tamsin', { state: { location: 'the dock' } })]);
-    expect(currentStates(adv.entities[0] ?? { state: {}, facts: [] })).toEqual({ hair: 'grey braid', location: 'the dock' });
+    expect(currentStates(lines(adv, e))).toEqual({ hair: 'grey braid', location: 'the dock' });
   });
 
   it('merges a new name that is part of a known one, or a known one with a title its description has', () => {
     const adv = story(['Brannoch waves, the Ashen Order rides past, and Captain Marr nods.']);
-    const known = (name: string, description = '') => mergeEntity(undefined, { name, kind: 'character', description, facts: [] }, 0);
+    const known = (name: string, description = '') => mergeEntity(undefined, { name, kind: 'character', description }, 0);
     adv.entities = [
       known('Old Brannoch'),
       known('The Ashen Order'),
@@ -152,9 +155,9 @@ describe('foldEntities', () => {
     expect(adv.entities).toEqual([]);
     expect(adv.scriptState.__pending?.map((p) => [p.entity.name, p.range])).toEqual([['Oriel Vance', { fromAction: 0, toAction: 2 }]]);
     expect(batch([seen('Oriel Vance', { facts: ['He draws his sword.'] })], 2, 3)).toBe(2);
-    expect(adv.entities[0]?.facts.map((f) => [f.text, f.sourceId])).toEqual([
-      ['He draws his sword.', 'a2'],
-      ['He has a long scar on his left cheek.', 'a0'],
+    expect(lines(adv, adv.entities[0]).map((a) => [textOf(a), a.at, a.producer])).toEqual([
+      ['He draws his sword.', 2, 'batch'],
+      ['He has a long scar on his left cheek.', 0, 'batch'],
     ]);
     expect(adv.scriptState.__pending).toEqual([]);
     expect(log).toEqual({ proposed: 2, rejected: [] });
