@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { deriveAssertions } from '@core/memory/assertions';
-import type { Action, Entity, EntityFact } from '@core/model/types';
+import { deriveAssertions, migrateEntities } from '@core/memory/assertions';
+import { isLegacy } from '@core/memory/assertionIndex';
+import type { Action, EntityFact, LegacyEntity } from '@core/model/types';
 
 const act = (id: string, text: string): Action => ({ id, type: 'continue', versions: [text], active: 0, createdAt: 0 });
 const actions = [act('a0', 'You reach the river.'), act('a1', 'Tamsin, grey-haired, rows the ferry.'), act('a2', 'The far bank is dark.')];
 
 const fact = (id: string, p: Partial<EntityFact>): EntityFact => ({ id, text: id, fromAction: 1, source: 'memory', ...p });
-const entity = (p: Partial<Entity>): Entity => ({
+const entity = (p: Partial<LegacyEntity>): LegacyEntity => ({
   id: 'ent_t',
   kind: 'character',
   name: 'Tamsin',
@@ -19,7 +20,7 @@ const entity = (p: Partial<Entity>): Entity => ({
   lastSeen: 2,
   ...p,
 });
-const derive = (e: Entity) => deriveAssertions({ entities: [e], actions });
+const derive = (e: LegacyEntity) => deriveAssertions({ entities: [e], actions });
 
 describe('deriveAssertions', () => {
   it('maps each fact kind, with at from the source action and since from fromAction', () => {
@@ -113,5 +114,28 @@ describe('deriveAssertions', () => {
   it('is idempotent', () => {
     const e = entity({ description: 'A ferrywoman.', facts: [fact('f1', { sourceId: 'a1', evidence: 'rows the ferry' })] });
     expect(derive(e)).toEqual(derive(e));
+  });
+});
+
+describe('migrateEntities', () => {
+  const tamsin = entity({ description: 'A ferrywoman.', facts: [fact('f1', { sourceId: 'a1', evidence: 'rows the ferry' })], state: { mood: 'calm' } });
+
+  it('derives an adventure without assertions and leaves its entities without legacy fields', () => {
+    const out = migrateEntities([tamsin], actions, []);
+    expect(out.assertions).toEqual(derive(tamsin));
+    expect(out.entities).toEqual([{ id: 'ent_t', kind: 'character', name: 'Tamsin', aliases: [], description: '', relations: [], firstSeen: 1, lastSeen: 2 }]);
+    expect(out.entities.some(isLegacy)).toBe(false);
+  });
+
+  it('keeps stored assertions, and a canon description', () => {
+    const stored = derive(tamsin).filter((a) => a.kind !== 'trait');
+    const out = migrateEntities([tamsin, entity({ id: 'ent_c', description: 'Card text.', canon: true })], actions, stored);
+    expect(out.assertions).toEqual(stored);
+    expect(out.entities.map((e) => e.description)).toEqual(['', 'Card text.']);
+  });
+
+  it('moves a non-canon description no identity assertion covers', () => {
+    const stored = derive(tamsin).filter((a) => a.kind !== 'identity');
+    expect(migrateEntities([tamsin], actions, stored).assertions.at(-1)).toMatchObject({ id: 'as_id_ent_t', kind: 'identity', text: 'A ferrywoman.' });
   });
 });

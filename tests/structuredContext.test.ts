@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildContext as build, type ContextBuildInput } from '@core/context';
-import type { Action, Entity, EntityFact } from '@core/model/types';
+import type { Action, EntityFact, LegacyEntity } from '@core/model/types';
 import type { Tokenizer } from '@core/text/tokenizer';
 import { derived } from './fixtures/assertions';
 
@@ -19,7 +19,7 @@ const fact = (name: string, i: number, text: string, over: Partial<EntityFact> =
   ...over,
 });
 
-function entity(name: string, description: string, facts: EntityFact[], state: Record<string, string> = {}): Entity {
+function entity(name: string, description: string, facts: EntityFact[], state: Record<string, string> = {}): LegacyEntity & { facts: EntityFact[] } {
   return { id: `e-${name}`, kind: 'character', name, aliases: [], description, facts, state, relations: [], firstSeen: 0, lastSeen: 1 };
 }
 

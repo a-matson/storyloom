@@ -43,6 +43,7 @@ export function readDb(page: Page) {
       actions: await all('actions'),
       memories: await all('memories'),
       entities: await all('entities'),
+      assertions: await all('assertions'),
       traces: await all('traces'),
       cards: await all('storyCards'),
     };

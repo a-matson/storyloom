@@ -54,7 +54,7 @@ export function itemsHere(scene: Scene, entities: readonly Entity[], ix: Asserti
   ];
   const label = (e: Entity) => {
     const h = holderOf(ix, e);
-    return h ? `${e.name} (${knownAs(entities, h)?.name ?? h})` : e.name;
+    return h ? `${e.name} (${knownAs(entities, h, ix)?.name ?? h})` : e.name;
   };
   return [...new Set(found)].flatMap((x) => (typeof x === 'string' ? [x] : mine.has(x) ? [] : [label(x)])).slice(0, MAX_ITEMS);
 }

@@ -2,7 +2,7 @@ import { z } from 'zod/mini';
 import { Action } from './action';
 import { Assertion } from './assertion';
 import { StoryCard } from './card';
-import { Entity, EntityKind } from './entity';
+import { Entity, EntityKind, LegacyEntity } from './entity';
 import { Memory } from './memory';
 import { Rule } from './rule';
 import { AdventureSettings } from './settings';
@@ -119,7 +119,7 @@ export const Adventure = z.object({
   entities: z.prefault(z.array(Entity), []),
   /** Kept on the adventure record: a few dozen short lines, saved with it. */
   rules: z.prefault(z.array(Rule), []),
-  /** Typed facts about the entities; derived from their `facts` until those are dropped. */
+  /** Typed facts about the entities; an adventure saved before the store derives them once (`migrateEntities`). */
   assertions: z.prefault(z.array(Assertion), []),
   scriptState: ScriptState,
   /** Copied from the scenario at creation, so later scenario edits never change a running story. */
@@ -132,3 +132,6 @@ export const Adventure = z.object({
   createdAt: z.number(),
   updatedAt: z.number(),
 });
+
+/** A stored or exported adventure that may predate the assertion store: `migrateEntities` moves its entity facts. */
+export const LegacyAdventure = z.object({ ...Adventure.shape, entities: z.prefault(z.array(LegacyEntity), []) });

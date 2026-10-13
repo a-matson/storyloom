@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildContext, chunkedStart, type ContextBuildInput } from '@core/context';
-import type { Action, Entity, Memory, StoryCard } from '@core/model/types';
+import type { Action, LegacyEntity, Memory, StoryCard } from '@core/model/types';
 import type { Tokenizer } from '@core/text/tokenizer';
 import { derived } from './fixtures/assertions';
 
@@ -245,13 +245,12 @@ describe('ordering', () => {
   });
 
   it('the scene line names confirmed items only', () => {
-    const item = (name: string, seen: number): Entity => ({
+    const item = (name: string, seen: number): LegacyEntity => ({
       id: name,
       kind: 'item',
       name,
       aliases: [],
       description: '',
-      facts: [],
       state: { holder: 'you' },
       relations: [],
       firstSeen: 0,

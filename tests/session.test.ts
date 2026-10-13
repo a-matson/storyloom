@@ -148,9 +148,7 @@ describe('GameSession', () => {
     const adventure = makeAdventure({ actions: 4, cards: 0 });
     const said = adventure.actions[1];
     if (said) said.versions = ['"Hold the rope," Tamsin says.'];
-    adventure.entities = [
-      { id: 'ent_1', kind: 'character', name: 'Tamsin', aliases: [], description: '', facts: [], state: {}, relations: [], firstSeen: 1, lastSeen: 1 },
-    ];
+    adventure.entities = [{ id: 'ent_1', kind: 'character', name: 'Tamsin', aliases: [], description: '', relations: [], firstSeen: 1, lastSeen: 1 }];
     const { session, idle, saved } = setup({ adventure });
     session.submit('continue', '');
     await settled(session);

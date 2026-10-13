@@ -6,11 +6,13 @@ import * as S from '@core/schema';
 export const FORMAT = 'storyloom-adventure';
 
 type Image = NonNullable<Action['image']>;
+type Exported = z.output<typeof S.LegacyAdventure>;
 
-const AdventureExport = z.object({ format: z.literal(FORMAT), version: z.literal(1), exportedAt: z.optional(z.string()), adventure: S.Adventure });
+/** Version 1 predates the assertion store: its entity facts move on the first open (`migrateEntities`). */
+const AdventureExport = z.object({ format: z.literal(FORMAT), version: z.literal([1, 2]), exportedAt: z.optional(z.string()), adventure: S.LegacyAdventure });
 
 export function exportAdventureJson(a: Adventure): string {
-  return JSON.stringify({ format: FORMAT, version: 1, exportedAt: new Date().toISOString(), adventure: a }, null, 2);
+  return JSON.stringify({ format: FORMAT, version: 2, exportedAt: new Date().toISOString(), adventure: a }, null, 2);
 }
 
 /** Plain-text transcript (what a reader would want). */
@@ -36,7 +38,7 @@ export function parseOwn(data: unknown): Adventure | undefined {
   const wrapped = AdventureExport.safeParse(data);
   if (wrapped.success) return renumber(wrapped.data.adventure);
   if (isRecord(data) && data['format'] === FORMAT) throw new Error(`Damaged Storyloom export: ${firstIssue(wrapped.error)}`);
-  const bare = S.Adventure.safeParse(data);
+  const bare = S.LegacyAdventure.safeParse(data);
   return bare.success ? renumber(bare.data) : undefined;
 }
 
@@ -53,16 +55,17 @@ function withoutBlob({ imageId, ...image }: Image): Image {
 }
 
 /** Fresh ids so an import never overwrites an existing adventure, and no ids pointing at blobs we do not have. */
-function renumber(a: Adventure): Adventure {
+function renumber(a: Exported): Adventure {
   const { coverId: _cover, ...rest } = a;
   const ids = new Map([...a.storyCards.map((c) => [c.id, newId('card_')] as const), ...a.entities.map((e) => [e.id, newId('ent_')] as const)]);
   const id = (old: string) => ids.get(old) ?? old;
+  const actionIds = new Map(a.actions.map((x) => [x.id, newId('act_')]));
   return {
     ...rest,
     id: newId('adv_'),
     actions: a.actions.map(({ image, ...x }) => ({
       ...x,
-      id: newId('act_'),
+      id: actionIds.get(x.id) ?? newId('act_'),
       ...(image && { image: { ...withoutBlob(image), ...(image.entityIds && { entityIds: image.entityIds.map(id) }) } }),
     })),
     storyCards: a.storyCards.map((c) => ({ ...c, id: id(c.id) })),
@@ -71,12 +74,18 @@ function renumber(a: Adventure): Adventure {
       ...e,
       id: id(e.id),
       relations: e.relations.map((r) => ({ ...r, to: id(r.to) })),
-      facts: e.facts.map((f) => (f.cause?.id ? { ...f, cause: { ...f.cause, id: id(f.cause.id) } } : f)),
       ...(e.cardId && { cardId: id(e.cardId) }),
+      // A version 1 export's facts, moved on the first open: their sources and causes follow the new ids.
+      ...(e.facts && {
+        facts: e.facts.map(({ sourceId, cause, ...f }) => ({
+          ...f,
+          ...(sourceId !== undefined && { sourceId: actionIds.get(sourceId) ?? sourceId }),
+          ...(cause && { cause: cause.id ? { ...cause, id: id(cause.id) } : cause }),
+        })),
+      }),
     })),
     // Rule ids are local to the adventure record, so only their gates follow the entities.
     rules: a.rules.map((r) => ({ ...r, gates: r.gates.map(id) })),
-    // An export from before the store has none: the first open derives them from the entities.
     assertions: a.assertions.map((x) => ({
       ...x,
       subject: id(x.subject),

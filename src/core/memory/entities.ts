@@ -98,10 +98,8 @@ export interface Sighting {
 }
 
 /**
- * Fold one sighting into an entity (or create it): aliases union, `lastSeen` moves, and an empty
- * description of a non-canon entity is set once. Readers take who it is from its identity
- * assertion; the field stays for `knownAs` until the entity facts go (M13-2c). What the sighting
- * says is `mergeAssertions`' job.
+ * Fold one sighting into an entity (or create it): aliases union, `lastSeen` moves. What the
+ * sighting says, its description included, is `mergeAssertions`' job.
  */
 export function mergeEntity(existing: Entity | undefined, incoming: Omit<Sighting, 'facts' | 'state'>, atAction: number): Entity {
   const base: Entity = existing ?? {
@@ -110,8 +108,6 @@ export function mergeEntity(existing: Entity | undefined, incoming: Omit<Sightin
     name: incoming.name.trim(),
     aliases: [],
     description: '',
-    facts: [],
-    state: {},
     relations: [],
     firstSeen: atAction,
     lastSeen: atAction,
@@ -124,13 +120,7 @@ export function mergeEntity(existing: Entity | undefined, incoming: Omit<Sightin
     aliases.push(a.trim());
   }
 
-  return {
-    ...base,
-    aliases,
-    // Frozen once set: a later one is a fact.
-    description: base.canon ? base.description : base.description || incoming.description.trim(),
-    lastSeen: Math.max(base.lastSeen, atAction),
-  };
+  return { ...base, aliases, lastSeen: Math.max(base.lastSeen, atAction) };
 }
 
 /** Items of `extra` whose key is not in `seen` (nor repeated within `extra`). */
@@ -148,13 +138,12 @@ const rel = (r: { to: string; label: string }) => `${norm(r.to)}|${norm(r.label)
 
 /**
  * Fold the stored entity `from` into `into` (the player's Merge): aliases and relations union in;
- * `into` keeps its id, name, kind, description and portrait. Assertions move with `mergeOwn`.
+ * `into` keeps its id, name, kind, card text and portrait. Assertions move with `mergeOwn`.
  */
 export function mergeEntities(into: Entity, from: Entity): Entity {
   return {
     ...into,
     aliases: [...into.aliases, ...unseen([into.name, ...into.aliases].map(norm), [from.name, ...from.aliases], norm)],
-    description: into.description || from.description,
     relations: [...into.relations, ...unseen(into.relations.map(rel), from.relations, rel)],
     firstSeen: Math.min(into.firstSeen, from.firstSeen),
     lastSeen: Math.max(into.lastSeen, from.lastSeen),

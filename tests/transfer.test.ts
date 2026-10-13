@@ -10,6 +10,7 @@ import {
   importStoryCardsJson,
 } from '@adapters/transfer';
 import { makeTrace } from './fixtures/trace';
+import { migrateEntities } from '@core/memory/assertions';
 import { createBlankAdventure, DEFAULT_ADVENTURE_SETTINGS } from '@core/model';
 
 const zip = (files: Record<string, string>, level: 0 | 6 = 6): ArrayBuffer =>
@@ -38,8 +39,6 @@ describe('adventure JSON', () => {
         name: 'Lena',
         aliases: [],
         description: '',
-        facts: [],
-        state: {},
         relations: [],
         firstSeen: 0,
         lastSeen: 0,
@@ -89,26 +88,45 @@ describe('adventure JSON', () => {
     expect(b.assertions).toEqual([{ ...a.assertions[0], subject: mira?.id, cause: { ...cause, id: lena?.id } }]);
   });
 
-  it('keeps rules and repoints their gates and effect causes', () => {
+  it('exports version 2 and keeps rules with their gates repointed', () => {
     const a = createBlankAdventure('T', 'You wake.');
-    const base = { kind: 'character' as const, aliases: [], description: '', state: {}, relations: [], firstSeen: 0, lastSeen: 0 };
+    a.entities = [{ kind: 'character', aliases: [], description: '', relations: [], firstSeen: 0, lastSeen: 0, id: 'ent_1', name: 'Lena' }];
+    a.rules = [{ id: 'rule_1', text: 'Lena never lies', gates: ['ent_1', 'ent_gone'], source: 'player', status: 'confirmed', createdAt: 1, fromAction: 0 }];
+    const json = exportAdventureJson(a);
+    expect(JSON.parse(json)).toMatchObject({ version: 2 });
+    const { adventure: b } = importAdventureJson(json);
+    expect(b.rules).toEqual([{ ...a.rules[0], gates: [b.entities[0]?.id, 'ent_gone'] }]);
+  });
+
+  it('keeps a version 1 export’s entity facts for the first open, sources and causes repointed', () => {
+    const a = createBlankAdventure('T', 'You wake.');
+    const base = { kind: 'character', aliases: [], relations: [], firstSeen: 0, lastSeen: 0 };
+    const said = a.actions[0]?.id;
     const hex = {
       id: 'f1',
       text: 'cursed',
       fromAction: 0,
-      source: 'player' as const,
-      kind: 'effect' as const,
-      cause: { kind: 'character' as const, id: 'ent_1', text: 'Lena' },
+      source: 'memory',
+      kind: 'effect',
+      sourceId: said,
+      evidence: 'You wake',
+      cause: { kind: 'character', id: 'ent_1', text: 'Lena' },
     };
-    a.entities = [
-      { ...base, id: 'ent_1', name: 'Lena', facts: [] },
-      { ...base, id: 'ent_2', name: 'Mira', facts: [hex] },
+    const entities = [
+      { ...base, id: 'ent_1', name: 'Lena', description: 'A ferrywoman.', facts: [], state: { mood: 'calm' } },
+      { ...base, id: 'ent_2', name: 'Mira', description: '', facts: [hex], state: {} },
     ];
-    a.rules = [{ id: 'rule_1', text: 'Lena never lies', gates: ['ent_1', 'ent_gone'], source: 'player', status: 'confirmed', createdAt: 1, fromAction: 0 }];
-    const { adventure: b } = importAdventureJson(exportAdventureJson(a));
+    const { adventure: b } = importAdventureJson(JSON.stringify({ format: 'storyloom-adventure', version: 1, adventure: { ...a, entities } }));
     const [lena, mira] = b.entities;
-    expect(b.rules).toEqual([{ ...a.rules[0], gates: [lena?.id, 'ent_gone'] }]);
-    expect(mira?.facts[0]?.cause).toEqual({ kind: 'character', id: lena?.id, text: 'Lena' });
+    // What the storage open then does.
+    const moved = migrateEntities(b.entities, b.actions, b.assertions);
+    expect(moved.entities.map((e) => e.description)).toEqual(['', '']);
+    expect(moved.assertions.map((x) => [x.subject, x.kind])).toEqual([
+      [lena?.id, 'identity'],
+      [lena?.id, 'state'],
+      [mira?.id, 'effect'],
+    ]);
+    expect(moved.assertions.at(-1)).toMatchObject({ at: 0, span: 'You wake', condition: 'cursed', cause: { kind: 'character', id: lena?.id, text: 'Lena' } });
   });
 
   it('parses an export from before rules with none', () => {

@@ -28,7 +28,7 @@ describe('canon seeding', () => {
       ['Location', 'place'],
       ['Faction', 'faction'],
     ]);
-    expect(seeded[0]).toMatchObject({ aliases: [], description: 'Character entry.', cardId: 'card_Character', canon: true, facts: [] });
+    expect(seeded[0]).toMatchObject({ aliases: [], description: 'Character entry.', cardId: 'card_Character', canon: true });
   });
 
   it('seeds from the placeholder-filled cards of a new adventure', () => {

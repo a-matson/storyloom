@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test';
-import type { Assertion, Entity, Scene } from '@core/model';
+import type { Assertion, LegacyEntity, Scene } from '@core/model';
 
 /**
  * Connect the demo backend, import an adventure of `count` short actions, seed two entities and open it.
@@ -14,7 +14,8 @@ export async function openSeededAdventure(
     speakerAvatars?: boolean;
     contextScript?: string;
     scene?: Scene;
-    entities?: Partial<Entity>[];
+    /** Stored in the pre-store shape: the first open moves their facts to assertions (`migrateEntities`). */
+    entities?: Partial<LegacyEntity>[];
     /** Stored as they are; with none, the first open derives them from the entities' facts. */
     assertions?: Assertion[];
     utility?: string;
@@ -48,7 +49,7 @@ export async function openSeededAdventure(
  * Two entities (plus `more`) written straight into the store for the first adventure; the memory cycle
  * never runs in e2e. An import carries no scripts or scene, so those are patched in too.
  */
-async function seedEntities(page: Page, contextScript?: string, seedScene?: Scene, more: Partial<Entity>[] = [], lines: Assertion[] = []): Promise<void> {
+async function seedEntities(page: Page, contextScript?: string, seedScene?: Scene, more: Partial<LegacyEntity>[] = [], lines: Assertion[] = []): Promise<void> {
   await page.evaluate(
     async ({ context, scene, extra, assertions }) => {
       const req = indexedDB.open('storyloom');

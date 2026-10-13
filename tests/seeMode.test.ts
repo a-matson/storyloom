@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createBlankAdventure } from '@core/model';
 import type { ImageProvider, ImageRequest } from '@core/ports';
-import { derived } from './fixtures/assertions';
+import { migrateEntities } from '@core/memory/assertions';
 import { setup } from './fixtures/session';
 
 const fakeImages = (txt2img: ImageProvider['txt2img']): ImageProvider => ({
@@ -127,12 +127,12 @@ describe('See mode', () => {
   it('turns names into looks, tags the image, and recomposes a new brief', async () => {
     const prompts: string[] = [];
     const adventure = createBlankAdventure('Test', 'You stand at the gate.');
-    const base = { kind: 'character' as const, aliases: [], facts: [], state: {}, relations: [], firstSeen: 0, lastSeen: 0 };
-    adventure.entities = [
+    const base = { kind: 'character' as const, aliases: [], relations: [], firstSeen: 0, lastSeen: 0 };
+    const old = [
       { ...base, id: 'ent_t', name: 'Tamsin', description: 'Tamsin is a ferrywoman.', appearance: 'grey braid' },
       { ...base, id: 'ent_b', name: 'Bram', description: 'A toll keeper.' },
     ];
-    adventure.assertions = derived(adventure).assertions;
+    Object.assign(adventure, migrateEntities(old, adventure.actions, []));
     adventure.plot.scene = { location: 'the jetty', present: ['Bram'] };
     const { session } = setup({ adventure, images: fakeImages(async (r) => (prompts.push(r.prompt), new Blob(['png']))) });
     session.see('Tamsin at the ferry');

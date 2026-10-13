@@ -39,12 +39,8 @@ export const Entity = z.object({
   kind: EntityKind,
   name: z.string(),
   aliases: z.array(z.string()),
+  /** A canon or carded entity's card text; empty for others, whose identity is an assertion. */
   description: z.string(),
-  /** Legacy free-text looks, set once; current look facts (`LOOK_KEYS`) take its place in `appearanceOf`. */
-  appearance: z.optional(z.string()),
-  facts: z.array(EntityFact),
-  /** Values the player set (and legacy model ones); a current state fact of the same key overrides it (`currentStates`). */
-  state: z.record(z.string(), z.string()),
   relations: z.array(Relation),
   /** A place's id of the place it is inside (a room in a house): moving between them is no change of place. */
   partOf: z.optional(z.string()),
@@ -59,6 +55,17 @@ export const Entity = z.object({
   cardId: z.optional(z.string()),
   /** Seeded from a scenario card: model output never replaces its name, kind or description. */
   canon: z.optional(z.boolean()),
-  /** State keys the player locked: a model overwrite keeps the value and records a conflict fact. */
+  /** State keys the player locked: a model overwrite keeps the value and records a conflict. */
   canonKeys: z.optional(z.array(z.string())),
+});
+
+/** An entity as stored before the assertion store (M13-2): only the migration reads these fields. */
+// Not `z.extend(Entity, …)`: React Refresh reads `Name = f(Name, …)` as a component HOC and breaks the script worker.
+export const LegacyEntity = z.object({
+  ...Entity.shape,
+  /** Free-text looks, set once. */
+  appearance: z.optional(z.string()),
+  facts: z.optional(z.array(EntityFact)),
+  /** Values the player set (and legacy model ones); a current state fact of the same key overrides it. */
+  state: z.optional(z.record(z.string(), z.string())),
 });

@@ -3,15 +3,13 @@ import { castIn, composeSeePrompt, isImplicit, namedCast, PROMPT_BUDGET } from '
 import type { Entity } from '@core/model';
 import { seedOf } from '@core/trace';
 
-const char = (id: string, name: string, description: string, appearance?: string, aliases: string[] = []): Entity => ({
+const char = (id: string, name: string, description: string, appearance?: string, aliases: string[] = []): Entity & { appearance?: string } => ({
   id,
   kind: 'character',
   name,
   aliases,
   description,
   ...(appearance !== undefined && { appearance }),
-  facts: [],
-  state: {},
   relations: [],
   firstSeen: 0,
   lastSeen: 0,

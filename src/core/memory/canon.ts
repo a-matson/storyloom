@@ -22,8 +22,6 @@ export function seedCanonEntities(cards: readonly StoryCard[], atAction: number)
         name,
         aliases: [],
         description: c.entry.trim(),
-        facts: [],
-        state: {},
         relations: [],
         firstSeen: atAction,
         lastSeen: atAction,

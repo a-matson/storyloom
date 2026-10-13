@@ -1,26 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { checkInputs, checkOutput } from '@core/memory/contradiction';
-import type { Adventure, Entity } from '@core/model';
+import type { Adventure, LegacyEntity } from '@core/model';
 import type { CompletionRequest } from '@core/ports';
 import { makeAdventure } from './fixtures/adventure';
 import { derived } from './fixtures/assertions';
 import { fakeProvider } from './fixtures/memoryJobs';
 
-const entity = (name: string, extra: Partial<Entity> = {}): Entity => ({
+const entity = (name: string, extra: Partial<LegacyEntity> = {}): LegacyEntity => ({
   id: `ent_${name}`,
   kind: 'character',
   name,
   aliases: [],
   description: '',
-  facts: [],
-  state: {},
   relations: [],
   firstSeen: 0,
   lastSeen: 0,
   ...extra,
 });
 
-function adventure(entities: Entity[], scene?: Adventure['plot']['scene']): Adventure {
+function adventure(entities: LegacyEntity[], scene?: Adventure['plot']['scene']): Adventure {
   const adv = makeAdventure({ actions: 2, cards: 0 });
   adv.entities = entities;
   adv.plot = { ...adv.plot, scene };

@@ -13,7 +13,7 @@ export const CAST_CAP = 2;
 export const PROMPT_BUDGET = 300;
 
 /** `description` and `appearance` as `withLooks` resolves them from the assertions. */
-type Character = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'description' | 'appearance' | 'look'>;
+type Character = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'description' | 'look'> & { appearance?: string };
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const nameRe = (n: string) => new RegExp(`(?<![\\p{L}\\p{N}])${escape(n.trim())}(?![\\p{L}\\p{N}])`, 'giu');

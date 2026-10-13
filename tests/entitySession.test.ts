@@ -12,8 +12,6 @@ const gate: Entity = {
   name: 'Gate',
   aliases: [],
   description: 'An iron gate older than the town.',
-  facts: [],
-  state: {},
   relations: [],
   firstSeen: 0,
   lastSeen: 1,

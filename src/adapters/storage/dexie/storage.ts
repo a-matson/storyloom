@@ -1,6 +1,6 @@
 import type { Action, Adventure, AppSettings, Assertion, Entity, HelperCall, Memory, Scenario, StoryCard, TurnTrace } from '@core/model';
 import { HELPER_CALL_CAP_PER_ADVENTURE, StorageError, summarise, TRACE_CAP_PER_ADVENTURE, type AdventureSummary, type Storage } from '@core/ports';
-import { loadAssertions } from '@core/memory';
+import { isLegacy, loadAssertions } from '@core/memory';
 import * as S from '@core/schema';
 import type { Table } from 'dexie';
 import { clearPending, takePending } from '../pending';
@@ -14,9 +14,6 @@ interface Saved {
   entities: readonly Entity[];
   assertions: readonly Assertion[];
 }
-
-// Loaded on the first open of an adventure saved before the store, off the start-up bundle.
-const derive = async (a: Adventure) => (await loadAssertions()).deriveAssertions(a);
 
 type Logged = { adventureId: string; createdAt: number };
 /** Oldest first. */
@@ -79,10 +76,13 @@ export class DexieStorage implements Storage {
       return joinAdventure(meta, await by(db.actions), await by(db.storyCards), await by(db.memories), await by(db.entities), await by(db.assertions));
     });
     if (rows === undefined) return undefined;
-    const adventure = parseOrThrow(S.Adventure, rows, `Adventure "${id}"`);
+    let adventure: Adventure = parseOrThrow(S.LegacyAdventure, rows, `Adventure "${id}"`);
     this.saved.set(id, saved(adventure));
-    // Saved before the table existed: the next save writes them.
-    if (!adventure.assertions.length && adventure.entities.length) adventure.assertions = await derive(adventure);
+    if (adventure.entities.some(isLegacy)) {
+      // Saved before the assertion store: moved once and written, so the next open finds nothing to move.
+      adventure = { ...adventure, ...(await loadAssertions()).migrateEntities(adventure.entities, adventure.actions, adventure.assertions) };
+      await this.putAdventure(adventure);
+    }
     // Edits made inside the save debounce before the tab hid: replay them before anyone sees the adventure.
     const pending = takePending(adventure);
     if (!pending) return adventure;

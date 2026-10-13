@@ -74,10 +74,8 @@ export function lineEdits(host: GameSession) {
       mutate((adv, at) => {
         const e = adv.entities.find((x) => x.id === id);
         if (!e) return;
-        // Kept on the others too, for `knownAs`, until the entity facts go (M13-2c).
-        patch(adv, id, { description: text });
-        if (!e.canon && !e.cardId)
-          mapOwn(adv, id, (_, own) => [...own.filter((a) => a.kind !== 'identity'), ...(text ? [byPlayer(id, at, { kind: 'identity', text })] : [])]);
+        if (e.canon || e.cardId) patch(adv, id, { description: text });
+        else mapOwn(adv, id, (_, own) => [...own.filter((a) => a.kind !== 'identity'), ...(text ? [byPlayer(id, at, { kind: 'identity', text })] : [])]);
       }),
     /** A new item card held by `holder` (a name). */
     addItem: (holder: string, name: string) =>
@@ -88,8 +86,6 @@ export function lineEdits(host: GameSession) {
           name,
           aliases: [],
           description: '',
-          facts: [],
-          state: {},
           relations: [],
           firstSeen: at,
           lastSeen: at,
