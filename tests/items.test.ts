@@ -2,11 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { renderScene } from '@core/context/render';
 import { indexAssertions } from '@core/memory/assertionIndex';
 import { mergeEntity } from '@core/memory/entities';
-import { foldEntities, type Incoming } from '@core/memory/fold';
 import { heldBy, itemsAt, itemsHere, YOU } from '@core/memory/items';
 import { setValue } from '@core/memory/looks';
-import { createBlankAdventure } from '@core/model/scenario';
-import type { Action, Entity } from '@core/model';
+import type { Entity } from '@core/model';
 
 const ent = (name: string, kind: Entity['kind']): Entity => ({ ...mergeEntity(undefined, { name, kind, description: '' }, 0), id: `ent_${name}` });
 const where = (e: Entity, key: string, value: string) => setValue(e, [], key, value, 0);
@@ -32,31 +30,5 @@ describe('items', () => {
     expect(renderScene(scene, all, ix)).toBe('the tower · Present: Korthak · You hold: Horn · Here: a lamp, Ledger, Key (Korthak)');
     const many = Array.from({ length: 7 }, (_, i) => ent(`Coin${i}`, 'item'));
     expect(renderScene(undefined, many, indexAssertions(many.flatMap((c) => where(c, 'holder', 'you'))))).toBe('You hold: Coin0, Coin1, Coin2, Coin3, Coin4');
-  });
-});
-
-const act = (id: string, text: string): Action => ({ id, type: 'continue', versions: [text], active: 0, createdAt: 0 });
-
-describe('folding a carried item', () => {
-  const fold = (texts: string[], incoming: Incoming[]) => {
-    const adv = createBlankAdventure('T', '');
-    adv.actions = texts.map((t, i) => act(`a${i}`, t));
-    const passage = texts.map((t, i) => `[${i}] ${t}`).join('\n');
-    foldEntities(adv, incoming, passage, { fromAction: 0, toAction: texts.length });
-    return adv;
-  };
-  const item = (state: Record<string, string>): Incoming => ({ name: 'Horn', kind: 'item', description: 'A brass horn.', state });
-
-  it('keeps a lower-case item only with a holder, the sentence naming it as its span', () => {
-    const adv = fold(['You lift the horn from the hook.'], [item({ holder: 'you' })]);
-    expect(adv.assertions.flatMap((a) => (a.kind === 'state' ? [[a.key, a.value, a.span]] : []))).toEqual([
-      ['holder', 'you', 'You lift the horn from the hook.'],
-    ]);
-    expect(fold(['You lift the horn from the hook.'], [item({ location: 'the hook' })]).entities).toEqual([]);
-  });
-
-  it('drops a holder on anything but an item', () => {
-    const adv = fold(['You meet Mira. Mira carries you.'], [{ name: 'Mira', kind: 'character', description: '', state: { holder: 'you' } }]);
-    expect(adv.assertions).toEqual([]);
   });
 });

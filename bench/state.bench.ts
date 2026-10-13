@@ -3,7 +3,8 @@ import { test } from 'vitest';
 import { z } from 'zod/mini';
 import { LlamaServerProvider } from '@adapters/providers/llamaServer';
 import { knownAs, matchEntity, mergeEntity } from '@core/memory/entities';
-import { HELPER_JSON_SAMPLING, passageOf } from '@core/memory/extract';
+import { HELPER_JSON_SAMPLING, passageOf, updateEntities } from '@core/memory/extract';
+import { ENTITY_BATCH } from '@core/memory/memoryBank';
 import { nextScene } from '@core/memory/scene';
 import type { HelperCallLog } from '@core/memory';
 import { indexAssertions } from '@core/memory/assertionIndex';
@@ -31,7 +32,7 @@ const grammar = (s: z.ZodMiniType) => {
   const { $schema: _d, ...schema } = z.toJSONSchema(s);
   return schema;
 };
-/** `MEASURE_READS=A` skips read B. */
+/** `MEASURE_READS=A` skips read B; `C` replays the batch call alone. */
 const READS = (process.env['MEASURE_READS'] ?? 'A,B').split(',');
 interface Reply {
   ms: number;
@@ -42,7 +43,7 @@ interface Reply {
   rejected?: StateUpdate['rejected'];
 }
 
-test.skipIf(!url || !backup)('state reads over a backup', { timeout: 3_600_000 }, async () => {
+test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('state reads over a backup', { timeout: 3_600_000 }, async () => {
   const adv = S.Adventure.parse(JSON.parse(readFileSync(backup ?? '', 'utf8')).adventure);
   const set = pickSet(JSON.parse(readFileSync('bench/stateLabels.json', 'utf8')), SET);
   const provider = new LlamaServerProvider('state', url ?? '');
@@ -164,4 +165,30 @@ test.skipIf(!url || !backup)('state reads over a backup', { timeout: 3_600_000 }
   };
   console.log('state score', JSON.stringify(score));
   console.log('wrote', writeMeasurement(`state-${LABEL}`, { url, backup, set: SET, sampling: HELPER_JSON_SAMPLING, score, rows }));
+});
+
+// Read C: the batch call from core at memory cadence, from no cards, so every identity is a new name's (read D).
+test.skipIf(!url || !backup || !READS.includes('C'))('batch call over a backup', { timeout: 3_600_000 }, async () => {
+  const adv = S.Adventure.parse(JSON.parse(readFileSync(backup ?? '', 'utf8')).adventure);
+  const provider = new LlamaServerProvider('state', url ?? '');
+  const work: Adventure = { ...adv, entities: [], assertions: [], scriptState: {} };
+  const mems = adv.memories.filter((m) => !m.stale).toSorted((a, b) => a.fromAction - b.fromAction);
+  const replies = [];
+  for (let i = 0; i + ENTITY_BATCH <= mems.length; i += ENTITY_BATCH) {
+    const range = { fromAction: mems[i]?.fromAction ?? 0, toAction: mems[i + ENTITY_BATCH - 1]?.toAction ?? 0 };
+    const calls: HelperCallLog[] = [];
+    const before = new Set(work.assertions.map((a) => a.id));
+    await updateEntities(work, range, { provider, template: adv.settings.template, cuts: { cutCalls: 0, finishedPastCut: 0, calls } });
+    const name = (id: string) => work.entities.find((e) => e.id === id)?.name;
+    const identities = work.assertions.flatMap((a) =>
+      a.kind === 'identity' && !before.has(a.id) ? [{ name: name(a.subject), text: a.text, span: a.span }] : [],
+    );
+    const c = calls[0];
+    replies.push({ range, ms: c?.ms, tokens: c?.generatedTokens, stop: c?.stopReason, raw: c?.reply, identities, rejected: c?.rejected });
+    console.log('batch', range, `${c?.ms} ms ${c?.generatedTokens} tokens ${c?.stopReason}`, JSON.stringify(identities), JSON.stringify(c?.rejected));
+  }
+  const proposals = (work.scriptState.__aliasProposals ?? []).map((p) => ({ name: p.name, of: work.entities.find((e) => e.id === p.of)?.name }));
+  const score = { calls: replies.length, cut: replies.filter((r) => r.stop === 'length').length, cards: work.entities.map((e) => e.name), proposals };
+  console.log('batch score', JSON.stringify(score));
+  console.log('wrote', writeMeasurement(`batch-${LABEL}`, { url, backup, sampling: HELPER_JSON_SAMPLING, score, replies }));
 });
