@@ -94,14 +94,15 @@ export function memoryOverdue(actionCount: number, existing: Pick<Memory, 'toAct
 /**
  * Memories waiting for the combined entity call before it runs regardless of typing or the next
  * turn. Without it a fast player starves it: each idle gap goes to the next memory, and typing cuts
- * the entity call after it (no entities in a 90-turn run with a 6 s read gap). The same 2 as
- * `ENTITY_BATCH`, so a full batch is always overdue. [provisional]
+ * the entity call after it (no entities in a 90-turn run with a 6 s read gap). The batch size, so a
+ * full batch is always overdue. 3, not 2: states come from the per-turn state read now, not from the
+ * batch call (C4). [provisional]
  */
-export const ENTITY_OVERDUE = 2;
+export const ENTITY_BATCH = 3;
 
 export function entitiesOverdue(adventure: Pick<Adventure, 'memories' | 'scriptState'>): boolean {
   const done = adventure.scriptState.__entitiesAt ?? 0;
-  return adventure.memories.filter((m) => !m.stale && m.toAction > done).length >= ENTITY_OVERDUE;
+  return adventure.memories.filter((m) => !m.stale && m.toAction > done).length >= ENTITY_BATCH;
 }
 
 export function createMemory(text: string, actions: Action[], range: MemoryRange, embedding?: number[]): Memory {

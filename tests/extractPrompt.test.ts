@@ -5,6 +5,7 @@ import { createBlankAdventure } from '@core/model/scenario';
 import { EXTRACT_JSON_SCHEMA } from '@core/memory/extractJsonSchema';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import { extractPrompt } from '@core/text/prompts';
+import { statePrompt } from '@core/text/statePrompt';
 import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure } from './fixtures/memoryJobs';
 
 describe('the entity call’s prompt', () => {
@@ -34,6 +35,25 @@ describe('the entity call’s prompt', () => {
 
   it('asks for the JSON on one line, grammar or not', () => {
     for (const g of [true, false]) expect(extractPrompt('[0] Mira waves.', [], g)).toMatch(/on one line, with no line breaks/);
+  });
+});
+
+describe('the state read’s prompt', () => {
+  it('lists each subject’s current record, the passage, then the P8b ask, and no effect on/off', () => {
+    const p = statePrompt(
+      [
+        { who: 'Mira', now: { posture: 'standing', holds: 'Horn' } },
+        { who: 'you', now: {} },
+      ],
+      '[4] Mira sits.',
+      4,
+      true,
+    );
+    expect(p).toContain('Mira: posture standing; holds Horn\nyou: nothing yet');
+    expect(p).toContain('---\n[4] Mira sits.\n---');
+    expect(p).toMatch(/At most 4 entries.*at most four words.*\[number\] of the paragraph.*no longer true at the end; skip values that did not change/s);
+    expect(p).not.toMatch(/effect|<Name>/i);
+    expect(statePrompt([], '', 2, false)).toContain('{"changes":[{"who":"<Name>"');
   });
 });
 

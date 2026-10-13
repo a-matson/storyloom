@@ -9,6 +9,7 @@ import { NeverWrite } from './NeverWrite';
 import { NumberInput } from './NumberInput';
 import { Section, Setting } from './Section';
 import { SettingSwitch } from './SettingSwitch';
+import { StateRead } from './StateRead';
 
 type Settings = AdventureSettings;
 type Update = (patch: Partial<Settings>) => void;
@@ -134,6 +135,7 @@ function MemorySystem({ s, update }: { s: Settings; update: Update }) {
         checked={s.memory.introductions}
         onChange={(on) => memory({ introductions: on })}
       />
+      <StateRead value={s.memory.stateRead} onChange={(stateRead) => memory({ stateRead })} />
       <Setting label="Bank size" htmlFor="bank">
         <NumberInput
           id="bank"

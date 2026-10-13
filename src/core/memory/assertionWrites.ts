@@ -12,7 +12,7 @@ export const CLOSED_KEYS: readonly string[] = ['species', 'eyes', 'horns'];
 export interface Rest {
   at: number;
   span?: string;
-  basis?: 'stated' | 'inferred';
+  basis?: 'stated' | 'inferred' | 'player';
 }
 
 /**
@@ -24,7 +24,7 @@ export interface Rest {
  * (`seen: false`), each once.
  */
 export function mergeAssertions(
-  e: Entity,
+  e: Pick<Entity, 'id' | 'kind' | 'canon' | 'cardId' | 'canonKeys'>,
   own: readonly Assertion[],
   incoming: { description: string; facts: readonly string[]; state?: Record<string, string> | undefined },
   atAction: number,

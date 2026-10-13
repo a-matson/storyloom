@@ -5,7 +5,12 @@ import { LlamaServerProvider } from '@adapters/providers/llamaServer';
 import { knownAs, matchEntity, mergeEntity } from '@core/memory/entities';
 import { HELPER_JSON_SAMPLING, passageOf } from '@core/memory/extract';
 import { nextScene } from '@core/memory/scene';
-import type { Entity, Scene } from '@core/model/types';
+import type { HelperCallLog } from '@core/memory';
+import { indexAssertions } from '@core/memory/assertionIndex';
+import { currentStates } from '@core/memory/looks';
+import { sceneIds } from '@core/memory/names';
+import { readState, stateCast, type StateUpdate } from '@core/memory/stateRead';
+import type { Adventure, Entity, Scene } from '@core/model/types';
 import { collect } from '@core/ports/provider';
 import * as S from '@core/schema';
 import { turnRead } from '@core/schema/extraction';
@@ -26,18 +31,16 @@ const grammar = (s: z.ZodMiniType) => {
   const { $schema: _d, ...schema } = z.toJSONSchema(s);
   return schema;
 };
-const enumOf = (list: readonly string[]) => z.enum(list.length ? (list as [string, ...string[]]) : ['nobody']);
+/** `MEASURE_READS=A` skips read B. */
+const READS = (process.env['MEASURE_READS'] ?? 'A,B').split(',');
 interface Reply {
   ms: number;
   tokens?: number | undefined;
   stop?: string | undefined;
   raw: string;
+  accepted?: number;
+  rejected?: StateUpdate['rejected'];
 }
-const Key = z.enum(['location', 'condition', 'posture', 'mood', 'wearing', 'holds']);
-/** Read B: a value padded to a longer cap ran its reply to the token cap (P8b). */
-const NOW_CHARS = 20;
-const B_TOKENS_EACH = 50;
-const B_TOKENS_CAP = 160;
 
 test.skipIf(!url || !backup)('state reads over a backup', { timeout: 3_600_000 }, async () => {
   const adv = S.Adventure.parse(JSON.parse(readFileSync(backup ?? '', 'utf8')).adventure);
@@ -74,6 +77,7 @@ test.skipIf(!url || !backup)('state reads over a backup', { timeout: 3_600_000 }
   let moves = 0;
   const newPlaces: string[] = [];
   const record: Record<string, Record<string, string>> = {};
+  let assertions: Adventure['assertions'] = [];
   for (let i = 2; i < adv.actions.length; i++) {
     if (adv.actions[i]?.type !== 'continue') continue;
     const n = i + 1;
@@ -95,32 +99,33 @@ test.skipIf(!url || !backup)('state reads over a backup', { timeout: 3_600_000 }
       scene = r.scene ?? scene;
     }
 
-    // Read B: the P8b shape for whoever read A left in the scene, against B's own record so far.
-    const here = scene.present;
-    const b = here.length
-      ? await ask(
-          `Characters in the scene, with their record before this passage:\n${here
-            .map(
-              (w) =>
-                `${w}: ${
-                  Object.entries(record[w] ?? {})
-                    .map(([k, v]) => `${k} ${v}`)
-                    .join('; ') || 'nothing yet'
-                }`,
-            )
-            .join('\n')}\n\n---\n${passage}\n---\n\n` +
-            `What changed for these characters by the end of the passage? At most ${2 * here.length} entries, the most important first: the character, which key, the new value in at most four words, and at = the [number] of the paragraph that shows it. ` +
-            'Skip values that did not change. Only what the passage states. Write the JSON on one line with no spaces after the commas.',
-          z.object({
-            changes: z
-              .array(z.object({ who: enumOf(here), key: Key, now: z.string().check(z.maxLength(NOW_CHARS)), at: z.number() }))
-              .check(z.maxLength(2 * here.length)),
-          }),
-          Math.min(B_TOKENS_EACH * here.length, B_TOKENS_CAP),
-        )
+    // Read B from core, on the adventure as it stood after this turn, with B's own record so far.
+    const known = adv.entities.filter((e) => e.firstSeen <= i);
+    const work: Adventure = {
+      ...adv,
+      actions: adv.actions.slice(0, n),
+      entities: known,
+      assertions,
+      plot: { ...adv.plot, scene: sceneIds(scene, known) },
+      scriptState: {},
+    };
+    const calls: HelperCallLog[] = [];
+    const subjects = READS.includes('B') ? stateCast(work) : [];
+    const r = subjects.length
+      ? await readState(work, { provider, template: adv.settings.template, cuts: { cutCalls: 0, finishedPastCut: 0, calls } })
       : undefined;
-    // A later `at` for the same key wins.
-    for (const c of (b?.parsed?.changes ?? []).toSorted((x, y) => x.at - y.at)) record[c.who] = { ...record[c.who], [c.key]: c.now };
+    assertions = work.assertions;
+    const call = calls[0];
+    const b = call && {
+      ms: call.ms,
+      tokens: call.generatedTokens,
+      stop: call.stopReason,
+      raw: call.reply,
+      accepted: r?.changed ?? 0,
+      rejected: r?.rejected ?? [],
+    };
+    const ix = indexAssertions(assertions);
+    for (const s of subjects) record[s.name] = currentStates(ix.of(s.id));
 
     rows.push({
       i,
@@ -129,9 +134,18 @@ test.skipIf(!url || !backup)('state reads over a backup', { timeout: 3_600_000 }
       present: scene.present,
       record: structuredClone(record),
       a: { ms: a.ms, tokens: a.tokens, stop: a.stop, raw: a.text },
-      ...(b && { b: { ms: b.ms, tokens: b.tokens, stop: b.stop, raw: b.text } }),
+      ...(b && { b }),
     });
-    console.log('state', i, `A ${a.ms} ms ${a.stop}`, b ? `B ${b.ms} ms ${b.stop}` : '', '=>', scene.location, '|', scene.present.join(','));
+    console.log(
+      'state',
+      i,
+      `A ${a.ms} ms ${a.stop}`,
+      b ? `B ${b.ms} ms ${b.stop} ${b.raw} rejected ${JSON.stringify(b.rejected)}` : '',
+      '=>',
+      scene.location,
+      '|',
+      scene.present.join(','),
+    );
   }
   const mean = (xs: number[]) => (xs.length ? Math.round(xs.reduce((s, x) => s + x, 0) / xs.length) : 0);
   const bs = rows.flatMap((r) => (r.b ? [r.b] : []));
@@ -144,6 +158,9 @@ test.skipIf(!url || !backup)('state reads over a backup', { timeout: 3_600_000 }
     cutReplies: [...rows.map((r) => r.a), ...bs].filter((x) => x.stop === 'length').length,
     meanMsA: mean(rows.map((r) => r.a.ms)),
     meanMsB: mean(bs.map((x) => x.ms)),
+    // C8: above 20 % the next item loosens the subject rule.
+    stateAccepted: bs.reduce((s, x) => s + (x.accepted ?? 0), 0),
+    stateRejected: bs.reduce((s, x) => s + (x.rejected?.length ?? 0), 0),
   };
   console.log('state score', JSON.stringify(score));
   console.log('wrote', writeMeasurement(`state-${LABEL}`, { url, backup, set: SET, sampling: HELPER_JSON_SAMPLING, score, rows }));

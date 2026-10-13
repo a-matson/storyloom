@@ -21,7 +21,16 @@ describe('schemas', () => {
         dryMultiplier: 0.8,
         dynamic: false,
       },
-      memory: { autoSummary: true, memoryBank: true, bankSize: 200, contradictionCheck: false, entityFacts: false, introductions: true, sceneEachTurn: true },
+      memory: {
+        autoSummary: true,
+        memoryBank: true,
+        bankSize: 200,
+        contradictionCheck: false,
+        entityFacts: false,
+        introductions: true,
+        sceneEachTurn: true,
+        stateRead: 'every',
+      },
       context: {
         cacheStableLayout: true,
         evictionChunk: 8,
