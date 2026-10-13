@@ -9,6 +9,7 @@ import { mergeEntity } from '@core/memory/entities';
 import { createBlankAdventure, type TurnTrace } from '@core/model';
 import { NoopScriptRunner, type HookInput, type HookResult, type CompletionChunk, type Storage } from '@core/ports';
 import * as S from '@core/schema';
+import { HELPER_REPLY_CAP, HelperCall } from '@core/schema';
 import { createApproxTokenizer } from '@core/text';
 import { buildTrace, clearJobLog, hashPrompt, overlappingJobs, TRACE_PROMPT_CAP, trackJob } from '@core/trace';
 import { runTurn, type TurnEvent } from '@core/turn';
@@ -54,7 +55,7 @@ describe('helper call log', () => {
   it('stores a call that parses as HelperCall, its reply cut at the cap', async () => {
     const stored: unknown[] = [];
     const storage = { putHelperCall: (c: unknown) => Promise.resolve(void stored.push(c)) } as unknown as Storage;
-    const long = 'x'.repeat(S.HELPER_REPLY_CAP + 10);
+    const long = 'x'.repeat(HELPER_REPLY_CAP + 10);
     const log: HelperCallLog = {
       job: 'entity',
       cut: false,
@@ -66,10 +67,10 @@ describe('helper call log', () => {
       rejected: [{ value: 'v', reason: 'r' }],
     };
     recordHelperCalls(storage, createBlankAdventure('T', 'Go.'), [log], 'wayfarer');
-    const call = S.HelperCall.parse(stored[0]);
+    const call = HelperCall.parse(stored[0]);
     expect(call).toMatchObject({ job: 'entity', model: 'wayfarer', accepted: 1, actionCount: 1 });
-    expect(call.reply).toHaveLength(S.HELPER_REPLY_CAP);
-    expect(S.HelperCall.safeParse({ ...call, reply: long }).success).toBe(false);
+    expect(call.reply).toHaveLength(HELPER_REPLY_CAP);
+    expect(HelperCall.safeParse({ ...call, reply: long }).success).toBe(false);
   });
 });
 

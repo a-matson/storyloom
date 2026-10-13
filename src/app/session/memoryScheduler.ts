@@ -21,8 +21,6 @@ interface Host {
   record?: (calls: HelperCallLog[], model: string | undefined) => void;
 }
 
-const newCuts = (): CutCounts => ({ cutCalls: 0, finishedPastCut: 0, calls: [] });
-
 /**
  * Memory and summary jobs on slot 1, between turns. Slots share one GPU, so a job that overlaps the
  * next story request slows it: jobs wait while the player types, and the first keystroke cuts a
@@ -67,6 +65,17 @@ export class MemoryScheduler {
   }
 
   /** First on slot 1 so the badge comes while the player reads; typing does not cut it (a few seconds), the next turn does. */
+  /** One helper job on the helper model, its calls recorded for the trace drawer even when it throws. */
+  private async logged<T>(job: (deps: HelperModel & { cuts: CutCounts }) => Promise<T>): Promise<T> {
+    const helper = await this.host.helperModel();
+    const calls: HelperCallLog[] = [];
+    try {
+      return await job({ ...helper, cuts: { cutCalls: 0, finishedPastCut: 0, calls } });
+    } finally {
+      this.host.record?.(calls, helper.model);
+    }
+  }
+
   private async check(idle: AbortSignal): Promise<void> {
     const adv = this.host.adventure();
     const last = adv.actions.at(-1);
@@ -76,14 +85,8 @@ export class MemoryScheduler {
       const output = actionText(last);
       const lines = checkInputs(adv, output);
       if (!lines.length) return;
-      const helper = await this.host.helperModel();
-      const cuts = newCuts();
-      try {
-        const fact = await checkOutput(output, lines, { ...helper, signal: idle, cuts });
-        if (!idle.aborted) this.host.flag(fact === null ? null : { actionId: last.id, fact });
-      } finally {
-        this.host.record?.(cuts.calls ?? [], helper.model);
-      }
+      const fact = await this.logged((d) => checkOutput(output, lines, { ...d, signal: idle }));
+      if (!idle.aborted) this.host.flag(fact === null ? null : { actionId: last.id, fact });
     } catch (e) {
       if (!idle.aborted) console.warn('contradiction check failed', e);
     }
@@ -114,9 +117,7 @@ export class MemoryScheduler {
     if (!introductions && !sceneEachTurn) return;
     try {
       const { introduce } = await loadMemoryJobs();
-      const helper = await this.host.helperModel();
-      const cuts = newCuts();
-      const r = await introduce(this.host.adventure(), { ...helper, cuts }).finally(() => this.host.record?.(cuts.calls ?? [], helper.model));
+      const r = await this.logged((d) => introduce(this.host.adventure(), d));
       if (r.touched || r.sceneUpdated) this.host.changed();
       if (r.touched && this.idle && !this.idle.aborted) this.portraits(this.idle);
     } catch (e) {

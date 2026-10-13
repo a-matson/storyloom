@@ -3,7 +3,6 @@ import { followLog } from '@core/memory';
 import { utilityProvider, type Adventure, type AdventureSettings, type AppSettings, type PlotComponents, type TurnTrace } from '@core/model';
 import type { Embedder, ScriptRunner } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
-import { recordHelperCalls } from './helperCalls';
 import { storyModel } from './helperModel';
 import { IdleWork } from './idleWork';
 import { dropOrphanImages, regenerateImage, seeImage } from './images';
@@ -55,7 +54,12 @@ export class GameSession {
     annotate: (s) => this.log.annotate(s),
     portraits: async (idle) => (await import('./portraits')).queuePortraits(this, idle),
     flag: (contradiction) => this.emit({ contradiction }),
-    record: (calls, model) => recordHelperCalls(this.svc.storage, this.adv, calls, model),
+    // Loaded on first use: start-up bundle budget.
+    record: (calls, model) =>
+      void import('./helperCalls').then(
+        ({ recordHelperCalls }) => recordHelperCalls(this.svc.storage, this.adv, calls, model),
+        (e: unknown) => console.warn('could not store helper calls', e),
+      ),
   });
   private readonly idleWork = new IdleWork({
     adventure: () => this.adv,

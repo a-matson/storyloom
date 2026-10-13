@@ -32,7 +32,8 @@ const helper = (i: number, adventureId: string): HelperCall => ({
 });
 
 describe('DexieStorage helper calls', () => {
-  it('round-trips newest first, prunes past the cap and deletes them with the adventure', async () => {
+  // fake-indexeddb counts 800 rows per put: ~3 s under coverage, more on CI.
+  it('round-trips newest first, prunes past the cap and deletes them with the adventure', { timeout: 30_000 }, async () => {
     const name = `helper-${++n}`;
     const s = await fresh(name);
     const adv = makeAdventure({ actions: 2 });
