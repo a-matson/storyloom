@@ -28,7 +28,7 @@ test('the Characters tab edits, pins and promotes an entity', async ({ page }) =
   await expect(drawer.getByRole('button', { name: 'Is a story card' })).toBeDisabled();
   await page.keyboard.press('Escape');
   await expect(drawer).toBeHidden();
-  await expect(page.getByText('location: the gate')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open Merav' })).toContainText('location: the gate');
 
   await page.getByRole('button', { name: 'Story cards · 1' }).click();
   await expect(page.getByRole('button', { name: 'Edit story card Merav' })).toBeVisible();
