@@ -43,6 +43,8 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps): Promis
   const plot = sceneEachTurn ? withScene(adventure.plot, reply.scene, name, n - 1, { sourceId: last.id, sourceHash: hash }) : adventure.plot;
   const sceneUpdated = plot !== adventure.plot;
   adventure.plot = plot;
+  const call = deps.cuts?.calls?.at(-1);
+  if (call) call.accepted = touched + (sceneUpdated ? 1 : 0);
   // No speakers: the short reply leaves them to the client guess and the batch call.
   return { touched, speakers: new Map(), sceneUpdated };
 }

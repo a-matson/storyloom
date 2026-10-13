@@ -3,6 +3,7 @@ import { followLog } from '@core/memory';
 import { utilityProvider, type Adventure, type AdventureSettings, type AppSettings, type PlotComponents, type TurnTrace } from '@core/model';
 import type { Embedder, ScriptRunner } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
+import { recordHelperCalls } from './helperCalls';
 import { storyModel } from './helperModel';
 import { IdleWork } from './idleWork';
 import { dropOrphanImages, regenerateImage, seeImage } from './images';
@@ -54,6 +55,7 @@ export class GameSession {
     annotate: (s) => this.log.annotate(s),
     portraits: async (idle) => (await import('./portraits')).queuePortraits(this, idle),
     flag: (contradiction) => this.emit({ contradiction }),
+    record: (calls, model) => recordHelperCalls(this.svc.storage, this.adv, calls, model),
   });
   private readonly idleWork = new IdleWork({
     adventure: () => this.adv,
@@ -200,7 +202,8 @@ export class GameSession {
     const utility = utilityProvider(this.app);
     if (utility) {
       const provider = this.svc.providerFor(this.app, utility.id);
-      if ((await provider.health()).ok) return { ...storyModel(this), provider, template: utility.template ?? this.adv.settings.template };
+      const health = await provider.health();
+      if (health.ok) return { ...storyModel(this), provider, template: utility.template ?? this.adv.settings.template, model: health.modelId };
       if (!this.utilityDown) console.warn(`utility model at ${utility.baseUrl} is unreachable; helper jobs use the story model`);
       this.utilityDown = true;
     }

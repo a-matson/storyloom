@@ -151,6 +151,23 @@ test('the content clause rides in the system prompt, and Custom replaces it', as
   await expect(dialog.getByText(/fiction for an adult reader/)).toHaveCount(0);
 });
 
+test("the turn's trace lists the turn read that ran after it", async ({ page }) => {
+  await openSeededAdventure(page, 3);
+  await page.getByRole('textbox', { name: 'Take a turn' }).fill('look around');
+  await page.getByRole('button', { name: 'Send' }).click();
+  // The read runs once the turn ends; the drawer loads the log when it opens.
+  await expect(async () => {
+    await page.getByRole('button', { name: 'Trace' }).last().click();
+    const dialog = page.getByRole('dialog', { name: 'Turn trace' });
+    try {
+      await expect(dialog.getByText('Helper calls')).toBeVisible({ timeout: 1000 });
+      await expect(dialog.getByText(/^entity · .* \d+ tok · .*kept \d+/)).toBeVisible();
+    } finally {
+      await page.keyboard.press('Escape');
+    }
+  }).toPass();
+});
+
 test('without a scene or a mention, no structured blocks are sent', async ({ page }) => {
   await openSeededAdventure(page, 3);
   const dialog = await takeTurnAndViewContext(page);

@@ -1,0 +1,33 @@
+{
+  "sets": {
+    "m12-dogfood": {
+      "start": "noodle shop under the railway arches",
+      "place": [
+        { "from": 0, "to": 12, "place": "shop" },
+        { "from": 13, "to": 31, "place": "woods" },
+        { "from": 32, "to": 56, "place": "cottage" },
+        { "from": 57, "to": 61, "place": "bedroom" }
+      ],
+      "present": [
+        { "from": 0, "to": 24, "names": ["Minos"] },
+        { "from": 25, "to": 26, "names": ["Minos", "Vorthak"] },
+        { "from": 27, "to": 30, "names": ["Minos", "Vorthak", "Weever"] },
+        { "from": 31, "to": 46, "names": ["Minos"] },
+        { "from": 47, "to": 55, "names": ["Minos", "Vorthak", "Weever"] },
+        { "from": 56, "to": 61, "names": ["Minos"] }
+      ],
+      "placeWords": {
+        "bedroom": ["bed"],
+        "cottage": ["cottage", "room", "sofa", "doorway", "house", "basement"],
+        "woods": ["wood", "forest", "clearing", "tree", "outside"],
+        "shop": ["shop", "restaurant", "bar", "table", "arch", "window"]
+      },
+      "checkpoints": [
+        { "at": 61, "who": "Minos", "key": "location", "value": "bed" },
+        { "at": 61, "who": "Minos", "key": "condition", "value": "awake" },
+        { "at": 61, "who": "Minos", "key": "posture", "value": "sitting" },
+        { "at": 61, "who": "Minos", "key": "wearing", "value": "dressed" }
+      ]
+    }
+  }
+}

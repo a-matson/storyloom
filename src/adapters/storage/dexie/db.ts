@@ -1,5 +1,5 @@
 import { Dexie, type EntityTable, type Table } from 'dexie';
-import type { AppSettings, Scenario, TurnTrace } from '@core/model';
+import type { AppSettings, HelperCall, Scenario, TurnTrace } from '@core/model';
 import { splitAdventure, type ActionRow, type AdventureRow, type CardRow, type EntityRow, type ImageRow, type MemoryRow } from './rows';
 import type { Adventure } from '@core/model';
 
@@ -13,6 +13,7 @@ export class StoryloomDb extends Dexie {
   settings!: Table<AppSettings, string>;
   traces!: Table<TurnTrace, string>;
   images!: Table<ImageRow, [string, string]>;
+  helperCalls!: Table<HelperCall, [string, string]>;
 
   constructor(name = 'storyloom') {
     super(name);
@@ -43,5 +44,7 @@ export class StoryloomDb extends Dexie {
     this.version(3).stores({ images: '[adventureId+id], adventureId' });
     // Version 4 only adds the (empty) entities table; stored adventures parse with none.
     this.version(4).stores({ entities: '[adventureId+id], adventureId' });
+    // Version 5 only adds the (empty) helper call log.
+    this.version(5).stores({ helperCalls: '[adventureId+id], adventureId, [adventureId+createdAt]' });
   }
 }

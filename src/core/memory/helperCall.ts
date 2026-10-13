@@ -1,4 +1,4 @@
-import { trackJob } from '../trace';
+import { hashPrompt, trackJob } from '../trace';
 import type { JobKind } from '../model/types';
 import type { CompletionChunk, CompletionStats, Provider } from '../ports/provider';
 import { sentenceGrammar } from '../text/prompts';
@@ -18,8 +18,15 @@ export interface HelperCallLog {
   generatedTokens: number;
   /** The raw reply, so a live run can read what the helper wrote before any guard. */
   reply: string;
+  ms: number;
+  stopReason?: string | undefined;
+  /** Hash of the rendered prompt: the same input read twice, or two inputs. */
+  promptHash: string;
   /** Entity calls: trait facts the reply carried. */
   factsProposed?: number;
+  /** Set by the caller after its guards: items kept, and values dropped with why. */
+  accepted?: number;
+  rejected?: { value: string; reason: string }[];
 }
 
 export interface CutCounts {
@@ -44,11 +51,13 @@ export interface CallDeps {
 export function helperCall(
   job: JobKind,
   maxTokens: number,
+  prompt: string,
   start: (signal: AbortSignal) => AsyncIterable<CompletionChunk>,
   { cancel, cuts }: CallDeps,
 ): Promise<{ text: string; stats?: CompletionStats | undefined }> {
   return trackJob(job, async () => {
     const call = new AbortController();
+    const t0 = Date.now();
     const follow = () => call.abort(cancel?.reason);
     if (cancel?.aborted) follow();
     else cancel?.addEventListener('abort', follow, { once: true });
@@ -68,7 +77,15 @@ export function helperCall(
     } finally {
       cancel?.removeEventListener('abort', follow);
     }
-    cuts?.calls?.push({ job, cut: call.signal.aborted, generatedTokens: stats?.generatedTokens ?? tokens, reply: text });
+    cuts?.calls?.push({
+      job,
+      cut: call.signal.aborted,
+      generatedTokens: stats?.generatedTokens ?? tokens,
+      reply: text,
+      ms: Date.now() - t0,
+      stopReason: stats?.stopReason,
+      promptHash: hashPrompt(prompt),
+    });
     if (call.signal.aborted) {
       if (cuts) cuts.cutCalls += 1;
       call.signal.throwIfAborted();

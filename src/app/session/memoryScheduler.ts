@@ -1,4 +1,4 @@
-import { entitiesOverdue, loadMemoryJobs, memoryOverdue } from '@core/memory';
+import { entitiesOverdue, loadMemoryJobs, memoryOverdue, type CutCounts, type HelperCallLog } from '@core/memory';
 import { actionText, type Adventure, type Speaker } from '@core/model';
 import type { Embedder } from '@core/ports';
 import type { HelperModel } from './types';
@@ -17,7 +17,11 @@ interface Host {
   portraits: (idle: AbortSignal) => Promise<void>;
   /** The contradiction check's verdict on the last output; an edit or retry ends the idle period before it arrives. */
   flag: (contradiction: { actionId: string; fact: string } | null) => void;
+  /** The helper calls one job made, for the trace drawer. */
+  record?: (calls: HelperCallLog[], model: string | undefined) => void;
 }
+
+const newCuts = (): CutCounts => ({ cutCalls: 0, finishedPastCut: 0, calls: [] });
 
 /**
  * Memory and summary jobs on slot 1, between turns. Slots share one GPU, so a job that overlaps the
@@ -72,8 +76,14 @@ export class MemoryScheduler {
       const output = actionText(last);
       const lines = checkInputs(adv, output);
       if (!lines.length) return;
-      const fact = await checkOutput(output, lines, { ...(await this.host.helperModel()), signal: idle });
-      if (!idle.aborted) this.host.flag(fact === null ? null : { actionId: last.id, fact });
+      const helper = await this.host.helperModel();
+      const cuts = newCuts();
+      try {
+        const fact = await checkOutput(output, lines, { ...helper, signal: idle, cuts });
+        if (!idle.aborted) this.host.flag(fact === null ? null : { actionId: last.id, fact });
+      } finally {
+        this.host.record?.(cuts.calls ?? [], helper.model);
+      }
     } catch (e) {
       if (!idle.aborted) console.warn('contradiction check failed', e);
     }
@@ -104,7 +114,9 @@ export class MemoryScheduler {
     if (!introductions && !sceneEachTurn) return;
     try {
       const { introduce } = await loadMemoryJobs();
-      const r = await introduce(this.host.adventure(), await this.host.helperModel());
+      const helper = await this.host.helperModel();
+      const cuts = newCuts();
+      const r = await introduce(this.host.adventure(), { ...helper, cuts }).finally(() => this.host.record?.(cuts.calls ?? [], helper.model));
       if (r.touched || r.sceneUpdated) this.host.changed();
       if (r.touched && this.idle && !this.idle.aborted) this.portraits(this.idle);
     } catch (e) {
@@ -173,6 +185,7 @@ export class MemoryScheduler {
       const { runMemoryMaintenance } = await loadMemoryJobs();
       const deps = { ...(await this.host.helperModel()), embedder: await this.host.embedder(), historyStart: this.host.historyStart?.() };
       const report = await runMemoryMaintenance(this.host.adventure(), { ...deps, signal: AbortSignal.any([idle, cancel.signal]), cancel: cancel.signal });
+      this.host.record?.(report.calls ?? [], deps.model);
       const { summaryUpdated, summaryFirst, cutCalls, finishedPastCut, factsProposed, rejected } = report;
       const entityCalls = (report.calls ?? []).filter((c) => c.job === 'entity');
       // A live run reads these from the console: whether the summary keeps up, what typing cuts, what the entity call proposes and its guards drop.

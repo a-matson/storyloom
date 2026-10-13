@@ -38,6 +38,7 @@ export async function refreshSummary(adventure: Adventure, deps: Omit<Maintenanc
   const { text: raw, stats } = await helperCall(
     'summary',
     500,
+    prompt.prompt,
     (signal) =>
       deps.provider.complete(
         { prompt: prompt.prompt, maxTokens: 500, temperature: 0.3, topP: 0.9, stop: prompt.stop, cachePrompt: false, slotId: 1, grammar },

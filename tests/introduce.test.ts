@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { mergeEntity } from '@core/memory/entities';
 import { candidateNames } from '@core/memory/fold';
+import type { HelperCallLog } from '@core/memory';
 import { introduce } from '@core/memory/introduce';
+import { hashPrompt } from '@core/trace';
 import { appearanceOf } from '@core/memory/looks';
 import type { Adventure } from '@core/model';
 import type { CompletionRequest } from '@core/ports';
@@ -43,6 +45,15 @@ describe('introduce', () => {
     );
     return { adv, reqs, deps: { provider, template: adv.settings.template } };
   }
+
+  it('logs the turn read with its timing and hash, and sends the JSON sampling', async () => {
+    const { adv, reqs, deps } = setup('You meet Tamsin at the ferry.');
+    const cuts = { cutCalls: 0, finishedPastCut: 0, calls: [] as HelperCallLog[] };
+    await introduce(adv, { ...deps, cuts });
+    expect(reqs[0]).toMatchObject({ repeatLastN: 256, presencePenalty: 0.3 });
+    expect(cuts.calls).toEqual([expect.objectContaining({ job: 'entity', cut: false, accepted: 1, promptHash: hashPrompt(reqs[0]?.prompt ?? '') })]);
+    expect(cuts.calls[0]?.ms).toBeGreaterThanOrEqual(0);
+  });
 
   it('reads the opening once, then only the last two actions when a new name appears', async () => {
     const { adv, reqs, deps } = setup('You meet Tamsin at the ferry.');

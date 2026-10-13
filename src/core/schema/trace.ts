@@ -71,3 +71,26 @@ export const TurnTrace = z.object({
   /** What actually went wrong behind `errorKind`, `unknown` most of all. */
   error: z.optional(z.object({ message: z.string(), status: z.optional(z.number()) })),
 });
+
+/** A helper reply kept in its log row; longer ones are cut. [provisional] */
+export const HELPER_REPLY_CAP = 2048;
+
+/** One helper call on slot 1, kept so a turn's reads can be explained afterwards. */
+export const HelperCall = z.object({
+  id: z.string(),
+  adventureId: z.string(),
+  createdAt: z.number(),
+  /** Actions in the adventure when the call ended. */
+  actionCount: count,
+  job: JobKind,
+  model: z.optional(z.string()),
+  ms: count,
+  promptHash: z.string(),
+  generatedTokens: count,
+  stopReason: z.optional(z.string()),
+  cut: z.boolean(),
+  reply: z.string().check(z.maxLength(HELPER_REPLY_CAP)),
+  /** Items the caller's guards kept and dropped. */
+  accepted: count,
+  rejected: z.array(z.object({ value: z.string(), reason: z.string() })),
+});

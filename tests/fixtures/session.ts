@@ -23,6 +23,7 @@ export function setup(
     async putTrace(t: TurnTrace) {
       traces.push(t);
     },
+    async putHelperCall() {},
     async putImage(adventureId: string, id: string, blob: Blob) {
       images.set(`${adventureId}|${id}`, blob);
     },

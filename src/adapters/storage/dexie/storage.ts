@@ -1,5 +1,5 @@
-import type { Action, Adventure, AppSettings, Entity, Memory, Scenario, StoryCard, TurnTrace } from '@core/model';
-import { StorageError, summarise, TRACE_CAP_PER_ADVENTURE, type AdventureSummary, type Storage } from '@core/ports';
+import type { Action, Adventure, AppSettings, Entity, HelperCall, Memory, Scenario, StoryCard, TurnTrace } from '@core/model';
+import { HELPER_CALL_CAP_PER_ADVENTURE, StorageError, summarise, TRACE_CAP_PER_ADVENTURE, type AdventureSummary, type Storage } from '@core/ports';
 import * as S from '@core/schema';
 import { clearPending, takePending } from '../pending';
 import { StoryloomDb } from './db';
@@ -102,9 +102,10 @@ export class DexieStorage implements Storage {
 
   async deleteAdventure(id: string): Promise<void> {
     const db = this.db;
-    await db.transaction('rw', [db.adventures, db.actions, db.storyCards, db.memories, db.entities, db.traces, db.images], async () => {
+    const owned = [db.actions, db.storyCards, db.memories, db.entities, db.traces, db.images, db.helperCalls];
+    await db.transaction('rw', [db.adventures, ...owned], async () => {
       await db.adventures.delete(id);
-      await Promise.all([db.actions, db.storyCards, db.memories, db.entities, db.traces, db.images].map((t) => t.where('adventureId').equals(id).delete()));
+      await Promise.all(owned.map((t) => t.where('adventureId').equals(id).delete()));
     });
     this.saved.delete(id);
   }
@@ -139,6 +140,21 @@ export class DexieStorage implements Storage {
   async listTraces(adventureId: string): Promise<TurnTrace[]> {
     const rows = await this.db.traces.where('[adventureId+createdAt]').between([adventureId, -Infinity], [adventureId, Infinity]).toArray();
     return rows.toReversed().map((r) => parseOrThrow(S.TurnTrace, r, `Trace "${r.turnId}"`));
+  }
+
+  async putHelperCall(c: HelperCall): Promise<void> {
+    const db = this.db;
+    await db.transaction('rw', db.helperCalls, async () => {
+      await db.helperCalls.put(c);
+      const byAge = db.helperCalls.where('[adventureId+createdAt]').between([c.adventureId, -Infinity], [c.adventureId, Infinity]);
+      const overflow = (await byAge.count()) - HELPER_CALL_CAP_PER_ADVENTURE;
+      if (overflow > 0) await db.helperCalls.bulkDelete(await byAge.limit(overflow).primaryKeys());
+    });
+  }
+
+  async listHelperCalls(adventureId: string): Promise<HelperCall[]> {
+    const rows = await this.db.helperCalls.where('[adventureId+createdAt]').between([adventureId, -Infinity], [adventureId, Infinity]).toArray();
+    return rows.toReversed().map((r) => parseOrThrow(S.HelperCall, r, `Helper call "${r.id}"`));
   }
 
   async listScenarios(): Promise<Scenario[]> {
