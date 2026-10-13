@@ -6,6 +6,7 @@ import { parseJsonReply } from '../text/jsonReply';
 import { CHECK_SYSTEM, checkPrompt } from '../text/prompts';
 import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
+import { indexAssertions, textOf } from './assertionIndex';
 import { entityNamedIn } from './entities';
 import { helperCall } from './helperCall';
 import type { MaintenanceDeps } from './memoryJobs';
@@ -22,12 +23,18 @@ const CHECK_TOKENS = 60;
  * What one output is checked against: the scene line, pinned and conflict facts, and the
  * description of every canon entity the output or the scene names. Empty means no call.
  */
-export function checkInputs(adv: Pick<Adventure, 'entities' | 'plot'>, output: string): string[] {
+export function checkInputs(adv: Pick<Adventure, 'entities' | 'assertions' | 'plot'>, output: string): string[] {
   const scene = renderScene(adv.plot.scene);
   const named = `${output}\n${scene}`;
+  const ix = indexAssertions(adv.assertions);
   return [
     ...(scene ? [`Scene: ${scene}`] : []),
-    ...adv.entities.flatMap((e) => e.facts.filter((f) => f.pinned || f.conflict).map((f) => `${e.name}: ${f.text}`)),
+    ...adv.entities.flatMap((e) =>
+      ix
+        .of(e.id)
+        .filter((a) => a.pinned || a.kind === 'conflict')
+        .map((a) => `${e.name}: ${textOf(a)}`),
+    ),
     ...adv.entities
       .filter((e) => e.canon === true && e.description.trim() !== '' && entityNamedIn([e], named) !== undefined)
       .map((e) => `${e.name}: ${e.description.trim()}`),
