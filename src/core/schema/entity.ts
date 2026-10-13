@@ -46,6 +46,8 @@ export const Entity = z.object({
   /** Values the player set (and legacy model ones); a current state fact of the same key overrides it (`currentStates`). */
   state: z.record(z.string(), z.string()),
   relations: z.array(Relation),
+  /** A place's id of the place it is inside (a room in a house): moving between them is no change of place. */
+  partOf: z.optional(z.string()),
   /** Action indexes. */
   firstSeen: count,
   lastSeen: count,

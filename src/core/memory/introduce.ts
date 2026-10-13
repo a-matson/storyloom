@@ -2,7 +2,7 @@ import type { Adventure } from '../model/types';
 import { actionText } from '../model/types';
 import { hashPrompt } from '../trace';
 import { MAX_INTRODUCED } from '../schema/extraction';
-import { matchEntity } from './entities';
+import { knownAs, matchEntity, mergeEntity } from './entities';
 import { passageOf, readTurn, type EntityUpdate, type ExtractDeps } from './extract';
 import { foldEntities, newNamesIn, notAName } from './fold';
 import { MEMORY_SPAN } from './memoryBank';
@@ -12,6 +12,22 @@ import { withScene } from './scene';
 const INTRODUCE_SPAN = 2;
 
 type TurnUpdate = EntityUpdate & { sceneUpdated: boolean };
+
+/**
+ * Makes a place card for a location no place is known as; true when it did. The new place sits top-level,
+ * and when the scene was at a known place the player is asked whether it is inside it (a room read as a
+ * new place: the bedroom case). [provisional: ask vs rule, open question 1 of the M13-1 plan]
+ */
+function notePlace(adventure: Adventure, location: string, at: number): boolean {
+  const said = location.trim();
+  const places = adventure.entities.filter((e) => e.kind === 'place');
+  if (!said || knownAs(places, said)) return false;
+  adventure.entities = [...adventure.entities, mergeEntity(undefined, { name: said, kind: 'place', description: '', facts: [] }, at)];
+  const was = adventure.plot.scene?.location;
+  const inside = was === undefined ? undefined : knownAs(places, was);
+  if (inside) adventure.scriptState = { ...adventure.scriptState, __placeAsk: { place: said, inside: inside.name } };
+  return true;
+}
 const none = (): TurnUpdate => ({ touched: 0, speakers: new Map(), sceneUpdated: false });
 
 /**
@@ -34,13 +50,24 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps): Promis
   // ponytail: names past the grammar's cap wait for the batch call; raise MAX_INTRODUCED if openings name more.
   const names = introductions ? newNamesIn(adventure, range).slice(0, MAX_INTRODUCED) : [];
   const passage = passageOf(adventure, range);
-  const reply = names.length || sceneEachTurn ? await readTurn(passage, names, deps) : null;
+  // Aliases too, so a character the text calls "the dragon" resolves (the two P7c misses); new names, so one met this turn can be there.
+  const cast = [...new Set([...adventure.entities.flatMap((e) => (e.kind === 'character' ? [e.name, ...e.aliases] : [])), ...names])];
+  const prev = { location: adventure.plot.scene?.location, present: adventure.plot.scene?.present ?? [] };
+  const reply = names.length || sceneEachTurn ? await readTurn(passage, names, prev, cast, deps) : null;
   adventure.scriptState = { ...adventure.scriptState, __introducedAt: n, __introducedHash: hash };
   if (!reply) return none();
   // Cards first, so the scene's names resolve to them.
-  const touched = names.length ? foldEntities(adventure, reply.entities, passage, range) : 0;
-  const name = (s: string) => (notAName(adventure.plot, s) ? undefined : (matchEntity(adventure.entities, s)?.name ?? s));
-  const plot = sceneEachTurn ? withScene(adventure.plot, reply.scene, name, n - 1, { sourceId: last.id, sourceHash: hash }) : adventure.plot;
+  let touched = names.length ? foldEntities(adventure, reply.entities, passage, range) : 0;
+  // Through the entity first: a role alias ("the ferrywoman") is not a name by itself.
+  const name = (s: string) => {
+    const e = matchEntity(adventure.entities, s);
+    const stored = e ? (e.kind === 'character' ? e.name : undefined) : s;
+    return stored === undefined || notAName(adventure.plot, stored) ? undefined : stored;
+  };
+  const scene = sceneEachTurn ? reply.scene : undefined;
+  if (scene && notePlace(adventure, scene.location, n - 1)) touched++;
+  const places = adventure.entities.filter((e) => e.kind === 'place');
+  const plot = scene ? withScene(adventure.plot, scene, name, n - 1, { sourceId: last.id, sourceHash: hash }, places) : adventure.plot;
   const sceneUpdated = plot !== adventure.plot;
   adventure.plot = plot;
   const call = deps.cuts?.calls?.at(-1);

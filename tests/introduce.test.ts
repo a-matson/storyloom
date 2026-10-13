@@ -139,26 +139,61 @@ describe('introduce', () => {
   });
 
   describe('the scene', () => {
-    const at = { location: 'the ferry', present: ['tamsin', 'You'], items: ['the Ledger'] };
+    const at = { moved: true, location: 'the ferry', present: ['Tamsin'], left: [], weather: 'fog' };
+    const tamsin = () => ({ ...mergeEntity(undefined, { name: 'Tamsin', kind: 'character', description: '', facts: [] }, 0), aliases: ['the ferrywoman'] });
+    function sceneOnly(output: string, scene: object) {
+      const s = setup(output, { scene });
+      s.adv.entities = [tamsin()];
+      s.adv.settings.memory = { ...s.adv.settings.memory, introductions: false, sceneEachTurn: true };
+      return s;
+    }
 
     it('is read on a turn with no new name: a scene-only call, then the scene moves and is logged', async () => {
-      const { adv, reqs, deps } = setup('You wait at the ferry.', { scene: at });
-      adv.entities = [mergeEntity(undefined, { name: 'Tamsin', kind: 'character', description: '', facts: [] }, 0)];
-      adv.settings.memory = { ...adv.settings.memory, introductions: false, sceneEachTurn: true };
+      const { adv, reqs, deps } = sceneOnly('You wait at the ferry.', at);
       const n = adv.actions.length;
-      expect(await introduce(adv, deps)).toMatchObject({ touched: 0, sceneUpdated: true });
+      expect(await introduce(adv, deps)).toMatchObject({ touched: 1, sceneUpdated: true });
       expect(reqs).toHaveLength(1);
       expect(reqs[0]?.maxTokens).toBe(80);
       expect(reqs[0]?.prompt).not.toContain('New here:');
       expect(JSON.stringify(reqs[0]?.jsonSchema)).not.toContain('entities');
-      expect(adv.plot.scene).toMatchObject({
-        location: 'the ferry',
-        present: ['Tamsin'],
-        items: ['the Ledger'],
-        since: n - 1,
-        sourceId: adv.actions.at(-1)?.id,
-      });
+      expect(adv.plot.scene).toMatchObject({ location: 'the ferry', present: ['Tamsin'], weather: 'fog', since: n - 1, sourceId: adv.actions.at(-1)?.id });
       expect(adv.plot.sceneLog).toEqual([{ at: n - 1, location: 'the ferry' }]);
+      // The first place has no previous one to be part of.
+      expect(adv.entities.find((e) => e.kind === 'place')).toMatchObject({ name: 'the ferry', firstSeen: n - 1 });
+      expect(adv.scriptState.__placeAsk).toBeUndefined();
+    });
+
+    it('asks the cast as an enum with aliases, `nobody` when there is none, and tells the previous scene', async () => {
+      const { adv, reqs, deps } = sceneOnly('You wait at the ferry.', at);
+      adv.plot.scene = { location: 'the ferry', present: ['Tamsin'] };
+      await introduce(adv, deps);
+      const schema = JSON.stringify(reqs[0]?.jsonSchema);
+      expect(schema).toContain('"enum":["Tamsin","the ferrywoman"]');
+      expect(schema).toContain('"required":["moved","location","present","left","weather"]');
+      expect(reqs[0]?.prompt).toContain('Previous scene: location "the ferry", present: Tamsin. Known characters: Tamsin, the ferrywoman.');
+      expect(reqs[0]?.prompt).toContain('asleep or unconscious still counts; gone to another room does not');
+
+      const empty = sceneOnly('You wait at the ferry.', at);
+      empty.adv.entities = [];
+      await introduce(empty.adv, empty.deps);
+      expect(JSON.stringify(empty.reqs[0]?.jsonSchema)).toContain('"enum":["nobody"]');
+      expect(empty.reqs[0]?.prompt).toContain('Previous scene: not known yet. Known characters: none yet.');
+    });
+
+    it('resolves an alias to the character’s name', async () => {
+      const { adv, deps } = sceneOnly('You wait at the ferry.', { ...at, present: ['the ferrywoman'] });
+      await introduce(adv, deps);
+      expect(adv.plot.scene?.present).toEqual(['Tamsin']);
+    });
+
+    it('makes a place card for an unknown location and asks whether it is inside the previous place', async () => {
+      const { adv, deps } = sceneOnly('You climb to the loft.', { ...at, location: 'the loft' });
+      const ferry = mergeEntity(undefined, { name: 'the ferry', kind: 'place', description: '', facts: [] }, 0);
+      adv.entities.push(ferry);
+      adv.plot.scene = { location: 'the ferry', present: [] };
+      await introduce(adv, deps);
+      expect(adv.entities.map((e) => e.name)).toEqual(['Tamsin', 'the ferry', 'the loft']);
+      expect(adv.scriptState.__placeAsk).toEqual({ place: 'the loft', inside: 'the ferry' });
     });
 
     it('comes with the cards when there are new names, which it resolves to', async () => {
@@ -166,7 +201,9 @@ describe('introduce', () => {
       adv.settings.memory = { ...adv.settings.memory, sceneEachTurn: true };
       await introduce(adv, deps);
       expect(reqs).toHaveLength(1);
-      expect(adv.entities.map((e) => e.name)).toEqual(['Tamsin']);
+      // New names join the cast: one met this turn can be there.
+      expect(JSON.stringify(reqs[0]?.jsonSchema)).toMatch(/"present":\{[^}]*"enum":\[[^\]]*"Tamsin"/);
+      expect(adv.entities.map((e) => e.name)).toEqual(['Tamsin', 'the ferry']);
       expect(adv.plot.scene?.present).toEqual(['Tamsin']);
     });
 

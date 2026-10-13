@@ -1,15 +1,26 @@
 import { jsonrepair } from 'jsonrepair';
 import type { Adventure, ExtractionJson, Speaker } from '../model/types';
 import { z } from 'zod/mini';
-import { ExtractedEntity, IntroducedEntity, MAX_ENTITIES, MAX_INTRODUCED, ExtractionJson as Schema, SpokenIn, TurnScene } from '../schema/extraction';
+import {
+  ExtractedEntity,
+  IntroducedEntity,
+  MAX_ENTITIES,
+  MAX_INTRODUCED,
+  ExtractionJson as Schema,
+  sceneRead,
+  SpokenIn,
+  turnRead,
+  type SceneRead,
+} from '../schema/extraction';
 import { actionStoryText } from '../text/formatting';
 import { parseJsonReply } from '../text/jsonReply';
-import { EXTRACT_SYSTEM, extractPrompt, introducePrompt } from '../text/prompts';
+import { EXTRACT_SYSTEM, extractPrompt } from '../text/prompts';
+import { introducePrompt, type PrevScene } from '../text/turnReadPrompt';
 import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
 import { helperCall } from './helperCall';
 import { attributeSpeakers } from './entities';
-import { EXTRACT_JSON_SCHEMA, INTRODUCE_JSON_SCHEMA, SCENE_JSON_SCHEMA } from './extractJsonSchema';
+import { EXTRACT_JSON_SCHEMA, grammarOf } from './extractJsonSchema';
 import { foldEntities, type FoldLog } from './fold';
 import { entitiesOverdue, type MemoryRange } from './memoryBank';
 import type { MaintenanceDeps } from './memoryJobs';
@@ -55,15 +66,21 @@ const extractAccepter =
     return r.success ? r.data : null;
   };
 export interface TurnRead {
-  scene: z.output<typeof TurnScene>;
+  /** Absent when the reply's scene did not parse. */
+  scene?: SceneRead;
   entities: z.output<typeof IntroducedEntity>[];
 }
 const turnAccepter =
+  (cast: readonly string[]) =>
   (cut: boolean) =>
   (data: unknown): TurnRead | null => {
     const l = lists(data, cut);
-    // A bad scene costs only the scene.
-    return l && { scene: TurnScene.safeParse(l.data['scene']).data ?? {}, entities: l.items('entities', IntroducedEntity, MAX_INTRODUCED) };
+    if (!l) return null;
+    // Without the grammar a name outside the cast costs only itself, and a bad scene only the scene.
+    const raw = Envelope.safeParse(l.data['scene']).data;
+    const known = (key: string) => (List.safeParse(raw?.[key]).data ?? []).filter((x) => typeof x === 'string' && cast.includes(x));
+    const scene = raw && sceneRead(cast).safeParse({ ...raw, present: known('present'), left: known('left') }).data;
+    return { ...(scene && { scene }), entities: l.items('entities', IntroducedEntity, MAX_INTRODUCED) };
   };
 
 /** Without them a JSON read looped a key to its token cap (state probes P1, P8). JSON reads only: memory-keep is measured on the prose calls' samplers. [provisional] */
@@ -119,14 +136,17 @@ const INTRODUCE_TOKENS = 200;
 /** The scene alone: a place, a few names, the weather. [provisional] */
 const SCENE_TOKENS = 80;
 
-/** The turn read: where the passage ends, and kind, description and looks for each new name. */
-export function readTurn(passage: string, newNames: readonly string[], deps: ExtractDeps): Promise<TurnRead | null> {
+/**
+ * The turn read: where the passage ends, after `prev`, with `cast` (every known character name and alias)
+ * as the names it may give; and kind, description and looks for each new name.
+ */
+export function readTurn(passage: string, newNames: readonly string[], prev: PrevScene, cast: readonly string[], deps: ExtractDeps): Promise<TurnRead | null> {
   const cards = newNames.length > 0;
   return helperJson(
-    (g) => introducePrompt(passage, newNames, g),
-    cards ? INTRODUCE_JSON_SCHEMA : SCENE_JSON_SCHEMA,
+    (g) => introducePrompt(passage, newNames, g, prev, cast),
+    grammarOf(turnRead(cast, cards)),
     cards ? INTRODUCE_TOKENS : SCENE_TOKENS,
-    turnAccepter,
+    turnAccepter(cast),
     deps,
   );
 }

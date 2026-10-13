@@ -13,8 +13,32 @@ test('the turn read fills the Scene section and its timeline', async ({ page }) 
   await page.getByText('Scene', { exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Scene location' })).toHaveValue('the lighthouse');
   await expect(page.getByRole('textbox', { name: 'Present' })).toHaveValue('Merav');
-  await expect(page.getByRole('textbox', { name: 'Items here' })).toHaveValue('the Needle Map');
+  await expect(page.getByRole('combobox', { name: 'Weather' })).toHaveValue('fog');
   await expect(page.getByRole('list', { name: 'Scene timeline' })).toHaveText('action 2 · the lighthouse');
+});
+
+// The lighthouse is a new place while the scene was at the seeded Old Well: the section asks once.
+test('a new place asks whether it is inside the last one, and Yes records it', async ({ page }) => {
+  await openSeededAdventure(page, 3, undefined, { opening: 'You climb to the lighthouse with Merav.', scene: { location: 'Old Well', present: ['Merav'] } });
+  await page.getByText('Scene', { exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Scene location' })).toHaveValue('the lighthouse');
+  await expect(page.getByText('Is the lighthouse inside Old Well?')).toBeVisible();
+  await page.getByRole('button', { name: 'Yes' }).click();
+  await expect(page.getByText('Is the lighthouse inside Old Well?')).toHaveCount(0);
+  // The save is debounced.
+  const partOf = () =>
+    page.evaluate(async () => {
+      const db = await new Promise<IDBDatabase>((ok) => {
+        const r = indexedDB.open('storyloom');
+        r.addEventListener('success', () => ok(r.result));
+      });
+      const all = await new Promise<{ name: string; partOf?: string }[]>((ok) => {
+        const r = db.transaction('entities').objectStore('entities').getAll();
+        r.addEventListener('success', () => ok(r.result as { name: string; partOf?: string }[]));
+      });
+      return all.find((e) => e.name === 'the lighthouse')?.partOf;
+    });
+  await expect.poll(partOf).toBe('ent_well');
 });
 
 // The seeded `time` is an old save's clock: it stays in the data but never reaches the prompt.
@@ -23,18 +47,18 @@ test('a seeded scene shows in the Plot tab and an edit persists', async ({ page 
   await page.getByText('Scene', { exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Scene location' })).toHaveValue('the Old Well');
   await expect(page.getByRole('textbox', { name: 'Present' })).toHaveValue('Merav');
-  await page.getByRole('textbox', { name: 'Weather' }).fill('dust storm');
+  await page.getByRole('combobox', { name: 'Weather' }).selectOption('storm');
 
   await page.reload();
   await page.getByText('Scene', { exact: true }).click();
-  await expect(page.getByRole('textbox', { name: 'Weather' })).toHaveValue('dust storm');
+  await expect(page.getByRole('combobox', { name: 'Weather' })).toHaveValue('storm');
 
   await page.getByRole('textbox', { name: 'Take a turn' }).fill('drink from the well');
   await page.getByRole('button', { name: 'Send' }).click();
   await page.getByRole('button', { name: 'View context' }).last().click();
   const context = page.getByRole('dialog', { name: 'Context sent to the model' });
   await context.getByRole('button', { name: 'Raw prompt' }).click();
-  await expect(context.getByText('[Scene: the Old Well · Present: Merav · Dust storm]')).toBeVisible();
+  await expect(context.getByText('[Scene: the Old Well · Present: Merav · Storm]')).toBeVisible();
 });
 
 test('an edited Story Summary persists and shows when it refreshes', async ({ page }) => {

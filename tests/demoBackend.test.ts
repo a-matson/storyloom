@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { LlamaServerProvider } from '@adapters/providers/llamaServer';
 import { collect } from '@core/ports/provider';
 import { createFakeLlama } from '@adapters/providers/demo/fakeLlama';
+import { turnRead } from '@core/schema/extraction';
+import { TURN_READ_ASK } from '@core/text/turnReadPrompt';
 
 const handler = createFakeLlama({ wordDelayMs: 0 });
 const provider = new LlamaServerProvider('d', 'http://demo.invalid', (i, init) => handler(new Request(i, init)));
@@ -40,6 +42,11 @@ describe('demo backend', () => {
       }),
     );
     expect(JSON.parse(text)).toMatchObject({ name: 'Zed' });
+  });
+
+  it('answers the turn read in its shape', async () => {
+    const { text } = await collect(provider.complete({ prompt: `${TURN_READ_ASK} at the lighthouse`, maxTokens: 80, temperature: 0 }));
+    expect(turnRead(['Merav'], false).parse(JSON.parse(text)).scene).toMatchObject({ location: 'the lighthouse', present: ['Merav'], weather: 'fog' });
   });
 
   it('404s unknown paths', async () => {

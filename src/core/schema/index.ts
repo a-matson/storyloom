@@ -7,3 +7,4 @@ export * from './rule';
 export * from './scenario';
 export * from './settings';
 export * from './trace';
+export * from './weather';

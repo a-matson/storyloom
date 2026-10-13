@@ -1,6 +1,7 @@
 import { z } from 'zod/mini';
 import { LOOK_KEYS, STATE_KEYS } from '../memory/looks';
 import { EntityKind } from './entity';
+import { WEATHERS } from './weather';
 
 // Not re-exported from `./index`: only the lazy memory jobs parse these, so they stay off the start-up bundle.
 
@@ -58,20 +59,29 @@ export const IntroducedEntity = z.object({
   looks: ExtractedEntity.shape.looks,
 });
 
-/** Where the passage ends, as the helper writes it; `scene.ts` cleans and resolves it. */
-export const TurnScene = z.object({
-  location: z.optional(z.string()),
-  present: z.optional(z.array(z.string())),
-  items: z.optional(z.array(z.string())),
-  weather: z.optional(z.string()),
-});
-/** A turn with no new name asks only this. */
-export const SceneJson = z.object({ scene: TurnScene });
+/** One word, so the scene line never carries "late-night traffic". `unchanged` keeps the last one, `none` clears it. [provisional] */
+export const Weather = z.enum(['unchanged', 'none', ...WEATHERS]);
+export const LOCATION_CHARS = 40;
+/** The cast enum's one value when no character is known yet. */
+export const NOBODY = 'nobody';
+
 /**
- * The turn read's reply. `scene` first and required: optional and with no worked example, the 12B
- * left it out. [measured: 2026-10-09-recall-m11-1.json]
+ * Where the passage ends; `scene.ts` resolves it. Every key required: optional, the 12B left keys out (R1).
+ * Names are an enum of the cast, so the grammar cannot invent one; an empty cast is `nobody`.
+ * [measured: 2026-10-13-state-probe-m12-dogfood P7c]
  */
-export const IntroductionJson = z.object({ scene: TurnScene, entities: z.array(IntroducedEntity).check(z.maxLength(MAX_INTRODUCED)) });
+export const sceneRead = (cast: readonly string[]) => {
+  const [first = NOBODY, ...rest] = cast;
+  const who = z.array(z.enum([first, ...rest]));
+  return z.object({ moved: z.boolean(), location: sentence(LOCATION_CHARS), present: who, left: who, weather: Weather });
+};
+export type SceneRead = z.output<ReturnType<typeof sceneRead>>;
+/**
+ * The turn read's reply; a turn with no new name asks only the scene. `scene` first and required:
+ * optional and with no worked example, the 12B left it out. [measured: 2026-10-09-recall-m11-1.json]
+ */
+export const turnRead = (cast: readonly string[], cards: boolean) =>
+  cards ? z.object({ scene: sceneRead(cast), entities: z.array(IntroducedEntity).check(z.maxLength(MAX_INTRODUCED)) }) : z.object({ scene: sceneRead(cast) });
 
 /**
  * The combined helper call's reply. No scene: it reads memories back, so it would move the scene

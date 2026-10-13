@@ -49,9 +49,9 @@ const EXTRACT_SKELETON =
  * llama-server's schema grammar allows newlines and indentation; pretty-printed, 3 of 8 entity
  * replies ran into the 500-token cap, with this line 0 of 8 (~330 tokens). [measured: M12-1 PR 4 probe, 2026-10-11]
  */
-const ONE_LINE = ' Write the JSON on one line, with no line breaks or indentation.';
+export const ONE_LINE = ' Write the JSON on one line, with no line breaks or indentation.';
 
-const LOOKS_ASK = `looks is only for characters: a few words for each of ${LOOK_KEYS.join(', ')} that the passage shows; leave out the rest, and leave it out for places, items and factions.`;
+export const LOOKS_ASK = `looks is only for characters: a few words for each of ${LOOK_KEYS.join(', ')} that the passage shows; leave out the rest, and leave it out for places, items and factions.`;
 
 /**
  * The combined call. No cards of the known names and no list of new ones: with both, the 12B
@@ -68,30 +68,6 @@ export function extractPrompt(passage: string, knownNames: readonly string[], gr
     `${LOOKS_ASK} state is where it is and how it is now (${STATE_KEYS.join(', ')}), a few words each, only what the passage shows; holder is who carries an item (a Name or "you"). ` +
     'The player is "you", not an entity. speakers names who talks in each numbered paragraph.\n' +
     (grammar ? 'Return {"entities": [...], "speakers": [...]}.' : EXTRACT_SKELETON) +
-    ONE_LINE
-  );
-}
-
-/** Opens the turn read's prompt; the demo backend answers by it. */
-export const TURN_READ_ASK = 'Where does the passage end, who is there, and which named items are there?';
-
-/** The turn read: the scene, then a card for each new name when there are any, so it ends while the player reads. */
-export function introducePrompt(passage: string, newNames: readonly string[], grammar: boolean): string {
-  const cards = newNames.length > 0;
-  return (
-    TURN_READ_ASK +
-    (cards ? ` New here: ${newNames.join(', ')}.` : '') +
-    `\n\n---\n${passage}\n---\n\n` +
-    'scene is where the passage ends: the place, the named characters there (not the player "you"), the named items there, and the weather only when the passage states it. ' +
-    (cards
-      ? 'For each new name that is a proper name of a character, place, item or faction in this passage, give its kind and a one-sentence description of who or what it is. ' +
-        `Skip a name that is not one (a common word, an exclamation, the player "you"). ${LOOKS_ASK}\n`
-      : '\n') +
-    (grammar
-      ? `Return {"scene": {...}${cards ? ', "entities": [...]' : ''}}.`
-      : 'Return JSON in this shape (<...> are placeholders):\n{"scene": {"location": "<place>", "present": ["<Name>"], "items": ["<Name>"], "weather": "<weather>"}' +
-        (cards ? ', "entities": [{"name": "<Name>", "kind": "character", "description": "<one sentence>", "looks": {"<key>": "<a few words>"}}]' : '') +
-        '}') +
     ONE_LINE
   );
 }
