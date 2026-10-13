@@ -1,7 +1,7 @@
 import type { Entity, Scene } from '../model/types';
 import type { AssertionIndex } from './assertionIndex';
 import { knownAs } from './names';
-import { currentStates, rivalKey, setState } from './looks';
+import { currentStates } from './looks';
 
 /** The `holder` value that means the player. */
 export const YOU = 'you';
@@ -39,12 +39,6 @@ export function itemsAt(entities: readonly Entity[], ix: AssertionIndex, place: 
     const p = placeOf(ix, i);
     return p !== undefined && holderOf(ix, i) === undefined && same(entities, p, place);
   });
-}
-
-/** The player sets where an item is (`''` clears it); a holder or a place, so a value ends the rival key. */
-export function setWhere(e: Entity, key: 'holder' | 'location', value: string): Pick<Entity, 'state' | 'facts'> {
-  const rival = rivalKey(e.kind, key);
-  return setState(value && rival ? { ...e, ...setState(e, rival, '') } : e, key, value);
 }
 
 /**

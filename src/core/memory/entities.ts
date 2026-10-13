@@ -1,8 +1,6 @@
-import type { Action, Adventure, Entity, EntityFact, Speaker } from '../model/types';
+import type { Action, Adventure, Entity, Speaker } from '../model/types';
 import { actionText, newId } from '../model/types';
 import { guessSpeakers } from '../text/speakers';
-import type { Source } from './invalidate';
-import { factStates, isCurrentState, rivalKey } from './looks';
 import { matchEntity, norm, words } from './names';
 
 export { knownAs, matchEntity } from './names';
@@ -100,14 +98,12 @@ export interface Sighting {
 }
 
 /**
- * Fold one sighting into an entity (or create it). Facts append, deduped by text and by
- * containment (a model fact the new one contains is replaced by it); aliases union; a `state`
- * value becomes a state fact that ends (`until`) the key's current one. The player's and pinned
- * facts, the `state` map and a non-empty description are never replaced. Canon: a canon entity's
- * description is never set, and a change to a `canonKeys` value is recorded as a conflict fact
- * instead. `source` stamps new facts with the action they came from.
+ * Fold one sighting into an entity (or create it): aliases union, `lastSeen` moves, and an empty
+ * description of a non-canon entity is set once. Readers take who it is from its identity
+ * assertion; the field stays for `knownAs` until the entity facts go (M13-2c). What the sighting
+ * says is `mergeAssertions`' job.
  */
-export function mergeEntity(existing: Entity | undefined, incoming: Sighting, atAction: number, source?: (text: string) => Source | undefined): Entity {
+export function mergeEntity(existing: Entity | undefined, incoming: Omit<Sighting, 'facts' | 'state'>, atAction: number): Entity {
   const base: Entity = existing ?? {
     id: newId('ent_'),
     kind: incoming.kind,
@@ -120,41 +116,6 @@ export function mergeEntity(existing: Entity | undefined, incoming: Sighting, at
     firstSeen: atAction,
     lastSeen: atAction,
   };
-  const facts = [...base.facts];
-  const fact = (text: string, from: string, extra?: Partial<EntityFact>): EntityFact => ({
-    id: newId('fact_'),
-    text: text.trim(),
-    fromAction: atAction,
-    source: 'memory',
-    ...source?.(from),
-    ...extra,
-  });
-  const addFact = (text: string, extra?: Partial<EntityFact>, from = text): void => {
-    const key = norm(text);
-    if (!key) return;
-    const i = facts.findIndex((f) => f.kind !== 'state' && (within(key, f.text) || within(f.text, key)));
-    const old = facts[i];
-    if (old && within(key, old.text)) return;
-    if (old && old.source === 'memory' && !old.pinned && !old.conflict) facts[i] = { ...fact(text, from, extra), id: old.id };
-    else facts.push(fact(text, from, extra));
-  };
-
-  const current = factStates(base);
-  const locked = new Set(base.canonKeys);
-  for (const [key, value] of Object.entries(incoming.state ?? {})) {
-    const old = current[key];
-    if (!norm(value) || (old !== undefined && norm(old) === norm(value))) continue;
-    if (old !== undefined && locked.has(key)) {
-      addFact(`the story says ${key} is ${value}, but canon says ${old}`, { conflict: true, claim: { key, value } }, value);
-      continue;
-    }
-    const rival = rivalKey(base.kind, key);
-    for (const [i, f] of facts.entries()) if (isCurrentState(f) && (f.key === key || f.key === rival)) facts[i] = { ...f, until: atAction };
-    facts.push(fact(`${key}: ${value.trim()}`, value, { kind: 'state', key, value: value.trim() }));
-    current[key] = value;
-  }
-  for (const f of incoming.facts) addFact(f);
-
   const names = new Set([base.name, ...base.aliases].map(norm));
   const aliases = [...base.aliases];
   for (const a of incoming.aliases ?? []) {
@@ -168,7 +129,6 @@ export function mergeEntity(existing: Entity | undefined, incoming: Sighting, at
     aliases,
     // Frozen once set: a later one is a fact.
     description: base.canon ? base.description : base.description || incoming.description.trim(),
-    facts,
     lastSeen: Math.max(base.lastSeen, atAction),
   };
 }
@@ -187,23 +147,14 @@ function unseen<T>(seen: Iterable<string>, extra: readonly T[], key: (t: T) => s
 const rel = (r: { to: string; label: string }) => `${norm(r.to)}|${norm(r.label)}`;
 
 /**
- * Fold the stored entity `from` into `into` (the player's Merge): facts, aliases, relations and
- * missing state values union in; `into` keeps its id, name, kind, description and portrait.
+ * Fold the stored entity `from` into `into` (the player's Merge): aliases and relations union in;
+ * `into` keeps its id, name, kind, description and portrait. Assertions move with `mergeOwn`.
  */
 export function mergeEntities(into: Entity, from: Entity): Entity {
   return {
     ...into,
     aliases: [...into.aliases, ...unseen([into.name, ...into.aliases].map(norm), [from.name, ...from.aliases], norm)],
     description: into.description || from.description,
-    facts: [
-      ...into.facts,
-      ...unseen(
-        into.facts.map((f) => norm(f.text)),
-        from.facts,
-        (f) => norm(f.text),
-      ),
-    ],
-    state: { ...from.state, ...into.state },
     relations: [...into.relations, ...unseen(into.relations.map(rel), from.relations, rel)],
     firstSeen: Math.min(into.firstSeen, from.firstSeen),
     lastSeen: Math.max(into.lastSeen, from.lastSeen),

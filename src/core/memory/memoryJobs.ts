@@ -15,6 +15,7 @@ import { ngramOverlap } from '../text/repetition';
 
 // For the player's entity edits, which load with these jobs.
 export { entityNamedIn, guessUnlabelled, mergeEntities } from './entities';
+export { mergeOwn } from './assertionWrites';
 export { updateEntities } from './extract';
 export { introduce } from './introduce';
 export { checkInputs, checkOutput } from './contradiction';

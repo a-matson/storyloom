@@ -75,6 +75,20 @@ describe('adventure JSON', () => {
     expect(mira).not.toHaveProperty('cardId');
   });
 
+  it('keeps assertions and repoints their subjects and effect causes', () => {
+    const a = createBlankAdventure('T', 'You wake.');
+    const base = { kind: 'character' as const, aliases: [], description: '', facts: [], state: {}, relations: [], firstSeen: 0, lastSeen: 0 };
+    a.entities = [
+      { ...base, id: 'ent_1', name: 'Lena' },
+      { ...base, id: 'ent_2', name: 'Mira' },
+    ];
+    const cause = { kind: 'character' as const, id: 'ent_1', text: 'Lena' };
+    a.assertions = [{ id: 'as_1', subject: 'ent_2', producer: 'player', at: 0, basis: 'player', since: 0, kind: 'effect', condition: 'cursed', cause }];
+    const { adventure: b } = importAdventureJson(exportAdventureJson(a));
+    const [lena, mira] = b.entities;
+    expect(b.assertions).toEqual([{ ...a.assertions[0], subject: mira?.id, cause: { ...cause, id: lena?.id } }]);
+  });
+
   it('keeps rules and repoints their gates and effect causes', () => {
     const a = createBlankAdventure('T', 'You wake.');
     const base = { kind: 'character' as const, aliases: [], description: '', state: {}, relations: [], firstSeen: 0, lastSeen: 0 };

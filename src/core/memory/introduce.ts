@@ -22,7 +22,7 @@ function notePlace(adventure: Adventure, location: string, at: number): boolean 
   const said = location.trim();
   const places = adventure.entities.filter((e) => e.kind === 'place');
   if (!said || knownAs(places, said)) return false;
-  adventure.entities = [...adventure.entities, mergeEntity(undefined, { name: said, kind: 'place', description: '', facts: [] }, at)];
+  adventure.entities = [...adventure.entities, mergeEntity(undefined, { name: said, kind: 'place', description: '' }, at)];
   const was = adventure.plot.scene?.location;
   const inside = was === undefined ? undefined : knownAs(places, was);
   if (inside) adventure.scriptState = { ...adventure.scriptState, __placeAsk: { place: said, inside: inside.name } };

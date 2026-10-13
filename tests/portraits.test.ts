@@ -4,7 +4,7 @@ import { PORTRAIT_PX, PORTRAIT_RETRY_TURNS, queuePortraits, renderPortrait } fro
 import { portraitPrompt, portraitStyle } from '@app/session/portraitPrompt';
 import { createBlankAdventure, type Entity } from '@core/model';
 import type { ImageProvider, ImageRequest } from '@core/ports';
-import { own } from './fixtures/assertions';
+import { derived, own } from './fixtures/assertions';
 import { settled, setup } from './fixtures/session';
 
 // No canvas under vitest; the re-encode is the browser's job.
@@ -33,6 +33,8 @@ const gate: Entity = { ...lena, id: 'ent_gate', kind: 'place', name: 'Gate', fac
 function withImages(txt2img: ImageProvider['txt2img'] | null, ...entities: Entity[]) {
   const adventure = createBlankAdventure('Test', 'You stand at the gate.');
   adventure.entities = entities;
+  // As an old save opens: its looks and facts derived.
+  adventure.assertions = derived(adventure).assertions;
   // Model-card settings on, so every test also proves portraits skip the hires pass.
   adventure.settings.image = { ...adventure.settings.image, sampler: 'DPM++ 2M Karras', clipSkip: 2, hires: true };
   const images: ImageProvider | undefined = txt2img

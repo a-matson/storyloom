@@ -1,6 +1,8 @@
-import type { Adventure, ExtractedEntity } from '../model/types';
+import type { Action, Adventure, ExtractedEntity } from '../model/types';
 import { actionText } from '../model/types';
 import { FACT_CHARS, INTRODUCED_CHARS, LOOK_CHARS } from '../schema/extraction';
+import { identityText, textOf } from './assertionIndex';
+import { mergeAssertions, type Rest } from './assertionWrites';
 import { knownAs, matchEntity, mergeEntity, namedInPassage, within, type Sighting } from './entities';
 import { sourceIn, type Source } from './invalidate';
 import type { MemoryRange } from './memoryBank';
@@ -90,6 +92,15 @@ export type Incoming = Omit<ExtractedEntity, 'facts'> & { facts?: string[] | und
 
 type Held = NonNullable<Adventure['scriptState']['__pending']>[number];
 
+/** A source by action id as where an assertion rests: the action's index, its evidence as the span. */
+function restIn(actions: readonly Action[]): (s: Source | undefined) => Rest | undefined {
+  const index = new Map(actions.map((a, i) => [a.id, i]));
+  return (s) => {
+    const at = s && index.get(s.sourceId);
+    return at === undefined ? undefined : { at, ...(s?.evidence && { span: s.evidence }), ...(s?.basis && s.basis !== 'player' && { basis: s.basis }) };
+  };
+}
+
 /** Held names kept; an older one is dropped with its facts. [provisional] */
 const MAX_HELD = 20;
 
@@ -112,8 +123,10 @@ export function foldEntities(
   opts: { twice?: boolean; log?: FoldLog } = {},
 ): number {
   let entities = adventure.entities;
+  let assertions = adventure.assertions;
   const actions = adventure.actions.slice(range.fromAction, range.toAction);
   const fallback = sourceIn(adventure.actions, range);
+  const restOf = restIn(adventure.actions);
   const held: Held[] = [];
   for (const item of incoming) {
     const { looks, state, facts = [], ...e } = item;
@@ -153,8 +166,9 @@ export function foldEntities(
     // A holder ("you") has no content word of its own: the sentence naming the item backs it.
     const about = (k: string) => (k === 'holder' ? (v: string) => `${who.name} ${v}` : undefined);
     const kept = Object.fromEntries(Object.entries(values).flatMap(([k, v = '']) => keep(v, LOOK_CHARS, about(k)).map((t) => [k, t])));
-    const states = [...(old?.facts ?? []).filter((f) => f.kind === 'state').map((f) => f.text), ...Object.entries(kept).map(([k, v]) => `${k}: ${v}`)];
-    const card = old?.description || description;
+    const own = old ? assertions.filter((a) => a.subject === old.id) : [];
+    const states = [...own.flatMap((a) => (a.kind === 'state' || a.kind === 'look' ? [textOf(a)] : [])), ...Object.entries(kept).map(([k, v]) => `${k}: ${v}`)];
+    const card = (old && identityText(old, own)) || description;
     const seen: Sighting = {
       ...e,
       aliases,
@@ -168,16 +182,21 @@ export function foldEntities(
       }),
       state: kept,
     };
-    const merged = mergeEntity(old, seen, range.toAction - 1, (t) => backed.get(t) ?? fallback(t));
+    const at = range.toAction - 1;
+    const merged = mergeEntity(old, seen, at);
+    const mine = mergeAssertions(merged, own, seen, at, { producer: opts.twice ? 'batch' : 'turn', source: (t) => restOf(backed.get(t) ?? fallback(t)) });
     entities = old ? entities.map((x) => (x === old ? merged : x)) : [...entities, merged];
+    assertions = [...assertions.filter((a) => a.subject !== merged.id), ...mine];
   }
   const touched = entities.filter((x, i) => x !== adventure.entities[i]).length;
   adventure.entities = entities;
+  adventure.assertions = assertions;
   const pending = [...(adventure.scriptState.__pending ?? []), ...held];
   const due = pending.filter((p) => knownAs(entities, p.entity.name));
   if (!held.length && !due.length) return touched;
   adventure.scriptState = { ...adventure.scriptState, __pending: pending.filter((p) => !due.includes(p)).slice(-MAX_HELD) };
   // Each was counted as proposed when it arrived; its rejections still log.
-  const log = opts.log && { log: { proposed: 0, rejected: opts.log.rejected } };
-  return touched + due.reduce((n, p) => n + foldEntities(adventure, [p.entity], '', p.range, log), 0);
+  // Only the batch call holds names; each now has its card, so `twice` only marks the producer.
+  const again = { twice: true, ...(opts.log && { log: { proposed: 0, rejected: opts.log.rejected } }) };
+  return touched + due.reduce((n, p) => n + foldEntities(adventure, [p.entity], '', p.range, again), 0);
 }

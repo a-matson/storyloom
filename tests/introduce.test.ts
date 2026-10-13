@@ -7,7 +7,6 @@ import { hashPrompt } from '@core/trace';
 import { appearanceOf } from '@core/memory/looks';
 import type { Adventure } from '@core/model';
 import type { CompletionRequest } from '@core/ports';
-import { own } from './fixtures/assertions';
 import { ENTITY_PROMPT, fakeProvider, memoryAdventure } from './fixtures/memoryJobs';
 
 describe('candidateNames', () => {
@@ -92,7 +91,7 @@ describe('introduce', () => {
 
   it('makes no call without a new name, nor twice for the same text, and re-runs for a retried one', async () => {
     const { adv, reqs, deps } = setup('You meet Tamsin at the ferry.');
-    adv.entities = [mergeEntity(undefined, { name: 'Tamsin', kind: 'character', description: '', facts: [] }, 0)];
+    adv.entities = [mergeEntity(undefined, { name: 'Tamsin', kind: 'character', description: '' }, 0)];
     // The previous turn's call finished.
     const before = { ...adv.scriptState, __introducedAt: adv.actions.length - 2 };
     adv.scriptState = before;
@@ -120,7 +119,7 @@ describe('introduce', () => {
     };
     const { adv, deps } = setup('You meet Tamsin, tall and lean, at the ferry.', looks);
     await introduce(adv, deps);
-    expect(adv.entities[0] && appearanceOf(own(adv.entities[0]))).toBe('build: tall');
+    expect(appearanceOf(adv.assertions)).toBe('build: tall');
   });
 
   it('reads from the last finished call when the turns between were cut', async () => {
@@ -141,7 +140,7 @@ describe('introduce', () => {
 
   describe('the scene', () => {
     const at = { moved: true, location: 'the ferry', present: ['Tamsin'], left: [], weather: 'fog' };
-    const tamsin = () => ({ ...mergeEntity(undefined, { name: 'Tamsin', kind: 'character', description: '', facts: [] }, 0), aliases: ['the ferrywoman'] });
+    const tamsin = () => ({ ...mergeEntity(undefined, { name: 'Tamsin', kind: 'character', description: '' }, 0), aliases: ['the ferrywoman'] });
     function sceneOnly(output: string, scene: object) {
       const s = setup(output, { scene });
       s.adv.entities = [tamsin()];
@@ -189,7 +188,7 @@ describe('introduce', () => {
 
     it('makes a place card for an unknown location and asks whether it is inside the previous place', async () => {
       const { adv, deps } = sceneOnly('You climb to the loft.', { ...at, location: 'the loft' });
-      const ferry = mergeEntity(undefined, { name: 'the ferry', kind: 'place', description: '', facts: [] }, 0);
+      const ferry = mergeEntity(undefined, { name: 'the ferry', kind: 'place', description: '' }, 0);
       adv.entities.push(ferry);
       adv.plot.scene = { location: 'the ferry', present: [] };
       await introduce(adv, deps);

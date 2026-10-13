@@ -87,7 +87,7 @@ test.skipIf(!url || !backup)('state reads over a backup', { timeout: 3_600_000 }
     if (read) {
       // As `introduce` does: an unknown location becomes a place card.
       if (read.location.trim() && !knownAs(places, read.location)) {
-        places.push(mergeEntity(undefined, { name: read.location.trim(), kind: 'place', description: '', facts: [] }, i));
+        places.push(mergeEntity(undefined, { name: read.location.trim(), kind: 'place', description: '' }, i));
         newPlaces.push(read.location.trim());
       }
       const r = nextScene(scene, read, (s) => matchEntity(characters, s)?.name, i, places);

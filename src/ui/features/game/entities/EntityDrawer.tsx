@@ -1,6 +1,7 @@
 import { useId, useState, useSyncExternalStore } from 'react';
 // Not through the barrel: that would pull the session out of the start-up chunk into a shared one.
 import { entityEdits } from '@app/session/entities';
+import { identityText, indexAssertions, isCurrent } from '@core/memory';
 import type { Adventure, Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { progressText, useImageProgress } from '@ui/hooks/useImageProgress';
@@ -36,6 +37,10 @@ export function EntityDrawer({ entity: e, adventure, api, onClose, onOpen }: Pro
   const id = useId();
   const edits = entityEdits(api);
   const update: Update = (patch) => edits.update(e.id, patch);
+  const own = indexAssertions(adventure.assertions).of(e.id);
+  // The old free-text looks: keyed looks the story sets show in the card's Is section.
+  const legacy = own.findLast((a) => a.kind === 'look' && a.key === 'legacy' && isCurrent(a));
+  const legacyLook = legacy?.kind === 'look' ? legacy.value : '';
   // The old name stays an alias, so the story's later mentions still find this entry.
   const rename = (name: string) => name && name !== e.name && update({ name, aliases: [...e.aliases.filter((a) => a !== name), e.name] });
 
@@ -60,16 +65,24 @@ export function EntityDrawer({ entity: e, adventure, api, onClose, onOpen }: Pro
         <label htmlFor={`${id}-desc`}>
           <SectionLabel>Description</SectionLabel>
         </label>
-        <Textarea id={`${id}-desc`} defaultValue={e.description} onBlur={(ev) => update({ description: ev.target.value.trim() })} />
+        <Textarea
+          id={`${id}-desc`}
+          defaultValue={identityText(e, own)}
+          onBlur={(ev) => ev.target.value.trim() !== identityText(e, own) && edits.setIdentity(e.id, ev.target.value.trim())}
+        />
         <label htmlFor={`${id}-looks`}>
           <SectionLabel>Looks</SectionLabel>
         </label>
-        <Input id={`${id}-looks`} defaultValue={e.appearance ?? ''} onBlur={(ev) => update({ appearance: ev.target.value.trim() })} />
+        <Input
+          id={`${id}-looks`}
+          defaultValue={legacyLook}
+          onBlur={(ev) => ev.target.value.trim() !== legacyLook && edits.setValue(e.id, 'legacy', ev.target.value.trim())}
+        />
         <label htmlFor={`${id}-aliases`}>
           <SectionLabel>Also called (comma-separated)</SectionLabel>
         </label>
         <Input id={`${id}-aliases`} defaultValue={e.aliases.join(', ')} onBlur={(ev) => update({ aliases: list(ev.target.value) })} />
-        {e.kind === 'item' && <ItemRows entity={e} adventure={adventure} update={update} />}
+        {e.kind === 'item' && <ItemRows entity={e} adventure={adventure} edits={edits} />}
         <CardSections entity={e} adventure={adventure} api={api} edits={edits} onClose={onClose} onOpen={onOpen} />
         <Appearances entity={e} adventure={adventure} onClose={onClose} edits={edits} />
         <Actions entity={e} adventure={adventure} edits={edits} />

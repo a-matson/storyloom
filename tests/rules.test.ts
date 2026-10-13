@@ -6,7 +6,7 @@ import type { Entity, EntityFact, Rule } from '@core/model';
 import { ixOf } from './fixtures/assertions';
 
 const ent = (name: string, kind: Entity['kind'], over: Partial<Entity> = {}): Entity => ({
-  ...mergeEntity(undefined, { name, kind, description: '', facts: [] }, 0),
+  ...mergeEntity(undefined, { name, kind, description: '' }, 0),
   id: `ent_${name}`,
   ...over,
 });

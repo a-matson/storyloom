@@ -1,5 +1,6 @@
-import type { Assertion, Entity, EntityFact } from '../model/types';
-import { identityText, isCurrent } from './assertionIndex';
+import type { Assertion, Entity } from '../model/types';
+import { newId } from '../model/types';
+import { identityText, isCurrent, type AssertionOf } from './assertionIndex';
 
 /** State keys that say how a character looks, in the order their tags are written. [provisional] */
 export const LOOK_KEYS = ['species', 'build', 'eyes', 'hair', 'horns', 'scales', 'marks', 'wearing'] as const;
@@ -11,19 +12,13 @@ export const STATE_KEYS = ['location', 'holder', 'condition', 'posture', 'mood',
 export const rivalKey = (kind: Entity['kind'], key: string): string | undefined =>
   kind !== 'item' ? undefined : key === 'holder' ? 'location' : key === 'location' ? 'holder' : undefined;
 
-export type CurrentState = EntityFact & { kind: 'state'; key: string; value: string; until?: undefined };
-
-export const isCurrentState = (f: EntityFact): f is CurrentState => f.kind === 'state' && f.key !== undefined && f.value !== undefined && f.until === undefined;
-
-/** The player's (and legacy) `state` map with each current state fact over it: what the fact writers merge against. */
-export function factStates(e: Pick<Entity, 'state' | 'facts'>): Record<string, string> {
-  return { ...e.state, ...Object.fromEntries(e.facts.filter(isCurrentState).map((f) => [f.key, f.value])) };
-}
-
-/** A subject's current look and state values by key, in store order, a later one over an earlier; the legacy free-text look is no key. */
+/**
+ * A subject's current look and state values by key, in store order, a later one over an earlier.
+ * The legacy free-text look is no key, and a proposal (`seen: false`) is not current until accepted.
+ */
 export function currentStates(as: readonly Assertion[]): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const a of as) if (isCurrent(a) && (a.kind === 'state' || (a.kind === 'look' && a.key !== 'legacy'))) out[a.key] = a.value;
+  for (const a of as) if (isCurrent(a) && a.seen !== false && (a.kind === 'state' || (a.kind === 'look' && a.key !== 'legacy'))) out[a.key] = a.value;
   return out;
 }
 
@@ -34,17 +29,38 @@ const tag = (key: string, value: string) => (value.toLowerCase().includes(key) ?
 export function appearanceOf(as: readonly Assertion[]): string {
   const now = currentStates(as);
   const looks = LOOK_KEYS.flatMap((k) => (now[k]?.trim() ? [tag(k, now[k].trim())] : []));
-  const legacy = as.find((a) => a.kind === 'look' && a.key === 'legacy' && isCurrent(a));
+  const legacy = as.findLast((a) => a.kind === 'look' && a.key === 'legacy' && isCurrent(a));
   return looks.length ? looks.join(', ') : legacy?.kind === 'look' ? legacy.value.trim() : '';
 }
 
 /** The entity as the image prompts read it: who it is as `description`, its current looks as `appearance`. */
 export const withLooks = <E extends Entity>(e: E, as: readonly Assertion[]): E => ({ ...e, description: identityText(e, as), appearance: appearanceOf(as) });
 
-/** The player sets (or, with `''`, clears) a state value: it goes in the map, and the model's current value for the key ends. */
-export function setState(e: Entity, key: string, value: string): Pick<Entity, 'state' | 'facts'> {
-  return {
-    state: Object.fromEntries(Object.entries({ ...e.state, [key]: value }).filter(([, v]) => v !== '')),
-    facts: e.facts.map((f) => (isCurrentState(f) && f.key === key ? { ...f, until: e.lastSeen } : f)),
-  };
+/** `wearing` changes scene to scene, so it is a state, not a look; `legacy` is the old free-text look. */
+export const isLook = (key: string): boolean => key === 'legacy' || (key !== 'wearing' && (LOOK_KEYS as readonly string[]).includes(key));
+
+type Origin = 'id' | 'subject' | 'producer' | 'at' | 'paragraph' | 'span' | 'basis' | 'since' | 'until' | 'pinned' | 'seen';
+/** What one kind of assertion says, without where it came from. */
+export type Fields = { [K in Assertion['kind']]: Omit<AssertionOf<K>, Origin> }[Assertion['kind']];
+
+export const valueOf = (key: string, value: string): Fields => ({ kind: isLook(key) ? 'look' : 'state', key, value });
+/** A look or state value, not a proposal. */
+export const isValue = (a: Assertion): a is AssertionOf<'look' | 'state'> => (a.kind === 'look' || a.kind === 'state') && a.seen !== false;
+
+/** A line the player wrote (or set) about `subject`, at action index `at` (now). */
+export const byPlayer = (subject: string, at: number, f: Fields): Assertion => ({
+  id: newId('as_'),
+  subject,
+  producer: 'player',
+  at,
+  basis: 'player',
+  since: at,
+  ...f,
+});
+
+/** The player sets (or, with `''`, clears) a value at `at`: the key's current one ends, and an item's holder and place end each other. */
+export function setValue(e: Pick<Entity, 'id' | 'kind'>, own: readonly Assertion[], key: string, value: string, at: number): Assertion[] {
+  const rival = value.trim() ? rivalKey(e.kind, key) : undefined;
+  const ended = own.map((a) => (isCurrent(a) && isValue(a) && (a.key === key || a.key === rival) ? { ...a, until: at } : a));
+  return value.trim() ? [...ended, byPlayer(e.id, at, valueOf(key, value.trim()))] : ended;
 }

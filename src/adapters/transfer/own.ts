@@ -76,8 +76,12 @@ function renumber(a: Adventure): Adventure {
     })),
     // Rule ids are local to the adventure record, so only their gates follow the entities.
     rules: a.rules.map((r) => ({ ...r, gates: r.gates.map(id) })),
-    // Still derived from the entities (on save), so the old subject ids are not carried.
-    assertions: [],
+    // An export from before the store has none: the first open derives them from the entities.
+    assertions: a.assertions.map((x) => ({
+      ...x,
+      subject: id(x.subject),
+      ...(x.kind === 'effect' && x.cause?.id && { cause: { ...x.cause, id: id(x.cause.id) } }),
+    })),
     memories: [], // embeddings may come from another embedder; rebuilt lazily
     updatedAt: Date.now(),
   };

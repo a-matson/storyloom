@@ -1,9 +1,14 @@
 import type { Action, Adventure, Assertion, Entity, EntityFact } from '../model/types';
 import { basisOf, holds } from './invalidate';
-import { factStates, isCurrentState, LOOK_KEYS } from './looks';
+import { isLook } from './looks';
 
-/** `wearing` changes scene to scene, so it is a state, not a look. */
-const isLook = (key: string) => key !== 'wearing' && (LOOK_KEYS as readonly string[]).includes(key);
+const isCurrentState = (f: EntityFact) => f.kind === 'state' && f.key !== undefined && f.value !== undefined && f.until === undefined;
+
+/** The `state` map with each current state fact over it. */
+const factStates = (e: Entity): Record<string, string> => ({
+  ...e.state,
+  ...Object.fromEntries(e.facts.flatMap((f) => (isCurrentState(f) && f.key !== undefined ? [[f.key, f.value ?? '']] : []))),
+});
 
 const PRODUCER = { memory: 'legacy', player: 'player', card: 'card' } as const;
 

@@ -58,10 +58,10 @@ describe('player rules', () => {
     expect(session.adv.rules.map((r) => r.gates)).toEqual([['ent_grub'], ['ent_grub']]);
   });
 
-  it('ending an effect stamps `until` and keeps the fact', () => {
+  it('ending an effect stamps `until` and keeps the line', () => {
     const { session } = withCast();
-    session.adv.entities[0]?.facts.push({ id: 'f1', text: 'Cursed', fromAction: 0, source: 'memory', kind: 'effect', value: 'cursed' });
-    entityEdits(session).endEffect('ent_mira', 'f1');
-    expect(session.adv.entities[0]?.facts[0]?.until).toBe(session.log.actions.length);
+    session.adv.assertions = [{ id: 'f1', subject: 'ent_mira', producer: 'turn', at: 0, basis: 'stated', since: 0, kind: 'effect', condition: 'cursed' }];
+    entityEdits(session).endEffect('f1');
+    expect(session.adv.assertions[0]?.until).toBe(session.log.actions.length);
   });
 });

@@ -1,5 +1,5 @@
 import { ActionLog } from '@core/log';
-import { deriveAssertions, followLog } from '@core/memory';
+import { followLog } from '@core/memory';
 import { utilityProvider, type Adventure, type AdventureSettings, type AppSettings, type PlotComponents, type TurnTrace } from '@core/model';
 import type { Embedder, ScriptRunner } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
@@ -93,7 +93,7 @@ export class GameSession {
   readonly getSnapshot = (): GameSnapshot => this.snapshot;
 
   private build(rest: Omit<GameSnapshot, 'adventure' | 'actions' | 'canUndo' | 'canRedo'>): GameSnapshot {
-    this.adv.assertions = deriveAssertions(Object.assign(this.adv, { actions: this.log.actions })); // ponytail: until writers (M13-2b)
+    this.adv.actions = this.log.actions;
     return { ...rest, adventure: { ...this.adv }, actions: this.log.actions, canUndo: this.log.canUndo, canRedo: this.log.canRedo };
   }
   emit(patch: Partial<GameSnapshot> = {}): void {

@@ -109,18 +109,6 @@ export function toScriptCards(cards: StoryCard[]): ScriptStoryCard[] {
   return cards.map((c) => ({ id: c.id, keys: c.triggers.join(','), entry: c.entry, type: c.type, title: c.name, description: c.notes ?? '' }));
 }
 
-export function toScriptEntities(entities: Entity[]): ScriptEntity[] {
-  return entities.map((e) => ({
-    id: e.id,
-    kind: e.kind,
-    name: e.name,
-    aliases: e.aliases,
-    description: e.description,
-    facts: e.facts.map((f) => f.text),
-    state: e.state,
-  }));
-}
-
 /** The script-facing shape of the built sections; `tokens`/`trimmed` stay host-side. */
 export function plainSections(sections: ContextSection[] | undefined): ScriptSection[] | undefined {
   return sections?.map((s) => ({ kind: s.kind, text: s.text, cacheable: s.cacheable }));

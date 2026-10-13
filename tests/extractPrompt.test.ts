@@ -49,7 +49,7 @@ describe('newNamesIn', () => {
         createdAt: 0,
       },
     ];
-    adv.entities = [mergeEntity(undefined, { name: 'The Ashen Order', kind: 'faction', description: '', facts: [] }, 0)];
+    adv.entities = [mergeEntity(undefined, { name: 'The Ashen Order', kind: 'faction', description: '' }, 0)];
     expect(newNamesIn(adv, { fromAction: 0, toAction: 1 })).toEqual(['Mira', 'Old Brannoch', "Deadman's Gulch"]);
   });
 });

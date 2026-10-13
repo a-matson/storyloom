@@ -1,6 +1,6 @@
-// Only `loadMemoryJobs`: importing more from the barrel splits it out of the start-up chunk.
-import { loadMemoryJobs } from '@core/memory';
-import { newId, type Entity, type EntityFact } from '@core/model';
+// Only start-up members of the barrel: importing a lazy one splits it out of the start-up chunk.
+import { byPlayer, loadMemoryJobs } from '@core/memory';
+import { newId, type Entity } from '@core/model';
 import type { GameSession } from './session';
 
 /**
@@ -15,8 +15,7 @@ export async function correct(host: GameSession, text: string): Promise<void> {
   if (!jobs || host.getSnapshot().busy) return;
   const e = jobs.entityNamedIn(host.adv.entities, t);
   host.mutate((log, adv) => {
-    const fact: EntityFact = { id: newId('fact_'), text: t, fromAction: log.actions.length, source: 'player', pinned: true };
-    if (e) adv.entities = adv.entities.map((x) => (x.id === e.id ? { ...x, facts: [...x.facts, fact] } : x));
+    if (e) adv.assertions = [...adv.assertions, { ...byPlayer(e.id, log.actions.length, { kind: 'trait', text: t }), pinned: true }];
     else adv.plot = { ...adv.plot, plotEssentials: [adv.plot.plotEssentials, t].filter(Boolean).join('\n') };
   });
   host.emit({ notice: e ? `Pinned to ${e.name}` : 'Added to Plot Essentials' });
@@ -32,8 +31,7 @@ export function pinFact(host: GameSession, entityId: string, text: string, actio
       0,
       log.actions.findIndex((a) => a.id === actionId),
     );
-    const fact: EntityFact = { id: newId('fact_'), text: t, fromAction: at, source: 'player', pinned: true, basis: 'player', sourceId: actionId, evidence: t };
-    adv.entities = adv.entities.map((x) => (x.id === entityId ? { ...x, facts: [...x.facts, fact] } : x));
+    adv.assertions = [...adv.assertions, { ...byPlayer(entityId, at, { kind: 'trait', text: t }), pinned: true, span: t }];
   });
   host.emit({ notice: `Pinned to ${e.name}` });
 }

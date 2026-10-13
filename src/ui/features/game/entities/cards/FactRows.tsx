@@ -1,30 +1,24 @@
 import { useState, type ReactNode } from 'react';
-import { basisOf, holds } from '@core/memory';
-import { actionText, type Adventure, type EntityFact } from '@core/model';
+import { holds } from '@core/memory';
+import { actionText, type Adventure, type Assertion } from '@core/model';
 import { cn } from '@ui/lib/utils';
 import { Button } from '@ui/components/ui/button';
 import { Input } from '@ui/components/ui/field';
 import { Pill } from '@ui/components/ui/pill';
 
-const LABEL = { stated: 'stated', inferred: 'inferred', player: 'yours' } as const;
+// `legacy`: read by the model before sources were kept.
+const LABEL = { stated: 'stated', inferred: 'inferred', player: 'yours', legacy: 'stated' } as const;
 
-/** The action a fact came from: its `sourceId`, else the action it was learned at. */
-const sourceIndex = (f: EntityFact, adventure: Adventure) => {
-  const i = f.sourceId === undefined ? -1 : adventure.actions.findIndex((a) => a.id === f.sourceId);
-  return i >= 0 ? i : f.fromAction;
-};
-
-/** The story no longer says it: the source action is gone or lost the words. The next idle run drops it. */
-function stale(f: EntityFact, adventure: Adventure): boolean {
-  if (f.sourceId === undefined) return false;
-  const a = adventure.actions.find((x) => x.id === f.sourceId);
-  return !a || (f.evidence !== undefined && !holds(a, f.evidence));
+/** The story no longer says it: the action is gone or lost the words. The next idle run drops it. */
+function stale(a: Assertion, adventure: Adventure): boolean {
+  const action = adventure.actions[a.at];
+  return !action || (a.span !== undefined && !holds(action, a.span));
 }
 
 interface LineProps {
   text: string;
-  /** Absent for values the player set outside a fact (the state map, legacy relations): they are "yours". */
-  fact?: EntityFact | undefined;
+  /** Absent for lines that are no assertion (legacy relations): they are "yours". */
+  fact?: Assertion | undefined;
   adventure: Adventure;
   onShow: (index: number) => void;
   onEdit?: ((text: string) => void) | undefined;
@@ -37,7 +31,7 @@ interface LineProps {
 export function Line({ text, fact: f, adventure, onShow, onEdit, onDelete, onPin, children }: LineProps) {
   const [editing, setEditing] = useState(false);
   const [open, setOpen] = useState(false);
-  const basis = f ? basisOf(f) : 'player';
+  const basis = f?.basis ?? 'player';
   const commit = (v: string) => {
     setEditing(false);
     if (v.trim() && v.trim() !== text) onEdit?.(v.trim());
@@ -96,13 +90,13 @@ export function Line({ text, fact: f, adventure, onShow, onEdit, onDelete, onPin
   );
 }
 
-/** The source paragraph with the evidence words marked, and a jump to it. */
-function Evidence({ fact: f, adventure, onShow }: { fact: EntityFact; adventure: Adventure; onShow: (index: number) => void }) {
-  const index = sourceIndex(f, adventure);
+/** The source paragraph with the span marked, and a jump to it. */
+function Evidence({ fact: f, adventure, onShow }: { fact: Assertion; adventure: Adventure; onShow: (index: number) => void }) {
+  const index = f.at;
   const action = adventure.actions[index];
   const text = action ? actionText(action) : '';
-  const at = f.evidence ? text.toLowerCase().indexOf(f.evidence.toLowerCase()) : -1;
-  const end = at + (f.evidence?.length ?? 0);
+  const at = f.span ? text.toLowerCase().indexOf(f.span.toLowerCase()) : -1;
+  const end = at + (f.span?.length ?? 0);
   return (
     <div className="flex flex-col gap-1.5 rounded-md border border-border bg-secondary p-2 text-caption">
       <p className="m-0 font-prose">
