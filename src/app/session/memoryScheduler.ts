@@ -1,4 +1,4 @@
-import { entitiesOverdue, loadMemoryJobs, memoryOverdue } from '@core/memory';
+import { entitiesOverdue, loadMemoryJobs, memoryOverdue, type CutCounts, type HelperCallLog } from '@core/memory';
 import { actionText, type Adventure, type Speaker } from '@core/model';
 import type { Embedder } from '@core/ports';
 import type { HelperModel } from './types';
@@ -17,6 +17,8 @@ interface Host {
   portraits: (idle: AbortSignal) => Promise<void>;
   /** The contradiction check's verdict on the last output; an edit or retry ends the idle period before it arrives. */
   flag: (contradiction: { actionId: string; fact: string } | null) => void;
+  /** The helper calls one job made, for the trace drawer. */
+  record?: (calls: HelperCallLog[], model: string | undefined) => void;
 }
 
 /**
@@ -63,6 +65,17 @@ export class MemoryScheduler {
   }
 
   /** First on slot 1 so the badge comes while the player reads; typing does not cut it (a few seconds), the next turn does. */
+  /** One helper job on the helper model, its calls recorded for the trace drawer even when it throws. */
+  private async logged<T>(job: (deps: HelperModel & { cuts: CutCounts }) => Promise<T>): Promise<T> {
+    const helper = await this.host.helperModel();
+    const calls: HelperCallLog[] = [];
+    try {
+      return await job({ ...helper, cuts: { cutCalls: 0, finishedPastCut: 0, calls } });
+    } finally {
+      this.host.record?.(calls, helper.model);
+    }
+  }
+
   private async check(idle: AbortSignal): Promise<void> {
     const adv = this.host.adventure();
     const last = adv.actions.at(-1);
@@ -72,7 +85,7 @@ export class MemoryScheduler {
       const output = actionText(last);
       const lines = checkInputs(adv, output);
       if (!lines.length) return;
-      const fact = await checkOutput(output, lines, { ...(await this.host.helperModel()), signal: idle });
+      const fact = await this.logged((d) => checkOutput(output, lines, { ...d, signal: idle }));
       if (!idle.aborted) this.host.flag(fact === null ? null : { actionId: last.id, fact });
     } catch (e) {
       if (!idle.aborted) console.warn('contradiction check failed', e);
@@ -104,7 +117,7 @@ export class MemoryScheduler {
     if (!introductions && !sceneEachTurn) return;
     try {
       const { introduce } = await loadMemoryJobs();
-      const r = await introduce(this.host.adventure(), await this.host.helperModel());
+      const r = await this.logged((d) => introduce(this.host.adventure(), d));
       if (r.touched || r.sceneUpdated) this.host.changed();
       if (r.touched && this.idle && !this.idle.aborted) this.portraits(this.idle);
     } catch (e) {
@@ -173,6 +186,7 @@ export class MemoryScheduler {
       const { runMemoryMaintenance } = await loadMemoryJobs();
       const deps = { ...(await this.host.helperModel()), embedder: await this.host.embedder(), historyStart: this.host.historyStart?.() };
       const report = await runMemoryMaintenance(this.host.adventure(), { ...deps, signal: AbortSignal.any([idle, cancel.signal]), cancel: cancel.signal });
+      this.host.record?.(report.calls ?? [], deps.model);
       const { summaryUpdated, summaryFirst, cutCalls, finishedPastCut, factsProposed, rejected } = report;
       const entityCalls = (report.calls ?? []).filter((c) => c.job === 'entity');
       // A live run reads these from the console: whether the summary keeps up, what typing cuts, what the entity call proposes and its guards drop.

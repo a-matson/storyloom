@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { createFakeLlama } from '@adapters/providers/demo/fakeLlama';
+import { recordHelperCalls } from '@app/session/helperCalls';
+import type { HelperCallLog } from '@core/memory';
+import { helperCall } from '@core/memory/helperCall';
 import { LlamaServerProvider } from '@adapters/providers/llamaServer';
 import { ActionLog } from '@core/log';
 import { mergeEntity } from '@core/memory/entities';
 import { createBlankAdventure, type TurnTrace } from '@core/model';
-import { NoopScriptRunner, type HookInput, type HookResult } from '@core/ports';
+import { NoopScriptRunner, type HookInput, type HookResult, type CompletionChunk, type Storage } from '@core/ports';
 import * as S from '@core/schema';
+import { HELPER_REPLY_CAP, HelperCall } from '@core/schema';
 import { createApproxTokenizer } from '@core/text';
 import { buildTrace, clearJobLog, hashPrompt, overlappingJobs, TRACE_PROMPT_CAP, trackJob } from '@core/trace';
 import { runTurn, type TurnEvent } from '@core/turn';
@@ -30,6 +34,43 @@ describe('TurnTrace schema', () => {
     expect(S.TurnTrace.safeParse({ ...trace, kind: 'bogus' }).success).toBe(false);
     expect(S.TurnTrace.safeParse({ ...trace, sections: [{ kind: 'history', tokens: -1, cacheable: true, trimmed: false }] }).success).toBe(false);
     expect(S.TurnTrace.safeParse({ ...trace, promptHash: undefined }).success).toBe(false);
+  });
+});
+
+describe('helper call log', () => {
+  const start = () =>
+    (async function* (): AsyncGenerator<CompletionChunk> {
+      yield { text: '{"a":', done: false };
+      yield { text: '1}', done: true, stats: { promptTokens: 10, generatedTokens: 4, stopReason: 'stop' } };
+    })();
+
+  it('carries ms, stop reason and the prompt hash', async () => {
+    const cuts = { cutCalls: 0, finishedPastCut: 0, calls: [] as HelperCallLog[] };
+    await helperCall('check', 60, 'the prompt', start, { cuts });
+    expect(cuts.calls).toEqual([
+      { job: 'check', cut: false, generatedTokens: 4, reply: '{"a":1}', ms: expect.any(Number), stopReason: 'stop', promptHash: hashPrompt('the prompt') },
+    ]);
+  });
+
+  it('stores a call that parses as HelperCall, its reply cut at the cap', async () => {
+    const stored: unknown[] = [];
+    const storage = { putHelperCall: (c: unknown) => Promise.resolve(void stored.push(c)) } as unknown as Storage;
+    const long = 'x'.repeat(HELPER_REPLY_CAP + 10);
+    const log: HelperCallLog = {
+      job: 'entity',
+      cut: false,
+      generatedTokens: 9,
+      reply: long,
+      ms: 5,
+      promptHash: 'h',
+      accepted: 1,
+      rejected: [{ value: 'v', reason: 'r' }],
+    };
+    recordHelperCalls(storage, createBlankAdventure('T', 'Go.'), [log], 'wayfarer');
+    const call = HelperCall.parse(stored[0]);
+    expect(call).toMatchObject({ job: 'entity', model: 'wayfarer', accepted: 1, actionCount: 1 });
+    expect(call.reply).toHaveLength(HELPER_REPLY_CAP);
+    expect(HelperCall.safeParse({ ...call, reply: long }).success).toBe(false);
   });
 });
 

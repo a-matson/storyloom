@@ -1,6 +1,7 @@
-import type { Action, Adventure, AppSettings, Entity, Memory, Scenario, StoryCard, TurnTrace } from '@core/model';
-import { StorageError, summarise, TRACE_CAP_PER_ADVENTURE, type AdventureSummary, type Storage } from '@core/ports';
+import type { Action, Adventure, AppSettings, Entity, HelperCall, Memory, Scenario, StoryCard, TurnTrace } from '@core/model';
+import { HELPER_CALL_CAP_PER_ADVENTURE, StorageError, summarise, TRACE_CAP_PER_ADVENTURE, type AdventureSummary, type Storage } from '@core/ports';
 import * as S from '@core/schema';
+import type { Table } from 'dexie';
 import { clearPending, takePending } from '../pending';
 import { StoryloomDb } from './db';
 import { joinAdventure, splitAdventure, toActionRow, toCardRow, toEntityRow, toMemoryRow } from './rows';
@@ -11,6 +12,11 @@ interface Saved {
   memories: readonly Memory[];
   entities: readonly Entity[];
 }
+
+type Logged = { adventureId: string; createdAt: number };
+/** Oldest first. */
+const byAge = <T extends Logged, K>(table: Table<T, K>, adventureId: string) =>
+  table.where('[adventureId+createdAt]').between([adventureId, -Infinity], [adventureId, Infinity]);
 
 const saved = (a: Adventure): Saved => ({ actions: a.actions, cards: a.storyCards, memories: a.memories, entities: a.entities });
 
@@ -102,9 +108,10 @@ export class DexieStorage implements Storage {
 
   async deleteAdventure(id: string): Promise<void> {
     const db = this.db;
-    await db.transaction('rw', [db.adventures, db.actions, db.storyCards, db.memories, db.entities, db.traces, db.images], async () => {
+    const owned = [db.actions, db.storyCards, db.memories, db.entities, db.traces, db.images, db.helperCalls];
+    await db.transaction('rw', [db.adventures, ...owned], async () => {
       await db.adventures.delete(id);
-      await Promise.all([db.actions, db.storyCards, db.memories, db.entities, db.traces, db.images].map((t) => t.where('adventureId').equals(id).delete()));
+      await Promise.all(owned.map((t) => t.where('adventureId').equals(id).delete()));
     });
     this.saved.delete(id);
   }
@@ -121,14 +128,18 @@ export class DexieStorage implements Storage {
     await this.db.images.delete([adventureId, id]);
   }
 
-  async putTrace(t: TurnTrace): Promise<void> {
-    const db = this.db;
-    await db.transaction('rw', db.traces, async () => {
-      await db.traces.put(t);
-      const byAge = db.traces.where('[adventureId+createdAt]').between([t.adventureId, -Infinity], [t.adventureId, Infinity]);
-      const overflow = (await byAge.count()) - TRACE_CAP_PER_ADVENTURE;
-      if (overflow > 0) await db.traces.bulkDelete(await byAge.limit(overflow).primaryKeys());
+  /** Puts a diagnostic row and prunes its adventure's oldest past `cap`. */
+  private async putCapped<T extends Logged, K>(table: Table<T, K>, row: T, cap: number): Promise<void> {
+    await this.db.transaction('rw', table, async () => {
+      await table.put(row);
+      const all = byAge(table, row.adventureId);
+      const overflow = (await all.count()) - cap;
+      if (overflow > 0) await table.bulkDelete(await all.limit(overflow).primaryKeys());
     });
+  }
+
+  async putTrace(t: TurnTrace): Promise<void> {
+    await this.putCapped(this.db.traces, t, TRACE_CAP_PER_ADVENTURE);
   }
 
   async getTrace(turnId: string): Promise<TurnTrace | undefined> {
@@ -137,8 +148,17 @@ export class DexieStorage implements Storage {
   }
 
   async listTraces(adventureId: string): Promise<TurnTrace[]> {
-    const rows = await this.db.traces.where('[adventureId+createdAt]').between([adventureId, -Infinity], [adventureId, Infinity]).toArray();
+    const rows = await byAge(this.db.traces, adventureId).toArray();
     return rows.toReversed().map((r) => parseOrThrow(S.TurnTrace, r, `Trace "${r.turnId}"`));
+  }
+
+  async putHelperCall(c: HelperCall): Promise<void> {
+    await this.putCapped(this.db.helperCalls, c, HELPER_CALL_CAP_PER_ADVENTURE);
+  }
+
+  async listHelperCalls(adventureId: string): Promise<HelperCall[]> {
+    const rows = await byAge(this.db.helperCalls, adventureId).toArray();
+    return rows.toReversed().map((r) => parseOrThrow(S.HelperCall, r, `Helper call "${r.id}"`));
   }
 
   async listScenarios(): Promise<Scenario[]> {

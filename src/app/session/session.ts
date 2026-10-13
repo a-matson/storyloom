@@ -54,6 +54,12 @@ export class GameSession {
     annotate: (s) => this.log.annotate(s),
     portraits: async (idle) => (await import('./portraits')).queuePortraits(this, idle),
     flag: (contradiction) => this.emit({ contradiction }),
+    // Loaded on first use: start-up bundle budget.
+    record: (calls, model) =>
+      void import('./helperCalls').then(
+        ({ recordHelperCalls }) => recordHelperCalls(this.svc.storage, this.adv, calls, model),
+        (e: unknown) => console.warn('could not store helper calls', e),
+      ),
   });
   private readonly idleWork = new IdleWork({
     adventure: () => this.adv,
@@ -200,7 +206,8 @@ export class GameSession {
     const utility = utilityProvider(this.app);
     if (utility) {
       const provider = this.svc.providerFor(this.app, utility.id);
-      if ((await provider.health()).ok) return { ...storyModel(this), provider, template: utility.template ?? this.adv.settings.template };
+      const health = await provider.health();
+      if (health.ok) return { ...storyModel(this), provider, template: utility.template ?? this.adv.settings.template, model: health.modelId };
       if (!this.utilityDown) console.warn(`utility model at ${utility.baseUrl} is unreachable; helper jobs use the story model`);
       this.utilityDown = true;
     }

@@ -66,6 +66,9 @@ const turnAccepter =
     return l && { scene: TurnScene.safeParse(l.data['scene']).data ?? {}, entities: l.items('entities', IntroducedEntity, MAX_INTRODUCED) };
   };
 
+/** Without them a JSON read looped a key to its token cap (state probes P1, P8). JSON reads only: memory-keep is measured on the prose calls' samplers. [provisional] */
+export const HELPER_JSON_SAMPLING = { repeatLastN: 256, presencePenalty: 0.3 };
+
 /** One helper call on slot 1 for a JSON reply: the grammar when the backend has one, else a `{` prefill. Null when unusable; a call typing cut throws. */
 async function helperJson<R>(
   prompt: (grammar: boolean) => string,
@@ -79,6 +82,7 @@ async function helperJson<R>(
   const { text, stats } = await helperCall(
     'entity',
     maxTokens,
+    rendered.prompt,
     (signal) =>
       deps.provider.complete(
         {
@@ -86,6 +90,7 @@ async function helperJson<R>(
           maxTokens,
           temperature: 0.2,
           topP: 0.9,
+          ...HELPER_JSON_SAMPLING,
           stop: rendered.stop,
           cachePrompt: false,
           slotId: 1,
@@ -180,6 +185,10 @@ export async function updateEntities(adventure: Adventure, range: MemoryRange, d
   const log: FoldLog = { proposed: 0, rejected: [] };
   const touched = foldEntities(adventure, reply.entities, passage, range, { twice: true, log }); // Calls are sequential: the last one logged is this one.
   const call = deps.cuts?.calls?.at(-1);
-  if (call?.job === 'entity') call.factsProposed = log.proposed;
+  if (call?.job === 'entity') {
+    call.factsProposed = log.proposed;
+    call.accepted = touched;
+    call.rejected = log.rejected.map((r) => ({ value: `${r.entity}: ${r.value}`, reason: r.reason }));
+  }
   return { touched, speakers: attributeSpeakers(adventure.actions, reply.speakers, adventure.entities), reply, log };
 }

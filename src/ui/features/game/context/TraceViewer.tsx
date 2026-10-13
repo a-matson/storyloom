@@ -3,6 +3,7 @@ import type { TurnTrace } from '@core/model';
 import { storage } from '@app/services';
 import { Drawer, DrawerBody, DrawerHeader, Segmented } from '@ui/components/ui/drawer';
 import { TopBarTitle } from '@ui/components/ui/top-bar';
+import { HelperCallRows } from './HelperCallRows';
 import { TraceSummary } from './TraceSummary';
 
 interface Props {
@@ -16,7 +17,8 @@ const VIEWS = [
   { id: 'prompt', label: 'Prompt' },
 ] as const;
 
-type Load = { state: 'loading' } | { state: 'error'; message: string } | { state: 'done'; trace: TurnTrace | undefined };
+/** `nextAt`: when the next turn started, so the helper calls between the two belong to this one. */
+type Load = { state: 'loading' } | { state: 'error'; message: string } | { state: 'done'; trace: TurnTrace | undefined; nextAt: number };
 
 /** The record of the latest generation for one action; a retry has its own trace, so the newest wins. */
 export function TraceViewer({ adventureId, actionId, onClose }: Props) {
@@ -25,7 +27,11 @@ export function TraceViewer({ adventureId, actionId, onClose }: Props) {
   useEffect(() => {
     let live = true;
     storage.listTraces(adventureId).then(
-      (all) => live && setLoad({ state: 'done', trace: all.find((t) => t.actionId === actionId) }),
+      (all) => {
+        // Newest first: the trace before this one in the list started after it.
+        const at = all.findIndex((t) => t.actionId === actionId);
+        return live && setLoad({ state: 'done', trace: all[at], nextAt: (at > 0 ? all[at - 1]?.createdAt : undefined) ?? Infinity });
+      },
       (e: unknown) => live && setLoad({ state: 'error', message: e instanceof Error ? e.message : String(e) }),
     );
     return () => {
@@ -43,7 +49,12 @@ export function TraceViewer({ adventureId, actionId, onClose }: Props) {
         {load.state === 'loading' && <p className="m-0 text-muted-foreground">Loading…</p>}
         {load.state === 'error' && <p className="m-0 text-destructive">{load.message}</p>}
         {load.state === 'done' && !trace && <p className="m-0 text-muted-foreground">No trace was recorded for this action.</p>}
-        {trace && view === 'summary' && <TraceSummary trace={trace} />}
+        {trace && view === 'summary' && (
+          <>
+            <TraceSummary trace={trace} />
+            {load.state === 'done' && <HelperCallRows adventureId={adventureId} from={trace.createdAt} to={load.nextAt} />}
+          </>
+        )}
         {trace && view === 'prompt' && (
           <>
             {trace.promptTruncated && (

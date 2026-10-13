@@ -5,6 +5,9 @@ import { dueMemoryRanges } from '@core/memory/memoryBank';
 import { memoryText } from '@core/memory/memoryJobs';
 import { actionText } from '@core/model';
 import type { Provider } from '@core/ports';
+import { collect } from '@core/ports/provider';
+import { SUMMARY_SYSTEM, summaryPrompt } from '@core/text/prompts';
+import { renderTemplate } from '@core/text/templates';
 import { writeMeasurement } from './env';
 import { FACTS } from './recall';
 import { HISTORY_FILE, RecallHistory } from './recallHistory';
@@ -41,7 +44,19 @@ test.skipIf(!url)('memories keep planted facts', { timeout: 900_000 }, async () 
     rows.push({ id: fact.id, memory, kept: fact.expect.some((k) => lower.includes(k)), retried: calls > 1 });
   }
   console.table(rows.map(({ memory: _m, ...r }) => r));
-  const leaked = rows.filter((r) => LEAK_WORDS.some((d) => r.memory.toLowerCase().includes(d))).length;
-  console.log(`${rows.filter((r) => r.kept).length}/${rows.length} kept, ${leaked} with example details`);
-  writeMeasurement(`memory-keep-${LABEL}`, { rows });
+  const leaks = (text: string) => LEAK_WORDS.filter((d) => text.toLowerCase().includes(d));
+  const leaked = rows.filter((r) => leaks(r.memory).length).length;
+  // The summary over these memories, as the app's first one: the M12 dogfood's invented the player's past.
+  const memories = rows.map((r) => r.memory).filter((m) => m !== '' && !m.startsWith('no range'));
+  const prompt = renderTemplate(settings.template, SUMMARY_SYSTEM, summaryPrompt('', memories));
+  const summary = memories.length
+    ? (
+        await collect(
+          provider.complete({ prompt: prompt.prompt, maxTokens: 500, temperature: 0.3, topP: 0.9, stop: prompt.stop, cachePrompt: false, slotId: 1 }),
+        )
+      ).text.trim()
+    : '';
+  const summaryLeaks = leaks(summary);
+  console.log(`${rows.filter((r) => r.kept).length}/${rows.length} kept, ${leaked} with example details; summary leaks: ${summaryLeaks.join(', ') || 'none'}`);
+  writeMeasurement(`memory-keep-${LABEL}`, { rows, summary, summaryLeaks });
 });

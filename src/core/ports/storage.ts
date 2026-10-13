@@ -1,7 +1,9 @@
-import type { Adventure, AppSettings, Scenario, TurnTrace } from '../model/types';
+import type { Adventure, AppSettings, HelperCall, Scenario, TurnTrace } from '../model/types';
 
 /** Traces kept per adventure; the oldest are pruned on insert. [provisional] revisit when P7 measures growth. */
 export const TRACE_CAP_PER_ADVENTURE = 200;
+/** A turn makes about three helper calls (check, turn read, a memory job). [provisional] */
+export const HELPER_CALL_CAP_PER_ADVENTURE = 4 * TRACE_CAP_PER_ADVENTURE;
 
 /** Persistence boundary; small so another backend (SQLite on OPFS, Tauri) can replace IndexedDB. */
 export interface AdventureSummary {
@@ -32,6 +34,10 @@ export interface Storage {
   getTrace(turnId: string): Promise<TurnTrace | undefined>;
   /** Newest first. */
   listTraces(adventureId: string): Promise<TurnTrace[]>;
+  /** Kept like traces: pruned past the cap, deleted with the adventure. */
+  putHelperCall(c: HelperCall): Promise<void>;
+  /** Newest first. */
+  listHelperCalls(adventureId: string): Promise<HelperCall[]>;
 
   /**
    * Generated images, keyed per owner — an adventure (See images, cover) or a scenario (cover).

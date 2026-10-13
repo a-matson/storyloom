@@ -9,4 +9,5 @@ export const storyModel = ({ app, adv, svc }: { app: AppSettings; adv: Adventure
   provider: svc.providerFor(app, adv.settings.providerId),
   template: adv.settings.template,
   content: contentClause(adv.settings, 'record'),
+  model: adv.settings.modelId,
 });

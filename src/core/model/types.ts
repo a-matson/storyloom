@@ -14,6 +14,7 @@ export type Action = z.output<typeof S.Action>;
 /** Who speaks in one paragraph of an action's active text. */
 export type Speaker = NonNullable<Action['speakers']>[number];
 export type TurnTrace = z.output<typeof S.TurnTrace>;
+export type HelperCall = z.output<typeof S.HelperCall>;
 export type TurnKind = z.output<typeof S.TurnKind>;
 export type TurnOutcome = z.output<typeof S.TurnOutcome>;
 export type TurnErrorKind = z.output<typeof S.TurnErrorKind>;

@@ -8,6 +8,8 @@ export interface HelperModel {
   provider: Provider;
   template: TemplateId;
   content?: string;
+  /** For the helper call log, when known. */
+  model?: string | undefined;
 }
 
 /** Immutable view of an open adventure; a new object on every change. */

@@ -1,0 +1,70 @@
+import { z } from 'zod/mini';
+
+const at = z.int().check(z.gte(0));
+const Span = { from: at, to: at };
+
+/** Hand labels for one adventure backup: where the scene is and who is there after action i, and a few state values. */
+export const LabelSet = z.object({
+  /** The scene before the first read. */
+  start: z.string(),
+  place: z.array(z.object({ ...Span, place: z.string() })),
+  present: z.array(z.object({ ...Span, names: z.array(z.string()) })),
+  /** Words that map a free-text location to a labelled place; the first place with a matching word wins. */
+  placeWords: z.record(z.string(), z.array(z.string())),
+  checkpoints: z.array(z.object({ at, who: z.string(), key: z.string(), value: z.string() })),
+});
+export type LabelSet = z.output<typeof LabelSet>;
+const Labels = z.object({ sets: z.record(z.string(), LabelSet) });
+
+export function pickSet(json: unknown, name: string): LabelSet {
+  const set = Labels.parse(json).sets[name];
+  if (!set) throw new Error(`no label set "${name}"`);
+  return set;
+}
+
+export function placeOf(location: string, placeWords: LabelSet['placeWords']): string {
+  const t = location.toLowerCase();
+  return Object.entries(placeWords).find(([, words]) => words.some((w) => t.includes(w)))?.[0] ?? t;
+}
+
+export const presentOk = (want: readonly string[], got: readonly string[]) => want.length === got.length && want.every((w) => got.includes(w));
+
+/** Nobody leaves without `left`, except that a move resets the scene to the listed names (C3: 27/30 on P7c's replies). */
+export function nextPresent(prev: readonly string[], read: { moved: boolean; present: readonly string[]; left: readonly string[] }): string[] {
+  const left = new Set(read.left);
+  const listed = read.present.filter((p) => p !== 'nobody' && !left.has(p));
+  return read.moved ? listed : [...new Set([...listed, ...prev.filter((p) => !left.has(p))])];
+}
+
+/** One replayed turn: action index, the cast known by then, and what the reads made of it. */
+export interface StateRow {
+  i: number;
+  cast: readonly string[];
+  location?: string | undefined;
+  present: readonly string[];
+  /** Read B's record after this turn: who -> key -> value. */
+  record?: Record<string, Record<string, string>>;
+}
+
+const labelAt = <T extends { from: number; to: number }>(spans: readonly T[], i: number) => spans.find((s) => s.from <= i && i <= s.to);
+
+export function scoreRows(rows: readonly StateRow[], set: LabelSet) {
+  const ok = rows.map((r) => {
+    const want = (labelAt(set.present, r.i)?.names ?? []).filter((n) => r.cast.includes(n));
+    return {
+      place: r.location !== undefined && placeOf(r.location, set.placeWords) === labelAt(set.place, r.i)?.place,
+      present: presentOk(want, r.present),
+    };
+  });
+  const checkpointsOk = set.checkpoints.filter((c) => {
+    const row = rows.findLast((r) => r.i <= c.at);
+    return row?.record?.[c.who]?.[c.key]?.toLowerCase().includes(c.value.toLowerCase()) ?? false;
+  }).length;
+  return {
+    turns: rows.length,
+    placeOk: ok.filter((o) => o.place).length,
+    presentOk: ok.filter((o) => o.present).length,
+    checkpointsOk,
+    checkpoints: set.checkpoints.length,
+  };
+}

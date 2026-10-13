@@ -6,7 +6,8 @@
  *   gatev <url>           llama-server checks: template, tokenizer error, warming, layout, evictionChunk, CORS
  *   memory-keep <url> [label]  does the memory for each planted Do/Say keep the fact? (recorded history, ~16 calls)
  *   contradiction <url> [label]  precision/recall of the contradiction check on 40 hand-labelled outputs
- *   live <url> [label]   plays 20 scripted turns in the real app; per-turn stats, memories, summary
+ *   state <url> <backup> [label] [labels-set]  scene and state reads over every AI turn of a backup, scored against bench/stateLabels.json
+ *   live <url> [label]  plays 20 scripted turns in the real app; per-turn stats, memories, summary
  *   repetition <url> [label]  the live turns alone: repeated phrases per turn, distinct 4-grams (MEASURE_SAMPLERS=64,0 for the "before")
  *   images <image-url> <url>  See mode and a cover against a real A1111 server
  *   recall-record <url>   plays the 24-fact scenario to turn 90 once and saves the history (bench/recall-history.json)
@@ -14,7 +15,7 @@
  */
 import { spawnSync } from 'node:child_process';
 
-const [scenario, a, b] = process.argv.slice(2);
+const [scenario, a, b, c, d] = process.argv.slice(2);
 const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | undefined> }> = {
   core: { cmd: ['pnpm', 'bench'] },
   renders: { cmd: ['pnpm', 'measure:renders'], env: { MEASURE_LABEL: a } },
@@ -27,6 +28,10 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
   contradiction: {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/contradiction'],
     env: { MEASURE_URL: a, MEASURE_LABEL: b },
+  },
+  state: {
+    cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/state.bench'],
+    env: { MEASURE_URL: a, MEASURE_BACKUP: b, MEASURE_LABEL: c, MEASURE_LABELS: d },
   },
   // `--project=live`, not `--project live`: the flag is variadic and would swallow the file.
   live: { cmd: ['pnpm', 'exec', 'playwright', 'test', '--project=live', 'e2e/live/play.spec.ts'], env: { MEASURE_URL: a, MEASURE_LABEL: b } },
