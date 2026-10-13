@@ -22,7 +22,7 @@ import { helperCall } from './helperCall';
 import { attributeSpeakers } from './entities';
 import { EXTRACT_JSON_SCHEMA, grammarOf } from './extractJsonSchema';
 import { foldEntities, type FoldLog } from './fold';
-import { entitiesOverdue, type MemoryRange } from './memoryBank';
+import { ENTITY_BATCH, entitiesOverdue, type MemoryRange } from './memoryBank';
 import type { MaintenanceDeps } from './memoryJobs';
 
 /** The call needs no embedder, so the player's "Update from story" works without one. */
@@ -87,17 +87,18 @@ const turnAccepter =
 export const HELPER_JSON_SAMPLING = { repeatLastN: 256, presencePenalty: 0.3 };
 
 /** One helper call on slot 1 for a JSON reply: the grammar when the backend has one, else a `{` prefill. Null when unusable; a call typing cut throws. */
-async function helperJson<R>(
+export async function helperJson<R>(
   prompt: (grammar: boolean) => string,
   jsonSchema: Record<string, unknown>,
   maxTokens: number,
   accept: (cut: boolean) => (data: unknown) => R | null,
   deps: ExtractDeps,
+  job: 'entity' | 'state' = 'entity',
 ): Promise<R | null> {
   const caps = await deps.provider.capabilities();
   const rendered = renderTemplate(deps.template, withContent(EXTRACT_SYSTEM, deps.content), prompt(caps.jsonSchema), caps.jsonSchema ? '' : '{');
   const { text, stats } = await helperCall(
-    'entity',
+    job,
     maxTokens,
     rendered.prompt,
     (signal) =>
@@ -152,14 +153,8 @@ export function readTurn(passage: string, newNames: readonly string[], prev: Pre
 }
 
 /**
- * Memories read by one call: each call costs ~26 s on slot 1, so two ranges share it. Fewer due
- * memories wait, so a session's last memory is extracted in the next one.
- * [measured: 2026-10-08-recall-wave2-run1.json]
- */
-const ENTITY_BATCH = 2;
-
-/**
- * One combined call over the oldest `ENTITY_BATCH` memories not yet extracted, as one passage.
+ * One combined call over the oldest `ENTITY_BATCH` memories (each call costs ~26 s on slot 1, so
+ * ranges share it [measured: 2026-10-08-recall-wave2-run1.json]) not yet extracted, as one passage.
  * `scriptState.__entitiesAt` advances past them once the call ends, unusable reply included,
  * but not when the call was cut: a cut call is retried on the next idle run.
  */

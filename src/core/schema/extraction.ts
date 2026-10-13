@@ -83,6 +83,18 @@ export type SceneRead = z.output<ReturnType<typeof sceneRead>>;
 export const turnRead = (cast: readonly string[], cards: boolean) =>
   cards ? z.object({ scene: sceneRead(cast), entities: z.array(IntroducedEntity).check(z.maxLength(MAX_INTRODUCED)) }) : z.object({ scene: sceneRead(cast) });
 
+/** What the state read may change; `holds` becomes the item's `holder`. [measured: 2026-10-13-state-probe-m12-dogfood P8b] */
+export const STATE_READ_KEYS = ['location', 'posture', 'condition', 'mood', 'wearing', 'holds'] as const;
+/** A value padded to a longer cap ran the reply to its token cap (P8b). */
+export const NOW_CHARS = 20;
+
+/** One change the state read reports: whose, which key, the new value, and the [number] of the action that shows it. */
+export const stateChange = (who: readonly [string, ...string[]]) =>
+  z.object({ who: z.enum(who), key: z.enum(STATE_READ_KEYS), now: z.string().check(z.maxLength(NOW_CHARS)), at: z.int() });
+export type StateChange = z.output<ReturnType<typeof stateChange>>;
+/** The state read's reply. No optional keys (R1). */
+export const stateRead = (who: readonly [string, ...string[]], max: number) => z.object({ changes: z.array(stateChange(who)).check(z.maxLength(max)) });
+
 /**
  * The combined helper call's reply. No scene: it reads memories back, so it would move the scene
  * into the past. Short fields come first so a reply cut at `maxTokens` still has them; a cut loses

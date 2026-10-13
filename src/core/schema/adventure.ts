@@ -86,6 +86,9 @@ export const ScriptState = z.looseObject({
   /** Action count, and a hash of the last action's text, at the last introduction call (memory jobs). */
   __introducedAt: z.optional(z.number()),
   __introducedHash: z.optional(z.string()),
+  /** The same, at the last state read (memory jobs). */
+  __stateAt: z.optional(z.number()),
+  __stateHash: z.optional(z.string()),
   /** An action the summary read was edited or erased: rebuild it from the memories. */
   __summaryDirty: z.optional(z.boolean()),
   /** A place the turn read made while the scene was at `inside`: the Scene section asks whether it is part of it. */

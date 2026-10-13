@@ -18,6 +18,7 @@ export { entityNamedIn, guessUnlabelled, mergeEntities } from './entities';
 export { mergeOwn } from './assertionWrites';
 export { updateEntities } from './extract';
 export { introduce } from './introduce';
+export { readState } from './stateRead';
 export { checkInputs, checkOutput } from './contradiction';
 export { MEMORY_SPAN } from './memoryBank';
 export { projectEntity } from './projection';

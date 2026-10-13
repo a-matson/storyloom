@@ -37,6 +37,8 @@ export const MemorySettings = z.object({
   introductions: z._default(z.boolean(), true),
   /** The same call reads where the turn ends: place, who and which named items are there. */
   sceneEachTurn: z._default(z.boolean(), true),
+  /** After the turn read, one call for what changed for whoever is there: every turn (never cut), only while idle (typing cuts it), or off. */
+  stateRead: z._default(z.enum(['every', 'idle', 'off']), 'every'),
 });
 
 export const ContextSettings = z.object({

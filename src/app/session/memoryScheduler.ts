@@ -113,16 +113,26 @@ export class MemoryScheduler {
     return this.introducing;
   }
   private async introduceOnce(): Promise<void> {
-    const { introductions, sceneEachTurn } = this.host.adventure().settings.memory;
-    if (!introductions && !sceneEachTurn) return;
+    const { introductions, sceneEachTurn, stateRead } = this.host.adventure().settings.memory;
     try {
-      const { introduce } = await loadMemoryJobs();
-      const r = await this.logged((d) => introduce(this.host.adventure(), d));
-      if (r.touched || r.sceneUpdated) this.host.changed();
-      if (r.touched && this.idle && !this.idle.aborted) this.portraits(this.idle);
+      if (introductions || sceneEachTurn) {
+        const { introduce } = await loadMemoryJobs();
+        const r = await this.logged((d) => introduce(this.host.adventure(), d));
+        if (r.touched || r.sceneUpdated) this.host.changed();
+        if (r.touched && this.idle && !this.idle.aborted) this.portraits(this.idle);
+      }
     } catch (e) {
       console.warn('introduction call failed', e);
     }
+    // After the turn read, so it asks about the scene that read left. A failed read is skipped: the next one anchors on the stored state.
+    if (stateRead === 'every') await this.readState().catch((e: unknown) => console.warn('state read failed', e));
+  }
+
+  /** What changed for whoever is there; `cancel` (idle mode) lets typing cut it. */
+  private async readState(cancel?: AbortSignal): Promise<void> {
+    const { readState } = await loadMemoryJobs();
+    const r = await this.logged((d) => readState(this.host.adventure(), { ...d, ...(cancel && { cancel }) }));
+    if (r.changed) this.host.changed();
   }
 
   /** The client guess fills the gutter now; the helper's attribution replaces it when its cycle reaches the turn. */
@@ -182,6 +192,11 @@ export class MemoryScheduler {
     const entitiesAt = this.host.adventure().scriptState.__entitiesAt;
     let progressed = false;
     try {
+      if (this.host.adventure().settings.memory.stateRead === 'idle')
+        await this.readState(cancel.signal).catch((e: unknown) => {
+          if (cancel.signal.aborted) throw e;
+          console.warn('state read failed', e);
+        });
       // Memories are embedded on the story side so they compare with the query vectors in `prepareContext`.
       const { runMemoryMaintenance } = await loadMemoryJobs();
       const deps = { ...(await this.host.helperModel()), embedder: await this.host.embedder(), historyStart: this.host.historyStart?.() };

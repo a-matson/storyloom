@@ -39,6 +39,14 @@ export function fakeDeps(adv: Adventure, opts: { abortAfter?: number; cancelAfte
 /** A fixture adventure with the memory bank on, and auto-summary and the turn read off. */
 export function memoryAdventure(actions: number, bankSize = 200): Adventure {
   const adv = makeAdventure({ actions, cards: 0 });
-  adv.settings.memory = { ...adv.settings.memory, memoryBank: true, autoSummary: false, introductions: false, sceneEachTurn: false, bankSize };
+  adv.settings.memory = {
+    ...adv.settings.memory,
+    memoryBank: true,
+    autoSummary: false,
+    introductions: false,
+    sceneEachTurn: false,
+    stateRead: 'off',
+    bankSize,
+  };
   return adv;
 }
