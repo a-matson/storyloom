@@ -95,6 +95,10 @@ describe('the state read', () => {
       { id: 'x', subject: mira.id, producer: 'player', at: 0, basis: 'player', since: 0, kind: 'state', key: 'condition', value: 'very tired' },
     ];
     expect((await readState(adv, deps)).rejected.map((x) => x.reason)).toEqual(['cut', 'unchanged']);
+
+    // Padded toward the cap: a value ending on a function word is unfinished.
+    const padded = setup(['You wait.', 'Mira stands by the cottage.'], [{ who: 'Mira', key: 'location', now: 'near cottage in the', at: 4 }]);
+    expect((await readState(padded.adv, padded.deps)).rejected.map((x) => x.reason)).toEqual(['cut']);
   });
 
   it('lets the later action win for one key, and supersedes the old value', async () => {

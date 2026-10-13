@@ -50,8 +50,10 @@ export function stateCast(adventure: Adventure): Subject[] {
 
 const isPlayerLine = (a: Action | undefined) => a?.type === 'do' || a?.type === 'say';
 const named = (s: Subject, text: string) => entityNamedIn([s], text) !== undefined;
+/** Words a finished value never ends on: the 12B padded values toward the cap ("near cottage in the"). [measured: 2026-10-13-state-m13-3.json] */
+const DANGLING = /\b(?:and|or|the|a|an|in|of|to|with|at|on|but)[\s,]*$|[,(…-]\s*$/iu;
 // A full-length value ending inside a word was cut by the grammar's cap.
-const isCut = (now: string) => now.length >= NOW_CHARS && /[\p{L}\p{N}]$/u.test(now);
+const isCut = (now: string) => (now.length >= NOW_CHARS && /[\p{L}\p{N}]$/u.test(now)) || DANGLING.test(now.trim());
 
 /**
  * Read B: what changed for the present cast in the last two actions. An entry stands only on the action it
@@ -140,7 +142,7 @@ function ask(adventure: Adventure, cast: readonly Subject[], passage: string, ma
   });
   const item = stateChange([first, ...rest]);
   return helperJson(
-    () => statePrompt(records, passage, max),
+    (g) => statePrompt(records, passage, max, g),
     grammarOf(stateRead([first, ...rest], max)),
     Math.min(TOKENS_CAP, TOKENS_EACH * cast.length),
     (cut) => (data) => {

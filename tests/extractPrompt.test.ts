@@ -46,11 +46,13 @@ describe('the state read’s prompt', () => {
       ],
       '[4] Mira sits.',
       4,
+      true,
     );
     expect(p).toContain('Mira: posture standing; holds Horn\nyou: nothing yet');
     expect(p).toContain('---\n[4] Mira sits.\n---');
-    expect(p).toMatch(/At most 4 entries.*no longer true at the end.*\[number\] of the paragraph.*nothing for an unchanged value/s);
-    expect(p).not.toMatch(/effect/i);
+    expect(p).toMatch(/At most 4 entries.*at most four words.*\[number\] of the paragraph.*no longer true at the end; skip values that did not change/s);
+    expect(p).not.toMatch(/effect|<Name>/i);
+    expect(statePrompt([], '', 2, false)).toContain('{"changes":[{"who":"<Name>"');
   });
 });
 

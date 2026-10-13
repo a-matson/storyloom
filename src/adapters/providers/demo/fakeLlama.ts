@@ -104,6 +104,8 @@ export function createFakeLlama(opts: FakeLlamaOptions = {}): (req: Request) => 
     // The turn read moves the scene only for a lighthouse, so other specs' prompts carry no scene line.
     if (prompt.includes('Where does the passage end'))
       return oneShot({ content: JSON.stringify({ scene: /lighthouse/i.test(prompt) ? LIGHTHOUSE : {}, entities: [] }), stop: true });
+    // The state read sees no change, and leaves the rotation alone like the entity call.
+    if (prompt.includes('Who is in the scene, with their record')) return oneShot({ content: '{"changes": []}', stop: true });
     if (body.json_schema !== undefined) return card(prompt, rotate(NAMES, n++));
     if (/Memory:\s*$|Write the updated summary:\s*$/.test(prompt)) {
       return oneShot({ content: MEMORY, stop: true, stop_type: 'eos', tokens_evaluated: 200, tokens_predicted: 20 });
