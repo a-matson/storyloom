@@ -1,7 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from 'react';
 import type { entityEdits } from '@app/session/entities';
 import { ruleEdits } from '@app/session/rules';
-import { currentStates, isCurrentState, LOOK_KEYS, rivalKey, setState } from '@core/memory';
+import { currentStates, indexAssertions, isCurrentState, LOOK_KEYS, rivalKey, setState } from '@core/memory';
 import type { Adventure, Entity, EntityFact } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
@@ -63,7 +63,7 @@ export function CardSections({ entity: e, adventure, api, edits, onClose, onOpen
   const card: Card = { entity: e, adventure, edits, onShow, onOpen };
   const live = e.facts.filter((f) => !isHistory(f) && !isCurrentState(f));
   const of = (kind: EntityFact['kind']) => live.filter((f) => !f.conflict && (f.kind ?? 'trait') === kind);
-  const states = Object.entries(currentStates(e)).filter(([k]) => !rivalKey(e.kind, k));
+  const states = Object.entries(currentStates(indexAssertions(adventure.assertions).of(e.id))).filter(([k]) => !rivalKey(e.kind, k));
   const stateLines = (looks: boolean) => states.filter(([k]) => LOOKS.has(k) === looks).map(([k, v]) => <StateLine key={k} card={card} k={k} v={v} />);
   const add = (kind: AddKind, t: string) => {
     const [k = '', ...v] = t.split(':');
@@ -82,7 +82,7 @@ export function CardSections({ entity: e, adventure, api, edits, onClose, onOpen
           ...live.filter((f) => f.conflict).map((f) => <ConflictLine key={f.id} card={card} fact={f} />),
         ]}
       </Section>
-      {e.kind === 'character' && <Has entity={e} entities={adventure.entities} onOpen={onOpen} />}
+      {e.kind === 'character' && <Has entity={e} adventure={adventure} onOpen={onOpen} />}
       <Section label="With">
         {[
           ...of('relationship').map((f) => <FactLine key={f.id} card={card} fact={f} text={`${f.key ?? 'you'}: ${f.value ?? f.text}`} />),

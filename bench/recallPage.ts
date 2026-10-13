@@ -2,6 +2,7 @@ import { expect, type Page } from '@playwright/test';
 import { z } from 'zod/mini';
 import * as S from '@core/schema';
 import { Rule } from '@core/schema/rule';
+import { indexAssertions, textOf } from '@core/memory/assertionIndex';
 import { appearanceOf, currentStates, LOOK_KEYS } from '@core/memory/looks';
 
 const LOOKS = new Set<string>(LOOK_KEYS);
@@ -54,6 +55,7 @@ export function readAdventure(page: Page, id: string) {
       actions: (await rows('actions')).toSorted((a, b) => (a['seq'] as number) - (b['seq'] as number)),
       memories: (await rows('memories')).map(({ embedding: _e, ...m }) => m),
       entities: await rows('entities'),
+      assertions: await rows('assertions'),
       traces: await rows('traces'),
     };
     db.close();
@@ -102,6 +104,7 @@ export function costAndState(r: Rows) {
     .array(S.TurnTrace)
     .parse(r.traces)
     .toSorted((a, b) => a.createdAt - b.createdAt);
+  const ix = indexAssertions(z.array(S.Assertion).parse(r.assertions));
   return {
     repeatedPerTurn: traces.reduce((n, t) => n + (t.repeatedPhrases?.length ?? 0), 0) / (traces.length || 1),
     errors: traces.flatMap((t) => (t.error ? [t.error.message] : [])),
@@ -118,15 +121,18 @@ export function costAndState(r: Rows) {
     entities: z
       .array(S.Entity)
       .parse(r.entities)
-      // Looks and state are keyed state facts: dumped apart, so `facts` counts trait facts only.
-      .map((e) => ({
-        kind: e.kind,
-        name: e.name,
-        canon: e.canon,
-        looks: appearanceOf(e),
-        state: Object.fromEntries(Object.entries(currentStates(e)).filter(([k]) => !LOOKS.has(k))),
-        facts: e.facts.filter((f) => (f.kind ?? 'trait') === 'trait' || f.conflict).map((f) => (f.conflict ? `CONFLICT ${f.text}` : f.text)),
-      })),
+      // Looks and state are keyed assertions: dumped apart, so `facts` counts traits (and conflicts) only.
+      .map((e) => {
+        const as = ix.of(e.id);
+        return {
+          kind: e.kind,
+          name: e.name,
+          canon: e.canon,
+          looks: appearanceOf(as),
+          state: Object.fromEntries(Object.entries(currentStates(as)).filter(([k]) => !LOOKS.has(k))),
+          facts: as.flatMap((a) => (a.kind === 'trait' ? [a.text] : a.kind === 'conflict' ? [`CONFLICT ${textOf(a)}`] : [])),
+        };
+      }),
     scene: (r.adventure['plot'] as { scene?: unknown } | undefined)?.scene,
     // What the summary and the bank cover, read by hand for the coverage bar.
     summary: (r.adventure['plot'] as { storySummary?: unknown } | undefined)?.storySummary,

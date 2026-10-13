@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { mergeEntity } from '@core/memory/entities';
 import { foldEntities, uncut, type FoldLog, type Incoming } from '@core/memory/fold';
-import { appearanceOf, currentStates } from '@core/memory/looks';
+import { appearanceOf, factStates as currentStates } from '@core/memory/looks';
 import { createBlankAdventure } from '@core/model/scenario';
 import type { Action, Adventure } from '@core/model';
+import { own } from './fixtures/assertions';
 
 const act = (id: string, text: string): Action => ({ id, type: 'continue', versions: [text], active: 0, createdAt: 0 });
 const seen = (name: string, over: Partial<Incoming> = {}): Incoming => ({ name, kind: 'character', description: '', facts: [], ...over });
@@ -107,7 +108,7 @@ describe('foldEntities', () => {
       seen('Tamsin', { looks: { hair: 'grey braid', eyes: 'not described', wearing: 'oilskin coat' }, state: { location: 'Gull Point' } }),
       seen('Gull Point', { kind: 'place', looks: { build: 'grey stone tower' } }),
     ]);
-    expect(appearanceOf(e ?? { facts: [] })).toBe('hair: grey braid');
+    expect(appearanceOf(e ? own(e) : [])).toBe('hair: grey braid');
     expect(place?.facts).toEqual([]);
     adv.actions.push(act('a1', 'Tamsin walks down to the dock.'));
     fold(adv, [seen('Tamsin', { state: { location: 'the dock' } })]);

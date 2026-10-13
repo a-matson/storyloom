@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildContext, chunkedStart, type ContextBuildInput } from '@core/context';
 import type { Action, Entity, Memory, StoryCard } from '@core/model/types';
 import type { Tokenizer } from '@core/text/tokenizer';
+import { derived } from './fixtures/assertions';
 
 /** Deterministic tokenizer for tests: 1 token per 4 characters. */
 const tok: Tokenizer = { count: (t) => (t ? Math.ceil(t.length / 4) : 0) };
@@ -256,7 +257,7 @@ describe('ordering', () => {
       firstSeen: 0,
       lastSeen: seen,
     });
-    const r = buildContext(base({ actions, plot, entities: [item('Horn', 3), item('Rumour', 0)] }));
+    const r = buildContext(derived(base({ actions, plot, entities: [item('Horn', 3), item('Rumour', 0)] })));
     expect(r.sections.find((s) => s.kind === 'scene')?.text).toBe('[Scene: the mill · Present: Amanda · You hold: Horn · Here: the ledger · Rain]');
   });
 

@@ -1,6 +1,6 @@
 import type { CardMatch } from '../cards/storyCards';
 import type { RankedMemory } from '../memory/memoryBank';
-import type { Action, Entity, Memory, PlotComponents, Rule, StoryCard } from '../model/types';
+import type { Action, Assertion, Entity, Memory, PlotComponents, Rule, StoryCard } from '../model/types';
 import type { Tokenizer } from '../text/tokenizer';
 
 export type SectionKind =
@@ -76,6 +76,8 @@ export interface ContextBuildInput {
   storyCards: StoryCard[];
   /** Sent as cast lines under the structured cap, never through `storyCards`. */
   entities: Entity[];
+  /** What the cast lines and item lists say about the entities. */
+  assertions?: readonly Assertion[];
   /** Sent as `[Rules: …]` while relevant (`relevantRules`), first claim on the structured cap. */
   rules?: readonly Rule[];
   /** Memories ranked by relevance to the most recent action, best first. */

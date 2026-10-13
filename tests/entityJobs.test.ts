@@ -9,6 +9,7 @@ import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import type { CompletionRequest } from '@core/ports';
 import { MAX_ENTITIES } from '@core/schema/extraction';
 import type { Adventure } from '@core/model';
+import { own } from './fixtures/assertions';
 import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure } from './fixtures/memoryJobs';
 
 const none: string[] = [];
@@ -188,7 +189,7 @@ describe('entity extraction in memory maintenance', () => {
       true,
     );
     await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
-    expect(adv.entities.map((e) => [e.name, appearanceOf(e)])).toEqual([
+    expect(adv.entities.map((e) => [e.name, appearanceOf(own(e))])).toEqual([
       ['Mira', 'build: short, hair: shaved head'],
       ['Tobin', ''],
     ]);

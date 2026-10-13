@@ -7,6 +7,7 @@ import { hashPrompt } from '@core/trace';
 import { appearanceOf } from '@core/memory/looks';
 import type { Adventure } from '@core/model';
 import type { CompletionRequest } from '@core/ports';
+import { own } from './fixtures/assertions';
 import { ENTITY_PROMPT, fakeProvider, memoryAdventure } from './fixtures/memoryJobs';
 
 describe('candidateNames', () => {
@@ -119,7 +120,7 @@ describe('introduce', () => {
     };
     const { adv, deps } = setup('You meet Tamsin, tall and lean, at the ferry.', looks);
     await introduce(adv, deps);
-    expect(adv.entities[0] && appearanceOf(adv.entities[0])).toBe('build: tall');
+    expect(adv.entities[0] && appearanceOf(own(adv.entities[0]))).toBe('build: tall');
   });
 
   it('reads from the last finished call when the turns between were cut', async () => {

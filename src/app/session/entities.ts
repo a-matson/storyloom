@@ -1,6 +1,6 @@
-// Only `loadMemoryJobs`: importing more from the barrel splits it out of the start-up chunk.
+// Only start-up members of the barrel: importing a lazy one splits it out of the start-up chunk.
 import { loadImagePrompt } from '@core/image';
-import { loadMemoryJobs } from '@core/memory';
+import { indexAssertions, loadMemoryJobs, withLooks } from '@core/memory';
 import { newId, type Adventure, type Entity, type EntityFact } from '@core/model';
 import { cropSquare, downscale } from '../image';
 import { withoutReference } from './images';
@@ -94,7 +94,7 @@ export function entityEdits(host: GameSession) {
       const { looksOf } = await loadImagePrompt();
       mutate((adv) => {
         const e = adv.entities.find((x) => x.id === id);
-        if (e) patch(adv, id, { referenceImageId: imageId, look: looksOf(e) });
+        if (e) patch(adv, id, { referenceImageId: imageId, look: looksOf(withLooks(e, indexAssertions(adv.assertions).of(id))) });
       });
     },
     clearReference: (id: string) => mutate((adv) => (adv.entities = adv.entities.map((e) => (e.id === id ? withoutReference(e) : e)))),
@@ -129,7 +129,7 @@ export function entityEdits(host: GameSession) {
       mutate((adv) => {
         const e = adv.entities.find((x) => x.id === id);
         if (!e) return;
-        const card = { ...projectEntity(e), id: newId('card_') };
+        const card = { ...projectEntity(e, indexAssertions(adv.assertions).of(id)), id: newId('card_') };
         adv.storyCards = [...adv.storyCards, card];
         patch(adv, id, { cardId: card.id });
       });

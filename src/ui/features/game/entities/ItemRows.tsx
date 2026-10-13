@@ -1,14 +1,14 @@
-import { currentStates, heldBy, setWhere, YOU } from '@core/memory';
-import type { Entity } from '@core/model';
+import { currentStates, heldBy, indexAssertions, setWhere, YOU } from '@core/memory';
+import type { Adventure, Entity } from '@core/model';
 import { Button } from '@ui/components/ui/button';
 import { Select } from '@ui/components/ui/field';
 import { SectionLabel } from '@ui/components/ui/section-label';
 import type { Update } from './EntityDetails';
 
 /** An item is held by someone or at a place; choosing one clears the other. A value no entry names stays selectable. */
-export function ItemRows({ entity: e, entities, update }: { entity: Entity; entities: readonly Entity[]; update: Update }) {
-  const now = currentStates(e);
-  const names = (kind: Entity['kind']) => entities.filter((x) => x.kind === kind).map((x) => x.name);
+export function ItemRows({ entity: e, adventure, update }: { entity: Entity; adventure: Adventure; update: Update }) {
+  const now = currentStates(indexAssertions(adventure.assertions).of(e.id));
+  const names = (kind: Entity['kind']) => adventure.entities.filter((x) => x.kind === kind).map((x) => x.name);
   const row = (key: 'holder' | 'location', label: string, options: string[]) => {
     const value = now[key] ?? '';
     return (
@@ -32,8 +32,8 @@ export function ItemRows({ entity: e, entities, update }: { entity: Entity; enti
 }
 
 /** The items a character holds; a click opens the item's card. */
-export function Has({ entity: e, entities, onOpen }: { entity: Entity; entities: readonly Entity[]; onOpen: (id: string) => void }) {
-  const items = heldBy(entities, e.name);
+export function Has({ entity: e, adventure, onOpen }: { entity: Entity; adventure: Adventure; onOpen: (id: string) => void }) {
+  const items = heldBy(adventure.entities, indexAssertions(adventure.assertions), e.name);
   if (items.length === 0) return null;
   return (
     <>

@@ -7,6 +7,7 @@ import { createBlankAdventure } from '@core/model';
 import { NoopScriptRunner, type CompletionRequest, type HookInput, type HookResult, type Provider } from '@core/ports';
 import { createApproxTokenizer } from '@core/text';
 import { generateAlternative, prepareContext, retryLast, runTurn, type TurnDeps, type TurnEvent } from '@core/turn';
+import { own } from './fixtures/assertions';
 
 function setup(scripts?: TurnDeps['scripts']) {
   const handler = createFakeLlama({ wordDelayMs: 0 });
@@ -244,7 +245,7 @@ describe('turn traces', () => {
       ...mergeEntity(undefined, { name: 'Tamsin', kind: 'character', aliases: ['ferrywoman'], description: 'Tamsin rows the night ferry.', facts: [] }, 0),
       lastSeen: 1,
     };
-    adventure.entities = [entity];
+    [adventure.entities, adventure.assertions] = [[entity], own(entity)];
     adventure.settings.memory.entityFacts = true;
     const prepared = await prepareContext(adventure, log.actions, deps);
     if ('stopped' in prepared) throw new Error('context build stopped');

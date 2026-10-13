@@ -3,9 +3,10 @@ import { renderScene } from '@core/context/render';
 import { mergeEntity } from '@core/memory/entities';
 import { foldEntities, type Incoming } from '@core/memory/fold';
 import { heldBy, itemsAt, itemsHere, setWhere, YOU } from '@core/memory/items';
-import { currentStates } from '@core/memory/looks';
+import { factStates as currentStates } from '@core/memory/looks';
 import { createBlankAdventure } from '@core/model/scenario';
 import type { Action, Entity } from '@core/model';
+import { ixOf } from './fixtures/assertions';
 
 const ent = (name: string, kind: Entity['kind'], state: Record<string, string> = {}): Entity => ({
   ...mergeEntity(undefined, { name, kind, description: '', facts: [] }, 0),
@@ -19,12 +20,13 @@ const horn = ent('Horn', 'item', { holder: 'you' });
 const key = ent('Key', 'item', { holder: 'Korthak the Bold' });
 const ledger = ent('Ledger', 'item', { location: 'the tower' });
 const all = [korthak, tower, horn, key, ledger];
+const ix = ixOf(all);
 
 describe('items', () => {
   it('finds what a holder holds and what lies at a place', () => {
-    expect(heldBy(all, YOU)).toEqual([horn]);
-    expect(heldBy(all, 'Korthak')).toEqual([key]);
-    expect(itemsAt(all, 'Tower')).toEqual([ledger]);
+    expect(heldBy(all, ix, YOU)).toEqual([horn]);
+    expect(heldBy(all, ix, 'Korthak')).toEqual([key]);
+    expect(itemsAt(all, ix, 'Tower')).toEqual([ledger]);
   });
 
   it('a holder ends the place and a place ends the holder, for the player and the story', () => {
@@ -41,10 +43,10 @@ describe('items', () => {
 
   it('the scene line holds your items and lists what is here, a held one with its holder, five at most', () => {
     const scene = { location: 'the tower', present: ['Korthak'], items: ['the horn', 'a lamp'] };
-    expect(itemsHere(scene, all)).toEqual(['a lamp', 'Ledger', 'Key (Korthak)']);
-    expect(renderScene(scene, all)).toBe('the tower · Present: Korthak · You hold: Horn · Here: a lamp, Ledger, Key (Korthak)');
+    expect(itemsHere(scene, all, ix)).toEqual(['a lamp', 'Ledger', 'Key (Korthak)']);
+    expect(renderScene(scene, all, ix)).toBe('the tower · Present: Korthak · You hold: Horn · Here: a lamp, Ledger, Key (Korthak)');
     const many = Array.from({ length: 7 }, (_, i) => ent(`Coin${i}`, 'item', { holder: 'you' }));
-    expect(renderScene(undefined, many)).toBe('You hold: Coin0, Coin1, Coin2, Coin3, Coin4');
+    expect(renderScene(undefined, many, ixOf(many))).toBe('You hold: Coin0, Coin1, Coin2, Coin3, Coin4');
   });
 });
 

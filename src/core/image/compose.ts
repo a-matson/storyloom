@@ -1,5 +1,4 @@
 import type { Entity, Scene } from '../model/types';
-import { appearanceOf } from '../memory/looks';
 import { seedOf } from '../trace';
 
 /**
@@ -13,7 +12,8 @@ export const CAST_CAP = 2;
 /** CLIP reads 75 tokens; ~4 characters a token. [provisional] */
 export const PROMPT_BUDGET = 300;
 
-type Character = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'description' | 'appearance' | 'facts' | 'look'>;
+/** `description` and `appearance` as `withLooks` resolves them from the assertions. */
+type Character = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'description' | 'appearance' | 'look'>;
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const nameRe = (n: string) => new RegExp(`(?<![\\p{L}\\p{N}])${escape(n.trim())}(?![\\p{L}\\p{N}])`, 'giu');
@@ -59,7 +59,7 @@ function noun(e: Character): string {
   return n && !namesOf(e).some((x) => nameRe(x).test(n)) ? n.replace(/^A(n)? /, (a) => a.toLowerCase()) : 'a person';
 }
 
-const looks = (e: Character, full: boolean) => [noun(e), full ? appearanceOf(e) : ''].filter(Boolean).join(', ');
+const looks = (e: Character, full: boolean) => [noun(e), full ? (e.appearance ?? '') : ''].filter(Boolean).join(', ');
 /** A character's current look without their name, from what the story says: what a new reference freezes. */
 export const looksOf = (e: Character): string => looks(e, true);
 /** What a See repeats for them: the frozen look when the player set a reference, else `looksOf`. */

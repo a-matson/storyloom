@@ -1,3 +1,4 @@
+import { indexAssertions } from '@core/memory';
 import { newId, type Adventure, type AppSettings, type Entity } from '@core/model';
 import { seedOf, trackJob } from '@core/trace';
 import { downscale } from '../image';
@@ -61,7 +62,11 @@ export async function renderPortrait(host: PortraitHost, id: string): Promise<vo
   if (!e) return;
   const s = host.adv.settings.image;
   const req = {
-    prompt: portraitPrompt(e, [s.portraitStyle ?? portraitStyle(host.adv.tags), s.promptSuffix?.trim()].filter(Boolean).join(', ')),
+    prompt: portraitPrompt(
+      e,
+      indexAssertions(host.adv.assertions).of(e.id),
+      [s.portraitStyle ?? portraitStyle(host.adv.tags), s.promptSuffix?.trim()].filter(Boolean).join(', '),
+    ),
     negativePrompt: [PORTRAIT_NEGATIVE, s.negativePrompt].filter(Boolean).join(', '),
     width: s.portraitSize,
     height: s.portraitSize,

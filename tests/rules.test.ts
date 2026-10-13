@@ -3,6 +3,7 @@ import { buildContext } from '@core/context';
 import { relevantRules, renderRules, type RuleContext } from '@core/context/rules';
 import { mergeEntity } from '@core/memory/entities';
 import type { Entity, EntityFact, Rule } from '@core/model';
+import { ixOf } from './fixtures/assertions';
 
 const ent = (name: string, kind: Entity['kind'], over: Partial<Entity> = {}): Entity => ({
   ...mergeEntity(undefined, { name, kind, description: '', facts: [] }, 0),
@@ -44,6 +45,7 @@ const all = [mira, grub, vex, kobolds, order, horn, key, ledger, tower];
 
 const ctx = (present: Entity[] = [], mentioned: Entity[] = [], entities = all): RuleContext => ({
   entities,
+  ix: ixOf(entities),
   scene: { location: 'Hall', present: present.map((e) => e.name) },
   present: new Set(present.map((e) => e.id)),
   mentioned: new Set(mentioned.map((e) => e.id)),

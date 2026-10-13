@@ -1,3 +1,4 @@
+import { isCurrent, type AssertionIndex } from '../memory/assertionIndex';
 import { heldBy, itemsAt, YOU } from '../memory/items';
 import { currentStates } from '../memory/looks';
 import type { Entity, Rule, Scene } from '../model/types';
@@ -5,6 +6,7 @@ import type { Entity, Rule, Scene } from '../model/types';
 /** What is in play this turn: entity ids the scene has present (its place too) and the recent text names. */
 export interface RuleContext {
   entities: readonly Entity[];
+  ix: AssertionIndex;
   scene: Scene | undefined;
   present: ReadonlySet<string>;
   mentioned: ReadonlySet<string>;
@@ -20,14 +22,18 @@ const one = (s: string) => s.trim().toLowerCase().replace(/s$/, '');
  * Ungated first, then oldest first, so the block reads the same turn to turn.
  */
 export function relevantRules(rules: readonly Rule[], ctx: RuleContext): Rule[] {
-  const { entities, scene, present, mentioned } = ctx;
+  const { entities, ix, scene, present, mentioned } = ctx;
   const here = entities.filter((e) => present.has(e.id));
-  const items = [...heldBy(entities, YOU), ...here.flatMap((e) => heldBy(entities, e.name)), ...(scene?.location ? itemsAt(entities, scene.location) : [])];
+  const items = [
+    ...heldBy(entities, ix, YOU),
+    ...here.flatMap((e) => heldBy(entities, ix, e.name)),
+    ...(scene?.location ? itemsAt(entities, ix, scene.location) : []),
+  ];
   const live = new Set([...present, ...mentioned, ...items.map((e) => e.id)]);
-  const member = (f: Entity) => here.some((e) => e.relations.some((r) => r.to === f.id) || one(currentStates(e)['species'] ?? '') === one(f.name));
+  const member = (f: Entity) => here.some((e) => e.relations.some((r) => r.to === f.id) || one(currentStates(ix.of(e.id))['species'] ?? '') === one(f.name));
   const kinds = new Set(entities.filter((f) => f.kind === 'faction' && member(f)).map((f) => f.id));
   const governed = new Set(
-    here.flatMap((e) => e.facts.flatMap((f) => (f.kind === 'effect' && f.until === undefined && f.cause?.kind === 'rule' && f.cause.id ? [f.cause.id] : []))),
+    here.flatMap((e) => ix.of(e.id).flatMap((a) => (a.kind === 'effect' && isCurrent(a) && a.cause?.kind === 'rule' && a.cause.id ? [a.cause.id] : []))),
   );
   return rules
     .filter((r) => r.status === 'confirmed' && (r.gates.length === 0 || r.gates.some((g) => live.has(g) || kinds.has(g)) || governed.has(r.id)))

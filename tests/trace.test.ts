@@ -13,6 +13,7 @@ import { HELPER_REPLY_CAP, HelperCall } from '@core/schema';
 import { createApproxTokenizer } from '@core/text';
 import { buildTrace, clearJobLog, hashPrompt, overlappingJobs, TRACE_PROMPT_CAP, trackJob } from '@core/trace';
 import { runTurn, type TurnEvent } from '@core/turn';
+import { own } from './fixtures/assertions';
 
 async function oneTurn(fetchFn?: typeof fetch, opening = 'You stand at the gate.') {
   const handler = createFakeLlama({ wordDelayMs: 0 });
@@ -204,6 +205,7 @@ describe('buildTrace', () => {
     };
     const absent = mergeEntity(undefined, { name: 'Orrin', kind: 'character', aliases: [], description: 'Orrin sleeps.', facts: [] }, 0);
     adventure.entities = [tamsin, absent];
+    adventure.assertions = [...own(tamsin), ...own(absent)];
     adventure.storyCards = [{ id: 'card_gate', type: 'location', name: 'Gate', entry: 'An iron gate.', triggers: ['gate'] }];
     const seen = new Map<string, HookInput['entities']>();
     const scripts = new (class extends NoopScriptRunner {

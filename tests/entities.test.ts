@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { attributeSpeakers, entityNamedIn, matchEntity, mergeEntities, mergeEntity, namedInPassage, type Sighting } from '@core/memory/entities';
 import { isConfirmed } from '@core/memory/facts';
-import { appearanceOf, currentStates, setState } from '@core/memory/looks';
-import { ENTITY_ENTRY_TOKENS, projectEntity } from '@core/memory/projection';
+import { appearanceOf as looksOf, factStates as currentStates, setState } from '@core/memory/looks';
+import { ENTITY_ENTRY_TOKENS, projectEntity as project } from '@core/memory/projection';
 import type { Action, Entity } from '@core/model';
+import { own } from './fixtures/assertions';
+
+const appearanceOf = (e: Entity) => looksOf(own(e));
+const projectEntity = (e: Entity) => project(e, own(e));
+const confirmed = (e: Entity) => isConfirmed(e, own(e));
 
 const seen = (over: Partial<Sighting> = {}): Sighting => ({ name: 'Tamsin', kind: 'character', description: '', facts: [], ...over });
 
@@ -217,11 +222,11 @@ describe('setState', () => {
 describe('isConfirmed', () => {
   it('needs a second sighting, canon, a card, or a player-touched fact', () => {
     const fresh = mergeEntity(undefined, seen({ facts: ['She rows.'] }), 4);
-    expect(isConfirmed(fresh)).toBe(false);
-    expect(isConfirmed(mergeEntity(fresh, seen(), 10))).toBe(true);
-    expect(isConfirmed({ ...fresh, canon: true })).toBe(true);
-    expect(isConfirmed({ ...fresh, cardId: 'card_1' })).toBe(true);
-    expect(isConfirmed({ ...fresh, facts: [{ id: 'f', text: 'She lies.', fromAction: 4, source: 'player' }] })).toBe(true);
-    expect(isConfirmed({ ...fresh, facts: fresh.facts.map((f) => ({ ...f, pinned: true })) })).toBe(true);
+    expect(confirmed(fresh)).toBe(false);
+    expect(confirmed(mergeEntity(fresh, seen(), 10))).toBe(true);
+    expect(confirmed({ ...fresh, canon: true })).toBe(true);
+    expect(confirmed({ ...fresh, cardId: 'card_1' })).toBe(true);
+    expect(confirmed({ ...fresh, facts: [{ id: 'f', text: 'She lies.', fromAction: 4, source: 'player' }] })).toBe(true);
+    expect(confirmed({ ...fresh, facts: fresh.facts.map((f) => ({ ...f, pinned: true })) })).toBe(true);
   });
 });

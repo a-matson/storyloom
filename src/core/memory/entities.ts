@@ -2,7 +2,7 @@ import type { Action, Adventure, Entity, EntityFact, Speaker } from '../model/ty
 import { actionText, newId } from '../model/types';
 import { guessSpeakers } from '../text/speakers';
 import type { Source } from './invalidate';
-import { currentStates, isCurrentState, rivalKey } from './looks';
+import { factStates, isCurrentState, rivalKey } from './looks';
 import { matchEntity, norm, words } from './names';
 
 export { knownAs, matchEntity } from './names';
@@ -139,7 +139,7 @@ export function mergeEntity(existing: Entity | undefined, incoming: Sighting, at
     else facts.push(fact(text, from, extra));
   };
 
-  const current = currentStates(base);
+  const current = factStates(base);
   const locked = new Set(base.canonKeys);
   for (const [key, value] of Object.entries(incoming.state ?? {})) {
     const old = current[key];

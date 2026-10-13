@@ -1,5 +1,5 @@
 import { useState, useSyncExternalStore } from 'react';
-import { currentStates } from '@core/memory';
+import { currentStates, identityText, indexAssertions } from '@core/memory';
 import type { Adventure, Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { progressText, useImageProgress } from '@ui/hooks/useImageProgress';
@@ -33,6 +33,7 @@ export function EntityList({ adventure, api, world }: { adventure: Adventure; ap
   const kinds: Kind[] = world ? (kind ? [kind] : WORLD) : ['character'];
   const shown = adventure.entities.filter((e) => kinds.includes(e.kind));
   const opened = adventure.entities.find((e) => e.id === open);
+  const ix = indexAssertions(adventure.assertions);
 
   return (
     <>
@@ -61,9 +62,9 @@ export function EntityList({ adventure, api, world }: { adventure: Adventure; ap
                 <PortraitDot id={e.id} api={api} />
               </span>
               <span className="truncate text-caption font-normal text-muted-foreground">
-                {Object.entries(currentStates(e))
+                {Object.entries(currentStates(ix.of(e.id)))
                   .map(([k, v]) => (k === 'holder' ? `held by ${v}` : `${k}: ${v}`))
-                  .join(' · ') || e.description}
+                  .join(' · ') || identityText(e, ix.of(e.id))}
               </span>
             </span>
           </div>

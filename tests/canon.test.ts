@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { pinnedLines } from '@core/context/cast';
 import { seedCanonEntities } from '@core/memory/canon';
 import { mergeEntity, type Sighting } from '@core/memory/entities';
-import { currentStates } from '@core/memory/looks';
+import { factStates as currentStates } from '@core/memory/looks';
 import { createAdventureFromScenario, newScenario } from '@core/model/scenario';
 import type { Entity, StoryCard } from '@core/model';
+import { ixOf } from './fixtures/assertions';
 
 const card = (type: string, name: string, over: Partial<StoryCard> = {}): StoryCard => ({
   id: `card_${name}`,
@@ -69,6 +70,6 @@ describe('canon lock', () => {
 
   it('a conflicted fact goes out with the pinned facts', () => {
     const e = mergeEntity(canon({ state: { eyes: 'grey' }, canonKeys: ['eyes'] }), seen({ state: { eyes: 'blue' }, facts: ['She sings.'] }), 7);
-    expect(pinnedLines([e]).map((l) => l.text)).toEqual([`${e.name}: the story says eyes is blue, but canon says grey`]);
+    expect(pinnedLines([e], ixOf([e])).map((l) => l.text)).toEqual([`${e.name}: the story says eyes is blue, but canon says grey`]);
   });
 });

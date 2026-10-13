@@ -69,7 +69,7 @@ export function EntityDrawer({ entity: e, adventure, api, onClose, onOpen }: Pro
           <SectionLabel>Also called (comma-separated)</SectionLabel>
         </label>
         <Input id={`${id}-aliases`} defaultValue={e.aliases.join(', ')} onBlur={(ev) => update({ aliases: list(ev.target.value) })} />
-        {e.kind === 'item' && <ItemRows entity={e} entities={adventure.entities} update={update} />}
+        {e.kind === 'item' && <ItemRows entity={e} adventure={adventure} update={update} />}
         <CardSections entity={e} adventure={adventure} api={api} edits={edits} onClose={onClose} onOpen={onOpen} />
         <Appearances entity={e} adventure={adventure} onClose={onClose} edits={edits} />
         <Actions entity={e} adventure={adventure} edits={edits} />
