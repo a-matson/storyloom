@@ -9,6 +9,8 @@ import { StatusDot } from '@ui/components/ui/status-dot';
 import { CHIP, SECTION, SECTION_HEADER } from '../sidebar/Section';
 import { Avatar } from './Avatar';
 import { EntityDrawer } from './EntityDrawer';
+import { NowCard } from './NowCard';
+import { PlacesList } from './PlacesList';
 import { YouCard } from './YouCard';
 
 type Kind = Entity['kind'];
@@ -53,6 +55,8 @@ export function EntityList({ adventure, api, world }: { adventure: Adventure; ap
 
   return (
     <>
+      {world && <NowCard adventure={adventure} api={api} />}
+      {world && <PlacesList adventure={adventure} api={api} />}
       {world && (
         <div className="flex gap-1.5">
           {WORLD.map((k) => (

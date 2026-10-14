@@ -59,7 +59,7 @@ describe('player rules', () => {
   it('ending an effect stamps `until` and keeps the line', () => {
     const { session } = withCast();
     session.adv.assertions = [{ id: 'f1', subject: 'ent_mira', producer: 'turn', at: 0, basis: 'stated', since: 0, kind: 'effect', condition: 'cursed' }];
-    entityEdits(session).endEffect('f1');
+    entityEdits(session).endLine('f1');
     expect(session.adv.assertions[0]?.until).toBe(session.log.actions.length);
   });
 });
