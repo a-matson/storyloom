@@ -9,6 +9,7 @@ import { StatusDot } from '@ui/components/ui/status-dot';
 import { CHIP, SECTION, SECTION_HEADER } from '../sidebar/Section';
 import { Avatar } from './Avatar';
 import { EntityDrawer } from './EntityDrawer';
+import { YouCard } from './YouCard';
 
 type Kind = Entity['kind'];
 const WORLD: Kind[] = ['place', 'item', 'faction'];
@@ -79,6 +80,7 @@ export function EntityList({ adventure, api, world }: { adventure: Adventure; ap
             ]
           : [];
       })}
+      {!world && <YouCard adventure={adventure} api={api} />}
       {shown.length === 0 && (
         <p className="text-caption text-muted-foreground">
           Nothing yet. {world ? 'Places, items and factions' : 'Characters'} appear here as the story introduces them.

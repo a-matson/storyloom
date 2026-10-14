@@ -218,6 +218,16 @@ describe('GameSession entity edits', () => {
     expect(session.getSnapshot().context?.prompt).toContain('Gate (An iron gate older than the town): The gate is painted red.');
   });
 
+  it('correct about the player pins a player line on you, even when it names an entity, and sends it', async () => {
+    const { session } = withGate();
+    await correct(session, 'You painted the gate red.');
+    expect(of(session, 'you').at(-1)).toMatchObject({ kind: 'trait', text: 'You painted the gate red.', producer: 'player', basis: 'player' });
+    expect(of(session, gate.id)).toHaveLength(2);
+    expect(session.getSnapshot().notice).toBe('Pinned to you');
+    await session.previewContext();
+    expect(session.getSnapshot().context?.prompt).toContain('The player ("you"): You painted the gate red.');
+  });
+
   it('correct with no named entity appends to Plot Essentials', async () => {
     const { session } = withGate();
     session.updatePlot({ plotEssentials: 'You are a courier.' });

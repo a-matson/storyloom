@@ -16,12 +16,16 @@ export const MEMORY_SYSTEM =
  * against that dropped real facts. [measured: 2026-10-08-memory-keep-after]
  */
 const MEMORY_FORMAT =
-  'Format: 1–4 past-tense sentences. First, anything the player states about themselves (name, body, belongings, past), ' +
-  'then the facts, decisions, discoveries and relationship changes, with every proper name kept. ' +
+  'Format: 1–4 past-tense sentences. First, anything the player states about themselves (name, body, belongings, past), if they state anything; ' +
+  'never say what the player is or looks like unless the passage does. ' +
+  'Then the facts, decisions, discoveries and relationship changes, with every proper name kept. ' +
   'No dialogue, no prose, no commentary.\n\n';
 
-export function memoryPrompt(passage: string): string {
-  return `${MEMORY_FORMAT}Summarise this passage.\n\n---\n${passage}\n---\n\nMemory:`;
+/** What the player wrote about themselves, so a helper need not invent it (the summary did). Empty: no block. */
+const givenBlock = (given: readonly string[]) => (given.length ? `Given about the player:\n${given.map((g) => `- ${g}`).join('\n')}\n\n` : '');
+
+export function memoryPrompt(passage: string, given: readonly string[] = []): string {
+  return `${MEMORY_FORMAT}${givenBlock(given)}Summarise this passage.\n\n---\n${passage}\n---\n\nMemory:`;
 }
 
 /**
@@ -91,8 +95,9 @@ export const SUMMARY_SYSTEM =
   '"Long ago:" (at most 6 sentences) then "Recently:" (at most 6 sentences). When Recently would pass 6 sentences, ' +
   'fold its oldest sentences into Long ago. Output only the summary.';
 
-export function summaryPrompt(previousSummary: string, newMemories: string[]): string {
+export function summaryPrompt(previousSummary: string, newMemories: string[], given: readonly string[] = []): string {
   return (
+    givenBlock(given) +
     (previousSummary ? `Current summary:\n${previousSummary}\n\n` : '') +
     (newMemories.length ? `New memories since then:\n${newMemories.map((m) => `- ${m}`).join('\n')}\n\n` : '') +
     'Write the updated summary:'

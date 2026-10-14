@@ -1,7 +1,9 @@
 // Only start-up members of the barrel: importing a lazy one splits it out of the start-up chunk.
-import { byPlayer, loadMemoryJobs } from '@core/memory';
+import { byPlayer, loadMemoryJobs, YOU } from '@core/memory';
 import { newId, type Entity } from '@core/model';
 import type { GameSession } from './session';
+
+const ABOUT_YOU = /^(?:you|your|yours|yourself|i|i'm|my|me)\b/i;
 
 /**
  * `/correct …`: a pinned player fact on the entity the text names (pinned facts lead the facts
@@ -13,7 +15,8 @@ export async function correct(host: GameSession, text: string): Promise<void> {
   if (!t) return;
   const jobs = await loadMemoryJobs().catch((err: unknown) => host.onError(`Could not save the correction: ${String(err)}`));
   if (!jobs || host.getSnapshot().busy) return;
-  const e = jobs.entityNamedIn(host.adv.entities, t);
+  // A correction that opens on the player ("You are…", "I am…") is about the player, whoever else it names.
+  const e = ABOUT_YOU.test(t) ? { id: YOU, name: 'you' } : jobs.entityNamedIn(host.adv.entities, t);
   host.mutate((log, adv) => {
     if (e) adv.assertions = [...adv.assertions, { ...byPlayer(e.id, log.actions.length, { kind: 'trait', text: t }), pinned: true }];
     else adv.plot = { ...adv.plot, plotEssentials: [adv.plot.plotEssentials, t].filter(Boolean).join('\n') };

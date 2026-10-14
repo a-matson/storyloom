@@ -6,6 +6,7 @@ import { trimUnfinishedSentence } from '../text/formatting';
 import { helperCall, sentencesOnly } from './helperCall';
 import { summaryDue, summaryOverdue } from './memoryBank';
 import type { MaintenanceDeps } from './memoryJobs';
+import { youLines } from './you';
 
 /** Long ago (≤ 6) plus Recently (≤ 6). [provisional] */
 const SUMMARY_SENTENCES = 12;
@@ -33,7 +34,7 @@ export async function refreshSummary(adventure: Adventure, deps: Omit<Maintenanc
   const since = adventure.memories.filter((m) => !m.stale && m.toAction > lastAt && m.toAction <= end).map((m) => m.text);
   const previous = dirty ? '' : (adventure.plot.storySummary ?? '');
   if (!since.length && !previous) return false;
-  const prompt = renderTemplate(deps.template, withContent(SUMMARY_SYSTEM, deps.content), summaryPrompt(previous, since));
+  const prompt = renderTemplate(deps.template, withContent(SUMMARY_SYSTEM, deps.content), summaryPrompt(previous, since, youLines(adventure.assertions)));
   const grammar = await sentencesOnly(deps.provider, SUMMARY_SENTENCES);
   const { text: raw, stats } = await helperCall(
     'summary',

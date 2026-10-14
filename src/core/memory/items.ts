@@ -2,9 +2,9 @@ import type { Entity, Scene } from '../model/types';
 import type { AssertionIndex } from './assertionIndex';
 import { knownAs } from './names';
 import { currentStates } from './looks';
+import { YOU } from './you';
 
-/** The `holder` value that means the player. */
-export const YOU = 'you';
+export { YOU };
 
 /** Items each scene list names. [provisional] */
 export const MAX_ITEMS = 5;
