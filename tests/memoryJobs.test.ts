@@ -3,7 +3,9 @@ import { isMemoryLike, runMemoryMaintenance } from '@core/memory/memoryJobs';
 import { actionText } from '@core/model';
 import type { CompletionRequest, Provider } from '@core/ports';
 import { joinStory } from '@core/text/formatting';
-import { memoryPrompt } from '@core/text/prompts';
+import { byPlayer } from '@core/memory/looks';
+import { YOU } from '@core/memory/you';
+import { memoryPrompt, summaryPrompt } from '@core/text/memoryPrompts';
 import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure as adventure } from './fixtures/memoryJobs';
 
 describe('memory maintenance', () => {
@@ -151,6 +153,35 @@ describe('memory maintenance', () => {
     const prompt = memoryPrompt('> You show the guard the scar on your cheek.');
     expect(prompt).toContain('anything the player states about themselves (name, body, belongings, past)');
     for (const word of ['Dunmere', 'copper ring', 'two pennies', 'loft above the stables', 'snowed in', 'Example']) expect(prompt).not.toContain(word);
+    expect(prompt).toContain('never say what the player is or looks like unless the passage does');
+    expect(prompt).not.toContain('Given about the player');
+  });
+
+  it("gives the player's own lines to the memory and the summary, before the passage", async () => {
+    const prompt = memoryPrompt('> You wave.', ['a noodle-shop owner']);
+    expect(prompt.indexOf('Given about the player:\n- a noodle-shop owner')).toBeLessThan(prompt.indexOf('---'));
+    expect(summaryPrompt('', ['Mira left.'], ['a noodle-shop owner'])).toMatch(/^Given about the player:\n- a noodle-shop owner\n\nNew memories/);
+
+    const adv = adventure(15);
+    adv.settings.memory.autoSummary = true;
+    adv.assertions = [
+      byPlayer(YOU, 0, { kind: 'trait', text: 'a noodle-shop owner' }),
+      { ...byPlayer(YOU, 0, { kind: 'trait', text: 'model guess' }), producer: 'turn' },
+    ];
+    const prompts: string[] = [];
+    const provider = fakeProvider(async function* (req) {
+      prompts.push(req.prompt);
+      yield { text: 'Mira found the map.', done: true };
+    });
+    // Dirty: the summary rebuilds from the memory just written.
+    adv.scriptState = { ...adv.scriptState, __summaryDirty: true };
+    await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider, historyStart: 12 });
+    const helper = prompts.filter((p) => p.includes('Memory:') || p.includes('Write the updated summary'));
+    expect(helper).toHaveLength(2);
+    for (const p of helper) {
+      expect(p).toContain('- a noodle-shop owner');
+      expect(p).not.toContain('model guess');
+    }
   });
 
   it('keeps a memory as written, even one naming a place the passage lacks', async () => {

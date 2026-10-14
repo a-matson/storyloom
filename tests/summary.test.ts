@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import { coveredEnd } from '@core/memory/summary';
 import type { Memory } from '@core/model';
-import { SUMMARY_SYSTEM } from '@core/text/prompts';
+import { SUMMARY_SYSTEM } from '@core/text/memoryPrompts';
 import { ENTITY_PROMPT, fakeDeps, memoryAdventure as adventure } from './fixtures/memoryJobs';
 
 const SUMMARY = 'Write the updated summary';

@@ -6,7 +6,7 @@ import { memoryText } from '@core/memory/memoryJobs';
 import { actionText } from '@core/model';
 import type { Provider } from '@core/ports';
 import { collect } from '@core/ports/provider';
-import { SUMMARY_SYSTEM, summaryPrompt } from '@core/text/prompts';
+import { SUMMARY_SYSTEM, summaryPrompt } from '@core/text/memoryPrompts';
 import { renderTemplate } from '@core/text/templates';
 import { writeMeasurement } from './env';
 import { FACTS } from './recall';

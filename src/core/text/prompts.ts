@@ -7,23 +7,6 @@
 
 import { LOOK_KEYS } from '../memory/looks';
 
-export const MEMORY_SYSTEM =
-  'You compress story passages into dense factual memories. Output only the memory: 1–4 sentences, past tense, ' +
-  'proper names kept, no prose flourishes, no commentary, no headings.';
-
-/**
- * A format line, not a worked example: the example's names leaked into 5-7 of 16 memories and the guard
- * against that dropped real facts. [measured: 2026-10-08-memory-keep-after]
- */
-const MEMORY_FORMAT =
-  'Format: 1–4 past-tense sentences. First, anything the player states about themselves (name, body, belongings, past), ' +
-  'then the facts, decisions, discoveries and relationship changes, with every proper name kept. ' +
-  'No dialogue, no prose, no commentary.\n\n';
-
-export function memoryPrompt(passage: string): string {
-  return `${MEMORY_FORMAT}Summarise this passage.\n\n---\n${passage}\n---\n\nMemory:`;
-}
-
 /**
  * GBNF (llama.cpp) for 1..max plain sentences: no dialogue, no `> You` lines, no newlines, and the
  * model can only end after a full stop. Mr./3.5 cannot be written; acceptable for summaries.
@@ -82,20 +65,6 @@ export function checkPrompt(output: string, lines: readonly string[]): string {
     'Moving to another place, time passing, new people and details the facts do not mention are not contradictions; ' +
     'only a direct clash is (long braids on a shaved head, one moon where there are two). ' +
     'Return {"contradicts": boolean, "fact": string}: fact is the fact it breaks, copied exactly, or "" when it breaks none.'
-  );
-}
-
-export const SUMMARY_SYSTEM =
-  'You maintain a running summary of an interactive story. Extend the summary with the new memories; ' +
-  'keep every earlier event; do not drop details. Keep it information-dense and chronological, in two parts: ' +
-  '"Long ago:" (at most 6 sentences) then "Recently:" (at most 6 sentences). When Recently would pass 6 sentences, ' +
-  'fold its oldest sentences into Long ago. Output only the summary.';
-
-export function summaryPrompt(previousSummary: string, newMemories: string[]): string {
-  return (
-    (previousSummary ? `Current summary:\n${previousSummary}\n\n` : '') +
-    (newMemories.length ? `New memories since then:\n${newMemories.map((m) => `- ${m}`).join('\n')}\n\n` : '') +
-    'Write the updated summary:'
   );
 }
 

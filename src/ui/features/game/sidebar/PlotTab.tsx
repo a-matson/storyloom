@@ -1,13 +1,11 @@
-import type { Adventure, PlotComponents } from '@core/model';
+import type { Adventure } from '@core/model';
 import { tokenizer } from '@app/services';
 import type { GameApi } from '@ui/hooks/useGameSession';
-import { Input } from '@ui/components/ui/field';
 import { Pill } from '@ui/components/ui/pill';
-import { Switch } from '@ui/components/ui/switch';
 import { Textarea } from '@ui/components/ui/textarea';
 import { MemoryStatus } from './MemoryStatus';
 import { SceneSection } from './SceneSection';
-import { Section, SECTION, SECTION_HEADER } from './Section';
+import { Section } from './Section';
 
 type TextKey = 'aiInstructions' | 'storySummary' | 'plotEssentials' | 'authorsNote';
 
@@ -17,26 +15,6 @@ const FIELDS: { key: TextKey; title: string; placeholder: string; open?: boolean
   { key: 'plotEssentials', title: 'Plot Essentials', placeholder: 'Key facts the AI must always remember.' },
   { key: 'authorsNote', title: "Author's Note", placeholder: 'Short guidance on style, tone and pacing.' },
 ];
-
-function ThirdPerson({ plot, api }: { plot: PlotComponents; api: GameApi }) {
-  const enabled = plot.thirdPerson?.enabled ?? false;
-  const name = plot.thirdPerson?.name ?? '';
-  return (
-    <section className={SECTION}>
-      <header className={SECTION_HEADER}>
-        <span className="grow">Third person</span>
-        <Input
-          className="h-7 w-30 text-caption"
-          placeholder="Name"
-          aria-label="Third-person name"
-          value={name}
-          onChange={(e) => api.updatePlot({ thirdPerson: { enabled, name: e.target.value } })}
-        />
-        <Switch aria-label="Third person" checked={enabled} onChange={(on) => api.updatePlot({ thirdPerson: { enabled: on, name } })} />
-      </header>
-    </section>
-  );
-}
 
 function SummaryCadence() {
   return (
@@ -67,7 +45,6 @@ export function PlotTab({ adventure, api, utilityModel }: { adventure: Adventure
         </Section>
       ))}
       {p.scene && <SceneSection scene={p.scene} entities={adventure.entities} log={p.sceneLog ?? []} ask={adventure.scriptState.__placeAsk} api={api} />}
-      <ThirdPerson plot={p} api={api} />
       <MemoryStatus adventure={adventure} utilityModel={utilityModel} />
     </>
   );

@@ -40,6 +40,8 @@ export const PlotComponents = z.object({
   authorsNote: z.optional(z.string()),
   /** Replace "You" in Do/Say actions with a character name. */
   thirdPerson: z.optional(z.object({ enabled: z.boolean(), name: z.string() })),
+  /** The player's own record; what they wrote about themselves is assertions on subject `you`. A free string, so "other" pronouns need no migration. */
+  you: z.optional(z.object({ pronouns: z.optional(z.string()) })),
   /** Sent as one `[Scene: …]` line beside the author's note. */
   scene: z.optional(Scene),
   /** One entry per location change, newest last. */

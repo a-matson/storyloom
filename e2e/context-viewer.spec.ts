@@ -134,6 +134,19 @@ test('a present entity sends its now-line under the structured cap', async ({ pa
   await expect(dialog.getByText(/Merav \(/)).toHaveCount(0);
 });
 
+test("the You card's pronouns and lines ride in the system prompt", async ({ page }) => {
+  await openSeededAdventure(page, 3);
+  await page.getByRole('button', { name: /^Characters/ }).click();
+  await page.getByRole('combobox', { name: 'Pronouns' }).selectOption('she/her');
+  await page.getByRole('textbox', { name: 'Add a line about you' }).fill('a noodle-shop owner');
+  await page.getByRole('textbox', { name: 'Add a line about you' }).press('Enter');
+  await page.getByRole('switch', { name: 'Third person' }).click();
+  await page.getByRole('textbox', { name: 'Third-person name' }).fill('Mira');
+  const dialog = await takeTurnAndViewContext(page);
+  await dialog.getByRole('button', { name: 'Raw prompt' }).click();
+  await expect(dialog.getByText(/The player \(Mira\) uses she\/her pronouns\. About the player: a noodle-shop owner\./)).toBeVisible();
+});
+
 test('the content clause rides in the system prompt, and Custom replaces it', async ({ page }) => {
   await openSeededAdventure(page, 3);
   let dialog = await takeTurnAndViewContext(page);

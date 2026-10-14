@@ -1,4 +1,5 @@
 import type { Action } from '../model/types';
+import { playerLine } from '../memory/you';
 import { withContent } from '../text/content';
 import { actionStoryText } from '../text/formatting';
 import { trimHeadToTokens, trimToTokens, type Tokenizer } from '../text/tokenizer';
@@ -30,12 +31,13 @@ function withLength(note: string, line: string | undefined): string {
   return l ? (note ? `${note.replace(/[.;]\s*$/, '')}; ${l}` : l) : note;
 }
 
-function plotValues({ plot, overrides, retryNote, settings }: ContextBuildInput): Partial<Record<SectionKind, string>> {
+function plotValues({ plot, assertions, overrides, retryNote, settings }: ContextBuildInput): Partial<Record<SectionKind, string>> {
   return {
     retryNote: (retryNote ?? '').trim(),
     authorsNote: withLength((overrides?.authorsNote || plot.authorsNote || '').trim(), settings.lengthLine),
     plotEssentials: (overrides?.plotEssentials || plot.plotEssentials || '').trim(),
-    instructions: withContent((plot.aiInstructions ?? '').trim(), settings.content?.trim()),
+    // The player line rides on the instructions so the cacheable prefix only changes when the player edits it.
+    instructions: withContent([(plot.aiInstructions ?? '').trim(), playerLine(plot, assertions ?? [])].filter(Boolean).join('\n'), settings.content?.trim()),
     storySummary: (plot.storySummary ?? '').trim(),
   };
 }
