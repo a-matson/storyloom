@@ -118,22 +118,20 @@ async function takeTurnAndViewContext(page: Page) {
 
 test('a present entity sends its now-line under the structured cap', async ({ page }) => {
   await openSeededAdventure(page, 3, undefined, { scene: { location: 'the Old Well', present: ['Merav'] } });
-  // Off by default: the scene line goes, the cast does not.
   let dialog = await takeTurnAndViewContext(page);
+  await expect(dialog.getByTestId('structured-budget')).toContainText(/\d+ \/ \d+/);
   await dialog.getByRole('button', { name: 'Raw prompt' }).click();
-  await expect(dialog.getByText(/\[Scene: Old Well/)).toBeVisible();
-  await expect(dialog.getByText(/Merav \(/)).toHaveCount(0);
+  // Model traits and the character's own location stay out; the scene's place is present too, so its identity follows.
+  await expect(dialog.getByText(/Merav \(A well-warden who keeps the salt road maps\)\.\s+Old Well \(A dry well at the edge of the flats\)\./)).toBeVisible();
+  await expect(dialog.getByText(/needle map/)).toHaveCount(0);
   await page.keyboard.press('Escape');
+  // Off: the scene line goes, the cast does not.
   await page.getByRole('tab', { name: 'Gameplay' }).click();
   await page.getByRole('switch', { name: 'Send entity facts and cards' }).click();
   dialog = await takeTurnAndViewContext(page);
-  await expect(dialog.getByTestId('structured-budget')).toContainText(/\d+ \/ \d+/);
   await dialog.getByRole('button', { name: 'Raw prompt' }).click();
-  // Model traits stay out; the scene's place is present too, so its identity follows the character's line.
-  await expect(
-    dialog.getByText(/Merav \(A well-warden who keeps the salt road maps\): location: the well\.\s+Old Well \(A dry well at the edge of the flats\)\./),
-  ).toBeVisible();
-  await expect(dialog.getByText(/needle map/)).toHaveCount(0);
+  await expect(dialog.getByText(/\[Scene: Old Well/)).toBeVisible();
+  await expect(dialog.getByText(/Merav \(/)).toHaveCount(0);
 });
 
 test('the content clause rides in the system prompt, and Custom replaces it', async ({ page }) => {

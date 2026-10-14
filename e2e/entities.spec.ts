@@ -236,9 +236,9 @@ test('a fact goes when the action it came from is edited', async ({ page }) => {
   // A state: the cast sends a present character's states, not model traits.
   const fact = {
     id: 'f9',
-    text: 'role: salt seller',
+    text: 'mood: salt seller',
     kind: 'state' as const,
-    key: 'role',
+    key: 'mood',
     value: 'salt seller',
     fromAction: 1,
     source: 'memory' as const,
@@ -246,8 +246,6 @@ test('a fact goes when the action it came from is edited', async ({ page }) => {
     evidence: 'bends 1',
   };
   await openSeededAdventure(page, 3, undefined, { scene: { present: ['Corrow'] }, entities: [{ id: 'ent_corrow', name: 'Corrow', facts: [fact] }] });
-  await page.getByRole('tab', { name: 'Gameplay' }).click();
-  await page.getByRole('switch', { name: 'Send entity facts and cards' }).click();
   const prompt = async () => {
     await page.getByRole('textbox', { name: 'Take a turn' }).fill('look around');
     await page.getByRole('button', { name: 'Send' }).click();
@@ -256,7 +254,7 @@ test('a fact goes when the action it came from is edited', async ({ page }) => {
     await dialog.getByRole('button', { name: 'Raw prompt' }).click();
     return dialog;
   };
-  await expect((await prompt()).getByText(/Corrow: role: salt seller/)).toBeVisible();
+  await expect((await prompt()).getByText(/Corrow — salt seller/)).toBeVisible();
   await page.keyboard.press('Escape');
 
   const older = page.getByText('The road bends 1.');
