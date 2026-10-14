@@ -86,7 +86,7 @@ export function NowCard({ adventure, api }: { adventure: Adventure; api: GameApi
     <Section title="Now" tokens={tokenizer.count(text)} badge={<Pill tone="auto">auto</Pill>} defaultOpen>
       {scene && <p className="text-caption">{scene}</p>}
       <ul aria-label="Cast" className="m-0 flex list-none flex-col gap-2 p-0">
-        {lines.map(({ entity: e, text: t, factIds }) => (
+        {lines.map(({ entity: e, text: t, factIds, gaps = [] }) => (
           <li key={e.id} className="flex flex-col gap-1">
             <span className="text-caption">{t}</span>
             <span className="flex flex-wrap gap-1">
@@ -94,6 +94,19 @@ export function NowCard({ adventure, api }: { adventure: Adventure; api: GameApi
                 const a = byId.get(id);
                 return a && label(a) ? [<Chip key={id} fact={a} onEnd={() => end(a)} />] : [];
               })}
+              {gaps.map((g) => (
+                <span key={g.from} className="inline-flex items-center gap-1 rounded-full border border-border px-2 text-caption">
+                  {g.kind === 'asleep' ? 'slept through' : 'away'}
+                  <button
+                    type="button"
+                    className="font-mono text-muted-foreground"
+                    aria-label={`Show action ${g.from} in the story`}
+                    onClick={() => showAction(g.from)}
+                  >
+                    {g.from}
+                  </button>
+                </span>
+              ))}
               {ended
                 .filter((a) => a.subject === e.id)
                 .map((a) => (

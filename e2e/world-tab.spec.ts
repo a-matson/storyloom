@@ -70,6 +70,22 @@ test('a state set on the Now card is in the next prompt; ✕ ends it and Undo br
   await expect(cast.getByText(/^Merav /)).toContainText('wary');
 });
 
+test('a character asleep is told in the prompt what they slept through', async ({ page }) => {
+  await openSeededAdventure(page, 3, undefined, { scene: { location: 'Old Well', present: ['Merav'] } });
+  await world(page);
+  await page.getByRole('combobox', { name: 'State of Merav' }).selectOption('condition');
+  await page.getByRole('textbox', { name: 'New condition of Merav' }).fill('asleep');
+  await page.getByRole('button', { name: 'Set condition of Merav' }).click();
+  const cast = page.getByRole('list', { name: 'Cast' });
+  // Asleep from the next action on: nothing missed yet.
+  await expect(cast).not.toContainText('slept through');
+  const context = await rawPrompt(page, 'whisper the secret');
+  await expect(context).toContainText('maps): asleep; slept through action 3.');
+  await page.keyboard.press('Escape');
+  await expect(cast).toContainText('slept through action');
+  await expect(cast.getByRole('button', { name: 'Show action 3 in the story' })).toHaveCount(2);
+});
+
 test('merging two places keeps one, with the other name as an alias', async ({ page }) => {
   await openSeededAdventure(page, 3, undefined, {
     scene: { location: 'the dry well', present: ['Merav'] },

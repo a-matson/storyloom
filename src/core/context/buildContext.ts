@@ -1,5 +1,5 @@
 import { selectCards } from './cards';
-import { selectHistory } from './history';
+import { historyWindowStart, selectHistory } from './history';
 import { selectMemories, type MemoriesResult } from './memories';
 import { renderBody } from './render';
 import { selectRequired } from './required';
@@ -31,7 +31,9 @@ export function buildContext(input: ContextBuildInput): ContextBuildResult {
   // Taken before cards and history so the scene is never starved; the cap is a ceiling, not a reservation.
   // 0.1 is more than needed (max 250 of ~819 used). [measured: 2026-10-08-recall-wave2-run1.json]
   const structuredCap = Math.min(afterRequired, Math.floor(total * (settings.structuredShare ?? 0.1)));
-  const structured = selectStructured(input, req.lastActionIndex, structuredCap, out);
+  // History is cut after structured takes its share, so this is the widest its window can be: a clause may cover a few actions history drops.
+  const historyFrom = historyWindowStart(actions, req.lastActionIndex, afterRequired, tokenizer).start;
+  const structured = selectStructured(input, req.lastActionIndex, historyFrom, structuredCap, out);
   const dynamicAvailable = afterRequired - structured.structuredUsed;
   const cards = selectCards(actions, req.lastActionIndex, input.storyCards, dynamicAvailable, tokenizer, out, warnings);
   const end = req.lastActionIndex; // history excludes the last action
