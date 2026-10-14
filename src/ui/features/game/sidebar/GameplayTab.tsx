@@ -1,4 +1,4 @@
-import { utilityProvider, type Adventure, type AdventureSettings, type AppSettings } from '@core/model';
+import type { Adventure, AdventureSettings, AppSettings } from '@core/model';
 import { MODEL_PRESETS } from '@core/text';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Input, Select } from '@ui/components/ui/field';
@@ -7,7 +7,6 @@ import { ImagesSection } from './ImagesSection';
 import { ModelSettings } from './ModelSettings';
 import { NeverWrite } from './NeverWrite';
 import { NumberInput } from './NumberInput';
-import { ReadsOn } from './ReadsOn';
 import { Section, Setting } from './Section';
 import { SettingSwitch } from './SettingSwitch';
 import { StateRead } from './StateRead';
@@ -230,7 +229,6 @@ export function GameplayTab({
     <>
       <StoryGenerator s={s} update={api.updateSettings} />
       <MemorySystem s={s} update={api.updateSettings} />
-      {utilityProvider(app) && <ReadsOn value={app.readsOn} onChange={(readsOn) => onAppChange({ ...app, readsOn })} />}
       <ModelSettings model={s.model} onChange={(patch) => api.updateSettings({ model: { ...s.model, ...patch } })} />
       <ImagesSection s={s} app={app} onAppChange={onAppChange} update={api.updateSettings} />
       <Feedback s={s} update={api.updateSettings} />

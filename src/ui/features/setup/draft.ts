@@ -12,13 +12,14 @@ export interface Choice {
   speakerAvatars: boolean;
   health: ProviderHealth | null;
   utility: ProviderConfig | undefined;
+  readsOn: AppSettings['readsOn'];
   image: ProviderConfig | undefined;
 }
 
 const normalizeUrl = (url: string) => url.trim().replace(/\/$/, '');
 
 /** App settings with the chosen backend as default; a tested model also sets template, sampler preset and context size. */
-export function draftSettings(app: AppSettings, { current, kind, url, theme, speech, speakerAvatars, health, utility, image }: Choice): AppSettings {
+export function draftSettings(app: AppSettings, { current, kind, url, theme, speech, speakerAvatars, health, utility, readsOn, image }: Choice): AppSettings {
   const cfg: ProviderConfig = {
     ...current,
     kind,
@@ -35,6 +36,7 @@ export function draftSettings(app: AppSettings, { current, kind, url, theme, spe
     theme,
     speech,
     speakerAvatars,
+    readsOn,
     providers: [
       cfg,
       ...app.providers.filter((p) => p.id !== cfg.id && p.role !== 'utility' && p.role !== 'image'),

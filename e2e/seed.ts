@@ -28,6 +28,8 @@ export async function openSeededAdventure(
   if (opts.utility !== undefined) {
     await page.getByRole('switch', { name: 'Use a utility model' }).click();
     await page.getByRole('textbox', { name: 'Utility server URL' }).fill(opts.utility);
+    // Per bench sends no read to it; these specs mock the utility server's replies.
+    await page.getByRole('combobox', { name: 'Reads on' }).selectOption('utility');
   }
   if (imageServer !== undefined) {
     await page.getByRole('switch', { name: 'Use an image server' }).click();

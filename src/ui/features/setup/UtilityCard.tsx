@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { ProviderConfig } from '@core/model';
+import type { AppSettings, ProviderConfig } from '@core/model';
 import type { ProviderHealth } from '@core/ports';
 import { DEFAULT_APP_SETTINGS, providerFor } from '@app/services';
 import { Button } from '@ui/components/ui/button';
@@ -25,10 +25,12 @@ const utilityConfig = (kind: ProviderConfig['kind'], baseUrl: string, template: 
 interface Props {
   value: ProviderConfig | undefined;
   onChange: (next: ProviderConfig | undefined) => void;
+  readsOn: AppSettings['readsOn'];
+  onReadsOn: (next: AppSettings['readsOn']) => void;
 }
 
 /** Optional second model server for memories and summaries; the URL is normalised when settings are drafted. */
-export function UtilityCard({ value, onChange }: Props) {
+export function UtilityCard({ value, onChange, readsOn, onReadsOn }: Props) {
   const [health, setHealth] = useState<ProviderHealth | null>(null);
   const set = (patch: Partial<Pick<ProviderConfig, 'kind' | 'baseUrl' | 'template'>>) => {
     const next = { kind: value?.kind ?? 'llama-server', baseUrl: value?.baseUrl ?? DEFAULT_URL, template: value?.template ?? 'chatml', ...patch };
@@ -85,6 +87,20 @@ export function UtilityCard({ value, onChange }: Props) {
               onChange={(e) => set({ baseUrl: e.target.value })}
             />
             <Button onClick={() => void test()}>Test</Button>
+          </div>
+          <div className="flex items-center gap-2.5 text-caption">
+            <label htmlFor="reads-on">Reads on</label>
+            <Select
+              id="reads-on"
+              title="Per bench: only the reads the utility model scored best on (none so far beside a 12B story model)"
+              className="h-9 w-48"
+              value={readsOn}
+              onChange={(e) => onReadsOn(e.target.value === 'story' || e.target.value === 'utility' ? e.target.value : 'bench')}
+            >
+              <option value="bench">Per bench</option>
+              <option value="utility">Utility model</option>
+              <option value="story">Story model</option>
+            </Select>
           </div>
           {health && <ConnectionCard health={health} caps={null} />}
         </>

@@ -84,7 +84,7 @@ export function SetupScreen({ app, onSave, onChange, onBack, firstRun = false }:
   const [utility, setUtility] = useState(utilityProvider(app));
   const [image, setImage] = useState(imageProvider(app));
 
-  const choice: Choice = { current, kind, url, theme, speech, speakerAvatars, health, utility, image };
+  const choice: Choice = { current, kind, url, theme, speech, speakerAvatars, health, utility, readsOn: app.readsOn, image };
   const draft = () => draftSettings(app, choice);
   // From the handlers with the next values, not an effect: storing re-renders with a new `app`.
   const store = (patch: Partial<Choice>) => onChange(draftSettings(app, { ...choice, ...patch }));
@@ -140,7 +140,7 @@ export function SetupScreen({ app, onSave, onChange, onBack, firstRun = false }:
           </div>
         </label>
         {health && <ConnectionCard health={health} caps={caps} templateOk={templateOk} template={app.defaults.template} />}
-        <UtilityCard value={utility} onChange={field('utility', setUtility)} />
+        <UtilityCard value={utility} onChange={field('utility', setUtility)} readsOn={app.readsOn} onReadsOn={(readsOn) => store({ readsOn })} />
         <ImageCard value={image} onChange={field('image', setImage)} />
         <AppearanceCard
           theme={theme}
