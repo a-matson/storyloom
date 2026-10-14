@@ -61,7 +61,7 @@ describe('nowLines', () => {
   it('is the scene line and the cast lines the prompt sends for who is here', () => {
     const i = derived(input(4000));
     const r = build(i);
-    const now = nowLines(i);
+    const now = nowLines({ ...i, memories: [] });
     expect(r.sections.find((s) => s.kind === 'scene')?.text).toContain(now.scene);
     // Orrin is only named by the text, so the cast has him after who is here.
     expect(now.lines.map((l) => l.text)).toEqual(cast(r)?.split('\n').slice(0, 1));
@@ -113,6 +113,21 @@ describe('structured elements', () => {
     const toOrrin = { ...lena, facts: [fact('Lena', 9, 'owes him money', { kind: 'relationship', key: 'Orrin' })] };
     const r = buildContext({ ...input(4000), entities: [toOrrin, orrin], plot: { scene: { ...scene, present: ['Orrin', 'Lena'] } } });
     expect(cast(r)).toBe('Orrin (a ferryman): calm.\nLena (keeps the mill). With Orrin: owes him money.');
+  });
+
+  it('says what a present character missed while history still holds it', () => {
+    const presence = [
+      { at: 0, present: ['e-Lena'] },
+      { at: 2, present: [] },
+      { at: 6, present: ['e-Lena'] },
+    ];
+    const plot = { scene, presence };
+    expect(cast(buildContext({ ...input(4000), plot }))?.split('\n')[0]).toMatch(
+      /^Lena \(keeps the mill\): .*; was away for actions 2–5: 1 w0 w1 [^;]*; She hums\.$/,
+    );
+    expect(cast(buildContext({ ...input(4000), plot: { scene } }))).not.toContain('away');
+    // A short context's history starts after action 5: the gap is a memory's business.
+    expect(cast(buildContext({ ...input(400), plot }))).not.toContain('away');
   });
 
   it('reads the same whatever order the entities come in', () => {

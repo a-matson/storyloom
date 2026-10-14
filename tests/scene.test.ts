@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { renderScene } from '@core/context/render';
 import { mergeEntity } from '@core/memory/entities';
 import { sceneIds, sceneNames } from '@core/memory/names';
-import { nextScene, SCENE_LOG_CAP, withScene } from '@core/memory/scene';
+import { nextScene, PRESENCE_CAP, SCENE_LOG_CAP, withScene } from '@core/memory/scene';
 import type { Entity, PlotComponents, Scene } from '@core/model/types';
 import type { SceneRead } from '@core/schema/extraction';
 
@@ -88,6 +88,17 @@ describe('withScene', () => {
     expect(moved.sceneLog).toHaveLength(SCENE_LOG_CAP);
     expect(moved.sceneLog?.at(-1)).toEqual({ at: 99, location: 'the road' });
     expect(moved.sceneLog?.[0]).toEqual({ at: 1, location: 'p1' });
+  });
+
+  it('logs who is present only when the set changes, capped', () => {
+    const joined = w({ scene: mill }, { present: ['Minos'] }, 3);
+    expect(joined.presence).toEqual([{ at: 3, present: ['Lena', 'Minos'] }]);
+    expect(w(joined, { weather: 'rain' }, 4).presence).toEqual(joined.presence);
+    expect(w(joined, { left: ['Minos'] }, 5).presence?.at(-1)).toEqual({ at: 5, present: ['Lena'] });
+    const presence = Array.from({ length: PRESENCE_CAP }, (_, i) => ({ at: i, present: [`p${i}`] }));
+    const capped = w({ scene: mill, presence }, { present: ['Minos'] }, 300).presence;
+    expect(capped).toHaveLength(PRESENCE_CAP);
+    expect(capped?.at(-1)).toEqual({ at: 300, present: ['Lena', 'Minos'] });
   });
 });
 

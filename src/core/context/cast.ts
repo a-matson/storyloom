@@ -1,6 +1,7 @@
 import { current, identityText, isCurrent, textOf, type AssertionOf } from '../memory/assertionIndex';
 import { currentStates } from '../memory/looks';
 import type { Assertion, Entity } from '../model/types';
+import type { Gap } from './witness';
 
 /** Words an identity keeps from the description's first clause. [provisional] */
 export const IDENTITY_WORDS = 12;
@@ -14,6 +15,8 @@ export interface CastLine {
   entity: Entity;
   text: string;
   factIds: string[];
+  /** What a present character missed, one per witnessed-by clause. */
+  gaps?: readonly Gap[];
 }
 
 const norm = (n: string) => n.trim().toLowerCase().replace(/^the /, '');
@@ -53,11 +56,11 @@ const lead = (e: Entity, as: readonly Assertion[], carded: boolean, parts: reado
 };
 
 /**
- * A present character's now-line: `Name (identity): sitting, poisoned, wary, wearing a cloak; effect — cause; stance to you; pins. With Other: stance.`
+ * A present character's now-line: `Name (identity): sitting, poisoned, wary, wearing a cloak; effect — cause; stance to you; witnessed-by; pins. With Other: stance.`
  * Looks are the portrait's; only `wearing` changes the scene. Conflicts are never sent.
- * A relationship's `to` is who it is towards (`you`: the player).
+ * A relationship's `to` is who it is towards (`you`: the player). `missed`: `witnessClause`s, so the model does not let them answer from what they never saw (U17).
  */
-export function presentLine(e: Entity, as: readonly Assertion[], present: readonly Entity[], carded: boolean): CastLine {
+export function presentLine(e: Entity, as: readonly Assertion[], present: readonly Entity[], carded: boolean, missed: readonly string[] = []): CastLine {
   const live = as.filter((a) => isCurrent(a) && !old(a)).toSorted((a, b) => a.since - b.since);
   const now = currentStates(as);
   const keys = KEY_ORDER.filter((k) => now[k]?.trim());
@@ -74,6 +77,7 @@ export function presentLine(e: Entity, as: readonly Assertion[], present: readon
     keys.map((k) => (k === 'wearing' ? 'wearing ' : '') + short(now[k] ?? '')).join(', '),
     ...effects.map(effect),
     ...toYou.map((a) => clause(a.stance)),
+    ...missed.map(clause),
     ...pins.map((a) => clause(textOf(a))),
   ].filter(Boolean);
   const withOthers = present.flatMap((p) => {

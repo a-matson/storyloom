@@ -3,13 +3,14 @@ import { type AssertionIndex, indexAssertions } from '../memory/assertionIndex';
 import { isConfirmed } from '../memory/facts';
 import { sceneNames } from '../memory/names';
 import { projectEntity } from '../memory/projection';
-import type { Adventure, Entity, Scene, StoryCard } from '../model/types';
+import type { Action, Adventure, Entity, Memory, PlotComponents, Scene, StoryCard } from '../model/types';
 import { actionStoryText } from '../text/formatting';
 import { heldBy, itemsIn, MAX_ITEMS, YOU } from '../memory/items';
 import { type CastLine, identityLine, pinnedLine, presentLine } from './cast';
 import { renderScene, renderSection } from './render';
 import { relevantRules, renderRules } from './rules';
 import type { ContextBuildInput, RenderedSections, SectionKind } from './types';
+import { gapsOf, MAX_GAPS, witnessClause } from './witness';
 
 /** Hard ceiling on rules, scene and cast together, under the `structuredShare` cap. [provisional] */
 export const STRUCTURED_CAP = 200;
@@ -52,25 +53,59 @@ function cardedBy(cards: readonly StoryCard[]) {
   return (e: Entity) => (e.cardId !== undefined && names.has(e.cardId)) || names.has(e.name.trim().toLowerCase());
 }
 
-const hereLines = (here: Entity[], items: Entity[], ix: AssertionIndex, carded: (e: Entity) => boolean): CastLine[] => [
-  ...here.map((e) => presentLine(e, ix.of(e.id), here, carded(e))),
+/** What witnessed-by clauses read: who was present when, the window history covers (`to`: the last action), and the text to quote. */
+interface Witnessed {
+  presence: NonNullable<PlotComponents['presence']>;
+  window: { from: number; to: number };
+  memories: readonly Memory[];
+  actions: readonly Action[];
+}
+
+/** A present character's now-line with what they missed in the window, the most recent `MAX_GAPS`. */
+function castLine(e: Entity, here: Entity[], ix: AssertionIndex, carded: boolean, w: Witnessed): CastLine {
+  const gaps = e.kind === 'character' ? gapsOf(e.id, w.presence, ix.of(e.id), w.window).slice(-MAX_GAPS) : [];
+  const line = presentLine(
+    e,
+    ix.of(e.id),
+    here,
+    carded,
+    gaps.map((g) => witnessClause(g, w.memories, w.actions)),
+  );
+  return gaps.length > 0 ? { ...line, gaps } : line;
+}
+
+const hereLines = (here: Entity[], items: Entity[], ix: AssertionIndex, carded: (e: Entity) => boolean, w: Witnessed): CastLine[] => [
+  ...here.map((e) => castLine(e, here, ix, carded(e), w)),
   ...items.flatMap((e) => identityLine(e, ix.of(e.id), carded(e))),
 ];
 
-/** The World tab's Now card: the prompt's scene line and its cast lines for who and what is here, by the same functions. */
-export function nowLines(adv: Pick<Adventure, 'plot' | 'entities' | 'assertions' | 'storyCards'>): { scene: string; lines: CastLine[] } {
+/**
+ * The World tab's Now card: the prompt's scene line and its cast lines for who and what is here, by the same functions.
+ * Witnessed-by reads the whole log; the prompt cuts it to its history window, so the card may show an older clause.
+ */
+export function nowLines(adv: Pick<Adventure, 'plot' | 'entities' | 'assertions' | 'storyCards' | 'actions' | 'memories'>): {
+  scene: string;
+  lines: CastLine[];
+} {
   const ix = indexAssertions(adv.assertions);
   const entities = adv.entities.filter((e) => isConfirmed(e, ix.of(e.id)));
   const { shown, here, items } = sceneCast(adv.plot.scene, entities, adv.entities, ix);
-  return { scene: renderScene(shown, entities, ix), lines: hereLines(here, items, ix, cardedBy(adv.storyCards)) };
+  const w: Witnessed = {
+    presence: adv.plot.presence ?? [],
+    window: { from: 0, to: adv.actions.length - 1 },
+    memories: adv.memories.filter((m) => !m.forgotten && !m.stale),
+    actions: adv.actions,
+  };
+  return { scene: renderScene(shown, entities, ix), lines: hereLines(here, items, ix, cardedBy(adv.storyCards), w) };
 }
 
 /**
  * Rules, the scene line, then the cast: a now-line per present character (and the scene's place),
  * an identity line per item here or held, then per entity the recent text names, most recent first.
  * In that order inside one cap; a line that does not fit is skipped whole. Absent entities send nothing, pins included.
+ * `historyFrom`: the earliest action history can reach, the witnessed-by window's start.
  */
-export function selectStructured(input: ContextBuildInput, lastActionIndex: number, cap: number, out: RenderedSections): StructuredResult {
+export function selectStructured(input: ContextBuildInput, lastActionIndex: number, historyFrom: number, cap: number, out: RenderedSections): StructuredResult {
   const { tokenizer, plot } = input;
   const budget = Math.min(cap, STRUCTURED_CAP);
   const ix = indexAssertions(input.assertions ?? []);
@@ -103,10 +138,17 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
   if (scene && tokenizer.count(renderSection('scene', scene)) <= left) put('scene', renderSection('scene', scene));
 
   const carded = cardedBy(input.storyCards);
+  // A gap that left the window is in a memory, which the model reads as a memory anyway.
+  const witnessed: Witnessed = {
+    presence: plot.presence ?? [],
+    window: { from: historyFrom, to: lastActionIndex },
+    memories: input.rankedMemories.map((r) => r.memory),
+    actions: input.actions,
+  };
   // With entity facts off, the player's own facts (Correct, pins) still go in for who is here or named.
   const lines: CastLine[] = input.settings.pinnedFactsOnly
     ? [...here, ...items, ...mentioned].flatMap((e) => pinnedLine(e, ix.of(e.id), carded(e)))
-    : [...hereLines(here, items, ix, carded), ...mentioned.flatMap((e) => identityLine(e, ix.of(e.id), carded(e)))];
+    : [...hereLines(here, items, ix, carded, witnessed), ...mentioned.flatMap((e) => identityLine(e, ix.of(e.id), carded(e)))];
   // Per-line cost +1 for the newline is an upper bound.
   let cost = 0;
   const kept = lines.filter((l) => {

@@ -100,6 +100,7 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
   const newPlaces: string[] = [];
   const record: Record<string, Record<string, string>> = {};
   let assertions: Adventure['assertions'] = [];
+  const presence: NonNullable<Adventure['plot']['presence']> = [];
   for (let i = 2; i < adv.actions.length; i++) {
     if (adv.actions[i]?.type !== 'continue') continue;
     const n = i + 1;
@@ -123,12 +124,15 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
 
     // Read B from core, on the adventure as it stood after this turn, with B's own record so far.
     const known = adv.entities.filter((e) => e.firstSeen <= i);
+    const here = sceneIds(scene, known);
+    // As `withScene` keeps it, so the cast prints its witnessed-by clauses.
+    if (presence.at(-1)?.present.toSorted().join() !== here.present.toSorted().join()) presence.push({ at: i, present: here.present });
     const work: Adventure = {
       ...adv,
       actions: adv.actions.slice(0, n),
       entities: known,
       assertions,
-      plot: { ...adv.plot, scene: sceneIds(scene, known) },
+      plot: { ...adv.plot, scene: here, presence },
       scriptState: {},
     };
     const calls: HelperCallLog[] = [];
@@ -156,11 +160,13 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
       {
         ...work,
         assertions: [...said, ...assertions],
-        rankedMemories: [],
+        // Memories made by now, for the witnessed-by text; the bank itself is off.
+        rankedMemories: adv.memories.filter((m) => m.toAction <= n && !m.forgotten).map((memory) => ({ memory, score: 0 })),
         settings: { ...CAST_SETTINGS, contextLength: adv.settings.model.contextLength },
         tokenizer,
       },
       i,
+      0,
       STRUCTURED_CAP,
       out,
     ).structuredUsed;

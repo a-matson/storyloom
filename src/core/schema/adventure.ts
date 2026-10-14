@@ -46,6 +46,8 @@ export const PlotComponents = z.object({
   scene: z.optional(Scene),
   /** One entry per location change, newest last. */
   sceneLog: z.optional(z.array(z.object({ at: z.int(), location: z.string() }))),
+  /** One entry per change of who is present (ids), newest last; the cast's witnessed-by clauses read it. */
+  presence: z.optional(z.array(z.object({ at: z.int(), present: z.array(z.string()) }))),
 });
 
 /** `state.memory` in the scripting API: overrides for plot essentials / author's note, plus front memory. */

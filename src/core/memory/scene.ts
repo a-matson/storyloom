@@ -4,6 +4,10 @@ import { knownAs, norm, sceneIds, sceneNames } from './names';
 
 /** Location changes the Plot tab can show. [provisional] */
 export const SCENE_LOG_CAP = 50;
+/** Changes of who is present kept for witnessed-by clauses. [provisional] */
+export const PRESENCE_CAP = 200;
+
+const key = (ids: readonly string[]) => ids.toSorted().join('\n');
 
 /** The outermost place `e` is part of, so a room inside the current place is not a move. */
 function outermost(places: readonly Entity[], e: Entity | undefined): Entity | undefined {
@@ -63,7 +67,8 @@ export function nextScene(
 
 /**
  * `plot` with the scene a turn read gives, read from `source`, stored as ids (`sceneIds`, so a name
- * that got a card since resolves too); a change of place is logged by name. Unchanged: `plot` itself.
+ * that got a card since resolves too); a change of place is logged by name, a change of who is present
+ * in `presence`. Unchanged: `plot` itself.
  */
 export function withScene(
   plot: PlotComponents,
@@ -81,5 +86,7 @@ export function withScene(
   if (!scene || (r.scene === named && JSON.stringify(scene) === JSON.stringify(old))) return plot;
   const where = r.scene?.location;
   const log = r.moved && where ? [...(plot.sceneLog ?? []), { at, location: where }].slice(-SCENE_LOG_CAP) : plot.sceneLog;
-  return { ...plot, scene: { ...scene, ...source }, ...(log && { sceneLog: log }) };
+  const changed = key(plot.presence?.at(-1)?.present ?? []) !== key(scene.present);
+  const presence = changed ? [...(plot.presence ?? []), { at, present: scene.present }].slice(-PRESENCE_CAP) : plot.presence;
+  return { ...plot, scene: { ...scene, ...source }, ...(log && { sceneLog: log }), ...(presence && { presence }) };
 }
