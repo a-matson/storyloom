@@ -144,15 +144,32 @@ describe('GameSession entity edits', () => {
     expect(a?.span).toBeUndefined();
   });
 
-  it('deleteLine removes the line; endEffect keeps it with until', () => {
+  it('deleteLine removes the line; endLine keeps it with until, restoreLine clears it', () => {
     const { session } = withGate();
     const edits = entityEdits(session);
     edits.addLine(gate.id, { kind: 'effect', condition: 'Bleeding' });
     const added = of(session, gate.id).at(-1);
-    edits.endEffect(added?.id ?? '');
+    edits.endLine(added?.id ?? '');
     expect(of(session, gate.id).at(-1)?.until).toBe(session.getSnapshot().actions.length);
+    edits.restoreLine(added?.id ?? '');
+    expect(of(session, gate.id).at(-1)).not.toHaveProperty('until');
+    edits.endLine(added?.id ?? '');
     edits.deleteLine('f1');
     expect(of(session, gate.id).map(textOf)).toEqual([gate.description, 'Bleeding']);
+  });
+
+  it('setPartOf nests a place in another and back; never a non-place', () => {
+    const tower: Entity = { ...gate, id: 'ent_tower', name: 'Tower' };
+    const mira: Entity = { ...gate, id: 'ent_mira', kind: 'character', name: 'Mira' };
+    const { session } = withGate([tower, mira]);
+    const edits = entityEdits(session);
+    const get = (id: string) => session.getSnapshot().adventure.entities.find((e) => e.id === id);
+    edits.setPartOf(gate.id, tower.id);
+    expect(get(gate.id)?.partOf).toBe(tower.id);
+    edits.setPartOf(gate.id, undefined);
+    expect(get(gate.id)).not.toHaveProperty('partOf');
+    edits.setPartOf(mira.id, tower.id);
+    expect(get(mira.id)).not.toHaveProperty('partOf');
   });
 
   it('addLine records a player line per kind; addItem makes a held item', () => {

@@ -38,8 +38,10 @@ const rewritten = (a: Assertion, text: string): Assertion => {
 export function lineEdits(host: GameSession) {
   const mutate = (fn: (adv: Adventure, at: number) => void) => host.mutate((log, adv) => fn(adv, log.actions.length));
   return {
-    /** The condition stops being true now; the line stays as history. */
-    endEffect: (lineId: string) => mutate((adv, at) => mapLine(adv, lineId, (a) => ({ ...a, until: at }))),
+    /** The line stops being true now and stays as history. */
+    endLine: (lineId: string) => mutate((adv, at) => mapLine(adv, lineId, (a) => ({ ...a, until: at }))),
+    /** Undo of `endLine`: current again. */
+    restoreLine: (lineId: string) => mutate((adv) => mapLine(adv, lineId, ({ until: _u, ...a }) => a)),
     editLine: (lineId: string, text: string) => mutate((adv) => mapLine(adv, lineId, (a) => rewritten(a, text))),
     deleteLine: (lineId: string) => mutate((adv) => (adv.assertions = adv.assertions.filter((a) => a.id !== lineId))),
     pinLine: (lineId: string) => mutate((adv) => mapLine(adv, lineId, (a) => ({ ...a, pinned: !a.pinned }))),

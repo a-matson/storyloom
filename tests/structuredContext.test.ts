@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildContext as build, type ContextBuildInput } from '@core/context';
+import { buildContext as build, nowLines, type ContextBuildInput } from '@core/context';
 import type { Action, EntityFact, LegacyEntity } from '@core/model/types';
 import type { Tokenizer } from '@core/text/tokenizer';
 import { derived } from './fixtures/assertions';
@@ -56,6 +56,17 @@ const input = (contextLength: number, cacheStableLayout = false): ContextBuildIn
 const kinds = new Set(['rules', 'scene', 'cast']);
 const structured = (r: ReturnType<typeof buildContext>) => r.sections.filter((s) => kinds.has(s.kind));
 const cast = (r: ReturnType<typeof buildContext>) => r.sections.find((s) => s.kind === 'cast')?.text;
+
+describe('nowLines', () => {
+  it('is the scene line and the cast lines the prompt sends for who is here', () => {
+    const i = derived(input(4000));
+    const r = build(i);
+    const now = nowLines(i);
+    expect(r.sections.find((s) => s.kind === 'scene')?.text).toContain(now.scene);
+    // Orrin is only named by the text, so the cast has him after who is here.
+    expect(now.lines.map((l) => l.text)).toEqual(cast(r)?.split('\n').slice(0, 1));
+  });
+});
 
 describe('structured elements', () => {
   it('sends the scene, then a now-line for who is present and an identity for who is named, never cached', () => {

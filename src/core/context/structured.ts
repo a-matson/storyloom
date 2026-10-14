@@ -1,9 +1,9 @@
 import { compileCards, lookbackWindow, matchCards } from '../cards/storyCards';
-import { indexAssertions } from '../memory/assertionIndex';
+import { type AssertionIndex, indexAssertions } from '../memory/assertionIndex';
 import { isConfirmed } from '../memory/facts';
 import { sceneNames } from '../memory/names';
 import { projectEntity } from '../memory/projection';
-import type { Entity } from '../model/types';
+import type { Adventure, Entity, Scene, StoryCard } from '../model/types';
 import { actionStoryText } from '../text/formatting';
 import { heldBy, itemsIn, MAX_ITEMS, YOU } from '../memory/items';
 import { type CastLine, identityLine, pinnedLine, presentLine } from './cast';
@@ -29,6 +29,43 @@ const named = (e: Entity, n: string) => [e.name, ...e.aliases].some((k) => norm(
 const ids = (es: Entity[]) => new Set(es.map((e) => e.id));
 
 /**
+ * Who and what the scene holds: present entities (the location counts as present, so its place gets
+ * a line too), then items here or held that are not present. `shown` is the scene in names.
+ */
+function sceneCast(scene: Scene | undefined, entities: Entity[], all: readonly Entity[], ix: AssertionIndex) {
+  const refs = [...(scene?.present ?? []), scene?.location ?? ''].filter((n) => n.trim());
+  const byId = new Map(entities.map((e) => [e.id, e]));
+  const here = [...ids(refs.flatMap((n) => byId.get(n) ?? entities.find((e) => named(e, n)) ?? []))].flatMap((i) => byId.get(i) ?? []);
+  // Named through every entity: an unconfirmed one present still reads as its name, not its id.
+  const shown = scene && sceneNames(scene, all);
+  const present = ids(here);
+  // An item here or held sends its own lore, or the model makes up new lore for it.
+  const things = [...(shown ? itemsIn(shown, entities, ix) : []), ...heldBy(entities, ix, YOU).slice(0, MAX_ITEMS)].flatMap((x) =>
+    typeof x === 'string' || present.has(x.id) ? [] : [x],
+  );
+  return { shown, here, items: [...ids(things)].flatMap((i) => byId.get(i) ?? []) };
+}
+
+/** A hand-written card already says who they are, so a carded entity keeps its now-line but no identity. */
+function cardedBy(cards: readonly StoryCard[]) {
+  const names = new Set(cards.flatMap((c) => [c.id, c.name.trim().toLowerCase()]));
+  return (e: Entity) => (e.cardId !== undefined && names.has(e.cardId)) || names.has(e.name.trim().toLowerCase());
+}
+
+const hereLines = (here: Entity[], items: Entity[], ix: AssertionIndex, carded: (e: Entity) => boolean): CastLine[] => [
+  ...here.map((e) => presentLine(e, ix.of(e.id), here, carded(e))),
+  ...items.flatMap((e) => identityLine(e, ix.of(e.id), carded(e))),
+];
+
+/** The World tab's Now card: the prompt's scene line and its cast lines for who and what is here, by the same functions. */
+export function nowLines(adv: Pick<Adventure, 'plot' | 'entities' | 'assertions' | 'storyCards'>): { scene: string; lines: CastLine[] } {
+  const ix = indexAssertions(adv.assertions);
+  const entities = adv.entities.filter((e) => isConfirmed(e, ix.of(e.id)));
+  const { shown, here, items } = sceneCast(adv.plot.scene, entities, adv.entities, ix);
+  return { scene: renderScene(shown, entities, ix), lines: hereLines(here, items, ix, cardedBy(adv.storyCards)) };
+}
+
+/**
  * Rules, the scene line, then the cast: a now-line per present character (and the scene's place),
  * an identity line per item here or held, then per entity the recent text names, most recent first.
  * In that order inside one cap; a line that does not fit is skipped whole. Absent entities send nothing, pins included.
@@ -45,23 +82,14 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
     left -= tokens;
   };
 
-  // The location counts as present, so the place the scene is in gets its identity line too.
-  const refs = [...(plot.scene?.present ?? []), plot.scene?.location ?? ''].filter((n) => n.trim());
+  const { shown, here, items } = sceneCast(plot.scene, entities, input.entities, ix);
   const byId = new Map(entities.map((e) => [e.id, e]));
-  const here = [...ids(refs.flatMap((n) => byId.get(n) ?? entities.find((e) => named(e, n)) ?? []))].flatMap((i) => byId.get(i) ?? []);
-  // Named through every entity: an unconfirmed one present still reads as its name, not its id.
-  const shown = plot.scene && sceneNames(plot.scene, input.entities);
   const window = lookbackWindow(cap);
   const recent = lastActionIndex >= 0 ? input.actions.slice(Math.max(0, lastActionIndex - window + 1), lastActionIndex + 1) : [];
   const inText = matchCards(compileCards(entities.map((e) => projectEntity(e, ix.of(e.id)))), recent.map(actionStoryText)).flatMap(
     (m) => byId.get(m.card.id) ?? [],
   );
   const present = ids(here);
-  // An item here or held sends its own lore, or the model makes up new lore for it.
-  const things = [...(shown ? itemsIn(shown, entities, ix) : []), ...heldBy(entities, ix, YOU).slice(0, MAX_ITEMS)].flatMap((x) =>
-    typeof x === 'string' || present.has(x.id) ? [] : [x],
-  );
-  const items = [...ids(things)].flatMap((i) => byId.get(i) ?? []);
   const seen = new Set([...present, ...ids(items)]);
   const mentioned = [...ids(inText)].filter((i) => !seen.has(i)).flatMap((i) => byId.get(i) ?? []);
 
@@ -74,13 +102,11 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
   const scene = renderScene(shown, entities, ix);
   if (scene && tokenizer.count(renderSection('scene', scene)) <= left) put('scene', renderSection('scene', scene));
 
-  // A hand-written card already says who they are, so a carded entity keeps its now-line but no identity.
-  const cardNames = new Set(input.storyCards.flatMap((c) => [c.id, c.name.trim().toLowerCase()]));
-  const carded = (e: Entity) => (e.cardId !== undefined && cardNames.has(e.cardId)) || cardNames.has(e.name.trim().toLowerCase());
+  const carded = cardedBy(input.storyCards);
   // With entity facts off, the player's own facts (Correct, pins) still go in for who is here or named.
   const lines: CastLine[] = input.settings.pinnedFactsOnly
     ? [...here, ...items, ...mentioned].flatMap((e) => pinnedLine(e, ix.of(e.id), carded(e)))
-    : [...here.map((e) => presentLine(e, ix.of(e.id), here, carded(e))), ...[...items, ...mentioned].flatMap((e) => identityLine(e, ix.of(e.id), carded(e)))];
+    : [...hereLines(here, items, ix, carded), ...mentioned.flatMap((e) => identityLine(e, ix.of(e.id), carded(e)))];
   // Per-line cost +1 for the newline is an upper bound.
   let cost = 0;
   const kept = lines.filter((l) => {

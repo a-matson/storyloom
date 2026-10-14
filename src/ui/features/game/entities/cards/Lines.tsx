@@ -99,7 +99,7 @@ export function EffectLine({ card: c, fact: f }: { card: Card; fact: AssertionOf
       ) : (
         cause && <span className="text-muted-foreground">— {cause.text}</span>
       )}
-      <Button variant="ghost" className="h-7 shrink-0" aria-label={`End: ${f.condition}`} onClick={() => c.edits.endEffect(f.id)}>
+      <Button variant="ghost" className="h-7 shrink-0" aria-label={`End: ${f.condition}`} onClick={() => c.edits.endLine(f.id)}>
         ✕
       </Button>
     </FactLine>

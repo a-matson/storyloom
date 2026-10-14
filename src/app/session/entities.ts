@@ -50,6 +50,13 @@ export function entityEdits(host: GameSession) {
       }
     },
     clearPortrait: (id: string) => clearPortrait(host, id),
+    /** Only between places; `undefined` makes it stand alone. */
+    setPartOf: (placeId: string, parentId: string | undefined) =>
+      mutate((adv) => {
+        if (placeId === parentId) return;
+        const set = ({ partOf: _p, ...e }: Entity): Entity => (parentId === undefined ? e : { ...e, partOf: parentId });
+        adv.entities = adv.entities.map((e) => (e.id === placeId && e.kind === 'place' ? set(e) : e));
+      }),
     ...lineEdits(host),
     /** Freeze the character's current look and point at that See image; later Sees repeat the words and the seed. */
     setReference: async (id: string, imageId: string) => {

@@ -4,7 +4,6 @@ import type { GameApi } from '@ui/hooks/useGameSession';
 import { Pill } from '@ui/components/ui/pill';
 import { Textarea } from '@ui/components/ui/textarea';
 import { MemoryStatus } from './MemoryStatus';
-import { SceneSection } from './SceneSection';
 import { Section } from './Section';
 
 type TextKey = 'aiInstructions' | 'storySummary' | 'plotEssentials' | 'authorsNote';
@@ -44,7 +43,7 @@ export function PlotTab({ adventure, api, utilityModel }: { adventure: Adventure
           {f.key === 'storySummary' && adventure.settings.memory.autoSummary && <SummaryCadence />}
         </Section>
       ))}
-      {p.scene && <SceneSection scene={p.scene} entities={adventure.entities} log={p.sceneLog ?? []} ask={adventure.scriptState.__placeAsk} api={api} />}
+      {p.scene && <p className="text-caption text-muted-foreground">Scene and cast: World tab.</p>}
       <MemoryStatus adventure={adventure} utilityModel={utilityModel} />
     </>
   );
