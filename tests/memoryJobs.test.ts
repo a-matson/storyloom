@@ -5,7 +5,7 @@ import type { CompletionRequest, Provider } from '@core/ports';
 import { joinStory } from '@core/text/formatting';
 import { byPlayer } from '@core/memory/looks';
 import { YOU } from '@core/memory/you';
-import { memoryPrompt, summaryPrompt } from '@core/text/prompts';
+import { memoryPrompt, summaryPrompt } from '@core/text/memoryPrompts';
 import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure as adventure } from './fixtures/memoryJobs';
 
 describe('memory maintenance', () => {

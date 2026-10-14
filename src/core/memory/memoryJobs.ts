@@ -1,6 +1,6 @@
 import type { Action, Adventure, Memory, Speaker } from '../model/types';
 import { createMemory, currentRange, dueMemoryRanges, evictToSize, isPlayerAction, type MemoryRange } from './memoryBank';
-import { MEMORY_SYSTEM, memoryPrompt } from '../text/prompts';
+import { MEMORY_SYSTEM, memoryPrompt } from '../text/memoryPrompts';
 import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
 import type { Provider } from '../ports/provider';

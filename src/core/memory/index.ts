@@ -3,7 +3,7 @@ export { followLog, holds } from './invalidate';
 export { appearanceOf, byPlayer, currentStates, isValue, LOOK_KEYS, rivalKey, setValue, withLooks, type Fields } from './looks';
 export { current, identityText, indexAssertions, isCurrent, isLegacy, textOf, type AssertionOf } from './assertionIndex';
 export { heldBy } from './items';
-export { playerLine, YOU, youLines } from './you';
+export { YOU } from './you';
 export { sceneIds, sceneNames } from './names';
 export type { MaintenanceDeps } from './memoryJobs';
 export type { CutCounts, HelperCallLog } from './helperCall';

@@ -1,5 +1,5 @@
 import type { Adventure } from '../model/types';
-import { SUMMARY_SYSTEM, summaryPrompt } from '../text/prompts';
+import { SUMMARY_SYSTEM, summaryPrompt } from '../text/memoryPrompts';
 import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
 import { trimUnfinishedSentence } from '../text/formatting';
