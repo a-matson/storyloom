@@ -16,6 +16,7 @@ import type { Adventure, Entity, Scene } from '@core/model/types';
 import { collect } from '@core/ports/provider';
 import * as S from '@core/schema';
 import { turnRead } from '@core/schema/extraction';
+import { contentClause, withContent } from '@core/text/content';
 import { EXTRACT_SYSTEM } from '@core/text/prompts';
 import { createApproxTokenizer } from '@core/text/tokenizer';
 import { introducePrompt } from '@core/text/turnReadPrompt';
@@ -36,6 +37,14 @@ const grammar = (s: z.ZodMiniType) => {
   const { $schema: _d, ...schema } = z.toJSONSchema(s);
   return schema;
 };
+const parses = (text: string) => {
+  try {
+    JSON.parse(text);
+    return true;
+  } catch {
+    return false;
+  }
+};
 const CAST_SETTINGS = { memoryBankEnabled: false, cacheStableLayout: false, evictionChunk: 8 };
 /** `MEASURE_READS=A` skips read B; `C` replays the batch call alone. */
 const READS = (process.env['MEASURE_READS'] ?? 'A,B').split(',');
@@ -44,6 +53,7 @@ interface Reply {
   tokens?: number | undefined;
   stop?: string | undefined;
   raw: string;
+  parsed?: boolean;
   accepted?: number;
   rejected?: StateUpdate['rejected'];
 }
@@ -55,8 +65,10 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
   const legacy = S.LegacyAdventure.parse(JSON.parse(readFileSync(backup ?? '', 'utf8')).adventure);
   const identities = [...adv.assertions, ...deriveAssertions(legacy)].filter((x) => x.kind === 'identity' || x.kind === 'trait');
   const provider = new LlamaServerProvider('state', url ?? '');
+  // As the app sends it: an instruct utility model must not soften the adult scenes.
+  const content = contentClause(adv.settings, 'record');
   const ask = async <T>(user: string, schema: z.ZodMiniType<T>, maxTokens: number) => {
-    const r = renderTemplate(adv.settings.template, EXTRACT_SYSTEM, user, '');
+    const r = renderTemplate(adv.settings.template, withContent(EXTRACT_SYSTEM, content), user, '');
     const t0 = Date.now();
     const { text, stats } = await collect(
       provider.complete({
@@ -122,7 +134,7 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     const calls: HelperCallLog[] = [];
     const subjects = READS.includes('B') ? stateCast(work) : [];
     const r = subjects.length
-      ? await readState(work, { provider, template: adv.settings.template, cuts: { cutCalls: 0, finishedPastCut: 0, calls } })
+      ? await readState(work, { provider, template: adv.settings.template, content, cuts: { cutCalls: 0, finishedPastCut: 0, calls } })
       : undefined;
     assertions = work.assertions;
     const call = calls[0];
@@ -131,6 +143,7 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
       tokens: call.generatedTokens,
       stop: call.stopReason,
       raw: call.reply,
+      parsed: parses(call.reply),
       accepted: r?.changed ?? 0,
       rejected: r?.rejected ?? [],
     };
@@ -159,7 +172,7 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
       location: scene.location,
       present: scene.present,
       record: structuredClone(record),
-      a: { ms: a.ms, tokens: a.tokens, stop: a.stop, raw: a.text },
+      a: { ms: a.ms, tokens: a.tokens, stop: a.stop, raw: a.text, parsed: !!a.parsed },
       ...(b && { b }),
       structured,
     });
@@ -184,6 +197,9 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     moves,
     newPlaces,
     cutReplies: [...rows.map((r) => r.a), ...bs].filter((x) => x.stop === 'length').length,
+    // C9: a utility model below 28/30 parsed fails the JSON bar.
+    parsedA: rows.filter((r) => r.a.parsed).length,
+    parsedB: bs.filter((x) => x.parsed).length,
     meanMsA: mean(rows.map((r) => r.a.ms)),
     meanMsB: mean(bs.map((x) => x.ms)),
     // C8: above 20 % the next item loosens the subject rule.

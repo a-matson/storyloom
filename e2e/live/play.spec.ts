@@ -87,6 +87,7 @@ test('scripted live play', async ({ page }) => {
   if (UTILITY) {
     await page.getByRole('switch', { name: 'Use a utility model' }).click();
     await page.getByRole('textbox', { name: 'Utility server URL' }).fill(UTILITY);
+    await page.getByRole('combobox', { name: 'Reads on' }).selectOption('utility');
   }
   if (IMAGES) {
     await page.getByRole('switch', { name: 'Use an image server' }).click();

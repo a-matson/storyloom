@@ -158,4 +158,6 @@ export const AppSettings = z.object({
   stickyInput: z._default(z.boolean(), true),
   compactButtons: z._default(z.boolean(), false),
   imagePresets: z._default(z.array(ImagePreset), []),
+  /** Helper reads with a utility model configured: `story` never uses it, `utility` always, `bench` per `READ_MODEL`. [provisional] */
+  readsOn: z._default(z.enum(['story', 'utility', 'bench']), 'bench'),
 });

@@ -30,6 +30,7 @@ function setup(utilityReachable: boolean) {
       { id: 'utility', kind: 'llama-server', name: 'utility', baseUrl: 'http://utility.invalid', role: 'utility', template: 'llama3' },
     ],
     defaultProviderId: 'story',
+    readsOn: 'utility',
   });
   const adventure = makeAdventure({ actions: 30, cards: 0 });
   adventure.settings = {

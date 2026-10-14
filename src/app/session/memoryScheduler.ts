@@ -1,11 +1,11 @@
 import { entitiesOverdue, loadMemoryJobs, memoryOverdue, type CutCounts, type HelperCallLog } from '@core/memory';
-import { actionText, type Adventure, type Speaker } from '@core/model';
+import { actionText, type Adventure, type ReadKind, type Speaker } from '@core/model';
 import type { Embedder } from '@core/ports';
 import type { HelperModel } from './types';
 
 interface Host {
   adventure: () => Adventure;
-  helperModel: () => Promise<HelperModel>;
+  helperModel: (read: ReadKind) => Promise<HelperModel>;
   embedder: () => Promise<Embedder>;
   /** First action of the history in the last built context: the summary covers what came before. */
   historyStart?: () => number | undefined;
@@ -66,8 +66,8 @@ export class MemoryScheduler {
 
   /** First on slot 1 so the badge comes while the player reads; typing does not cut it (a few seconds), the next turn does. */
   /** One helper job on the helper model, its calls recorded for the trace drawer even when it throws. */
-  private async logged<T>(job: (deps: HelperModel & { cuts: CutCounts }) => Promise<T>): Promise<T> {
-    const helper = await this.host.helperModel();
+  private async logged<T>(read: ReadKind, job: (deps: HelperModel & { cuts: CutCounts }) => Promise<T>): Promise<T> {
+    const helper = await this.host.helperModel(read);
     const calls: HelperCallLog[] = [];
     try {
       return await job({ ...helper, cuts: { cutCalls: 0, finishedPastCut: 0, calls } });
@@ -85,7 +85,7 @@ export class MemoryScheduler {
       const output = actionText(last);
       const lines = checkInputs(adv);
       if (!lines.length) return;
-      const fact = await this.logged((d) => checkOutput(output, lines, { ...d, signal: idle }));
+      const fact = await this.logged('check', (d) => checkOutput(output, lines, { ...d, signal: idle }));
       if (!idle.aborted) this.host.flag(fact === null ? null : { actionId: last.id, fact });
     } catch (e) {
       if (!idle.aborted) console.warn('contradiction check failed', e);
@@ -117,7 +117,7 @@ export class MemoryScheduler {
     try {
       if (introductions || sceneEachTurn) {
         const { introduce } = await loadMemoryJobs();
-        const r = await this.logged((d) => introduce(this.host.adventure(), d));
+        const r = await this.logged('scene', (d) => introduce(this.host.adventure(), d));
         if (r.touched || r.sceneUpdated) this.host.changed();
         if (r.touched && this.idle && !this.idle.aborted) this.portraits(this.idle);
       }
@@ -132,7 +132,7 @@ export class MemoryScheduler {
   private async readState(cancel?: AbortSignal): Promise<void> {
     try {
       const { readState } = await loadMemoryJobs();
-      const r = await this.logged((d) => readState(this.host.adventure(), { ...d, ...(cancel && { cancel }) }));
+      const r = await this.logged('state', (d) => readState(this.host.adventure(), { ...d, ...(cancel && { cancel }) }));
       if (r.changed) this.host.changed();
     } catch (e) {
       if (cancel?.aborted) throw e;
@@ -200,7 +200,15 @@ export class MemoryScheduler {
       if (this.host.adventure().settings.memory.stateRead === 'idle') await this.readState(cancel.signal);
       // Memories are embedded on the story side so they compare with the query vectors in `prepareContext`.
       const { runMemoryMaintenance } = await loadMemoryJobs();
-      const deps = { ...(await this.host.helperModel()), embedder: await this.host.embedder(), historyStart: this.host.historyStart?.() };
+      const model = this.host.helperModel;
+      const [memory, batch, summary] = await Promise.all([model('memory'), model('batch'), model('summary')]);
+      const models = { memory, batch, summary };
+      const deps = {
+        ...memory,
+        modelFor: (r: keyof typeof models) => models[r],
+        embedder: await this.host.embedder(),
+        historyStart: this.host.historyStart?.(),
+      };
       const report = await runMemoryMaintenance(this.host.adventure(), { ...deps, signal: AbortSignal.any([idle, cancel.signal]), cancel: cancel.signal });
       this.host.record?.(report.calls ?? [], deps.model);
       const { summaryUpdated, summaryFirst, cutCalls, finishedPastCut, factsProposed, rejected } = report;

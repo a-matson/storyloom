@@ -1,9 +1,9 @@
 import { ActionLog } from '@core/log';
 import { followLog } from '@core/memory';
-import { utilityProvider, type Adventure, type AdventureSettings, type AppSettings, type PlotComponents, type TurnTrace } from '@core/model';
+import type { Adventure, AdventureSettings, AppSettings, PlotComponents, ReadKind, TurnTrace } from '@core/model';
 import type { Embedder, ScriptRunner } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
-import { storyModel } from './helperModel';
+import { helperModelFor } from './helperModel';
 import { IdleWork } from './idleWork';
 import { dropOrphanImages, regenerateImage, seeImage } from './images';
 import { MemoryScheduler } from './memoryScheduler';
@@ -47,7 +47,7 @@ export class GameSession {
   private utilityDown = false;
   private readonly memory = new MemoryScheduler({
     adventure: () => this.adv,
-    helperModel: () => this.helperModel(),
+    helperModel: (read) => this.helperModel(read),
     embedder: () => this.resolveEmbedder(),
     historyStart: () => this.lastPrepared?.result.historyRange?.from,
     changed: () => this.changed(),
@@ -201,18 +201,11 @@ export class GameSession {
   /** Diagnostics never block play; the next turn writes its own. */
   private readonly storeTrace = (t: TurnTrace): void => void this.svc.storage.putTrace(t).catch((e: unknown) => console.warn('could not store turn trace', e));
 
-  /** Memories, summaries and story cards run on the utility server when configured and reachable, else the story provider; each with its own template. */
-  readonly helperModel = async (): Promise<HelperModel> => {
-    const utility = utilityProvider(this.app);
-    if (utility) {
-      const provider = this.svc.providerFor(this.app, utility.id);
-      const health = await provider.health();
-      if (health.ok) return { ...storyModel(this), provider, template: utility.template ?? this.adv.settings.template, model: health.modelId };
-      if (!this.utilityDown) console.warn(`utility model at ${utility.baseUrl} is unreachable; helper jobs use the story model`);
+  readonly helperModel = (read: ReadKind): Promise<HelperModel> =>
+    helperModelFor(read, this, (url) => {
+      if (!this.utilityDown) console.warn(`utility model at ${url} is unreachable; helper jobs use the story model`);
       this.utilityDown = true;
-    }
-    return storyModel(this);
-  };
+    });
 
   /** Any player action cancels background work. */
   private beginAction(): void {

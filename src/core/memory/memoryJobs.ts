@@ -45,7 +45,11 @@ export interface MaintenanceDeps {
   cuts?: CutCounts;
   /** First action of the history in the last built context; undefined before the first turn (nothing evicted). */
   historyStart?: number | undefined;
+  /** A provider and template per job, when they differ from `provider`/`template` (a read routed to the utility model). */
+  modelFor?: (job: MaintenanceJob) => Pick<MaintenanceDeps, 'provider' | 'template'>;
 }
+
+export type MaintenanceJob = 'memory' | 'batch' | 'summary';
 
 export interface MaintenanceReport extends CutCounts {
   memoriesWritten: number;
@@ -192,7 +196,9 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
   return report;
 }
 
-async function maintain(adventure: Adventure, deps: MaintenanceDeps, report: MaintenanceReport): Promise<void> {
+async function maintain(adventure: Adventure, all: MaintenanceDeps, report: MaintenanceReport): Promise<void> {
+  const on = (job: MaintenanceJob): MaintenanceDeps => ({ ...all, ...all.modelFor?.(job) });
+  const deps = on('memory');
   const settings = adventure.settings.memory;
   const actions = adventure.actions;
   // Memories feed both features (auto-summary uses them to bridge gaps).
@@ -203,7 +209,7 @@ async function maintain(adventure: Adventure, deps: MaintenanceDeps, report: Mai
   // An edited range must not feed the summary its old text.
   const regenerateFirst = report.summaryFirst && memoriesOn && adventure.memories.some((m) => m.stale);
   if (regenerateFirst) await regenerateStale(adventure, deps, report);
-  if (report.summaryFirst) report.summaryUpdated = await refreshSummary(adventure, deps);
+  if (report.summaryFirst) report.summaryUpdated = await refreshSummary(adventure, on('summary'));
 
   if (memoriesOn) {
     if (!regenerateFirst) await regenerateStale(adventure, deps, report);
@@ -215,7 +221,7 @@ async function maintain(adventure: Adventure, deps: MaintenanceDeps, report: Mai
       report.memoriesWritten += 1;
     }
     // The one combined helper call per two memories; a bad reply only costs the entities.
-    const e = await catchUpEntities(adventure, deps);
+    const e = await catchUpEntities(adventure, on('batch'));
     ({ touched: report.entitiesTouched, speakers: report.speakers } = e);
     report.factsProposed = e.log?.proposed ?? 0;
     report.rejected = e.log?.rejected ?? [];
@@ -225,5 +231,5 @@ async function maintain(adventure: Adventure, deps: MaintenanceDeps, report: Mai
     report.memoriesForgotten = evicted.forgotten;
   }
 
-  if (settings.autoSummary && !report.summaryFirst) report.summaryUpdated = await refreshSummary(adventure, deps);
+  if (settings.autoSummary && !report.summaryFirst) report.summaryUpdated = await refreshSummary(adventure, on('summary'));
 }

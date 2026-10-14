@@ -41,6 +41,7 @@ test('a utility model gets the memory jobs and survives a reload', async ({ page
   await page.getByRole('switch', { name: 'Use a utility model' }).click();
   await page.getByRole('textbox', { name: 'Utility server URL' }).fill(`${UTILITY}/`);
   await page.getByRole('combobox', { name: 'Utility template' }).selectOption('llama3');
+  await page.getByRole('combobox', { name: 'Reads on' }).selectOption('utility');
   await page.getByRole('button', { name: 'Test', exact: true }).click();
   await expect(page.getByText('qwen-3b.gguf')).toBeVisible();
   await page.getByRole('button', { name: 'Continue' }).click();
@@ -61,4 +62,5 @@ test('a utility model gets the memory jobs and survives a reload', async ({ page
   await expect(page.getByRole('switch', { name: 'Use a utility model' })).toBeChecked();
   await expect(page.getByRole('textbox', { name: 'Utility server URL' })).toHaveValue(UTILITY);
   await expect(page.getByRole('combobox', { name: 'Utility template' })).toHaveValue('llama3');
+  await expect(page.getByRole('combobox', { name: 'Reads on' })).toHaveValue('utility');
 });

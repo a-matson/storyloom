@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { MemoryScheduler } from '@app/session/memoryScheduler';
 import { mergeEntity } from '@core/memory/entities';
-import type { Adventure } from '@core/model';
+import type { Adventure, ReadKind } from '@core/model';
 import type { Embedder } from '@core/ports';
 import { ENTITY_PROMPT, fakeProvider, memoryAdventure } from './fixtures/memoryJobs';
 
@@ -17,6 +17,7 @@ function setup(stateRead: Adventure['settings']['memory']['stateRead'], hold = f
   const last = adv.actions.at(-1);
   if (last) last.versions = ['Mira sits down.'];
   const calls: string[] = [];
+  const asked = new Set<ReadKind>();
   let held = hold;
   const provider = fakeProvider(
     async function* (req, signal) {
@@ -47,7 +48,10 @@ function setup(stateRead: Adventure['settings']['memory']['stateRead'], hold = f
   const embedder: Embedder = { id: 'e', dimensions: 2, embed: (t) => Promise.resolve(t.map(() => [1, 0])) };
   const scheduler = new MemoryScheduler({
     adventure: () => adv,
-    helperModel: () => Promise.resolve({ provider, template: adv.settings.template }),
+    helperModel: (read) => {
+      asked.add(read);
+      return Promise.resolve({ provider, template: adv.settings.template });
+    },
     embedder: () => Promise.resolve(embedder),
     changed: () => {},
     annotate: () => {},
@@ -55,15 +59,17 @@ function setup(stateRead: Adventure['settings']['memory']['stateRead'], hold = f
     flag: () => {},
   });
   const posture = () => adv.assertions.find((a) => a.subject === mira.id && a.kind === 'state' && a.key === 'posture' && a.until === undefined);
-  return { calls, scheduler, posture };
+  return { calls, scheduler, posture, asked };
 }
 
 describe('the state read in the scheduler', () => {
   it('runs after the turn read and before the memory run', async () => {
-    const { calls, scheduler, posture } = setup('every');
+    const { calls, scheduler, posture, asked } = setup('every');
     scheduler.start(new AbortController().signal);
     await vi.waitFor(() => expect(calls).toContain('memory'));
     expect(calls.slice(0, 2)).toEqual(['scene', 'state']);
+    // Each read asks for its own model, so `readsOn` can route it.
+    expect([...asked]).toEqual(['scene', 'state', 'memory', 'batch', 'summary']);
     expect(posture()).toMatchObject({ value: 'sitting', producer: 'turn' });
   });
 

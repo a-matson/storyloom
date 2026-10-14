@@ -14,6 +14,7 @@ const choice = {
   speakerAvatars: false,
   health: null,
   utility: undefined,
+  readsOn: 'bench' as const,
   image: undefined,
 };
 
