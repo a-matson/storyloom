@@ -28,7 +28,7 @@ export function YouCard({ adventure, api }: { adventure: Adventure; api: GameApi
       <header className={SECTION_HEADER}>
         <span className="grow">You</span>
         <Select
-          className="h-7 w-28 text-caption"
+          className="h-7 w-32 text-caption"
           aria-label="Pronouns"
           value={plot.you?.pronouns ?? ''}
           onChange={(e) => api.updatePlot({ you: { ...plot.you, pronouns: e.target.value || undefined } })}
@@ -51,7 +51,7 @@ export function YouCard({ adventure, api }: { adventure: Adventure; api: GameApi
           />
           <Switch aria-label="Third person" checked={enabled} onChange={(on) => api.updatePlot({ thirdPerson: { enabled: on, name } })} />
         </div>
-        <ul className="flex flex-col gap-1.5">
+        <ul className="flex flex-col gap-1.5 empty:hidden">
           {mine.map((a) => (
             <Line
               key={a.id}
