@@ -8,6 +8,7 @@ import { ENTITY_BATCH } from '@core/memory/memoryBank';
 import { nextScene } from '@core/memory/scene';
 import type { HelperCallLog } from '@core/memory';
 import { indexAssertions } from '@core/memory/assertionIndex';
+import { deriveAssertions } from '@core/memory/assertions';
 import { currentStates } from '@core/memory/looks';
 import { sceneIds } from '@core/memory/names';
 import { readState, stateCast, type StateUpdate } from '@core/memory/stateRead';
@@ -50,6 +51,9 @@ interface Reply {
 test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('state reads over a backup', { timeout: 3_600_000 }, async () => {
   const adv = S.Adventure.parse(JSON.parse(readFileSync(backup ?? '', 'utf8')).adventure);
   const set = pickSet(JSON.parse(readFileSync('bench/stateLabels.json', 'utf8')), SET);
+  // A v1 backup keeps identities in entity fields: derive them as opening it would.
+  const legacy = S.LegacyAdventure.parse(JSON.parse(readFileSync(backup ?? '', 'utf8')).adventure);
+  const identities = [...adv.assertions, ...deriveAssertions(legacy)].filter((x) => x.kind === 'identity' || x.kind === 'trait');
   const provider = new LlamaServerProvider('state', url ?? '');
   const ask = async <T>(user: string, schema: z.ZodMiniType<T>, maxTokens: number) => {
     const r = renderTemplate(adv.settings.template, EXTRACT_SYSTEM, user, '');
@@ -134,7 +138,7 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     for (const s of subjects) record[s.name] = currentStates(ix.of(s.id));
     // The cast block this turn would send: the backup's identities and pins as of now, B's states.
     const out: RenderedSections = new Map();
-    const said = adv.assertions.filter((x) => x.at <= i && x.kind !== 'state' && x.kind !== 'look');
+    const said = identities.filter((x) => x.at <= i);
     const used = selectStructured(
       {
         ...work,

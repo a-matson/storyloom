@@ -62,7 +62,10 @@ export function presentLine(e: Entity, as: readonly Assertion[], present: readon
   const now = currentStates(as);
   const keys = KEY_ORDER.filter((k) => now[k]?.trim());
   const stateIds = keys.flatMap((k) => as.findLast((a) => isCurrent(a) && (a.kind === 'state' || a.kind === 'look') && a.key === k)?.id ?? []);
-  const effects = current(live, 'effect');
+  // Read B proposes an effect per condition that names someone and never ends it: unseen, it holds only while the condition does.
+  const effects = current(live, 'effect').filter(
+    (a, i, all) => (a.seen !== false || norm(a.condition) === norm(now['condition'] ?? '')) && all.findIndex((b) => effect(b) === effect(a)) === i,
+  );
   const rels = current(live, 'relationship');
   const toward = (a: AssertionOf<'relationship'>) => present.find((p) => p !== e && names(p).includes(norm(a.to)));
   const toYou = rels.filter((a) => norm(a.to) === 'you');
