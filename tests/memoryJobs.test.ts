@@ -183,4 +183,21 @@ describe('memory maintenance', () => {
     await runMemoryMaintenance(adventure(15), { ...fakeDeps(adv).deps, provider: fakeProvider(answer, false) });
     expect(reqs[0]?.grammar).toBeUndefined();
   });
+
+  it('sends memories, the batch call and the summary each to the model modelFor gives that job', async () => {
+    const adv = adventure(30);
+    adv.settings.memory.autoSummary = true;
+    const seen: Record<string, string[]> = { memory: [], batch: [], summary: [] };
+    const model = (job: string) => ({
+      template: adv.settings.template,
+      provider: fakeProvider(async function* (req) {
+        seen[job]?.push(req.prompt.includes(ENTITY_PROMPT) ? 'entity' : req.prompt.includes('Write the updated summary') ? 'summary' : 'memory');
+        yield { text: req.prompt.includes(ENTITY_PROMPT) ? '{"entities": [], "speakers": []}' : 'Mira found the map.', done: true };
+      }),
+    });
+    await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, modelFor: model, historyStart: 12 });
+    expect(new Set(seen['memory'])).toEqual(new Set(['memory']));
+    expect(new Set(seen['batch'])).toEqual(new Set(['entity']));
+    expect(new Set(seen['summary'])).toEqual(new Set(['summary']));
+  });
 });

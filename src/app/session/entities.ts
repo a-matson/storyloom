@@ -114,7 +114,7 @@ async function refreshEntity(host: GameSession, id: string): Promise<void> {
   const toAction = e.lastSeen + 1;
   try {
     const { updateEntities, MEMORY_SPAN } = await loadMemoryJobs();
-    const r = await updateEntities(host.adv, { fromAction: Math.max(e.firstSeen, toAction - MEMORY_SPAN), toAction }, await host.helperModel());
+    const r = await updateEntities(host.adv, { fromAction: Math.max(e.firstSeen, toAction - MEMORY_SPAN), toAction }, await host.helperModel('batch'));
     host.log.annotate(r.speakers);
     host.changed();
   } catch (err) {

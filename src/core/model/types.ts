@@ -68,5 +68,19 @@ export function hasScripts(scripts: Adventure['scripts']): scripts is NonNullabl
 /** The second, small model server for memory jobs, if one is configured. */
 export const utilityProvider = (app: AppSettings): ProviderConfig | undefined => app.providers.find((p) => p.role === 'utility');
 
+/** Helper reads that can each run on the story or the utility model. */
+export type ReadKind = 'scene' | 'state' | 'batch' | 'memory' | 'summary' | 'check' | 'card';
+
+/**
+ * The reads `readsOn: 'bench'` sends to the utility model: those it won on the bench. None: Qwen2.5-3B abliterated
+ * lost every read to the 12B (scene present 1/30 vs 21/30, state 19 vs 67 accepted, batch 0 vs 3 cards), 3x faster.
+ * [measured: 2026-10-14-state-m13-6-qwen3b.json, 2026-10-14-state-m13-6-wayfarer.json]
+ */
+export const UTILITY_READS: ReadonlySet<ReadKind> = new Set();
+
+/** Whether `read` asks for the utility model; the caller still needs one configured and reachable. */
+export const readsOnUtility = (app: Pick<AppSettings, 'readsOn'>, read: ReadKind): boolean =>
+  app.readsOn === 'utility' || (app.readsOn === 'bench' && UTILITY_READS.has(read));
+
 /** The image server for See mode, if one is configured. */
 export const imageProvider = (app: AppSettings): ProviderConfig | undefined => app.providers.find((p) => p.role === 'image');

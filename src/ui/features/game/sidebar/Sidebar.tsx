@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { utilityProvider, type Adventure, type AppSettings } from '@core/model';
+import { readsOnUtility, utilityProvider, type Adventure, type AppSettings } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
 import { cn } from '@ui/lib/utils';
@@ -35,8 +35,8 @@ const body = 'flex grow flex-col gap-2 overflow-y-auto px-4 pb-4';
 
 /** Adventure / Gameplay settings panel; an overlay sheet below 1100 px. Mirrors AI Dungeon's in-game settings. */
 export function Sidebar({ adventure, api, app, onAppChange, hidden, onClose }: Props) {
-  // Memory jobs run on a separate utility model.
-  const utilityModel = !!utilityProvider(app);
+  // Summaries run on a separate utility model when one is configured and the reads routing sends them there.
+  const utilityModel = !!utilityProvider(app) && readsOnUtility(app, 'summary');
   const [current, setTab] = useState<Tab>('adventure');
   const [sub, setSub] = useState<SubTab>('plot');
   const characters = adventure.entities.filter((e) => e.kind === 'character').length;
