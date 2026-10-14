@@ -8,6 +8,7 @@ import { ENTITY_BATCH } from '@core/memory/memoryBank';
 import { nextScene } from '@core/memory/scene';
 import type { HelperCallLog } from '@core/memory';
 import { indexAssertions } from '@core/memory/assertionIndex';
+import { deriveAssertions } from '@core/memory/assertions';
 import { currentStates } from '@core/memory/looks';
 import { sceneIds } from '@core/memory/names';
 import { readState, stateCast, type StateUpdate } from '@core/memory/stateRead';
@@ -16,7 +17,10 @@ import { collect } from '@core/ports/provider';
 import * as S from '@core/schema';
 import { turnRead } from '@core/schema/extraction';
 import { EXTRACT_SYSTEM } from '@core/text/prompts';
+import { createApproxTokenizer } from '@core/text/tokenizer';
 import { introducePrompt } from '@core/text/turnReadPrompt';
+import { selectStructured, STRUCTURED_CAP } from '@core/context/structured';
+import type { RenderedSections } from '@core/context/types';
 import { renderTemplate } from '@core/text/templates';
 import { writeMeasurement } from './env';
 import { pickSet, scoreRows, type StateRow } from './stateScore';
@@ -32,6 +36,7 @@ const grammar = (s: z.ZodMiniType) => {
   const { $schema: _d, ...schema } = z.toJSONSchema(s);
   return schema;
 };
+const CAST_SETTINGS = { memoryBankEnabled: false, cacheStableLayout: false, evictionChunk: 8 };
 /** `MEASURE_READS=A` skips read B; `C` replays the batch call alone. */
 const READS = (process.env['MEASURE_READS'] ?? 'A,B').split(',');
 interface Reply {
@@ -46,6 +51,9 @@ interface Reply {
 test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('state reads over a backup', { timeout: 3_600_000 }, async () => {
   const adv = S.Adventure.parse(JSON.parse(readFileSync(backup ?? '', 'utf8')).adventure);
   const set = pickSet(JSON.parse(readFileSync('bench/stateLabels.json', 'utf8')), SET);
+  // A v1 backup keeps identities in entity fields: derive them as opening it would.
+  const legacy = S.LegacyAdventure.parse(JSON.parse(readFileSync(backup ?? '', 'utf8')).adventure);
+  const identities = [...adv.assertions, ...deriveAssertions(legacy)].filter((x) => x.kind === 'identity' || x.kind === 'trait');
   const provider = new LlamaServerProvider('state', url ?? '');
   const ask = async <T>(user: string, schema: z.ZodMiniType<T>, maxTokens: number) => {
     const r = renderTemplate(adv.settings.template, EXTRACT_SYSTEM, user, '');
@@ -72,7 +80,8 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     return { text, parsed, ms: Date.now() - t0, tokens: stats?.generatedTokens, stop: stats?.stopReason };
   };
 
-  const rows: (StateRow & { a: Reply; b?: Reply })[] = [];
+  const rows: (StateRow & { a: Reply; b?: Reply; structured: { tokens: number; text: string } })[] = [];
+  const tokenizer = createApproxTokenizer();
   let scene: Scene = { location: set.start, present: [] };
   const places: Entity[] = [];
   let moves = 0;
@@ -127,6 +136,22 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     };
     const ix = indexAssertions(assertions);
     for (const s of subjects) record[s.name] = currentStates(ix.of(s.id));
+    // The cast block this turn would send: the backup's identities and pins as of now, B's states.
+    const out: RenderedSections = new Map();
+    const said = identities.filter((x) => x.at <= i);
+    const used = selectStructured(
+      {
+        ...work,
+        assertions: [...said, ...assertions],
+        rankedMemories: [],
+        settings: { ...CAST_SETTINGS, contextLength: adv.settings.model.contextLength },
+        tokenizer,
+      },
+      i,
+      STRUCTURED_CAP,
+      out,
+    ).structuredUsed;
+    const structured = { tokens: used, text: [...out.values()].map((s) => s.text).join('\n') };
 
     rows.push({
       i,
@@ -136,7 +161,9 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
       record: structuredClone(record),
       a: { ms: a.ms, tokens: a.tokens, stop: a.stop, raw: a.text },
       ...(b && { b }),
+      structured,
     });
+    console.log('cast', i, `${structured.tokens} tokens`, `\n${structured.text}`);
     console.log(
       'state',
       i,
@@ -162,6 +189,9 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     // C8: above 20 % the next item loosens the subject rule.
     stateAccepted: bs.reduce((s, x) => s + (x.accepted ?? 0), 0),
     stateRejected: bs.reduce((s, x) => s + (x.rejected?.length ?? 0), 0),
+    // M13-5's bar: ≤ 200 with three present.
+    maxStructured: Math.max(0, ...rows.map((r) => r.structured.tokens)),
+    maxStructuredThreePresent: Math.max(0, ...rows.filter((r) => r.present.length >= 3).map((r) => r.structured.tokens)),
   };
   console.log('state score', JSON.stringify(score));
   console.log('wrote', writeMeasurement(`state-${LABEL}`, { url, backup, set: SET, sampling: HELPER_JSON_SAMPLING, score, rows }));

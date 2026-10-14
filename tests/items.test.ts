@@ -27,7 +27,7 @@ describe('items', () => {
   it('the scene line holds your items and lists what is here, a held one with its holder, five at most', () => {
     const scene = { location: 'the tower', present: ['Korthak'], items: ['the horn', 'a lamp'] };
     expect(itemsHere(scene, all, ix)).toEqual(['a lamp', 'Ledger', 'Key (Korthak)']);
-    expect(renderScene(scene, all, ix)).toBe('the tower · Present: Korthak · You hold: Horn · Here: a lamp, Ledger, Key (Korthak)');
+    expect(renderScene(scene, all, ix)).toBe('the tower · Present: Korthak · Here: a lamp, Ledger, Key (Korthak) · You hold: Horn');
     const many = Array.from({ length: 7 }, (_, i) => ent(`Coin${i}`, 'item'));
     expect(renderScene(undefined, many, indexAssertions(many.flatMap((c) => where(c, 'holder', 'you'))))).toBe('You hold: Coin0, Coin1, Coin2, Coin3, Coin4');
   });

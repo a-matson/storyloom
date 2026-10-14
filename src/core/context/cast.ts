@@ -1,9 +1,13 @@
-import { current, identityText, isCurrent, textOf, type AssertionIndex, type AssertionOf } from '../memory/assertionIndex';
-import { currentStates, LOOK_KEYS } from '../memory/looks';
+import { current, identityText, isCurrent, textOf, type AssertionOf } from '../memory/assertionIndex';
+import { currentStates } from '../memory/looks';
 import type { Assertion, Entity } from '../model/types';
 
 /** Words an identity keeps from the description's first clause. [provisional] */
 export const IDENTITY_WORDS = 12;
+/** Now-line keys in the order sent; `location` is the scene line's, `holds` the item's holder. [provisional] */
+export const KEY_ORDER = ['posture', 'condition', 'mood', 'wearing'] as const;
+/** Words a state value keeps. [provisional] */
+export const VALUE_WORDS = 4;
 
 /** One cast line and the assertions it sends. */
 export interface CastLine {
@@ -17,10 +21,11 @@ const names = (e: Entity) => [e.name, ...e.aliases].map(norm);
 // `looked:` traits are the old, replaced looks.
 const old = (a: Assertion) => a.kind === 'trait' && a.text.startsWith('looked: ');
 const clause = (s: string) => s.trim().replace(/[.;]+$/, '');
-// Looks are the portrait's business; only what someone wears changes the scene.
-const SKIP = new Set<string>(LOOK_KEYS.filter((k) => k !== 'wearing'));
+const short = (v: string) => v.trim().split(/\s+/).slice(0, VALUE_WORDS).join(' ');
 /** `<condition> — <cause>`. */
 const effect = (a: AssertionOf<'effect'>) => clause(a.condition) + (a.cause ? ` — ${clause(a.cause.text)}` : '');
+/** The player's own facts: pinned, or given by Correct. */
+const pinsOf = (as: readonly Assertion[]) => as.filter((a) => isCurrent(a) && !old(a) && a.kind === 'trait' && (a.pinned || a.basis === 'player'));
 
 /** "Lena keeps the mill. She…" → "keeps the mill": first clause, the name and a leading "is" cut, at most 12 words. */
 export function identityOf(e: Entity, as: readonly Assertion[]): string {
@@ -40,47 +45,58 @@ const head = (e: Entity, as: readonly Assertion[], carded: boolean) => {
   const id = carded ? '' : identityOf(e, as);
   return id ? `${e.name} (${id})` : e.name;
 };
+// Never `Name: …`: the model copies it into `Weever:` paragraphs (U14).
+const lead = (e: Entity, as: readonly Assertion[], carded: boolean, parts: readonly string[]) => {
+  const h = head(e, as, carded);
+  if (!parts.length) return `${h}.`;
+  return `${h}${h === e.name ? ' —' : ':'} ${parts.join('; ')}.`;
+};
 
 /**
- * A present entity's now-line: `Name (identity): states; effects — cause; stance to you. With Other: stance.`
- * States leave out looks but `wearing`; traits go only when pinned or the player's, with canon conflicts.
+ * A present character's now-line: `Name (identity): sitting, poisoned, wary, wearing a cloak; effect — cause; stance to you; pins. With Other: stance.`
+ * Looks are the portrait's; only `wearing` changes the scene. Conflicts are never sent.
  * A relationship's `to` is who it is towards (`you`: the player).
  */
 export function presentLine(e: Entity, as: readonly Assertion[], present: readonly Entity[], carded: boolean): CastLine {
   const live = as.filter((a) => isCurrent(a) && !old(a)).toSorted((a, b) => a.since - b.since);
-  const states = Object.entries(currentStates(as)).filter(([k]) => !SKIP.has(k));
-  const stateIds = states.flatMap(([k]) => as.findLast((a) => isCurrent(a) && (a.kind === 'state' || a.kind === 'look') && a.key === k)?.id ?? []);
-  const effects = current(live, 'effect');
+  const now = currentStates(as);
+  const keys = KEY_ORDER.filter((k) => now[k]?.trim());
+  const stateIds = keys.flatMap((k) => as.findLast((a) => isCurrent(a) && (a.kind === 'state' || a.kind === 'look') && a.key === k)?.id ?? []);
+  // Read B proposes an effect per condition that names someone and never ends it: unseen, it holds only while the condition does.
+  const effects = current(live, 'effect').filter(
+    (a, i, all) => (a.seen !== false || norm(a.condition) === norm(now['condition'] ?? '')) && all.findIndex((b) => effect(b) === effect(a)) === i,
+  );
   const rels = current(live, 'relationship');
   const toward = (a: AssertionOf<'relationship'>) => present.find((p) => p !== e && names(p).includes(norm(a.to)));
   const toYou = rels.filter((a) => norm(a.to) === 'you');
-  const traits = live.filter((a) => a.kind === 'conflict' || (a.kind === 'trait' && (a.pinned || a.basis === 'player')));
+  const pins = pinsOf(live);
   const parts = [
-    states.map(([k, v]) => `${k}: ${v}`).join(', '),
+    keys.map((k) => (k === 'wearing' ? 'wearing ' : '') + short(now[k] ?? '')).join(', '),
     ...effects.map(effect),
     ...toYou.map((a) => clause(a.stance)),
-    ...traits.map((a) => clause(textOf(a))),
+    ...pins.map((a) => clause(textOf(a))),
   ].filter(Boolean);
   const withOthers = present.flatMap((p) => {
     const about = rels.filter((a) => toward(a) === p);
     return about.length ? [`With ${p.name}: ${about.map((a) => clause(a.stance)).join('; ')}.`] : [];
   });
-  const text = [`${head(e, as, carded)}${parts.length ? `: ${parts.join('; ')}` : ''}.`, ...withOthers].join(' ');
-  const sent = [...effects, ...toYou, ...traits, ...rels.filter((a) => toward(a))].map((a) => a.id);
+  const text = [lead(e, as, carded, parts), ...withOthers].join(' ');
+  const sent = [...effects, ...toYou, ...pins, ...rels.filter((a) => toward(a))].map((a) => a.id);
   return { entity: e, text, factIds: [...stateIds, ...sent] };
 }
 
-/** A mentioned entity's identity, nothing else; none when there is no identity to give. */
-export const mentionedLine = (e: Entity, as: readonly Assertion[], carded: boolean): CastLine[] =>
+/** `Name (identity).` for a mentioned entity or an item here or held; none when there is no identity to give. */
+export const identityLine = (e: Entity, as: readonly Assertion[], carded: boolean): CastLine[] =>
   carded || !identityOf(e, as) ? [] : [{ entity: e, text: `${head(e, as, false)}.`, factIds: [] }];
 
-/** `Name: fact` for the player's pins and canon conflicts, sent whoever is in the scene. */
-export const pinnedLines = (entities: readonly Entity[], ix: AssertionIndex): CastLine[] =>
-  entities
-    .flatMap((entity) =>
-      ix
-        .of(entity.id)
-        .filter((a) => isCurrent(a) && !old(a) && (a.pinned || a.kind === 'conflict'))
-        .map((a) => ({ entity, text: `${entity.name}: ${textOf(a)}`, factIds: [a.id] })),
-    )
-    .toSorted((a, b) => a.entity.name.localeCompare(b.entity.name));
+/** With entity facts off: `Name (identity): pins.`, for an entity with any. */
+export function pinnedLine(e: Entity, as: readonly Assertion[], carded: boolean): CastLine[] {
+  const pins = pinsOf(as);
+  const text = lead(
+    e,
+    as,
+    carded,
+    pins.map((a) => clause(textOf(a))),
+  );
+  return pins.length ? [{ entity: e, text, factIds: pins.map((a) => a.id) }] : [];
+}

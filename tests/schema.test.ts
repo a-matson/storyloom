@@ -26,7 +26,7 @@ describe('schemas', () => {
         memoryBank: true,
         bankSize: 200,
         contradictionCheck: false,
-        entityFacts: false,
+        entityFacts: true,
         introductions: true,
         sceneEachTurn: true,
         stateRead: 'every',

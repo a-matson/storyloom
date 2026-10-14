@@ -57,11 +57,14 @@ describe('MemoryScheduler', () => {
   };
 
   describe('contradiction check', () => {
-    /** An adventure whose last output names a canon entity, and a helper that logs each call's kind. */
-    function setup(check: boolean) {
+    /** An adventure whose last output follows a present canon entity, and a helper that logs each call's kind. */
+    function setup(check: boolean, locked = false) {
       const adv = memoryAdventure(19); // odd, so the last action is AI output
       adv.settings.memory = { ...adv.settings.memory, contradictionCheck: check };
-      adv.entities = [{ ...mergeEntity(undefined, { name: 'Mira', kind: 'character', description: '' }, 0), canon: true, description: 'Mira is bald.' }];
+      const mira = { ...mergeEntity(undefined, { name: 'Mira', kind: 'character', description: '' }, 0), canon: true, ...(locked && { canonKeys: ['hair'] }) };
+      adv.entities = [mira];
+      adv.assertions = [{ id: 'as_hair', subject: mira.id, producer: 'player', at: 0, basis: 'player', since: 0, kind: 'state', key: 'hair', value: 'bald' }];
+      adv.plot = { ...adv.plot, scene: { location: 'the quay', present: [mira.id] } };
       const last = adv.actions.at(-1);
       if (last) last.versions = ['Mira shakes out her long hair.'];
       const calls: string[] = [];
@@ -69,9 +72,11 @@ describe('MemoryScheduler', () => {
         async function* (req) {
           const kind = req.prompt.includes(CHECK_PROMPT) ? 'check' : req.prompt.includes(ENTITY_PROMPT) ? 'entity' : 'memory';
           calls.push(kind);
-          const text = { check: '{"contradicts": true, "fact": "Mira is bald."}', entity: '{"importance": 1, "entities": []}', memory: 'Mira found the map.' }[
-            kind
-          ];
+          const text = {
+            check: '{"contradicts": true, "fact": "Mira: hair is bald"}',
+            entity: '{"importance": 1, "entities": []}',
+            memory: 'Mira found the map.',
+          }[kind];
           yield { text, done: true };
         },
         false,
@@ -83,19 +88,19 @@ describe('MemoryScheduler', () => {
     }
     const CHECK_PROMPT = 'Established facts:';
 
-    it('makes no check call when the setting is off', async () => {
+    it('makes no check call when the setting is off and nobody locked is present', async () => {
       const { adv, calls, scheduler } = setup(false);
       scheduler.start(new AbortController().signal);
       await vi.waitFor(() => expect(adv.memories.length).toBeGreaterThan(0));
       expect(calls).not.toContain('check');
     });
 
-    it('checks the last output before maintenance and flags it', async () => {
-      const { adv, calls, flags, scheduler } = setup(true);
+    it('checks the last output before maintenance and flags it, the setting off, for a locked present entity', async () => {
+      const { adv, calls, flags, scheduler } = setup(false, true);
       scheduler.start(new AbortController().signal);
       await vi.waitFor(() => expect(adv.memories.length).toBeGreaterThan(0));
       expect(calls[0]).toBe('check');
-      expect(flags).toEqual([{ actionId: adv.actions.at(-1)?.id, fact: 'Mira: Mira is bald.' }]);
+      expect(flags).toEqual([{ actionId: adv.actions.at(-1)?.id, fact: 'Mira: hair is bald' }]);
     });
 
     it('skips the check and the rest once the idle period ended', async () => {

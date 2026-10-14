@@ -29,10 +29,10 @@ export const MemorySettings = z.object({
   memoryBank: z._default(z.boolean(), true),
   /** Max memories kept per adventure (AID tiers: 25/100/200/400/800). */
   bankSize: z._default(z.int().check(z.gt(0)), 200),
-  /** After each turn, one helper call checks the output against canon, pinned facts and the scene. Off until its precision is measured. */
+  /** After each turn, one helper call checks the output against the scene and locked values; a locked value present runs it anyway. Off until its precision is measured. */
   contradictionCheck: z._default(z.boolean(), false),
-  /** Send entity facts and cards in the prompt. Off: no recall gain in the wave-2 bench. [measured: 2026-10-08-recall-wave2-run1.json] */
-  entityFacts: z._default(z.boolean(), false),
+  /** Send now-lines and identities in the prompt: three present fit the cap. [measured: 2026-10-14-state-m13-5-cast.json] */
+  entityFacts: z._default(z.boolean(), true),
   /** Cards for the names a turn brings, from the short call after each turn. */
   introductions: z._default(z.boolean(), true),
   /** The same call reads where the turn ends: place, who and which named items are there. */

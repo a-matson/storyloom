@@ -117,14 +117,14 @@ function MemorySystem({ s, update }: { s: Settings; update: Update }) {
       <SettingSwitch
         id="contradiction-check"
         label="Check each turn for contradictions"
-        title="One extra helper call after each turn (a few seconds on slot 1) checks the output against canon, pinned facts and the scene"
+        title="One extra helper call after each turn (a few seconds on slot 1) checks the output against the scene and locked values; it runs anyway when someone with a locked value is present"
         checked={s.memory.contradictionCheck ?? false}
         onChange={(on) => memory({ contradictionCheck: on })}
       />
       <SettingSwitch
         id="entity-facts"
         label="Send entity facts and cards"
-        title="Now-lines for who is in the scene and identities for who is named; rules, the scene line and pinned facts are sent either way"
+        title="Now-lines for who is in the scene and identities for items and who is named; off, only pinned facts of who is here or named; rules and the scene line are sent either way"
         checked={s.memory.entityFacts}
         onChange={(on) => memory({ entityFacts: on })}
       />
