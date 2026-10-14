@@ -57,7 +57,7 @@ describe('GameSession derived values follow log edits', () => {
   };
 
   it('edit drops a line its action no longer supports, from the drawer and the prompt', async () => {
-    const { session, id } = open('The gate hums at night.');
+    const { session, id } = open('hums at night');
     await session.previewContext();
     expect(session.getSnapshot().context?.prompt).toContain('hums at night');
     session.edit(id, 'You stand at a hedge.');
@@ -207,6 +207,7 @@ describe('GameSession entity edits', () => {
 
   it('correct pins a player line on the named entity, adds no action and sends it next turn', async () => {
     const { session } = withGate();
+    session.adv.plot.scene = { location: gate.name, present: [] };
     const actions = session.getSnapshot().adventure.actions.length;
     await correct(session, 'The gate is painted red.');
     const snap = session.getSnapshot();
@@ -214,7 +215,7 @@ describe('GameSession entity edits', () => {
     expect(of(session, gate.id).at(-1)).toMatchObject({ kind: 'trait', text: 'The gate is painted red.', producer: 'player', pinned: true });
     expect(snap.notice).toBe('Pinned to Gate');
     await session.previewContext();
-    expect(session.getSnapshot().context?.prompt).toContain('Gate: The gate is painted red.');
+    expect(session.getSnapshot().context?.prompt).toContain('Gate (An iron gate older than the town): The gate is painted red.');
   });
 
   it('correct with no named entity appends to Plot Essentials', async () => {

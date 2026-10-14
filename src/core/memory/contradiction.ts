@@ -6,10 +6,10 @@ import { parseJsonReply } from '../text/jsonReply';
 import { CHECK_SYSTEM, checkPrompt } from '../text/prompts';
 import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
-import { indexAssertions, textOf } from './assertionIndex';
-import { entityNamedIn } from './entities';
+import { indexAssertions } from './assertionIndex';
 import { helperCall } from './helperCall';
-import { sceneNames } from './names';
+import { currentStates } from './looks';
+import { knownAs, sceneNames } from './names';
 import type { MaintenanceDeps } from './memoryJobs';
 
 const CheckJson = z.object({ contradicts: z.boolean(), fact: z.string() });
@@ -21,25 +21,19 @@ const MIN_QUOTE = 12;
 const CHECK_TOKENS = 60;
 
 /**
- * What one output is checked against: the scene line, pinned and conflict facts, and the
- * description of every canon entity the output or the scene names. Empty means no call.
+ * What an output is checked against: the scene line and the locked values of who is present
+ * (`Mira: hair is grey`). A locked value present runs the check whatever the setting. Empty means no call.
  */
-export function checkInputs(adv: Pick<Adventure, 'entities' | 'assertions' | 'plot'>, output: string): string[] {
+export function checkInputs(adv: Pick<Adventure, 'entities' | 'assertions' | 'plot' | 'settings'>): string[] {
   const scene = renderScene(adv.plot.scene && sceneNames(adv.plot.scene, adv.entities));
-  const named = `${output}\n${scene}`;
   const ix = indexAssertions(adv.assertions);
-  return [
-    ...(scene ? [`Scene: ${scene}`] : []),
-    ...adv.entities.flatMap((e) =>
-      ix
-        .of(e.id)
-        .filter((a) => a.pinned || a.kind === 'conflict')
-        .map((a) => `${e.name}: ${textOf(a)}`),
-    ),
-    ...adv.entities
-      .filter((e) => e.canon === true && e.description.trim() !== '' && entityNamedIn([e], named) !== undefined)
-      .map((e) => `${e.name}: ${e.description.trim()}`),
-  ];
+  const present = (adv.plot.scene?.present ?? []).flatMap((p) => adv.entities.find((e) => e.id === p) ?? knownAs(adv.entities, p) ?? []);
+  const locked = [...new Set(present)].flatMap((e) => {
+    const now = currentStates(ix.of(e.id));
+    return (e.canonKeys ?? []).flatMap((k) => (now[k] ? [`${e.name}: ${k} is ${now[k]}`] : []));
+  });
+  if (!locked.length && !adv.settings.memory.contradictionCheck) return [];
+  return [...(scene ? [`Scene: ${scene}`] : []), ...locked];
 }
 
 /**

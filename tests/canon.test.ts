@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pinnedLines } from '@core/context/cast';
+import { presentLine } from '@core/context/cast';
 import { seedCanonEntities } from '@core/memory/canon';
 import { indexAssertions, textOf } from '@core/memory/assertionIndex';
 import { mergeAssertions } from '@core/memory/assertionWrites';
@@ -66,9 +66,9 @@ describe('canon lock', () => {
     expect(next.some((a) => a.kind === 'conflict')).toBe(false);
   });
 
-  it('a conflict goes out with the pinned lines', () => {
+  it('a conflict is never sent', () => {
     const e = canon({ canonKeys: ['eyes'] });
     const own = fold(e, setValue(e, [], 'eyes', 'grey', 0), { state: { eyes: 'blue' }, facts: ['She sings.'] }, 7);
-    expect(pinnedLines([e], indexAssertions(own)).map((l) => l.text)).toEqual([`${e.name}: the story says eyes is blue, but canon says grey`]);
+    expect(presentLine(e, indexAssertions(own).of(e.id), [e], true).text).not.toContain('canon says');
   });
 });

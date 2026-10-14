@@ -64,25 +64,44 @@ describe('structured elements', () => {
       const order = r.sections.map((s) => s.kind);
       expect(order.slice(order.indexOf('history') + 1)).toEqual(['scene', 'cast', 'authorsNote', 'lastAction']);
       expect(structured(r).every((s) => !s.cacheable)).toBe(true);
-      expect(cast(r)).toBe(
-        ['Lena (keeps the mill): location: the loft, mood: wary; poisoned — the green wine; distrusts you; She hums.', 'Orrin (a ferryman).'].join('\n'),
-      );
+      expect(cast(r)).toBe(['Lena (keeps the mill): wary; poisoned — the green wine; distrusts you; She hums.', 'Orrin (a ferryman).'].join('\n'));
       expect(r.usedEntityIds).toEqual([lena.id, orrin.id]);
-      expect(r.usedFacts.map((f) => f.factId)).toEqual(['as_st_e-Lena_location', 'as_f-Lena-2', 'as_f-Lena-3', 'as_f-Lena-4', 'as_f-Lena-5']);
+      expect(r.usedFacts.map((f) => f.factId)).toEqual(['as_f-Lena-2', 'as_f-Lena-3', 'as_f-Lena-4', 'as_f-Lena-5']);
       expect(r.budget.structuredUsed).toBe(structured(r).reduce((sum, s) => sum + s.tokens, 0));
     }
   });
 
-  it('sends nothing for an absent entity but its pinned facts', () => {
+  it('sends states in key order, four words each, no location and no look but wearing', () => {
+    const states = { wearing: 'a long grey wool cloak', mood: 'wary', hair: 'red', location: 'the loft', posture: 'sitting', condition: 'very tired' };
+    const r = buildContext({ ...input(4000), entities: [entity('Lena', 'Lena keeps the mill.', [], states)] });
+    expect(cast(r)).toBe('Lena (keeps the mill): sitting, very tired, wary, wearing a long grey wool.');
+  });
+
+  it('sends nothing for an absent entity, its pins included, and never a `Name:` line', () => {
     const pinned = { ...tamsin, facts: [...tamsin.facts, fact('Tamsin', 1, 'She owes Lena.', { pinned: true })] };
-    expect(cast(buildContext({ ...input(4000), entities: [lena, orrin, pinned] }))).toMatch(/\nTamsin: She owes Lena\.$/);
-    expect(cast(buildContext(input(4000)))).not.toContain('Tamsin');
+    expect(cast(buildContext({ ...input(4000), entities: [lena, orrin, pinned] }))).not.toContain('Tamsin');
+    const bare = entity('Mara', '', [fact('Mara', 0, 'mood: sullen', { kind: 'state', key: 'mood', value: 'sullen' })]);
+    const r = buildContext({ ...input(4000), entities: [bare, orrin], plot: { scene: { present: ['Mara'] } } });
+    expect(cast(r)).toBe('Mara — sullen.\nOrrin (a ferryman).');
+    expect(cast(r)).not.toMatch(/^\w+:/m);
+  });
+
+  it('sends the identity of an item here and one you hold, after who is present and before who is named', () => {
+    const item = (name: string, description: string, state: Record<string, string> = {}) => ({
+      ...entity(name, description, [], state),
+      kind: 'item' as const,
+    });
+    const amulet = item('Amulet', 'Amulet of the drowned queen, cold to touch.', { holder: 'you' });
+    const lamp = item('Lamp', 'Lamp that never goes out.');
+    const r = buildContext({ ...input(4000), entities: [lena, orrin, amulet, lamp], plot: { scene: { ...scene, items: ['Lamp'] } } });
+    expect(r.sections.find((s) => s.kind === 'scene')?.text).toBe('[Scene: the mill · Present: Lena · Here: Lamp · You hold: Amulet · Cold rain at night]');
+    expect(cast(r)?.split('\n').slice(1)).toEqual(['Lamp (that never goes out).', 'Amulet (of the drowned queen).', 'Orrin (a ferryman).']);
   });
 
   it('gives a present character its stance to another present one', () => {
     const toOrrin = { ...lena, facts: [fact('Lena', 9, 'owes him money', { kind: 'relationship', key: 'Orrin' })] };
     const r = buildContext({ ...input(4000), entities: [toOrrin, orrin], plot: { scene: { ...scene, present: ['Orrin', 'Lena'] } } });
-    expect(cast(r)).toBe('Orrin (a ferryman): mood: calm.\nLena (keeps the mill): location: the loft. With Orrin: owes him money.');
+    expect(cast(r)).toBe('Orrin (a ferryman): calm.\nLena (keeps the mill). With Orrin: owes him money.');
   });
 
   it('reads the same whatever order the entities come in', () => {
@@ -100,7 +119,7 @@ describe('structured elements', () => {
     expect(r.budget.structuredUsed).toBeLessThanOrEqual(200);
     const lines = cast(r)?.split('\n') ?? [];
     expect(lines.length).toBeLessThan(40);
-    expect(lines.at(-1)).toBe(`P${lines.length - 1} (a guard of the long hall): mood: tense ${lines.length - 1}.`);
+    expect(lines.at(-1)).toBe(`P${lines.length - 1} (a guard of the long hall): tense ${lines.length - 1}.`);
   });
 
   it('never goes over the share and returns what it leaves to the dynamic budget', () => {
@@ -115,7 +134,7 @@ describe('structured elements', () => {
   it('gives no identity to an entity a story card already covers', () => {
     const card = { id: 'c-orrin', type: 'Character', name: 'Orrin', entry: 'The hand-written Orrin.', triggers: ['Orrin'] };
     const r = buildContext({ ...input(4000), storyCards: [card], plot: { scene: { present: ['Orrin'] } } });
-    expect(cast(r)).toBe('Orrin: mood: calm.');
+    expect(cast(r)).toBe('Orrin — calm.');
     expect(r.triggeredCards.map((m) => m.card.id)).toEqual(['c-orrin']);
   });
 
@@ -125,10 +144,11 @@ describe('structured elements', () => {
     expect(r.usedEntityIds).toEqual([lena.id]);
   });
 
-  it('with entity facts off, sends the scene and only pinned facts', () => {
+  it('with entity facts off, sends the scene and only the pins of who is here or named', () => {
     const pinned = { ...orrin, facts: [...orrin.facts, fact('Orrin', 2, 'He is bald.', { source: 'player', pinned: true })] };
-    const r = buildContext({ ...input(4000), entities: [lena, pinned], settings: { ...settings(4000), pinnedFactsOnly: true } });
+    const away = { ...tamsin, facts: [fact('Tamsin', 1, 'She owes Lena.', { pinned: true })] };
+    const r = buildContext({ ...input(4000), entities: [lena, pinned, away], settings: { ...settings(4000), pinnedFactsOnly: true } });
     expect(structured(r).map((s) => s.kind)).toEqual(['scene', 'cast']);
-    expect(cast(r)).toBe('Orrin: He is bald.');
+    expect(cast(r)).toBe('Lena (keeps the mill): She hums.\nOrrin (a ferryman): He is bald.');
   });
 });

@@ -79,11 +79,11 @@ export class MemoryScheduler {
   private async check(idle: AbortSignal): Promise<void> {
     const adv = this.host.adventure();
     const last = adv.actions.at(-1);
-    if (!adv.settings.memory.contradictionCheck || (last?.type !== 'continue' && last?.type !== 'start')) return;
+    if (last?.type !== 'continue' && last?.type !== 'start') return;
     try {
       const { checkInputs, checkOutput } = await loadMemoryJobs();
       const output = actionText(last);
-      const lines = checkInputs(adv, output);
+      const lines = checkInputs(adv);
       if (!lines.length) return;
       const fact = await this.logged((d) => checkOutput(output, lines, { ...d, signal: idle }));
       if (!idle.aborted) this.host.flag(fact === null ? null : { actionId: last.id, fact });

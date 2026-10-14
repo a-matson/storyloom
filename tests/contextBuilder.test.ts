@@ -257,7 +257,7 @@ describe('ordering', () => {
       lastSeen: seen,
     });
     const r = buildContext(derived(base({ actions, plot, entities: [item('Horn', 3), item('Rumour', 0)] })));
-    expect(r.sections.find((s) => s.kind === 'scene')?.text).toBe('[Scene: the mill · Present: Amanda · You hold: Horn · Here: the ledger · Rain]');
+    expect(r.sections.find((s) => s.kind === 'scene')?.text).toBe('[Scene: the mill · Present: Amanda · Here: the ledger · You hold: Horn · Rain]');
   });
 
   it('cache-stable history start only moves on chunk boundaries', () => {

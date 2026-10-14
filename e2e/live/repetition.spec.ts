@@ -66,11 +66,17 @@ test('repetition bench', async ({ page }) => {
     .array(S.TurnTrace)
     .parse(db.traces)
     .filter((t) => t.outcome === 'done' && t.actionId !== undefined)
-    .map((t) => ({ out: text.get(t.actionId ?? '') ?? '', repeated: t.repeatedPhrases ?? [], stopReason: t.stopReason }));
+    .map((t) => ({ out: text.get(t.actionId ?? '') ?? '', repeated: t.repeatedPhrases ?? [], stopReason: t.stopReason, prompt: t.prompt }));
   const counts = new Map<string, number>();
   for (const p of turns.flatMap((t) => t.repeated)) counts.set(p, (counts.get(p) ?? 0) + 1);
   const grams = turns.flatMap((t) => fourGrams(t.out));
   const mean = (xs: number[]) => +(xs.reduce((a, b) => a + b, 0) / (xs.length || 1)).toFixed(2);
+  // U14: `Weever:` paragraphs, a script line copied from the prompt's cast.
+  const known = z
+    .array(z.object({ name: z.string(), aliases: z.array(z.string()) }))
+    .parse(db.entities)
+    .flatMap((e) => [e.name, ...e.aliases].map((n) => n.toLowerCase()));
+  const paragraphs = turns.flatMap((t) => t.out.split(/\n+/).map((p) => p.trim().toLowerCase()));
 
   const label = process.env['MEASURE_LABEL'];
   const path = writeMeasurement(label ? `repetition-${label}` : 'repetition', {
@@ -83,8 +89,11 @@ test('repetition bench', async ({ page }) => {
     meanWords: mean(turns.map((t) => t.out.split(/\s+/).filter(Boolean).length)),
     stopLength: turns.filter((t) => t.stopReason === 'length').length,
     pastTense: turns.filter((t) => pastTense(t.out)).length,
+    namePrefixed: paragraphs.filter((p) => known.some((n) => p.startsWith(`${n}:`))).length,
     topPhrases: [...counts].toSorted((a, b) => b[1] - a[1]).slice(0, 10),
     outputs: turns.map((t) => t.out),
+    // The Context viewer's Raw prompt of the last turn, for a prompt-construction PR.
+    lastPrompt: turns.at(-1)?.prompt,
   });
   console.log(`wrote ${path}`);
   expect(turns.length).toBeGreaterThanOrEqual(TURNS.length);

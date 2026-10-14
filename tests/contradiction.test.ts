@@ -26,45 +26,38 @@ function adventure(entities: LegacyEntity[], scene?: Adventure['plot']['scene'])
 }
 
 describe('checkInputs', () => {
-  it('is empty with no scene, canon or pinned facts', () => {
-    expect(checkInputs(adventure([entity('Mira', { description: 'A ferrywoman.' })]), 'Mira waves.')).toEqual([]);
+  const mira = entity('Mira', {
+    canon: true,
+    description: 'A ferrywoman.',
+    state: { hair: 'grey', mood: 'calm' },
+    canonKeys: ['hair'],
+    facts: [
+      { id: 'f1', text: 'She is afraid of horses.', fromAction: 0, source: 'player', pinned: true },
+      {
+        id: 'f2',
+        text: 'the story says hair is red, but canon says grey',
+        fromAction: 0,
+        source: 'memory',
+        conflict: true,
+        claim: { key: 'hair', value: 'red' },
+      },
+    ],
   });
 
-  it('takes canon entities the output names, not the others', () => {
-    const adv = adventure([
-      entity('Ysolde Marr', { canon: true, aliases: ['the captain'], description: 'She has a shaved head.' }),
-      entity('Aldric', { canon: true, description: 'Her brother.' }),
-    ]);
-    expect(checkInputs(adv, 'The captain walks in.')).toEqual(['Ysolde Marr: She has a shaved head.']);
+  it('takes the scene and the locked values of who is present, nothing else, even with the setting off', () => {
+    const adv = adventure([mira, entity('Aldric', { canon: true, description: 'Her brother.' })], { location: 'The quay', present: ['ent_Mira'] });
+    expect(adv.settings.memory.contradictionCheck).toBe(false);
+    expect(checkInputs(adv)).toEqual(['Scene: The quay · Present: Mira', 'Mira: hair is grey']);
   });
 
-  it('takes the scene, pinned facts and conflict facts', () => {
-    const adv = adventure(
-      [
-        entity('Mira', {
-          state: { hair: 'grey' },
-          canonKeys: ['hair'],
-          facts: [
-            { id: 'f1', text: 'She is afraid of horses.', fromAction: 0, source: 'player', pinned: true },
-            {
-              id: 'f2',
-              text: 'the story says hair is red, but canon says grey',
-              fromAction: 0,
-              source: 'memory',
-              conflict: true,
-              claim: { key: 'hair', value: 'red' },
-            },
-            { id: 'f3', text: 'She waves.', fromAction: 0, source: 'memory' },
-          ],
-        }),
-      ],
-      { location: 'The quay', present: [] },
-    );
-    expect(checkInputs(adv, 'You ride off.')).toEqual([
-      'Scene: The quay',
-      'Mira: She is afraid of horses.',
-      'Mira: the story says hair is red, but canon says grey',
-    ]);
+  it('is empty with no locked value present and the setting off', () => {
+    expect(checkInputs(adventure([mira], { location: 'The quay', present: [] }))).toEqual([]);
+  });
+
+  it('with the setting on, takes the scene alone when nobody locked is present', () => {
+    const adv = adventure([mira], { location: 'The quay', present: [] });
+    adv.settings.memory.contradictionCheck = true;
+    expect(checkInputs(adv)).toEqual(['Scene: The quay']);
   });
 });
 

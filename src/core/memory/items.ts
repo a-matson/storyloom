@@ -42,19 +42,24 @@ export function itemsAt(entities: readonly Entity[], ix: AssertionIndex, place: 
 }
 
 /**
- * The scene's `Here:` list: the items it names as written, then those stored at its place or held
- * by someone present, a held one with its holder ("Horn (Korthak)"); never the player's own.
+ * The items here: those the scene names (as written when no card has the name), then those stored
+ * at its place or held by someone present; never the player's own.
  */
-export function itemsHere(scene: Scene, entities: readonly Entity[], ix: AssertionIndex): string[] {
+export function itemsIn(scene: Scene, entities: readonly Entity[], ix: AssertionIndex): (Entity | string)[] {
   const mine = new Set(heldBy(entities, ix, YOU));
   const found = [
     ...(scene.items ?? []).map((n) => knownAs(items(entities), n) ?? n),
     ...(scene.location ? itemsAt(entities, ix, scene.location) : []),
     ...scene.present.flatMap((p) => heldBy(entities, ix, p)),
   ];
+  return [...new Set(found)].filter((x) => typeof x === 'string' || !mine.has(x)).slice(0, MAX_ITEMS);
+}
+
+/** The scene's `Here:` list, a held item with its holder ("Horn (Korthak)"). */
+export function itemsHere(scene: Scene, entities: readonly Entity[], ix: AssertionIndex): string[] {
   const label = (e: Entity) => {
     const h = holderOf(ix, e);
     return h ? `${e.name} (${knownAs(entities, h, ix)?.name ?? h})` : e.name;
   };
-  return [...new Set(found)].flatMap((x) => (typeof x === 'string' ? [x] : mine.has(x) ? [] : [label(x)])).slice(0, MAX_ITEMS);
+  return itemsIn(scene, entities, ix).map((x) => (typeof x === 'string' ? x : label(x)));
 }
