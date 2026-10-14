@@ -63,6 +63,8 @@ describe('the state read’s prompt', () => {
     expect(p).toContain('---\n[4] Mira sits.\n---');
     expect(p).toMatch(/At most 4 entries.*at most four words.*\[number\] of the paragraph.*no longer true at the end; skip values that did not change/s);
     expect(p).not.toMatch(/effect|<Name>/i);
+    // M13-3b: awake went to mood and kneeling to location without a meaning per key.
+    expect(p).toMatch(/posture = .*kneeling.*condition = .*awake.*holds = an item listed above/s);
     expect(statePrompt([], '', 2, false)).toContain('{"changes":[{"who":"<Name>"');
   });
 });
