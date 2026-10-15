@@ -59,7 +59,7 @@ export function Setting({ label, htmlFor, help, warn, children }: SettingProps) 
         {children}
       </div>
       {warn !== undefined && (
-        <p role="note" id={`${htmlFor}-warn`} className="-mt-1 text-caption text-warning">
+        <p role="note" id={`${htmlFor}-warn`} className="text-caption text-warning">
           {warn}
         </p>
       )}
