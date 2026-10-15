@@ -95,6 +95,30 @@ test('a character asleep is told in the prompt what they slept through', async (
   await expect(cast.getByRole('button', { name: 'Show action 3 in the story' })).toHaveCount(2);
 });
 
+test('Mark secret on a Do adds it to Secrets, known to whoever was there', async ({ page }) => {
+  await openSeededAdventure(page, 3, undefined, { opening: 'You climb to the lighthouse with Merav.' });
+  await page.getByRole('textbox', { name: 'Take a turn' }).fill('confess to Merav. She must tell nobody.');
+  await page.getByRole('button', { name: 'Send' }).click();
+  // The Do's pill opens it once the reply is in: the session takes no edits mid-turn.
+  await expect(page.getByRole('button', { name: 'View context' }).last()).toBeVisible();
+  await page.getByRole('button', { name: 'Mark secret' }).click();
+  const form = page.getByRole('form', { name: 'Mark secret' });
+  await expect(form.getByRole('textbox', { name: 'Secret' })).toHaveValue('You confess to Merav.');
+  await expect(form.getByRole('checkbox', { name: 'Merav' })).toBeChecked();
+  await form.getByRole('textbox', { name: 'Secret' }).fill('You stole the lamp.');
+  await form.getByRole('button', { name: 'Save secret' }).click();
+  await world(page);
+  await page.getByText('Secrets', { exact: true }).click();
+  await expect(page.getByRole('list', { name: 'Secret' })).toContainText('You stole the lamp.');
+  const merav = page.getByRole('group', { name: 'Who knows: You stole the lamp.' }).getByRole('checkbox', { name: 'Merav' });
+  await expect(merav).toBeChecked();
+  await merav.uncheck();
+  await page.reload();
+  await world(page);
+  await page.getByText('Secrets', { exact: true }).click();
+  await expect(page.getByRole('group', { name: 'Who knows: You stole the lamp.' }).getByRole('checkbox', { name: 'Merav' })).not.toBeChecked();
+});
+
 test('merging two places keeps one, with the other name as an alias', async ({ page }) => {
   await openSeededAdventure(page, 3, undefined, {
     scene: { location: 'the dry well', present: ['Merav'] },

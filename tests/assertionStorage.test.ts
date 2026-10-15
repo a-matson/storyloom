@@ -3,6 +3,7 @@ import { Dexie } from 'dexie';
 import { expect, it } from 'vitest';
 import { DexieStorage } from '@adapters/storage';
 import { mergeEntity } from '@core/memory/entities';
+import { newSecret } from '@core/memory/secrets';
 import type { Adventure } from '@core/model';
 import { makeAdventure } from './fixtures/adventure';
 import { told } from './fixtures/assertions';
@@ -31,6 +32,15 @@ it('saves the assertions the writers made, edits and removals included', async (
   expect(texts(await (await reopen()).getAdventure(adv.id))).toEqual(['A ferrywoman.', 'She rows.']);
   await s.putAdventure({ ...adv, assertions: said.slice(1) });
   expect(texts(await (await reopen()).getAdventure(adv.id))).toEqual(['She rows.']);
+  await s.deleteAdventure(adv.id);
+});
+
+it('saves a secret with who knows it', async () => {
+  const secret = newSecret(2, 'You sold the keys.', ['ent_minos']);
+  const adv = { ...makeAdventure({ actions: 4, cards: 0 }), assertions: [secret] };
+  const s = await reopen();
+  await s.putAdventure(adv);
+  expect((await (await reopen()).getAdventure(adv.id))?.assertions).toEqual([secret]);
   await s.deleteAdventure(adv.id);
 });
 

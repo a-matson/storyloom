@@ -11,6 +11,7 @@ import { Avatar } from './Avatar';
 import { EntityDrawer } from './EntityDrawer';
 import { NowCard } from './NowCard';
 import { PlacesList } from './PlacesList';
+import { SecretsList } from './SecretsList';
 import { YouCard } from './YouCard';
 
 type Kind = Entity['kind'];
@@ -57,6 +58,7 @@ export function EntityList({ adventure, api, world }: { adventure: Adventure; ap
     <>
       {world && <NowCard adventure={adventure} api={api} />}
       {world && <PlacesList adventure={adventure} api={api} />}
+      {world && <SecretsList adventure={adventure} api={api} />}
       {world && (
         <div className="flex gap-1.5">
           {WORLD.map((k) => (
