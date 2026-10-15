@@ -49,8 +49,8 @@ export function firstIssue(error: { issues: readonly { path: readonly PropertyKe
   return i ? `${i.path.join('.') || '(root)'}: ${i.message}` : 'invalid';
 }
 
-/** An image blob does not travel with the JSON, so its id is dropped and the See action says so. */
-function withoutBlob({ imageId, ...image }: Image): Image {
+/** An image blob does not travel with the JSON, so its id is dropped and the See action says so. Unpicked renders stay home. */
+function withoutBlob({ imageId, candidates: _unpicked, ...image }: Image): Image {
   return { ...image, ...(imageId === undefined ? {} : { missing: true as const }) };
 }
 

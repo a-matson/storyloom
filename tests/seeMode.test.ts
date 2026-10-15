@@ -2,18 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { createBlankAdventure } from '@core/model';
 import type { ImageProvider, ImageRequest } from '@core/ports';
 import { migrateEntities } from '@core/memory/assertions';
+import { fakeImages } from './fixtures/images';
 import { setup } from './fixtures/session';
-
-const fakeImages = (txt2img: ImageProvider['txt2img']): ImageProvider => ({
-  id: 'img',
-  baseUrl: 'http://img.invalid',
-  health: () => Promise.resolve(true),
-  models: () => Promise.resolve([]),
-  samplers: () => Promise.resolve([]),
-  txt2img,
-  // The hires pass lives inside the adapter's txt2img; the session never calls img2img itself.
-  img2img: () => Promise.reject(new Error('not called by the session')),
-});
 
 type Session = ReturnType<typeof setup>['session'];
 /** The See action once its prompt is composed (a lazy import away). */
@@ -89,7 +79,7 @@ describe('See mode', () => {
     expect(session.getSnapshot().actions.some((a) => a.type === 'see')).toBe(true);
   });
 
-  it('retries with a fresh image and drops the old blob', async () => {
+  it('retries with a fresh image and keeps the old blob as a candidate', async () => {
     let n = 0;
     const { session, images } = setup({ images: fakeImages(() => Promise.resolve(new Blob([`png${++n}`]))) });
     session.see('a lantern');
@@ -103,8 +93,15 @@ describe('See mode', () => {
       expect(id !== undefined && id !== first).toBe(true);
     });
     const adv = session.getSnapshot().adventure.id;
-    expect(images.has(`${adv}|${first}`)).toBe(false);
-    expect(await images.get(`${adv}|${session.getSnapshot().actions.at(-1)?.image?.imageId ?? ''}`)?.text()).toBe('png2');
+    const second = session.getSnapshot().actions.at(-1)?.image?.imageId ?? '';
+    expect(images.has(`${adv}|${first}`)).toBe(true);
+    expect(await images.get(`${adv}|${second}`)?.text()).toBe('png2');
+    expect(
+      session
+        .getSnapshot()
+        .actions.at(-1)
+        ?.image?.candidates?.map((c) => c.imageId),
+    ).toEqual([first, second]);
     // Editing the caption is not a retry alternative: the action keeps its single version.
     expect(session.getSnapshot().actions.at(-1)?.versions).toHaveLength(1);
   });

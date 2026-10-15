@@ -6,6 +6,7 @@ import { progressText, useImageProgress } from '@ui/hooks/useImageProgress';
 import { Button, buttonClass } from '@ui/components/ui/button';
 import { cn } from '@ui/lib/utils';
 import { caretAtEnd, revealOnHover, seeIndent } from './OutputTools';
+import { SeeCandidates, useCandidateView } from './SeeCandidates';
 import { SeeDetails } from './SeeDetails';
 
 type Image = NonNullable<Action['image']>;
@@ -95,8 +96,11 @@ function ImageTools({ id, prompt, src, api }: { id: string; prompt: string; src:
 }
 
 /** A See-mode action: the caption shows while the image is still generating; double-click it to change the brief. */
-export function SeeBlock({ action, image, adventureId, isLast, busy, generating, api }: Props) {
+export function SeeBlock({ action, image: own, adventureId, isLast, busy, generating, api }: Props) {
   const [editing, setEditing] = useState(false);
+  // Flipping through candidates shows that render, its caption and its prompt in place of the shown one.
+  const v = useCandidateView(own);
+  const image = v.view;
   const ref = useRef<HTMLElement>(null);
   const blobUrl = useImageBlob(adventureId, image.imageId);
   // `url` only comes from imported AI Dungeon data; ours are blobs.
@@ -159,6 +163,7 @@ export function SeeBlock({ action, image, adventureId, isLast, busy, generating,
       >
         {caption}
       </figcaption>
+      {own.candidates && <SeeCandidates actionId={action.id} generating={generating} api={api} v={v} />}
       <SeeDetails id={action.id} image={image} busy={busy} api={api} />
       {isLast && !busy && <ImageTools id={action.id} prompt={caption} src={src} api={api} />}
     </figure>

@@ -37,6 +37,21 @@ export const Action = z.object({
       seed: z.optional(z.number()),
       model: z.optional(z.string()),
       missing: z.optional(z.literal(true)),
+      /**
+       * Every render of a re-rendered See, oldest first, the shown one included, while the player has not picked one;
+       * absent once picked (and on every single render). Never exported, never a character reference.
+       */
+      candidates: z.optional(
+        z.array(
+          z.object({
+            imageId: z.string(),
+            prompt: z.string(),
+            brief: z.optional(z.string()),
+            entityIds: z.optional(z.array(z.string())),
+            seed: z.optional(z.number()),
+          }),
+        ),
+      ),
     }),
   ),
   stats: z.optional(GenerationStats),

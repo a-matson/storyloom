@@ -4,7 +4,7 @@ import { hashPrompt, seedOf, trackJob } from '@core/trace';
 import { downscale } from '../image';
 import { imageQueue } from './imageQueue';
 import { withProgress } from './imageProgress';
-import { imageFailure } from './images';
+import { imageFailure } from './seeRender';
 import { PORTRAIT_NEGATIVE, portraitBasis, portraitPrompt, portraitStyle } from './portraitPrompt';
 import type { GameSnapshot, PortraitState, SessionServices } from './types';
 

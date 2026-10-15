@@ -57,6 +57,24 @@ describe('adventure JSON', () => {
     expect(b.actions[1]!.image).toEqual({ prompt: 'a door', missing: true });
   });
 
+  it('exports the shown render of a See without its unpicked candidates', () => {
+    const a = createBlankAdventure('T', 'You wake.');
+    const candidates = [
+      { imageId: 'img_1', prompt: 'a door' },
+      { imageId: 'img_2', prompt: 'a gate', brief: 'gate' },
+    ];
+    a.actions.push({
+      id: 'act_see',
+      type: 'see',
+      versions: [''],
+      active: 0,
+      createdAt: 1,
+      image: { imageId: 'img_2', prompt: 'a gate', brief: 'gate', candidates },
+    });
+    const { adventure: b } = importAdventureJson(exportAdventureJson(a));
+    expect(b.actions[1]!.image).toEqual({ prompt: 'a gate', brief: 'gate', missing: true });
+  });
+
   it('gives entities fresh ids and repoints their relations and promoted cards', () => {
     const a = createBlankAdventure('T', 'You wake.');
     a.storyCards = [{ id: 'card_1', type: 'character', name: 'Lena', entry: 'Lena.', triggers: ['Lena'] }];
