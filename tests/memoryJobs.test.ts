@@ -157,6 +157,12 @@ describe('memory maintenance', () => {
     expect(prompt).not.toContain('Given about the player');
   });
 
+  it('keeps the player as "you", apart from every character', () => {
+    expect(memoryPrompt('> You confess.')).toContain(
+      'Lines starting "> You" are the player\'s: what is said or done there is yours, kept as "you", even when the line opens with a name.',
+    );
+  });
+
   it("gives the player's own lines to the memory and the summary, before the passage", async () => {
     const prompt = memoryPrompt('> You wave.', ['a noodle-shop owner']);
     expect(prompt.indexOf('Given about the player:\n- a noodle-shop owner')).toBeLessThan(prompt.indexOf('---'));

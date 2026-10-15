@@ -6,6 +6,7 @@
  *   gatev <url>           llama-server checks: template, tokenizer error, warming, layout, evictionChunk, CORS
  *   memory-keep <url> [label]  does the memory for each planted Do/Say keep the fact? (recorded history, ~16 calls)
  *   contradiction <url> [label]  precision/recall of the contradiction check on 40 hand-labelled outputs
+ *   memory-replay <url> <backup> <from-to> [label] [samples]  the memory for one action range of a backup, written [samples] times (default 5)
  *   state <url> <backup> [label] [labels-set]  scene and state reads over every AI turn of a backup, scored against bench/stateLabels.json
  *   probe <url> <backup> <at> [label] [samples]  the reply to player action <at>, drawn [samples] times (default 3); graded by hand
  *   migrate <backup> [label]  entity facts to typed assertions: counts kept, dropped (conflicts on unlocked keys, stale spans), lost
@@ -30,6 +31,10 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
   contradiction: {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/contradiction'],
     env: { MEASURE_URL: a, MEASURE_LABEL: b },
+  },
+  'memory-replay': {
+    cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/memoryReplay'],
+    env: { MEASURE_URL: a, MEASURE_BACKUP: b, MEASURE_RANGE: c, MEASURE_LABEL: d, MEASURE_SAMPLES: process.argv[7] },
   },
   state: {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/state.bench'],
