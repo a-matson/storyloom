@@ -114,15 +114,14 @@ test("dialogue gets the speaker's portrait after a turn", async ({ page }) => {
   expect(violations).toEqual([]);
 });
 
-test('a paragraph naming one character gets its 32 px face, no speaker label; the face opens the card', async ({ page }) => {
+test('a paragraph naming one character gets its face without a speaker label', async ({ page }) => {
   await openSeededAdventure(page, 3, undefined, { opening: 'The well is dry.\n\nMerav unrolls the map.' });
   const blocks = page.locator('#story p').first().locator('span.block');
   await expect(blocks.nth(1).locator('span[aria-hidden="true"]')).toHaveText('M');
   await expect(blocks.nth(0).locator('span[aria-hidden="true"]')).toHaveCount(0);
   await expect(page.locator('#story').getByText('Merav says', { exact: true })).toHaveCount(0);
-  const face = page.locator('#story').getByRole('button', { name: 'Open Merav' });
-  expect(await face.boundingBox()).toMatchObject({ width: 32, height: 32 });
-  await face.click();
+  expect(await page.locator('#story').getByRole('button', { name: 'Open Merav' }).boundingBox()).toMatchObject({ width: 32, height: 32 });
+  await page.locator('#story').getByRole('button', { name: 'Open Merav' }).click();
   await expect(page.getByRole('dialog', { name: 'Merav' })).toBeVisible();
 });
 
