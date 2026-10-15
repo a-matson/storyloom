@@ -1,4 +1,4 @@
-import type { Adventure, Assertion, PlotComponents } from '../model/types';
+import type { Adventure, Assertion, Entity, PlotComponents } from '../model/types';
 import type { AssertionOf } from './assertionIndex';
 import { byPlayer } from './looks';
 import { YOU } from './you';
@@ -18,6 +18,25 @@ export const newSecret = (at: number, text: string, knownBy: readonly string[]):
 });
 
 export const secretsOf = (as: readonly Assertion[]): Secret[] => as.filter((a): a is Secret => a.kind === 'secret');
+
+/** "Minos", "Minos and Weever", "Minos, Weever and Okafor". */
+export const andList = (names: readonly string[]): string => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`);
+
+/** `known only to you and Minos`; a knower whose entity is gone is left out. */
+export function knownByLabel(s: Secret, entities: readonly Pick<Entity, 'id' | 'name'>[]): string {
+  const name = new Map(entities.map((e) => [e.id, e.name]));
+  return `known only to ${andList(['you', ...s.knownBy.flatMap((k) => (k === YOU ? [] : (name.get(k) ?? [])))])}`;
+}
+
+/** The secrets marked on actions `[fromAction, toAction)`: what a memory over that range tells. */
+export const secretsIn = (as: readonly Assertion[], r: { fromAction: number; toAction: number }): Secret[] =>
+  secretsOf(as).filter((s) => s.at >= r.fromAction && s.at < r.toAction);
+
+/** `(known only to you and Minos) `, the mark a memory over the range carries when it tells a secret; '' otherwise. */
+export function markOf(as: readonly Assertion[], entities: readonly Pick<Entity, 'id' | 'name'>[], r: { fromAction: number; toAction: number }): string {
+  const labels = [...new Set(secretsIn(as, r).map((s) => knownByLabel(s, entities)))];
+  return labels.length ? `(${labels.join('; ')}) ` : '';
+}
 
 /** `fromId` merged into `intoId`: whoever knew as one name knows as the other. */
 export const repointSecrets = (adv: Pick<Adventure, 'assertions'>, fromId: string, intoId: string) =>

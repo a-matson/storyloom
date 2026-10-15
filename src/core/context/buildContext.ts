@@ -1,3 +1,4 @@
+import { markOf } from '../memory/secrets';
 import { selectCards } from './cards';
 import { historyWindowStart, selectHistory } from './history';
 import { selectMemories, type MemoriesResult } from './memories';
@@ -42,7 +43,9 @@ export function buildContext(input: ContextBuildInput): ContextBuildResult {
   const memoriesBudget = settings.memoryBankEnabled ? Math.max(0, dynamicAvailable - cards.cardsUsed - history.historyUsed) : 0;
   const useMemories = settings.memoryBankEnabled && !history.historyFullyIncluded && memoriesBudget > 0 && input.rankedMemories.length > 0;
   const memories: MemoriesResult = useMemories
-    ? selectMemories(input.rankedMemories, memoriesBudget, history.historyRange?.from ?? end, end, tokenizer, out)
+    ? selectMemories(input.rankedMemories, memoriesBudget, history.historyRange?.from ?? end, end, tokenizer, out, (m) =>
+        markOf(input.assertions ?? [], input.entities, m),
+      )
     : { memoriesBudget, memoriesUsed: 0, usedMemories: [] };
 
   if (req.lastActionText) out.set('lastAction', { text: req.lastActionText, tokens: req.lastTokens, trimmed: false });

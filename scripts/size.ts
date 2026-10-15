@@ -28,7 +28,8 @@ import { brotliCompressSync } from 'node:zlib';
 // js: 147.84 measured 2026-10-14 (M13-6: a lazy-only Setup change moved it 147.70 -> 147.84 through renamed chunk hashes in the
 // entry's preload list); user raised 147.8 -> 148.0.
 // js: 148.14 measured 2026-10-14 (M13-10: witnessed-by in the context builder); user raised 148.0 -> 148.5.
-const BUDGET_KB = { js: 148.5, css: 6.6 };
+// js: 148.78 measured 2026-10-15 (M14-S3: secret lines and memory marks in the context builder); user raised 148.5 -> 149.5.
+const BUDGET_KB = { js: 149.5, css: 6.6 };
 
 const html = readFileSync('dist/index.html', 'utf8');
 const files = [...html.matchAll(/(?:src|href)="[^"]*?(assets\/[^"]+\.(js|css))"/g)].map(

@@ -147,7 +147,11 @@ export async function memoryText(
   return '';
 }
 
-/** Summarise and embed one range; null when there is no memory text for it. */
+/**
+ * Summarise and embed one range; null when there is no memory text for it. A secret in the range is not
+ * given to the helper: as a given line it emptied 3–5 of 10 memories and turned others into `Minos: …` lists
+ * [measured: 2026-10-15-memory-replay-47-53-s3-secret2]; the memory carries its mark when sent (`markOf`).
+ */
 async function writeMemory(adventure: Adventure, range: MemoryRange, deps: MaintenanceDeps, report: MaintenanceReport): Promise<Memory | null> {
   const text = await memoryText(adventure.actions.slice(range.fromAction, range.toAction), deps, report, youLines(adventure.assertions));
   if (!text) return null;

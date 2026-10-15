@@ -7,6 +7,7 @@ import { helperCall, sentencesOnly } from './helperCall';
 import { summaryDue, summaryOverdue } from './memoryBank';
 import type { MaintenanceDeps } from './memoryJobs';
 import { youLines } from './you';
+import { markOf } from './secrets';
 
 /** Long ago (≤ 6) plus Recently (≤ 6). [provisional] */
 const SUMMARY_SENTENCES = 12;
@@ -31,7 +32,9 @@ export async function refreshSummary(adventure: Adventure, deps: Omit<Maintenanc
   const lastAt = dirty ? 0 : (adventure.scriptState.__summaryAt ?? 0);
   const end = coveredEnd(adventure, deps.historyStart);
   if (!(dirty || summaryDue(end, lastAt, adventure.settings.context.evictionChunk)) || deps.signal?.aborted) return false;
-  const since = adventure.memories.filter((m) => !m.stale && m.toAction > lastAt && m.toAction <= end).map((m) => m.text);
+  const since = adventure.memories
+    .filter((m) => !m.stale && m.toAction > lastAt && m.toAction <= end)
+    .map((m) => markOf(adventure.assertions, adventure.entities, m) + m.text);
   const previous = dirty ? '' : (adventure.plot.storySummary ?? '');
   if (!since.length && !previous) return false;
   const prompt = renderTemplate(deps.template, withContent(SUMMARY_SYSTEM, deps.content), summaryPrompt(previous, since, youLines(adventure.assertions)));

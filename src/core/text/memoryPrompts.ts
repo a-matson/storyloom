@@ -33,11 +33,16 @@ export const SUMMARY_SYSTEM =
   '"Long ago:" (at most 6 sentences) then "Recently:" (at most 6 sentences). When Recently would pass 6 sentences, ' +
   'fold its oldest sentences into Long ago. Output only the summary.';
 
+/** Sent only when a memory or the summary carries a secret's mark, so other summaries keep their measured prompt. [provisional] */
+const KEEP_MARKS = 'Keep each "(known only to …)" mark as written, with the fact it marks.\n\n';
+
 export function summaryPrompt(previousSummary: string, newMemories: string[], given: readonly string[] = []): string {
+  const marked = [previousSummary, ...newMemories].some((t) => t.includes('(known only to '));
   return (
     givenBlock(given) +
     (previousSummary ? `Current summary:\n${previousSummary}\n\n` : '') +
     (newMemories.length ? `New memories since then:\n${newMemories.map((m) => `- ${m}`).join('\n')}\n\n` : '') +
+    (marked ? KEEP_MARKS : '') +
     'Write the updated summary:'
   );
 }
