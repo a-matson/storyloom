@@ -122,7 +122,7 @@ test('a present entity sends its now-line under the structured cap', async ({ pa
   await expect(dialog.getByTestId('structured-budget')).toContainText(/\d+ \/ \d+/);
   await dialog.getByRole('button', { name: 'Raw prompt' }).click();
   // Model traits and the character's own location stay out; the scene's place is present too, so its identity follows.
-  await expect(dialog.getByText(/Merav \(A well-warden who keeps the salt road maps\)\.\s+Old Well \(A dry well at the edge of the flats\)\./)).toBeVisible();
+  await expect(dialog.getByText(/Merav \(a well-warden who keeps the salt road maps\)\.\s+Old Well \(a dry well at the edge of the flats\)\./)).toBeVisible();
   await expect(dialog.getByText(/needle map/)).toHaveCount(0);
   await page.keyboard.press('Escape');
   // Off: the scene line goes, the cast does not.
