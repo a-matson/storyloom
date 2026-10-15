@@ -139,7 +139,7 @@ describe('introduce', () => {
   });
 
   describe('the scene', () => {
-    const at = { moved: true, location: 'the ferry', present: ['Tamsin'], left: [], weather: 'fog' };
+    const at = { location: 'the ferry', present: ['Tamsin'], stay: {}, weather: 'fog' };
     const tamsin = () => ({ ...mergeEntity(undefined, { name: 'Tamsin', kind: 'character', description: '' }, 0), aliases: ['the ferrywoman'] });
     function sceneOnly(output: string, scene: object) {
       const s = setup(output, { scene });
@@ -149,7 +149,7 @@ describe('introduce', () => {
     }
 
     it('is read on a turn with no new name: a scene-only call, then the scene moves and is logged', async () => {
-      const { adv, reqs, deps } = sceneOnly('You wait at the ferry.', at);
+      const { adv, reqs, deps } = sceneOnly('You wait at the ferry with Tamsin.', at);
       const n = adv.actions.length;
       // The place card, and Tamsin seen present.
       expect(await introduce(adv, deps)).toMatchObject({ touched: 2, sceneUpdated: true });
@@ -179,7 +179,10 @@ describe('introduce', () => {
       await introduce(adv, deps);
       const schema = JSON.stringify(reqs[0]?.jsonSchema);
       expect(schema).toContain('"enum":["Tamsin","the ferrywoman"]');
-      expect(schema).toContain('"required":["moved","location","present","left","weather"]');
+      expect(schema).toContain('"required":["location","present","stay","weather"]');
+      // A required verdict per character present before.
+      expect(schema).toContain('"stay":{"type":"object","properties":{"Tamsin":{"type":"string","enum":["here","left","asleep"]}},"required":["Tamsin"]');
+      expect(reqs[0]?.prompt).toContain('stay gives each character present in the previous scene');
       expect(reqs[0]?.prompt).toContain('Previous scene: location "the ferry", present: Tamsin. Known characters: Tamsin, the ferrywoman.');
       expect(reqs[0]?.prompt).toContain('asleep or unconscious still counts; gone to another room does not');
 
@@ -188,6 +191,22 @@ describe('introduce', () => {
       await introduce(empty.adv, empty.deps);
       expect(JSON.stringify(empty.reqs[0]?.jsonSchema)).toContain('"enum":["nobody"]');
       expect(empty.reqs[0]?.prompt).toContain('Previous scene: not known yet. Known characters: none yet.');
+      expect(empty.reqs[0]?.prompt).not.toContain('stay gives');
+    });
+
+    // F17: the read re-added a character the player had removed by hand.
+    it('drops a character the reply re-adds when the passage does not name them', async () => {
+      const { adv, deps } = sceneOnly('You wait at the ferry.', { ...at, present: ['Tamsin', 'Corwin'] });
+      adv.plot.scene = { location: 'the ferry', present: ['Corwin'] };
+      await introduce(adv, deps);
+      expect(adv.plot.scene?.present).toEqual(['Corwin']);
+    });
+
+    it('still takes a `left` list, and a missing verdict keeps the character', async () => {
+      const { adv, deps } = sceneOnly('Tamsin and Corwin row away.', { ...at, present: [], left: ['Corwin'] });
+      adv.plot.scene = { location: 'the ferry', present: [adv.entities[0]?.id ?? '', 'Corwin'] };
+      await introduce(adv, deps);
+      expect(adv.plot.scene?.present).toEqual([adv.entities[0]?.id]);
     });
 
     // Dogfood M13-9: with only a new name in the enum the 12B wrote it for every present character until the token cap.
@@ -197,12 +216,12 @@ describe('introduce', () => {
       await introduce(adv, deps);
       const scene = JSON.stringify(reqs[0]?.jsonSchema);
       expect(scene).toContain('"enum":["Tamsin","the ferrywoman","Corwin"]');
-      expect(scene.match(/"maxItems":3/g)).toHaveLength(2);
+      expect(scene.match(/"maxItems":3/g)).toHaveLength(1);
       expect(reqs[0]?.prompt).toContain('Known characters: Tamsin, the ferrywoman, Corwin.');
     });
 
     it('resolves an alias to the character’s id, and keeps a name nothing is known as', async () => {
-      const { adv, deps } = sceneOnly('You wait at the ferry.', { ...at, present: ['the ferrywoman'] });
+      const { adv, deps } = sceneOnly('You wait at the ferry with the ferrywoman.', { ...at, present: ['the ferrywoman'] });
       adv.plot.scene = { location: 'the ferry', present: ['Corwin'] };
       await introduce(adv, deps);
       expect(adv.plot.scene?.present).toEqual(['Corwin', adv.entities[0]?.id]);
@@ -210,7 +229,7 @@ describe('introduce', () => {
 
     // Dogfood M13-9: a character the turn read carded waited ~12 actions for a second batch range before the prompt used them.
     it('counts a read that puts a character present as a sighting', async () => {
-      const { adv, deps } = sceneOnly('You wait at the ferry.', at);
+      const { adv, deps } = sceneOnly('You wait at the ferry with Tamsin.', at);
       const n = adv.actions.length;
       adv.entities = [{ ...tamsin(), firstSeen: 3, lastSeen: 3 }];
       expect(await introduce(adv, deps)).toMatchObject({ touched: 2 });

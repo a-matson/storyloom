@@ -72,7 +72,7 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps): Promis
   };
   const scene = sceneEachTurn ? reply.scene : undefined;
   if (scene && notePlace(adventure, scene.location, n - 1)) touched++;
-  const plot = scene ? withScene(adventure.plot, scene, name, n - 1, { sourceId: last.id, sourceHash: hash }, adventure.entities) : adventure.plot;
+  const plot = scene ? withScene(adventure.plot, scene, name, n - 1, { sourceId: last.id, sourceHash: hash }, adventure.entities, passage) : adventure.plot;
   const sceneUpdated = plot !== adventure.plot;
   adventure.plot = plot;
   // Present by this read is a second sighting: `isConfirmed` kept a character the turn read carded out of the prompt until a batch range.

@@ -41,6 +41,44 @@ export interface StateRow {
 
 const labelAt = <T extends { from: number; to: number }>(spans: readonly T[], i: number) => spans.find((s) => s.from <= i && i <= s.to);
 
+/** `MEASURE_ONLY=43-44` (or `43`): the action range to replay; undefined replays all. */
+export function onlySpan(s: string | undefined): { from: number; to: number } | undefined {
+  const m = s?.match(/^(\d+)(?:-(\d+))?$/);
+  if (!m) return undefined;
+  const from = Number(m[1]);
+  return { from, to: Number(m[2] ?? from) };
+}
+
+/** The labelled scene after action i, so a filtered replay starts where the play stood. */
+export function sceneAt(set: LabelSet, i: number): { location: string; present: string[] } {
+  const place = labelAt(set.place, i)?.place ?? '';
+  return { location: placeOf(set.start, set.placeWords) === place ? set.start : place, present: [...(labelAt(set.present, i)?.names ?? [])] };
+}
+
+/** One replayed turn's leavers: the labelled ones, what each sample read gave (null: unparsed), and each sample's ms. */
+export interface LeftRow {
+  want: readonly string[];
+  samples: readonly (readonly string[] | null)[];
+  ms: readonly number[];
+}
+
+/** M14-S2's bar: samples naming every labelled leaver, over the turns where someone left; and the median read time. */
+export function scoreLeft(rows: readonly LeftRow[]) {
+  const counted = rows.filter((r) => r.want.length > 0);
+  const ms = rows.flatMap((r) => r.ms).toSorted((x, y) => x - y);
+  return {
+    leftOk: counted.flatMap((r) => r.samples.filter((s) => s !== null && r.want.every((w) => s.includes(w)))).length,
+    leftSamples: counted.reduce((n, r) => n + r.samples.length, 0),
+    medianMsA: ms[Math.floor(ms.length / 2)] ?? 0,
+  };
+}
+
+/** Who the labels say left between actions `before` and `i`. */
+export function leftWanted(set: LabelSet, before: number, i: number): string[] {
+  const now = labelAt(set.present, i)?.names ?? [];
+  return (labelAt(set.present, before)?.names ?? []).filter((n) => !now.includes(n));
+}
+
 export function scoreRows(rows: readonly StateRow[], set: LabelSet) {
   const ok = rows.map((r) => {
     const want = (labelAt(set.present, r.i)?.names ?? []).filter((n) => r.cast.includes(n));
