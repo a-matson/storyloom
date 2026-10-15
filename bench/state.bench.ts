@@ -1,11 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { test } from 'vitest';
-import { z } from 'zod/mini';
+import type { z } from 'zod/mini';
 import { LlamaServerProvider } from '@adapters/providers/llamaServer';
 import { knownAs, matchEntity, mergeEntity } from '@core/memory/entities';
 import { HELPER_JSON_SAMPLING, passageOf, updateEntities } from '@core/memory/extract';
 import { ENTITY_BATCH } from '@core/memory/memoryBank';
-import { nextScene } from '@core/memory/scene';
+import { grammarOf } from '@core/memory/extractJsonSchema';
+import { leaversOf, namedIn, nextScene } from '@core/memory/scene';
 import type { HelperCallLog } from '@core/memory';
 import { indexAssertions } from '@core/memory/assertionIndex';
 import { deriveAssertions } from '@core/memory/assertions';
@@ -24,7 +25,7 @@ import { selectStructured, STRUCTURED_CAP } from '@core/context/structured';
 import type { RenderedSections } from '@core/context/types';
 import { renderTemplate } from '@core/text/templates';
 import { writeMeasurement } from './env';
-import { pickSet, scoreRows, type StateRow } from './stateScore';
+import { leftWanted, onlySpan, pickSet, sceneAt, scoreLeft, scoreRows, type LeftRow, type StateRow } from './stateScore';
 
 // Reads A (scene) and B (state of who is there) replayed over every AI turn of a backup, scored against hand labels.
 // `pnpm measure state <url> <backup.storyloom.json> [label] [labels-set]`; skipped without both.
@@ -33,10 +34,6 @@ const backup = process.env['MEASURE_BACKUP'];
 const LABEL = process.env['MEASURE_LABEL'] ?? 'baseline';
 const SET = process.env['MEASURE_LABELS'] ?? 'm12-dogfood';
 
-const grammar = (s: z.ZodMiniType) => {
-  const { $schema: _d, ...schema } = z.toJSONSchema(s);
-  return schema;
-};
 const parses = (text: string) => {
   try {
     JSON.parse(text);
@@ -48,6 +45,9 @@ const parses = (text: string) => {
 const CAST_SETTINGS = { memoryBankEnabled: false, cacheStableLayout: false, evictionChunk: 8 };
 /** `MEASURE_READS=A` skips read B; `C` replays the batch call alone. */
 const READS = (process.env['MEASURE_READS'] ?? 'A,B').split(',');
+/** `MEASURE_ONLY=43-44` replays those AI turns from the labelled scene; `MEASURE_REPEAT=5` reads each one 5 times (`left` per sample). */
+const ONLY = onlySpan(process.env['MEASURE_ONLY']);
+const REPEAT = Number(process.env['MEASURE_REPEAT'] ?? '1');
 interface Reply {
   ms: number;
   tokens?: number | undefined;
@@ -80,36 +80,37 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
         stop: r.stop,
         cachePrompt: false,
         slotId: 1,
-        jsonSchema: grammar(schema),
+        jsonSchema: grammarOf(schema),
       }),
     );
-    let parsed: T | undefined;
-    try {
-      parsed = schema.parse(JSON.parse(text));
-    } catch {
-      parsed = undefined;
-    }
+    const parsed = parses(text) ? schema.safeParse(JSON.parse(text)).data : undefined;
     return { text, parsed, ms: Date.now() - t0, tokens: stats?.generatedTokens, stop: stats?.stopReason };
   };
 
-  const rows: (StateRow & { a: Reply; b?: Reply; structured: { tokens: number; text: string } })[] = [];
+  const rows: (StateRow & { a: Reply; b?: Reply; left: LeftRow; structured: { tokens: number; text: string } })[] = [];
   const tokenizer = createApproxTokenizer();
-  let scene: Scene = { location: set.start, present: [] };
-  const places: Entity[] = [];
+  let before = ONLY ? ONLY.from - 1 : 0;
+  let scene: Scene = ONLY ? sceneAt(set, before) : { location: set.start, present: [] };
+  const places: Entity[] = ONLY && scene.location ? [mergeEntity(undefined, { name: scene.location, kind: 'place', description: '' }, 0)] : [];
   let moves = 0;
   const newPlaces: string[] = [];
   const record: Record<string, Record<string, string>> = {};
   let assertions: Adventure['assertions'] = [];
   const presence: NonNullable<Adventure['plot']['presence']> = [];
   for (let i = 2; i < adv.actions.length; i++) {
-    if (adv.actions[i]?.type !== 'continue') continue;
+    if (adv.actions[i]?.type !== 'continue' || (ONLY && (i < ONLY.from || i > ONLY.to))) continue;
     const n = i + 1;
     const characters = adv.entities.filter((e) => e.kind === 'character' && e.firstSeen <= i);
     const cast = [...new Set(characters.flatMap((e) => [e.name, ...e.aliases]))];
     const passage = passageOf({ ...adv, actions: adv.actions.slice(0, n) }, { fromAction: Math.max(0, n - 2), toAction: n });
 
     // Read A: the turn read from core, its scene part only (as on a turn with no new name).
-    const a = await ask(introducePrompt(passage, [], true, scene, cast), turnRead(cast, []), 80);
+    const readA = () => ask(introducePrompt(passage, [], true, scene, cast), turnRead(cast, [], scene.present), 80);
+    const a = await readA();
+    const samples = [a];
+    for (let k = 1; k < REPEAT; k++) samples.push(await readA());
+    const left = { want: leftWanted(set, before, i), samples: samples.map((s) => (s.parsed ? leaversOf(s.parsed.scene) : null)), ms: samples.map((s) => s.ms) };
+    before = i;
     const read = a.parsed?.scene;
     if (read) {
       // As `introduce` does: an unknown location becomes a place card.
@@ -117,7 +118,7 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
         places.push(mergeEntity(undefined, { name: read.location.trim(), kind: 'place', description: '' }, i));
         newPlaces.push(read.location.trim());
       }
-      const r = nextScene(scene, read, (s) => matchEntity(characters, s)?.name, i, places);
+      const r = nextScene(scene, read, (s) => matchEntity(characters, s)?.name, i, places, namedIn(characters, passage));
       if (r.moved) moves++;
       scene = r.scene ?? scene;
     }
@@ -179,6 +180,7 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
       present: scene.present,
       record: structuredClone(record),
       a: { ms: a.ms, tokens: a.tokens, stop: a.stop, raw: a.text, parsed: !!a.parsed },
+      left,
       ...(b && { b }),
       structured,
     });
@@ -207,6 +209,7 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     parsedA: rows.filter((r) => r.a.parsed).length,
     parsedB: bs.filter((x) => x.parsed).length,
     meanMsA: mean(rows.map((r) => r.a.ms)),
+    ...scoreLeft(rows.map((r) => r.left)),
     meanMsB: mean(bs.map((x) => x.ms)),
     // C8: above 20 % the next item loosens the subject rule.
     stateAccepted: bs.reduce((s, x) => s + (x.accepted ?? 0), 0),

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { renderScene } from '@core/context/render';
 import { mergeEntity } from '@core/memory/entities';
 import { sceneIds, sceneNames } from '@core/memory/names';
-import { nextScene, PRESENCE_CAP, SCENE_LOG_CAP, withScene } from '@core/memory/scene';
+import { namedIn, nextScene, PRESENCE_CAP, SCENE_LOG_CAP, withScene } from '@core/memory/scene';
 import type { Entity, PlotComponents, Scene } from '@core/model/types';
 import type { SceneRead } from '@core/schema/extraction';
 
@@ -11,23 +11,30 @@ const mill: Scene = { location: 'the mill', present: ['Lena'] };
 // An adventure saved while the clock existed.
 const oldSave: Scene = { ...mill, time: { day: 3, part: 'night' } };
 const source = { sourceId: 'a9', sourceHash: 'h' };
-const read = (r: Partial<SceneRead>): SceneRead => ({ moved: false, location: 'the mill', present: [], left: [], weather: 'unchanged', ...r });
+const read = (r: Partial<SceneRead>): SceneRead => ({ location: 'the mill', present: [], stay: {}, weather: 'unchanged', ...r });
 const place = (n: string, partOf?: Entity) => ({
   ...mergeEntity(undefined, { name: n, kind: 'place', description: '' }, 0),
   ...(partOf && { partOf: partOf.id }),
 });
-const next = (scene: Scene | undefined, r: Partial<SceneRead>, places: Entity[] = [], at = 7) => nextScene(scene, read(r), name, at, places);
+const everyone = () => true;
+const next = (scene: Scene | undefined, r: Partial<SceneRead>, places: Entity[] = [], at = 7, named: (n: string) => boolean = everyone) =>
+  nextScene(scene, read(r), name, at, places, named);
 
 describe('nextScene', () => {
-  it('keeps everyone not in `left`: a sleeper the reply leaves out stays, the listed join, the left go', () => {
+  it('keeps everyone not marked left: a sleeper the reply leaves out stays, the listed join, the left go', () => {
     const scene: Scene = { location: 'the mill', present: ['Lena', 'Minos'] };
     expect(next(scene, { present: ['Lena', 'the dragon', 'You'] }).scene?.present).toEqual(['Lena', 'Minos', 'Weever']);
-    expect(next(scene, { present: ['Lena'], left: ['Minos'] }).scene?.present).toEqual(['Lena']);
-    expect(next(scene, { present: ['Lena', 'Minos'], left: ['Minos'] }).scene?.present).toEqual(['Lena']);
+    expect(next(scene, { present: ['Lena'], stay: { Lena: 'here', Minos: 'left' } }).scene?.present).toEqual(['Lena']);
+    expect(next(scene, { present: ['Lena', 'Minos'], stay: { Minos: 'left' } }).scene?.present).toEqual(['Lena']);
   });
 
-  it('ignores `left` for someone who was not there, and returns an unchanged scene itself', () => {
-    expect(next(mill, { present: ['Lena'], left: ['Corwin'] })).toEqual({ scene: mill, moved: false });
+  it('stay: left removes a character, asleep keeps them', () => {
+    const scene: Scene = { location: 'the mill', present: ['Lena', 'Minos'] };
+    expect(next(scene, { present: [], stay: { Lena: 'left', Minos: 'asleep' } }).scene?.present).toEqual(['Minos']);
+  });
+
+  it('ignores a leave for someone who was not there, and returns an unchanged scene itself', () => {
+    expect(next(mill, { present: ['Lena'], stay: { Corwin: 'left' } })).toEqual({ scene: mill, moved: false });
   });
 
   it('resets to the listed names on a change of place, and stamps `since` only then', () => {
@@ -38,10 +45,31 @@ describe('nextScene', () => {
     expect(next({ ...mill, since: 2 }, { present: ['Corwin'] }).scene?.since).toBe(2);
   });
 
-  it('takes place identity from the place cards, not the `moved` flag, and stores the card name', () => {
+  it('on a change of place keeps who the read has here or asleep: they came along', () => {
+    const scene: Scene = { location: 'the mill', present: ['Lena', 'Minos', 'Corwin'] };
+    const r = next(scene, { location: 'the road', present: [], stay: { Lena: 'here', Minos: 'asleep', Corwin: 'left' } });
+    expect(r.scene?.present).toEqual(['Lena', 'Minos']);
+  });
+
+  it('a read cannot re-add a character the passage does not name', () => {
+    const scene: Scene = { location: 'the mill', present: ['Minos'] };
+    expect(next(scene, { present: ['Minos', 'Vorthak'] }, [], 7, (n) => n === 'Minos').scene).toBe(scene);
+  });
+
+  it('an arrival named in the passage is added', () => {
+    const scene: Scene = { location: 'the mill', present: ['Minos'] };
+    expect(next(scene, { present: ['Vorthak'] }, [], 7, (n) => n === 'Vorthak').scene?.present).toEqual(['Minos', 'Vorthak']);
+  });
+
+  it('a leave counts only when the passage names who left', () => {
+    const scene: Scene = { location: 'the mill', present: ['Minos', 'Vorthak'] };
+    expect(next(scene, { stay: { Minos: 'here', Vorthak: 'left' } }, [], 7, (n) => n === 'Minos').scene).toBe(scene);
+  });
+
+  it('takes place identity from the place cards and stores the card name', () => {
     const cottage = place('Cottage');
     const scene: Scene = { location: 'Cottage', present: ['Lena'] };
-    expect(next(scene, { moved: true, location: 'the cottage', present: [] }, [cottage])).toEqual({ scene, moved: false });
+    expect(next(scene, { location: 'the cottage', present: [] }, [cottage])).toEqual({ scene, moved: false });
     expect(next({ ...scene, location: 'cottage in the woods' }, { location: 'the cottage' }, [cottage]).scene?.location).toBe('Cottage');
   });
 
@@ -72,7 +100,16 @@ describe('nextScene', () => {
 });
 
 describe('withScene', () => {
-  const w = (plot: PlotComponents, r: Partial<SceneRead>, at: number) => withScene(plot, read(r), name, at, source, []);
+  const w = (plot: PlotComponents, r: Partial<SceneRead>, at: number) => withScene(plot, read(r), name, at, source, [], 'Lena and Minos.');
+
+  it('an alias in the passage counts ("the dragon")', () => {
+    const weever = { ...mergeEntity(undefined, { name: 'Weever', kind: 'character', description: '' }, 0), aliases: ['the dragon'] };
+    expect(namedIn([weever], 'The dragon lands.')('Weever')).toBe(true);
+    expect(namedIn([weever], 'Lena waits.')('Weever')).toBe(false);
+    expect(namedIn([], 'Corwin waits.')('Corwin')).toBe(true);
+    const plot = withScene({ scene: mill }, read({ present: ['Weever'] }), name, 3, source, [weever], 'The dragon lands.');
+    expect(plot.scene?.present).toEqual(['Lena', weever.id]);
+  });
 
   it('logs a change of place and stamps the source; an unchanged scene leaves the plot alone', () => {
     const moved = w({ scene: mill }, { location: 'the road' }, 6);
@@ -94,7 +131,7 @@ describe('withScene', () => {
     const joined = w({ scene: mill }, { present: ['Minos'] }, 3);
     expect(joined.presence).toEqual([{ at: 3, present: ['Lena', 'Minos'] }]);
     expect(w(joined, { weather: 'rain' }, 4).presence).toEqual(joined.presence);
-    expect(w(joined, { left: ['Minos'] }, 5).presence?.at(-1)).toEqual({ at: 5, present: ['Lena'] });
+    expect(w(joined, { stay: { Minos: 'left' } }, 5).presence?.at(-1)).toEqual({ at: 5, present: ['Lena'] });
     const presence = Array.from({ length: PRESENCE_CAP }, (_, i) => ({ at: i, present: [`p${i}`] }));
     const capped = w({ scene: mill, presence }, { present: ['Minos'] }, 300).presence;
     expect(capped).toHaveLength(PRESENCE_CAP);
@@ -121,11 +158,11 @@ describe('scene ids (M13-2d option B)', () => {
   });
 
   it('a turn read resolves a plain name that got a card since, and logs the place by name', () => {
-    const plot = withScene({ scene: { location: 'the mill', present: ['Lena'] } }, read({}), name, 4, source, [mill_, lena]);
+    const plot = withScene({ scene: { location: 'the mill', present: ['Lena'] } }, read({}), name, 4, source, [mill_, lena], '');
     expect(plot.scene).toMatchObject({ location: mill_.id, present: [lena.id] });
-    expect(withScene(plot, read({}), name, 5, source, [mill_, lena])).toBe(plot);
+    expect(withScene(plot, read({}), name, 5, source, [mill_, lena], '')).toBe(plot);
     const road = place('the road');
-    const moved = withScene(plot, read({ location: 'the road', present: ['Lena'] }), name, 6, source, [mill_, road, lena]);
+    const moved = withScene(plot, read({ location: 'the road', present: ['Lena'] }), name, 6, source, [mill_, road, lena], 'Lena walks.');
     expect(moved.scene).toMatchObject({ location: road.id, present: [lena.id], since: 6 });
     expect(moved.sceneLog).toEqual([{ at: 6, location: 'the road' }]);
   });

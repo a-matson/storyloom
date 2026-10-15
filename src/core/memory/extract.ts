@@ -8,6 +8,7 @@ import {
   MAX_INTRODUCED,
   ExtractionJson as Schema,
   sceneRead,
+  STAYS,
   SpokenIn,
   turnRead,
   type SceneRead,
@@ -71,7 +72,7 @@ export interface TurnRead {
   entities: z.output<typeof IntroducedEntity>[];
 }
 const turnAccepter =
-  (cast: readonly string[]) =>
+  (cast: readonly string[], before: readonly string[]) =>
   (cut: boolean) =>
   (data: unknown): TurnRead | null => {
     const l = lists(data, cut);
@@ -79,7 +80,12 @@ const turnAccepter =
     // Without the grammar a name outside the cast costs only itself, and a bad scene only the scene.
     const raw = Envelope.safeParse(l.data['scene']).data;
     const known = (key: string) => (List.safeParse(raw?.[key]).data ?? []).filter((x) => typeof x === 'string' && cast.includes(x));
-    const scene = raw && sceneRead(cast).safeParse({ ...raw, present: known('present'), left: known('left') }).data;
+    // A missing or bad verdict is "here"; a `left` list (the read before M14-S2) still counts.
+    const said = Envelope.safeParse(raw?.['stay']).data;
+    const gone = known('left');
+    const verdict = (n: string) => STAYS.find((s) => s === said?.[n]) ?? (gone.includes(n) ? 'left' : 'here');
+    const stay = Object.fromEntries(before.map((n) => [n, verdict(n)]));
+    const scene = raw && sceneRead(cast, before).safeParse({ ...raw, present: known('present'), stay }).data;
     return { ...(scene && { scene }), entities: l.items('entities', IntroducedEntity, MAX_INTRODUCED) };
   };
 
@@ -148,9 +154,9 @@ const SCENE_TOKENS = 80;
 export function readTurn(passage: string, newNames: readonly string[], prev: PrevScene, cast: readonly string[], deps: ExtractDeps): Promise<TurnRead | null> {
   return helperJson(
     (g) => introducePrompt(passage, newNames, g, prev, cast),
-    grammarOf(turnRead(cast, newNames)),
+    grammarOf(turnRead(cast, newNames, prev.present)),
     newNames.length ? INTRODUCE_TOKENS : SCENE_TOKENS,
-    turnAccepter(cast),
+    turnAccepter(cast, prev.present),
     deps,
   );
 }
