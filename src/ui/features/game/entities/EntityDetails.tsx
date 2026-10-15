@@ -17,7 +17,10 @@ type Edits = Pick<ReturnType<typeof entityEdits>, 'setReference' | 'clearReferen
  * the story. A reference freezes the look the next Sees repeat; as a portrait it is centre-cropped.
  */
 export function Appearances({ entity: e, adventure, onClose, edits }: { entity: Entity; adventure: Adventure; onClose: () => void; edits: Edits }) {
-  const shots = adventure.actions.flatMap((a, i) => (a.image?.entityIds?.includes(e.id) ? [{ index: i, image: a.image }] : [])).toReversed();
+  // A See still choosing between renders is no reference yet: the blob may be deleted with the pick.
+  const shots = adventure.actions
+    .flatMap((a, i) => (a.image?.entityIds?.includes(e.id) && !a.image.candidates ? [{ index: i, image: a.image }] : []))
+    .toReversed();
   if (shots.length === 0) return null;
   return (
     <>

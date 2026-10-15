@@ -5,13 +5,11 @@ import type { Embedder, ScriptRunner } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
 import { helperModelFor } from './helperModel';
 import { IdleWork } from './idleWork';
-import { dropOrphanImages, regenerateImage, seeImage } from './images';
+import type * as SeeMode from './images';
 import { MemoryScheduler } from './memoryScheduler';
 import { SaveQueue } from './saveQueue';
 import { sessionScripts } from './scripts';
 import { OPENED, type GameSnapshot, type HelperModel, type Prefetched, type SessionServices } from './types';
-
-const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /**
  * One open adventure: action log, streaming, the last context sent, debounced persistence,
@@ -77,7 +75,7 @@ export class GameSession {
     this.app = app;
     this.svc = services;
     this.snapshot = this.build(OPENED);
-    this.scripts = sessionScripts(services, adventure, (e) => this.emit({ notice: `Scenario scripts are off: ${message(e)}` }));
+    this.scripts = sessionScripts(services, adventure, (e) => this.emit({ notice: `Scenario scripts are off: ${e instanceof Error ? e.message : String(e)}` }));
     // Until these resolve, turns rank memories by recency only and the context length is not clamped to n_ctx.
     this.resolveEmbedder().catch((e: unknown) => console.warn('no embedder; memories rank by recency', e));
     void this.deps()
@@ -253,15 +251,17 @@ export class GameSession {
   /** Image jobs in flight. Only this session knows them, so a reload drops them and the block becomes retryable. */
   private readonly runningImages = new Set<string>();
   readonly imagePending = (actionId: string, running: boolean): void => {
-    if (running) this.runningImages.add(actionId);
-    else this.runningImages.delete(actionId);
+    this.runningImages[running ? 'add' : 'delete'](actionId);
     this.emit({ pendingImages: [...this.runningImages] });
   };
 
+  /** See mode is its own chunk, off the start-up bundle. */
+  private readonly seeMode = (run: (m: typeof SeeMode) => void): void => void import('./images').then(run, (e: unknown) => this.onError(String(e)));
   /** See mode: one image from the player's prompt (blank = written by the helper model), generated in the background. */
-  readonly see = (brief: string): void => seeImage(brief, this);
-  /** Retry (no `brief`) or rewrite the brief of a `see` action (`/raw …` sends a prompt as written); the old blob is replaced. */
-  readonly regenerateSee = (id: string, brief?: string): void => regenerateImage(this, id, brief);
+  readonly see = (brief: string): void => this.seeMode((m) => m.seeImage(brief, this));
+  /** Retry (no `brief`) or rewrite the brief of a `see` action (`/raw …` sends a prompt as written); the old render stays a candidate until `chooseSee` keeps one and deletes the rest. */
+  readonly regenerateSee = (id: string, brief?: string): void => this.seeMode((m) => m.regenerateImage(this, id, brief));
+  readonly chooseSee = (id: string, imageId: string): void => this.seeMode((m) => m.chooseSeeCandidate(this, id, imageId));
 
   readonly cancel = (): void => this.abort?.abort();
   /** The turn input is focused and holds text; memory jobs wait so they do not slow the coming turn. */
@@ -275,7 +275,7 @@ export class GameSession {
     fn(this.log, this.adv);
     followLog(this.adv, before, this.log.actions);
     for (const [i, a] of this.log.actions.entries()) if (i < before.length && a !== before[i]) this.memory.edited(i);
-    dropOrphanImages(this, before);
+    this.seeMode((m) => m.dropOrphanImages(this, before));
     // Editing the log makes a prefetched alternative stale unless it still targets the last action.
     if (this.prefetched && this.prefetched.actionId !== this.log.last?.id) this.dropPrefetch();
     this.idleWork.afterEdit();

@@ -3,7 +3,7 @@ import { loadImagePrompt } from '@core/image';
 import { indexAssertions, loadMemoryJobs, repointSecrets, withLooks } from '@core/memory';
 import { newId, type Adventure, type Entity } from '@core/model';
 import { cropSquare, downscale } from '../image';
-import { withoutReference } from './images';
+import { withoutReference } from './seeRender';
 import { lineEdits, patch } from './lines';
 import { clearPortrait, dropPortrait, PORTRAIT_PX, renderPortrait, setPortrait } from './portraits';
 import { repointGates } from './rules';
