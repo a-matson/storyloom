@@ -46,7 +46,7 @@ describe('demo backend', () => {
 
   it('answers the turn read in its shape', async () => {
     const { text } = await collect(provider.complete({ prompt: `${TURN_READ_ASK} at the lighthouse`, maxTokens: 80, temperature: 0 }));
-    expect(turnRead(['Merav'], false).parse(JSON.parse(text)).scene).toMatchObject({ location: 'the lighthouse', present: ['Merav'], weather: 'fog' });
+    expect(turnRead(['Merav'], []).parse(JSON.parse(text)).scene).toMatchObject({ location: 'the lighthouse', present: ['Merav'], weather: 'fog' });
   });
 
   it('404s unknown paths', async () => {

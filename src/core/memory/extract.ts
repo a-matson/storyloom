@@ -146,11 +146,10 @@ const SCENE_TOKENS = 80;
  * as the names it may give; and kind, description and looks for each new name.
  */
 export function readTurn(passage: string, newNames: readonly string[], prev: PrevScene, cast: readonly string[], deps: ExtractDeps): Promise<TurnRead | null> {
-  const cards = newNames.length > 0;
   return helperJson(
     (g) => introducePrompt(passage, newNames, g, prev, cast),
-    grammarOf(turnRead(cast, cards)),
-    cards ? INTRODUCE_TOKENS : SCENE_TOKENS,
+    grammarOf(turnRead(cast, newNames)),
+    newNames.length ? INTRODUCE_TOKENS : SCENE_TOKENS,
     turnAccepter(cast),
     deps,
   );

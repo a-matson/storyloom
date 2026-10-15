@@ -48,18 +48,22 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps): Promis
   if (at === n && __introducedHash === hash) return none();
   // From the last finished call: a call the next turn cut (it takes ~28 s) is read again with that turn. [measured: 2026-10-09-live-play-m11-2-read30.json]
   const range = { fromAction: Math.max(0, n - MEMORY_SPAN, Math.min(at ?? 0, n - INTRODUCE_SPAN)), toAction: n };
-  // ponytail: names past the grammar's cap wait for the batch call; raise MAX_INTRODUCED if openings name more.
-  const names = introductions ? newNamesIn(adventure, range).slice(0, MAX_INTRODUCED) : [];
   const passage = passageOf(adventure, range);
-  // Aliases too, so a character the text calls "the dragon" resolves (the two P7c misses); new names, so one met this turn can be there.
-  const cast = [...new Set([...adventure.entities.flatMap((e) => (e.kind === 'character' ? [e.name, ...e.aliases] : [])), ...names])];
   const now = adventure.plot.scene && sceneNames(adventure.plot.scene, adventure.entities);
+  // Present without a card: the name guard drops a name that only opens sentences ("Weever nods.").
+  const uncarded = (now?.present ?? []).filter((p) => !knownAs(adventure.entities, p) && passage.includes(p));
+  // ponytail: names past the grammar's cap wait for the batch call; raise MAX_INTRODUCED if openings name more.
+  const names = introductions ? [...new Set([...newNamesIn(adventure, range), ...uncarded])].slice(0, MAX_INTRODUCED) : [];
+  // Aliases too, so a character the text calls "the dragon" resolves (the two P7c misses); new names, so one met this turn can be there;
+  // and who is present without a card yet, or the enum has no word for them.
+  const characters = adventure.entities.flatMap((e) => (e.kind === 'character' ? [e.name, ...e.aliases] : []));
+  const cast = [...new Set([...characters, ...names, ...(now?.present ?? [])])];
   const prev = { location: now?.location, present: now?.present ?? [] };
   const reply = names.length || sceneEachTurn ? await readTurn(passage, names, prev, cast, deps) : null;
   adventure.scriptState = { ...adventure.scriptState, __introducedAt: n, __introducedHash: hash };
   if (!reply) return none();
   // Cards first, so the scene's names resolve to them.
-  let touched = names.length ? foldEntities(adventure, reply.entities, passage, range) : 0;
+  let touched = names.length ? foldEntities(adventure, reply.entities, passage, range, { present: uncarded }) : 0;
   // Through the entity first: a role alias ("the ferrywoman") is not a name by itself.
   const name = (s: string) => {
     const e = matchEntity(adventure.entities, s);

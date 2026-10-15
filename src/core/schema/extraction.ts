@@ -73,7 +73,8 @@ export const NOBODY = 'nobody';
  */
 export const sceneRead = (cast: readonly string[]) => {
   const [first = NOBODY, ...rest] = cast;
-  const who = z.array(z.enum([first, ...rest]));
+  // Capped: uncapped, the 12B repeated one name to the token cap when the enum lacked the ones it meant (dogfood M13-9).
+  const who = z.array(z.enum([first, ...rest])).check(z.maxLength(rest.length + 1));
   return z.object({ moved: z.boolean(), location: sentence(LOCATION_CHARS), present: who, left: who, weather: Weather });
 };
 export type SceneRead = z.output<ReturnType<typeof sceneRead>>;
@@ -81,8 +82,13 @@ export type SceneRead = z.output<ReturnType<typeof sceneRead>>;
  * The turn read's reply; a turn with no new name asks only the scene. `scene` first and required:
  * optional and with no worked example, the 12B left it out. [measured: 2026-10-09-recall-m11-1.json]
  */
-export const turnRead = (cast: readonly string[], cards: boolean) =>
-  cards ? z.object({ scene: sceneRead(cast), entities: z.array(IntroducedEntity).check(z.maxLength(MAX_INTRODUCED)) }) : z.object({ scene: sceneRead(cast) });
+export const turnRead = (cast: readonly string[], newNames: readonly string[]) => {
+  const [first, ...rest] = newNames;
+  if (first === undefined) return z.object({ scene: sceneRead(cast) });
+  // A card per asked name, at least one: a free list after the scene came back empty in 7 of 9 reads, 0 of 8 so. [measured: 2026-10-15-turn-read-cards.json]
+  const card = z.object({ ...IntroducedEntity.shape, name: z.enum([first, ...rest]) });
+  return z.object({ scene: sceneRead(cast), entities: z.array(card).check(z.minLength(1), z.maxLength(Math.min(MAX_INTRODUCED, newNames.length))) });
+};
 
 /** What the state read may change; `holds` becomes the item's `holder`. [measured: 2026-10-13-state-probe-m12-dogfood P8b] */
 export const STATE_READ_KEYS = ['location', 'posture', 'condition', 'mood', 'wearing', 'holds'] as const;

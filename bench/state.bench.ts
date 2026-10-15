@@ -109,7 +109,7 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     const passage = passageOf({ ...adv, actions: adv.actions.slice(0, n) }, { fromAction: Math.max(0, n - 2), toAction: n });
 
     // Read A: the turn read from core, its scene part only (as on a turn with no new name).
-    const a = await ask(introducePrompt(passage, [], true, scene, cast), turnRead(cast, false), 80);
+    const a = await ask(introducePrompt(passage, [], true, scene, cast), turnRead(cast, []), 80);
     const read = a.parsed?.scene;
     if (read) {
       // As `introduce` does: an unknown location becomes a place card.
