@@ -98,6 +98,11 @@ export class MemoryScheduler {
    * [measured: 2026-10-09-live-play-m11-2c.json] One at a time; turns that end meanwhile share one re-run.
    */
   private introducing: Promise<void> | null = null;
+  /** Actions the player edited or switched since the last turn read: an older output may name someone new (F30), so each gets a read for new names. */
+  private readonly edits = new Set<number>();
+  edited(i: number): void {
+    if (i >= 0) this.edits.add(i);
+  }
   private introduceAgain = false;
   private introduce(): Promise<void> {
     if (this.introducing) {
@@ -118,8 +123,12 @@ export class MemoryScheduler {
       if (introductions || sceneEachTurn) {
         const { introduce } = await loadMemoryJobs();
         const r = await this.logged('scene', (d) => introduce(this.host.adventure(), d));
-        if (r.touched || r.sceneUpdated) this.host.changed();
-        if (r.touched && this.idle && !this.idle.aborted) this.portraits(this.idle);
+        let touched = r.touched;
+        const edits = [...this.edits];
+        this.edits.clear();
+        for (const i of edits) touched += (await this.logged('scene', (d) => introduce(this.host.adventure(), d, i))).touched;
+        if (touched || r.sceneUpdated) this.host.changed();
+        if (touched && this.idle && !this.idle.aborted) this.portraits(this.idle);
       }
     } catch (e) {
       console.warn('introduction call failed', e);
