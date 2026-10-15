@@ -4,7 +4,7 @@ export { appearanceOf, byPlayer, currentStates, isValue, LOOK_KEYS, rivalKey, se
 export { current, identityText, indexAssertions, isCurrent, isLegacy, textOf, type AssertionOf } from './assertionIndex';
 export { heldBy } from './items';
 export { isYouLine, YOU } from './you';
-export { defaultKnownBy, newSecret, repointSecrets, secretsOf, type Secret } from './secrets';
+export { defaultKnownBy, newSecret, repointSecrets, secretsOf } from './secrets';
 export { sceneIds, sceneNames, withPresence } from './names';
 export type { MaintenanceDeps } from './memoryJobs';
 export type { CutCounts, HelperCallLog } from './helperCall';
