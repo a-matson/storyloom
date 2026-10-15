@@ -28,6 +28,35 @@
         { "at": 61, "who": "Minos", "key": "posture", "value": "sitting" },
         { "at": 61, "who": "Minos", "key": "wearing", "value": "dressed" }
       ]
+    },
+    "m13-dogfood": {
+      "start": "noodle shop under the railway arches",
+      "place": [
+        { "from": 0, "to": 21, "place": "shop" },
+        { "from": 22, "to": 22, "place": "alley" },
+        { "from": 23, "to": 32, "place": "tunnel" },
+        { "from": 33, "to": 33, "place": "alley" },
+        { "from": 34, "to": 53, "place": "shop" },
+        { "from": 54, "to": 63, "place": "market" }
+      ],
+      "present": [
+        { "from": 0, "to": 9, "names": ["Minos"] },
+        { "from": 10, "to": 42, "names": ["Minos", "Vorthak", "Weever"] },
+        { "from": 43, "to": 49, "names": ["Minos"] },
+        { "from": 50, "to": 54, "names": ["Minos", "Vorthak", "Weever"] },
+        { "from": 55, "to": 63, "names": ["Minos", "Vorthak", "Weever", "Doctor Okafor", "Pell"] }
+      ],
+      "placeWords": {
+        "market": ["market", "smithfield", "stall"],
+        "tunnel": ["tunnel", "junction", "underground", "station", "stair"],
+        "alley": ["alley", "street"],
+        "shop": ["shop", "noodle", "arch", "counter", "door"]
+      },
+      "checkpoints": [
+        { "at": 63, "who": "Minos", "key": "condition", "value": "hurt" },
+        { "at": 63, "who": "Weever", "key": "condition", "value": "hurt" },
+        { "at": 63, "who": "Minos", "key": "location", "value": "market" }
+      ]
     }
   }
 }
