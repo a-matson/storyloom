@@ -14,6 +14,13 @@ describe('image presets', () => {
     expect(out.hiresScale).toBe(p.settings.hires ? 1.5 : 2);
   });
 
+  // Clip skip 1 blanks every image on an SDXL checkpoint [measured: 2026-10-15].
+  it('SD 1.5 default sets no clip skip, and applying it clears a stored one', () => {
+    const sd15 = IMAGE_PRESETS.filter((p) => p.id === 'sd15');
+    expect(sd15).toHaveLength(1);
+    expect(sd15.map((p) => [p.settings.clipSkip, applyImagePreset({ ...mine, clipSkip: 1 }, p).clipSkip])).toEqual([[undefined, undefined]]);
+  });
+
   it('a saved preset round-trips the model-card fields, and a blank sampler clears the old one', () => {
     const tuned = { ...mine, sampler: undefined, clipSkip: 2, steps: 30, cfgScale: 4.5, hires: true, hiresDenoise: 0.4 };
     const saved = presetFrom(tuned, 'Mine');

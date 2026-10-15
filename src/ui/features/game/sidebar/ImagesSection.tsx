@@ -2,16 +2,16 @@ import type { AdventureSettings, AppSettings } from '@core/model';
 import { Input } from '@ui/components/ui/field';
 import { ImagePresetRow } from './ImagePresetRow';
 import { NumberInput } from './NumberInput';
-import { Section, Setting } from './Section';
+import { describedBy, Section, Setting } from './Section';
 import { ServerChoice, useServerLists } from './ServerChoice';
+import { IMAGE_HELP, type ImageNumberKey } from './settingHelp';
 import { SettingSwitch } from './SettingSwitch';
 
 type Settings = AdventureSettings;
 type Update = (patch: Partial<Settings>) => void;
 type Props = { s: Settings; app: AppSettings; onAppChange: (next: AppSettings) => void; update: Update };
-type NumberKey = 'width' | 'height' | 'steps' | 'cfgScale' | 'portraitSize' | 'portraitSteps' | 'clipSkip' | 'hiresScale' | 'hiresDenoise' | 'hiresSteps';
 
-type ImageNumber = { label: string; key: NumberKey; step: number; min: number; max?: number; optional?: boolean };
+type ImageNumber = { label: string; key: ImageNumberKey; step: number; min: number; max?: number; optional?: boolean };
 const IMAGE_NUMBERS: ImageNumber[] = [
   { label: 'Width', key: 'width', step: 64, min: 256 },
   { label: 'Height', key: 'height', step: 64, min: 256 },
@@ -45,12 +45,16 @@ function ModelCard({ s, app, onAppChange, update }: Props) {
   return (
     <>
       {(models?.length !== 1 || s.image.model !== undefined) && (
-        <Setting label="Checkpoint" htmlFor="img-model" title="The model file to render with; Server default uses whatever the image server has loaded">
+        <Setting label="Checkpoint" htmlFor="img-model" help="The model file to render with; Server default uses whatever the image server has loaded">
           <ServerChoice id="img-model" value={s.image.model} options={models} onChange={(model) => image({ model })} />
         </Setting>
       )}
       <ImagePresetRow image={s.image} onImage={(next) => update({ image: next })} app={app} onAppChange={onAppChange} />
-      <Setting label="Sampler" htmlFor="img-sampler" title="As the checkpoint's page names it, e.g. DPM++ 2M Karras">
+      <Setting
+        label="Sampler"
+        htmlFor="img-sampler"
+        help="As the checkpoint's page names it, e.g. DPM++ 2M Karras. Server default uses the image server's own."
+      >
         <ServerChoice id="img-sampler" value={s.image.sampler} options={samplers} onChange={(sampler) => image({ sampler })} />
       </Setting>
     </>
@@ -60,21 +64,27 @@ function ModelCard({ s, app, onAppChange, update }: Props) {
 export function ImagesSection({ s, app, onAppChange, update }: Props) {
   const image = (patch: Partial<Settings['image']>) => update({ image: { ...s.image, ...patch } });
   const numbers = (list: ImageNumber[]) =>
-    list.map((n) => (
-      <Setting key={n.key} label={n.label} htmlFor={`img-${n.key}`}>
-        <NumberInput
-          id={`img-${n.key}`}
-          step={n.step}
-          min={n.min}
-          max={n.max}
-          optional={n.optional ?? false}
-          value={s.image[n.key]}
-          onCommit={(v) => {
-            if (v !== undefined || n.optional) image({ [n.key]: v });
-          }}
-        />
-      </Setting>
-    ));
+    list.map((n) => {
+      const id = `img-${n.key}`;
+      const { help, warn } = IMAGE_HELP[n.key];
+      const warning = warn?.(s.image[n.key], s.image);
+      return (
+        <Setting key={n.key} label={n.label} htmlFor={id} help={help} warn={warning}>
+          <NumberInput
+            id={id}
+            step={n.step}
+            min={n.min}
+            max={n.max}
+            optional={n.optional ?? false}
+            describedBy={describedBy(id, help, warning)}
+            value={s.image[n.key]}
+            onCommit={(v) => {
+              if (v !== undefined || n.optional) image({ [n.key]: v });
+            }}
+          />
+        </Setting>
+      );
+    });
   return (
     <Section title="Images">
       <ModelCard s={s} app={app} onAppChange={onAppChange} update={update} />
@@ -82,12 +92,12 @@ export function ImagesSection({ s, app, onAppChange, update }: Props) {
       <SettingSwitch
         id="img-hires"
         label="Hires pass"
-        title="The model page's denoise: render, upscale, then redraw at that strength. Roughly doubles the time; never used for portraits"
+        help="The model page's denoise: render, upscale, then redraw at that strength. Roughly doubles the time; never used for portraits"
         checked={s.image.hires}
         onChange={(on) => image({ hires: on })}
       />
       {s.image.hires && numbers(HIRES_NUMBERS)}
-      <Setting label="Negative prompt" htmlFor="img-neg">
+      <Setting label="Negative prompt" htmlFor="img-neg" help="What the image should avoid, e.g. blurry, extra fingers, text. Blank sends nothing.">
         <Input
           id="img-neg"
           className={IMAGE_TEXT_INPUT}
@@ -98,12 +108,12 @@ export function ImagesSection({ s, app, onAppChange, update }: Props) {
       <SettingSwitch
         id="img-portraits"
         label="Character portraits"
-        title="Drawn between turns, one character at a time"
+        help="Drawn between turns, one character at a time"
         checked={s.image.portraits}
         onChange={(on) => image({ portraits: on })}
       />
       {numbers(PORTRAIT_NUMBERS)}
-      <Setting label="Portrait style" htmlFor="img-style" title="Added to every portrait prompt; blank picks one from the adventure's tags">
+      <Setting label="Portrait style" htmlFor="img-style" help="Added to every portrait prompt; blank picks one from the adventure's tags">
         <Input
           id="img-style"
           className={IMAGE_TEXT_INPUT}
@@ -114,7 +124,7 @@ export function ImagesSection({ s, app, onAppChange, update }: Props) {
       <Setting
         label="Prompt suffix"
         htmlFor="img-suffix"
-        title="Added to every See, portrait and cover prompt: style, nudity or gore words your checkpoint needs"
+        help="Added to every See, portrait and cover prompt: style, nudity or gore words your checkpoint needs"
       >
         <Input
           id="img-suffix"
