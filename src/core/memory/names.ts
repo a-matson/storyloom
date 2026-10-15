@@ -1,4 +1,4 @@
-import type { Entity, Scene } from '../model/types';
+import type { Entity, PlotComponents, Scene } from '../model/types';
 import { identityText, type AssertionIndex } from './assertionIndex';
 
 // Apart from `entities.ts` so the scene line's item lookup stays light in the start-up chunk.
@@ -51,6 +51,16 @@ export function knownAs(entities: readonly Entity[], name: string, ix?: Assertio
 // A scene reference is an entity id, else a plain name: someone the turn read named without a card (M13-2d).
 const refFor = (pool: readonly Entity[], ref: string): string => (!ref.trim() || pool.some((e) => e.id === ref) ? ref : (knownAs(pool, ref)?.id ?? ref));
 const nameOf = (entities: readonly Entity[], ref: string): string => entities.find((e) => e.id === ref)?.name ?? ref;
+
+/** Changes of who is present kept for witnessed-by clauses. [provisional] */
+export const PRESENCE_CAP = 200;
+const key = (ids: readonly string[]) => ids.toSorted().join('\n');
+
+/** `plot.presence` with `present` from action `at` on, when it differs from the last entry; a turn read and a hand edit both log here. */
+export function withPresence(plot: PlotComponents, present: readonly string[], at: number): PlotComponents['presence'] {
+  if (key(plot.presence?.at(-1)?.present ?? []) === key(present)) return plot.presence;
+  return [...(plot.presence ?? []), { at, present: [...present] }].slice(-PRESENCE_CAP);
+}
 
 /** `scene` with each name `knownAs` resolves (a place for the location, a character for the present) as its id; unchanged: `scene` itself. */
 export function sceneIds(scene: Scene, entities: readonly Entity[]): Scene {
