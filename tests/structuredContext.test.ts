@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildContext as build, nowLines, type ContextBuildInput } from '@core/context';
+import { STRUCTURED_CAP } from '@core/context/structured';
 import { newSecret } from '@core/memory/secrets';
 import type { Action, Assertion, EntityFact, LegacyEntity } from '@core/model/types';
 import type { Tokenizer } from '@core/text/tokenizer';
@@ -28,7 +29,7 @@ const actions = [act('start', 'The mill.'), ...Array.from({ length: 30 }, (_, i)
 const scene = { location: 'the mill', present: ['Lena'], weather: 'cold rain at night' };
 const lena = entity(
   'Lena',
-  'Lena keeps the mill, and has for years.',
+  'Lena keeps the mill. She has for years.',
   [
     fact('Lena', 0, 'She has blue eyes.'),
     fact('Lena', 1, 'eyes: blue', { kind: 'state', key: 'eyes', value: 'blue' }),
@@ -103,7 +104,7 @@ describe('structured elements', () => {
       ...entity(name, description, [], state),
       kind: 'item' as const,
     });
-    const amulet = item('Amulet', 'Amulet of the drowned queen, cold to touch.', { holder: 'you' });
+    const amulet = item('Amulet', 'Amulet of the drowned queen. Cold to touch.', { holder: 'you' });
     const lamp = item('Lamp', 'Lamp that never goes out.');
     const r = buildContext({ ...input(4000), entities: [lena, orrin, amulet, lamp], plot: { scene: { ...scene, items: ['Lamp'] } } });
     expect(r.sections.find((s) => s.kind === 'scene')?.text).toBe('[Scene: the mill · Present: Lena · Here: Lamp · You hold: Amulet · Cold rain at night]');
@@ -142,13 +143,28 @@ describe('structured elements', () => {
     expect(cast(b)).toBe(cast(a));
   });
 
-  it('never passes 200 tokens and drops whole lines from the end', () => {
+  it('five present characters all get a line under the cap', () => {
+    // Shaped like the M13 dogfood's #63: five present, each with an identity, four states and a stance.
+    const states = { posture: 'standing by the door', condition: 'bruised and tired', mood: 'wary of strangers', wearing: 'a torn leather coat' };
+    const five = ['Minos', 'Vorthak', 'Thessaly', 'Garrick', 'Ilse'].map((n) =>
+      entity(
+        n,
+        `${n} is a sellsword from the northern marches, scarred, quiet and slow to trust.`,
+        [fact(n, 0, 'watches you closely', { kind: 'relationship' })],
+        states,
+      ),
+    );
+    const r = buildContext({ ...input(40000), entities: five, plot: { scene: { location: 'the cellar', present: five.map((e) => e.name) } } });
+    expect(cast(r)?.split('\n')).toHaveLength(5);
+  });
+
+  it(`never passes ${STRUCTURED_CAP} tokens and drops whole lines from the end`, () => {
     const crowd = Array.from({ length: 40 }, (_, i) =>
       entity(`P${i}`, `P${i} is a guard of the long hall.`, [fact(`P${i}`, 0, `mood: tense ${i}`, { kind: 'state', key: 'mood', value: `tense ${i}` })]),
     );
     const r = buildContext({ ...input(40000), entities: crowd, plot: { scene: { present: crowd.map((e) => e.name) } } });
-    expect(r.budget.structuredBudget).toBe(200);
-    expect(r.budget.structuredUsed).toBeLessThanOrEqual(200);
+    expect(r.budget.structuredBudget).toBe(STRUCTURED_CAP);
+    expect(r.budget.structuredUsed).toBeLessThanOrEqual(STRUCTURED_CAP);
     const lines = cast(r)?.split('\n') ?? [];
     expect(lines.length).toBeLessThan(40);
     expect(lines.at(-1)).toBe(`P${lines.length - 1} (a guard of the long hall): tense ${lines.length - 1}.`);

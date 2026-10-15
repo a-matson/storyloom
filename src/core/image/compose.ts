@@ -106,7 +106,8 @@ export function composeSeePrompt({ brief, scene, entities, style }: ComposeInput
         // The look once, at the first mention; repeating it reads to SD as more people.
         const head = first ? look : n;
         first = false;
-        return poss ? (head === n ? n + poss : `${head}, ${n}${poss}`) : head;
+        // SD tags need no possessive; with one, a noun ending "chest" read "chest's chest" (F23).
+        return poss && head !== n ? `${head}, ${n}` : head;
       });
       if (text === before && i < CAST_CAP) unnamed.push(look);
     });

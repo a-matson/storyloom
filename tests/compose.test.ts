@@ -89,10 +89,15 @@ describe('composeSeePrompt', () => {
     );
   });
 
-  it('keeps a possessive on the noun and puts the look once before it', () => {
+  it('drops a possessive and puts the look once before the noun', () => {
     expect(composeSeePrompt({ brief: "Bram's lantern swings, Bram’s hat", entities: all, style: '' }).prompt).toBe(
-      "a toll keeper, bald, red beard, a toll keeper's lantern swings, a toll keeper’s hat",
+      'a toll keeper, bald, red beard, a toll keeper lantern swings, a toll keeper hat',
     );
+  });
+
+  it('a possessive after a long noun does not repeat the noun', () => {
+    const minos = char('m', 'Minos', 'Minos is a giant with bare arms and chest.', 'bronze skin');
+    expect(composeSeePrompt({ brief: "Minos's chest glows", entities: [minos], style: '' }).prompt).not.toContain("chest's");
   });
 
   it('passes a tag list through, deduped, with commas normalised', () => {

@@ -232,7 +232,7 @@ describe('GameSession entity edits', () => {
     expect(of(session, gate.id).at(-1)).toMatchObject({ kind: 'trait', text: 'The gate is painted red.', producer: 'player', pinned: true });
     expect(snap.notice).toBe('Pinned to Gate');
     await session.previewContext();
-    expect(session.getSnapshot().context?.prompt).toContain('Gate (An iron gate older than the town): The gate is painted red.');
+    expect(session.getSnapshot().context?.prompt).toContain('Gate (an iron gate older than the town): The gate is painted red.');
   });
 
   it('correct about the player pins a player line on you, even when it names an entity, and sends it', async () => {
