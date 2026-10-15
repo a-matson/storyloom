@@ -27,6 +27,12 @@ test('play, retry, undo and reload with the demo backend', async ({ page }) => {
   await page.getByRole('button', { name: 'Fantasy' }).click();
   await expect(page).toHaveURL(/#\/adventure\//);
 
+  // The turn box grows with what is typed.
+  const input = page.getByRole('textbox', { name: 'Take a turn' });
+  const oneLine = (await input.boundingBox())?.height ?? 0;
+  await input.fill('open the letter '.repeat(20));
+  expect((await input.boundingBox())?.height).toBeGreaterThan(oneLine);
+
   await takeTurn(page, 'open the letter');
   await expect(page.getByText('You open the letter.')).toBeVisible();
   await expect(page.getByText('hand stops moving.')).toBeVisible();

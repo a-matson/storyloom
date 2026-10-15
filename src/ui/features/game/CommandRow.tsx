@@ -53,7 +53,7 @@ export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retry
     else api.submit(mode, text);
   };
 
-  const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
+  const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     const mod = e.ctrlKey || e.metaKey;
     const key = e.key.toLowerCase();
     if (e.key === 'Enter') {
