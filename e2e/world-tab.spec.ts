@@ -70,6 +70,15 @@ test('a state set on the Now card is in the next prompt; ✕ ends it and Undo br
   await expect(cast.getByText(/^Merav /)).toContainText('wary');
 });
 
+test('Away on the Now card sends a character out of the scene', async ({ page }) => {
+  await openSeededAdventure(page, 3, undefined, { scene: { location: 'Old Well', present: ['Merav'] } });
+  await world(page);
+  const cast = page.getByRole('list', { name: 'Cast' });
+  await cast.getByRole('button', { name: 'Merav is away' }).click();
+  await expect(cast.getByText(/^Merav /)).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Present' })).toHaveValue('');
+});
+
 test('a character asleep is told in the prompt what they slept through', async ({ page }) => {
   await openSeededAdventure(page, 3, undefined, { scene: { location: 'Old Well', present: ['Merav'] } });
   await world(page);

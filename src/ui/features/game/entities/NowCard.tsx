@@ -119,6 +119,17 @@ export function NowCard({ adventure, api }: { adventure: Adventure; api: GameApi
                 ))}
             </span>
             {e.kind === 'character' && <SetState entity={e} edits={edits} />}
+            {/* The read misses a move to another room; through `updatePlot` the gap is logged, so witnessed-by sees it. */}
+            {stored.present.includes(e.id) && (
+              <Button
+                variant="ghost"
+                className="h-6 self-start"
+                aria-label={`${e.name} is away`}
+                onClick={() => api.updatePlot({ scene: { ...stored, present: stored.present.filter((p) => p !== e.id) } })}
+              >
+                Away
+              </Button>
+            )}
           </li>
         ))}
       </ul>
