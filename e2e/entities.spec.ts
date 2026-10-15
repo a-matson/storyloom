@@ -17,7 +17,7 @@ test('the Characters tab edits, pins and promotes an entity', async ({ page }) =
   await expect(drawer).toBeVisible();
   const { violations } = await new AxeBuilder({ page }).include('dialog').analyze();
   expect(violations).toEqual([]);
-  expect((await drawer.locator('span[aria-hidden="true"]', { hasText: /^M$/ }).boundingBox())?.width).toBe(32);
+  expect((await drawer.locator('span[aria-hidden="true"]', { hasText: /^M$/ }).boundingBox())?.width).toBe(128);
 
   await drawer.getByRole('button', { name: 'Edit location: the well' }).click();
   await drawer.getByRole('textbox', { name: 'Edit: location: the well' }).fill('the gate');
@@ -88,6 +88,9 @@ test('a portrait is queued on open; a failed one shows why and Retry draws it', 
   await drawer.getByRole('button', { name: 'Retry' }).click();
   await expect(drawer.getByRole('button', { name: 'Redraw' })).toBeEnabled();
   expect(requests[1]?.seed).toBe(requests[0]?.seed);
+  // The drawer shows the portrait at 128 CSS px, not the 32 px avatar.
+  await expect(drawer.locator('img')).toHaveAttribute('src', /^blob:/);
+  expect((await drawer.locator('img').boundingBox())?.width).toBe(128);
   await page.keyboard.press('Escape');
   await expect(card.locator('img')).toHaveAttribute('src', /^blob:/);
 });
