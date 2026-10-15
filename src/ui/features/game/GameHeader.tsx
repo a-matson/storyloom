@@ -23,7 +23,7 @@ interface Props {
 export function GameHeader({ title, actionCount, busy, canUndo, canRedo, failed, modelLabel, meter, sidebarOpen, api, onExit, onToggleSidebar }: Props) {
   return (
     <TopBar>
-      <Button size="icon" aria-label="Back to library" onClick={onExit}>
+      <Button size="icon" className="shrink-0" aria-label="Back to library" onClick={onExit}>
         <IconHome />
       </Button>
       <div className="flex min-w-0 flex-col gap-px">
@@ -31,7 +31,7 @@ export function GameHeader({ title, actionCount, busy, canUndo, canRedo, failed,
         <div className="text-caption text-muted-foreground">{actionCount} actions</div>
       </div>
       <span className="grow" />
-      <div className="flex items-center gap-1.5">
+      <div className="flex shrink-0 items-center gap-1.5">
         <Button size="icon" aria-label="Undo" onClick={api.undo} disabled={busy || !canUndo}>
           <IconUndo />
         </Button>
@@ -39,12 +39,14 @@ export function GameHeader({ title, actionCount, busy, canUndo, canRedo, failed,
           <IconRedo />
         </Button>
       </div>
-      <div className="flex items-center gap-2.5 rounded-lg border border-border bg-secondary px-3 py-1.5">
+      <div className="flex min-w-0 items-center gap-2.5 rounded-lg border border-border bg-secondary px-3 py-1.5 max-sm:max-w-28">
         <StatusDot status={failed ? 'bad' : 'ok'} />
-        <span className="text-caption font-medium">{modelLabel}</span>
+        <span className="truncate text-caption font-medium" title={modelLabel}>
+          {modelLabel}
+        </span>
       </div>
       {meter}
-      <Button size="icon" aria-label="Adventure settings" aria-expanded={sidebarOpen} onClick={onToggleSidebar}>
+      <Button size="icon" className="shrink-0" aria-label="Adventure settings" aria-expanded={sidebarOpen} onClick={onToggleSidebar}>
         <IconSettings />
       </Button>
     </TopBar>
