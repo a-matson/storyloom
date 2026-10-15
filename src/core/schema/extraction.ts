@@ -95,8 +95,11 @@ export const turnRead = (cast: readonly string[], newNames: readonly string[], b
   return z.object({ scene: sceneRead(cast, before), entities: z.array(card).check(z.minLength(1), z.maxLength(Math.min(MAX_INTRODUCED, newNames.length))) });
 };
 
-/** What the state read may change; `holds` becomes the item's `holder`. [measured: 2026-10-13-state-probe-m12-dogfood P8b] */
-export const STATE_READ_KEYS = ['location', 'posture', 'condition', 'mood', 'wearing', 'holds'] as const;
+/**
+ * What the state read may change; `holds` becomes the item's `holder`. [measured: 2026-10-13-state-probe-m12-dogfood P8b]
+ * No `location`: the scene is a character's only place; read B's own contradicted it ("shop floor" at the market).
+ */
+export const STATE_READ_KEYS = ['posture', 'condition', 'mood', 'wearing', 'holds'] as const;
 /** A value padded to a longer cap ran the reply to its token cap (P8b). */
 export const NOW_CHARS = 20;
 

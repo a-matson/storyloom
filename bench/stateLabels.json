@@ -23,7 +23,6 @@
         "shop": ["shop", "restaurant", "bar", "table", "arch", "window"]
       },
       "checkpoints": [
-        { "at": 61, "who": "Minos", "key": "location", "value": "bed" },
         { "at": 61, "who": "Minos", "key": "condition", "value": "awake" },
         { "at": 61, "who": "Minos", "key": "posture", "value": "sitting" },
         { "at": 61, "who": "Minos", "key": "wearing", "value": "dressed" }
@@ -54,8 +53,7 @@
       },
       "checkpoints": [
         { "at": 63, "who": "Minos", "key": "condition", "value": "hurt" },
-        { "at": 63, "who": "Weever", "key": "condition", "value": "hurt" },
-        { "at": 63, "who": "Minos", "key": "location", "value": "market" }
+        { "at": 63, "who": "Weever", "key": "condition", "value": "hurt" }
       ]
     }
   }
