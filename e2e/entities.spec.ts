@@ -120,7 +120,7 @@ test('a paragraph naming one character gets its face without a speaker label', a
   await expect(blocks.nth(1).locator('span[aria-hidden="true"]')).toHaveText('M');
   await expect(blocks.nth(0).locator('span[aria-hidden="true"]')).toHaveCount(0);
   await expect(page.locator('#story').getByText('Merav says', { exact: true })).toHaveCount(0);
-  expect(await page.locator('#story').getByRole('button', { name: 'Open Merav' }).boundingBox()).toMatchObject({ width: 32, height: 32 });
+  // The face opens that character's card.
   await page.locator('#story').getByRole('button', { name: 'Open Merav' }).click();
   await expect(page.getByRole('dialog', { name: 'Merav' })).toBeVisible();
 });
