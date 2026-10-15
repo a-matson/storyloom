@@ -4,6 +4,7 @@ import { actionText } from '@core/model';
 import type { CompletionRequest, Provider } from '@core/ports';
 import { joinStory } from '@core/text/formatting';
 import { byPlayer } from '@core/memory/looks';
+import { newSecret } from '@core/memory/secrets';
 import { YOU } from '@core/memory/you';
 import { memoryPrompt, summaryPrompt } from '@core/text/memoryPrompts';
 import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure as adventure } from './fixtures/memoryJobs';
@@ -188,6 +189,24 @@ describe('memory maintenance', () => {
       expect(p).toContain('- a noodle-shop owner');
       expect(p).not.toContain('model guess');
     }
+  });
+
+  it('keeps a secret out of the memory prompt and gives its mark to the summary', async () => {
+    const adv = adventure(15);
+    adv.settings.memory.autoSummary = true;
+    adv.assertions = [newSecret(1, 'You sold the keys.', [])];
+    const prompts: string[] = [];
+    const provider = fakeProvider(async function* (req) {
+      prompts.push(req.prompt);
+      yield { text: 'Mira found the map.', done: true };
+    });
+    adv.scriptState = { ...adv.scriptState, __summaryDirty: true };
+    await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider, historyStart: 12 });
+    expect(prompts.filter((p) => p.includes('Memory:')).join()).not.toContain('sold the keys');
+    const summary = prompts.find((p) => p.includes('Write the updated summary'));
+    expect(summary).toContain('- (known only to you) Mira found the map.');
+    expect(summary).toContain('Keep each "(known only to …)" mark as written');
+    expect(summaryPrompt('', ['Mira left.'])).not.toContain('Keep each');
   });
 
   it('keeps a memory as written, even one naming a place the passage lacks', async () => {

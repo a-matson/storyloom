@@ -7,6 +7,7 @@ import { prepareContext } from '@core/turn';
 import { buildRequest, generate, randomSeed } from '@core/turn/generate';
 import type { TurnDeps } from '@core/turn/types';
 import { writeMeasurement } from './env';
+import { withSecret } from './secret';
 
 // The reply to one player action of a backup, drawn N times; graded by hand (does an absent character say the secret?).
 // `pnpm measure probe <url> <backup.storyloom.json> <at> [label] [samples]`; skipped without the first three.
@@ -17,7 +18,7 @@ const LABEL = process.env['MEASURE_LABEL'] ?? 'before';
 const SAMPLES = Number(process.env['MEASURE_SAMPLES'] ?? 3);
 
 test.skipIf(!url || !backup || !Number.isInteger(AT))('secret probe over a backup', { timeout: 1_800_000 }, async () => {
-  const adv = S.Adventure.parse(JSON.parse(readFileSync(backup ?? '', 'utf8')).adventure);
+  const adv = withSecret(S.Adventure.parse(JSON.parse(readFileSync(backup ?? '', 'utf8')).adventure));
   adv.actions = adv.actions.slice(0, AT + 1);
   // As the app stood when action AT was sent; memories are not cut at `toAction`, so the one over the secret stays.
   if (adv.plot.presence) adv.plot.presence = adv.plot.presence.filter((p) => p.at < AT);
