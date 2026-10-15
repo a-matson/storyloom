@@ -78,10 +78,10 @@ function RetryStack({ action, api }: { action: Action; api: GameApi }) {
 export function OutputTools({ action, api, speech, onEdit, onViewContext, onViewTrace, contextSummary, flag }: Props) {
   const voice = useSpeech();
   return (
-    <div className="mt-1.5 flex items-center gap-2 font-sans text-caption text-muted-foreground">
+    <div className="mt-1.5 flex flex-wrap items-center gap-2 font-sans text-caption text-muted-foreground">
       {flag !== undefined && (
         <output className="min-w-0">
-          <Pill tone="warning" className="block max-w-[40ch] truncate normal-case tracking-normal" title={flag.label}>
+          <Pill tone="warning" className="block max-w-[40ch] truncate max-sm:max-w-full normal-case tracking-normal" title={flag.label}>
             {flag.label}
           </Pill>
         </output>
@@ -91,7 +91,7 @@ export function OutputTools({ action, api, speech, onEdit, onViewContext, onView
           {flag.button}
         </Button>
       )}
-      <div className={cn('flex grow items-center gap-2', revealOnHover)}>
+      <div className={cn('flex grow flex-wrap items-center gap-2', revealOnHover)}>
         {action.type === 'continue' && action.versions.length > 1 && <RetryStack action={action} api={api} />}
         {voice.supported && (
           <Button className={tool} onClick={() => (voice.speaking ? voice.stop() : voice.speak(actionText(action), speech))}>

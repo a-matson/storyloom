@@ -178,6 +178,20 @@ test('the game header fits a phone and the model name truncates', async ({ page 
   expect(await header.getByTitle('Fake-12B-Q4_K_M.gguf').evaluate((s) => s.scrollWidth > s.clientWidth)).toBe(true);
 });
 
+test('the action bars fit a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await connectDemo(page);
+  await page.getByRole('button', { name: 'Fantasy' }).click();
+  await takeTurn(page, 'open the letter');
+  await expect(page.getByText('hand stops moving.')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  // Overflow can hide inside a clipped container, so every button's right edge is checked too.
+  for (const name of ['Continue', 'Retry', 'Erase', 'Edit', 'Erase to here', 'View context', 'Trace']) {
+    const box = await page.getByRole('button', { name, exact: true }).last().boundingBox();
+    expect((box?.x ?? 0) + (box?.width ?? 0), name).toBeLessThanOrEqual(390);
+  }
+});
+
 test('the trace viewer shows the latest generation and its prompt', async ({ page }) => {
   await connectDemo(page);
   await page.getByRole('button', { name: 'Fantasy' }).click();
