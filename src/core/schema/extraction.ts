@@ -86,7 +86,7 @@ export const turnRead = (cast: readonly string[], newNames: readonly string[]) =
   const [first, ...rest] = newNames;
   if (first === undefined) return z.object({ scene: sceneRead(cast) });
   // A card per asked name, at least one: a free list after the scene came back empty in 7 of 9 reads, 0 of 8 so. [measured: 2026-10-15-turn-read-cards.json]
-  const card = z.extend(IntroducedEntity, { name: z.enum([first, ...rest]) });
+  const card = z.object({ ...IntroducedEntity.shape, name: z.enum([first, ...rest]) });
   return z.object({ scene: sceneRead(cast), entities: z.array(card).check(z.minLength(1), z.maxLength(Math.min(MAX_INTRODUCED, newNames.length))) });
 };
 
