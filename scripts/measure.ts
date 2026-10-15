@@ -7,6 +7,7 @@
  *   memory-keep <url> [label]  does the memory for each planted Do/Say keep the fact? (recorded history, ~16 calls)
  *   contradiction <url> [label]  precision/recall of the contradiction check on 40 hand-labelled outputs
  *   state <url> <backup> [label] [labels-set]  scene and state reads over every AI turn of a backup, scored against bench/stateLabels.json
+ *   probe <url> <backup> <at> [label] [samples]  the reply to player action <at>, drawn [samples] times (default 3); graded by hand
  *   migrate <backup> [label]  entity facts to typed assertions: counts kept, dropped (conflicts on unlocked keys, stale spans), lost
  *   live <url> [label]  plays 20 scripted turns in the real app; per-turn stats, memories, summary
  *   repetition <url> [label]  the live turns alone: repeated phrases per turn, distinct 4-grams (MEASURE_SAMPLERS=64,0 for the "before")
@@ -33,6 +34,10 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
   state: {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/state.bench'],
     env: { MEASURE_URL: a, MEASURE_BACKUP: b, MEASURE_LABEL: c, MEASURE_LABELS: d },
+  },
+  probe: {
+    cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/probe'],
+    env: { MEASURE_URL: a, MEASURE_BACKUP: b, MEASURE_AT: c, MEASURE_LABEL: d, MEASURE_SAMPLES: process.argv[7] },
   },
   migrate: {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/migrate'],
