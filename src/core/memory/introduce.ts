@@ -31,6 +31,27 @@ function notePlace(adventure: Adventure, location: string, at: number): boolean 
 }
 const none = (): TurnUpdate => ({ touched: 0, speakers: new Map(), sceneUpdated: false });
 
+// Aliases too, so a character the text calls "the dragon" resolves (the two P7c misses); new names, so one met this turn can be there;
+// and who is present without a card yet, or the enum has no word for them.
+const castOf = (adventure: Adventure, names: readonly string[], present: readonly string[]) => {
+  const characters = adventure.entities.flatMap((e) => (e.kind === 'character' ? [e.name, ...e.aliases] : []));
+  return [...new Set([...characters, ...names, ...present])];
+};
+
+/** An edit of an older output (F30): cards for the new names that action holds. The scene and the turn-read marker are the last turn's, so both stay. */
+async function readEdit(adventure: Adventure, deps: ExtractDeps, i: number): Promise<TurnUpdate> {
+  const range = { fromAction: i, toAction: i + 1 };
+  const names = adventure.settings.memory.introductions && i < adventure.actions.length ? newNamesIn(adventure, range).slice(0, MAX_INTRODUCED) : [];
+  if (!names.length) return none();
+  const passage = passageOf(adventure, range);
+  const present = (adventure.plot.scene && sceneNames(adventure.plot.scene, adventure.entities).present) ?? [];
+  const reply = await readTurn(passage, names, { location: undefined, present }, castOf(adventure, names, present), deps);
+  const touched = reply ? foldEntities(adventure, reply.entities, passage, range) : 0;
+  const call = deps.cuts?.calls?.at(-1);
+  if (call) call.accepted = touched;
+  return { touched, speakers: new Map(), sceneUpdated: false };
+}
+
 /**
  * The turn read: one short call after every turn for where it ends (place, who and which named
  * items are there), plus a card for each new name so one exists before the next turn. The first
@@ -38,7 +59,8 @@ const none = (): TurnUpdate => ({ touched: 0, speakers: new Map(), sceneUpdated:
  * `scriptState.__introducedAt`/`__introducedHash` mark the turn read; a retried output with other
  * text is read again. A cut call leaves the marker, so the next idle period retries it.
  */
-export async function introduce(adventure: Adventure, deps: ExtractDeps): Promise<TurnUpdate> {
+export async function introduce(adventure: Adventure, deps: ExtractDeps, edited?: number): Promise<TurnUpdate> {
+  if (edited !== undefined) return readEdit(adventure, deps, edited);
   const n = adventure.actions.length;
   const last = adventure.actions.at(-1);
   const { introductions, sceneEachTurn } = adventure.settings.memory;
@@ -54,12 +76,8 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps): Promis
   const uncarded = (now?.present ?? []).filter((p) => !knownAs(adventure.entities, p) && passage.includes(p));
   // ponytail: names past the grammar's cap wait for the batch call; raise MAX_INTRODUCED if openings name more.
   const names = introductions ? [...new Set([...newNamesIn(adventure, range), ...uncarded])].slice(0, MAX_INTRODUCED) : [];
-  // Aliases too, so a character the text calls "the dragon" resolves (the two P7c misses); new names, so one met this turn can be there;
-  // and who is present without a card yet, or the enum has no word for them.
-  const characters = adventure.entities.flatMap((e) => (e.kind === 'character' ? [e.name, ...e.aliases] : []));
-  const cast = [...new Set([...characters, ...names, ...(now?.present ?? [])])];
   const prev = { location: now?.location, present: now?.present ?? [] };
-  const reply = names.length || sceneEachTurn ? await readTurn(passage, names, prev, cast, deps) : null;
+  const reply = names.length || sceneEachTurn ? await readTurn(passage, names, prev, castOf(adventure, names, prev.present), deps) : null;
   adventure.scriptState = { ...adventure.scriptState, __introducedAt: n, __introducedHash: hash };
   if (!reply) return none();
   // Cards first, so the scene's names resolve to them.

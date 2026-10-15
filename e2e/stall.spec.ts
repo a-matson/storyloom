@@ -30,9 +30,13 @@ test('a turn whose stream never starts fails as stalled, and Continue recovers',
   await page.clock.fastForward('01:31');
   await expect(page.getByRole('alert')).toContainText('The model sent nothing for 90 s');
 
+  // The error toast stays until dismissed, so it must never cover Send.
+  const toast = await page.getByRole('alert').boundingBox();
+  const send = await page.getByRole('button', { name: 'Send' }).boundingBox();
+  if (!toast || !send) throw new Error('no box');
+  expect(toast.y + toast.height <= send.y || send.y + send.height <= toast.y).toBe(true);
+
   stall = false;
-  // The toast sits over the command row until dismissed.
-  await page.getByRole('button', { name: 'dismiss' }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByText('The gate stays shut.')).toBeVisible();
 });

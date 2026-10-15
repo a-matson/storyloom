@@ -28,7 +28,7 @@ export function Toast({ message, error = false, onDismiss }: Props) {
     <Tag
       role={error ? 'alert' : undefined}
       className={cn(
-        'fixed bottom-6 left-1/2 z-30 -translate-x-1/2 rounded-md border bg-secondary px-3.5 py-2.5 text-control',
+        'fixed top-4 left-1/2 z-30 -translate-x-1/2 rounded-md border bg-secondary px-3.5 py-2.5 text-control',
         error ? 'border-danger' : 'border-border',
       )}
       onMouseEnter={hold}

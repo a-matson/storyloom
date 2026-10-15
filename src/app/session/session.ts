@@ -274,6 +274,7 @@ export class GameSession {
     const before = this.log.actions;
     fn(this.log, this.adv);
     followLog(this.adv, before, this.log.actions);
+    for (const [i, a] of this.log.actions.entries()) if (i < before.length && a !== before[i]) this.memory.edited(i);
     dropOrphanImages(this, before);
     // Editing the log makes a prefetched alternative stale unless it still targets the last action.
     if (this.prefetched && this.prefetched.actionId !== this.log.last?.id) this.dropPrefetch();

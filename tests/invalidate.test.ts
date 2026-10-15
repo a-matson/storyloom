@@ -116,3 +116,41 @@ describe('derived values follow edits', () => {
     expect(adv.scriptState.__summaryDirty).toBe(true);
   });
 });
+
+describe('erase drops what it introduced', () => {
+  /** Tamsin first seen at 2; Oriel at 0 with a sighting at 2. */
+  function erasable(): Adventure {
+    const adv = story();
+    adv.entities = [...adv.entities, { ...mergeEntity(undefined, { name: 'Oriel', kind: 'character', description: '' }, 0), lastSeen: 2 }];
+    adv.plot.scene = { location: 'the river', present: adv.entities.map((e) => e.id) };
+    return adv;
+  }
+
+  it('erase drops an entity first seen in the erased range', () => {
+    const adv = erasable();
+    followLog(adv, adv.actions, adv.actions.slice(0, 2));
+    expect(adv.entities.map((e) => e.name)).toEqual(['Oriel']);
+    expect(adv.assertions).toEqual([]);
+  });
+
+  it('removes it from scene.present', () => {
+    const adv = erasable();
+    const oriel = adv.entities[1]?.id;
+    followLog(adv, adv.actions, adv.actions.slice(0, 2));
+    expect(adv.plot.scene?.present).toEqual([oriel]);
+  });
+
+  it('keeps a canon, carded or player-touched one', () => {
+    for (const keep of [{ canon: true }, { cardId: 'c' }] as const) {
+      const adv = erasable();
+      adv.entities = adv.entities.map((e) => (e.name === 'Tamsin' ? { ...e, ...keep } : e));
+      followLog(adv, adv.actions, adv.actions.slice(0, 2));
+      expect(adv.entities.map((e) => e.name)).toEqual(['Tamsin', 'Oriel']);
+    }
+    const adv = erasable();
+    const tamsin = adv.entities[0]?.id ?? '';
+    adv.assertions = [...adv.assertions, byPlayer(tamsin, 2, { kind: 'trait', text: 'She lies.' })];
+    followLog(adv, adv.actions, adv.actions.slice(0, 2));
+    expect(adv.entities.map((e) => e.name)).toEqual(['Tamsin', 'Oriel']);
+  });
+});

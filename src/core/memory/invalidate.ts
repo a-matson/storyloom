@@ -96,6 +96,24 @@ export function followLog(adventure: Adventure, before: readonly Action[], after
     );
   }
   dropUnsupported(adventure, after, new Set(changed.map((c) => c.i)));
+  if (after.length < before.length) dropUnborn(adventure, after.length);
+}
+
+/**
+ * An erase (F21): entities first seen at or after `n` go with their assertions and their place in the
+ * scene, unless canon, carded or touched by the player. ponytail: an undo of the erase does not bring
+ * them back; the next turn read re-cards a name it meets.
+ */
+function dropUnborn(adventure: Adventure, n: number): void {
+  const touched = new Set(
+    adventure.assertions.flatMap((a) => (a.pinned || (a.basis === 'player' && a.kind !== 'state' && a.kind !== 'look') ? [a.subject] : [])),
+  );
+  const gone = new Set(adventure.entities.flatMap((e) => (e.firstSeen >= n && !e.canon && !e.cardId && !touched.has(e.id) ? [e.id] : [])));
+  if (!gone.size) return;
+  adventure.entities = adventure.entities.filter((e) => !gone.has(e.id));
+  adventure.assertions = adventure.assertions.filter((a) => !gone.has(a.subject));
+  const scene = adventure.plot.scene;
+  if (scene?.present) adventure.plot = { ...adventure.plot, scene: { ...scene, present: scene.present.filter((p) => !gone.has(p)) } };
 }
 
 /** An edit or erase of an action the summary already read: the next refresh rebuilds it from the memories. */

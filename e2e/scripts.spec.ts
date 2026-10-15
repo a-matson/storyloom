@@ -47,8 +47,6 @@ test('an info toast auto-dismisses, and hovering it holds it on screen', async (
 
   const toast = page.getByRole('status').filter({ hasText: 'A bell rings somewhere.' });
   await expect(toast).toBeVisible();
-  // The toast pops up under the cursor left on Send, and a stationary cursor fires no mouseover; move away first.
-  await page.mouse.move(0, 0);
   // Pointed at, the timer is held: still there well past the 5 s it would otherwise live.
   await toast.hover();
   await page.waitForTimeout(6000);
