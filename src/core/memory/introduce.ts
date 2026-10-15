@@ -75,6 +75,11 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps): Promis
   const plot = scene ? withScene(adventure.plot, scene, name, n - 1, { sourceId: last.id, sourceHash: hash }, adventure.entities) : adventure.plot;
   const sceneUpdated = plot !== adventure.plot;
   adventure.plot = plot;
+  // Present by this read is a second sighting: `isConfirmed` kept a character the turn read carded out of the prompt until a batch range.
+  if (scene) {
+    const here = new Set(plot.scene?.present);
+    adventure.entities = adventure.entities.map((e) => (here.has(e.id) && e.lastSeen < n - 1 ? (touched++, { ...e, lastSeen: n - 1 }) : e));
+  }
   const call = deps.cuts?.calls?.at(-1);
   if (call) call.accepted = touched + (sceneUpdated ? 1 : 0);
   // No speakers: the short reply leaves them to the client guess and the batch call.
