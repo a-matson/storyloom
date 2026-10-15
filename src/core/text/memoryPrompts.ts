@@ -10,10 +10,13 @@ export const MEMORY_SYSTEM =
  * against that dropped real facts. [measured: 2026-10-08-memory-keep-after]
  * The "never say" clause: without it a dogfood range gave the player a body and a dress they never had
  * (5/5 invented, 0/5 with it); memory-keep 14 and 10/16 against main's 13. [measured: 2026-10-14-memory-replay-28-33-m13-7]
+ * The "> You" clause: `> You say "Minos, …"` read as Minos speaking ("Minos's confession") in 3/10, 3/20 with it;
+ * memory-keep 11 and 10 against main's 11. [measured: 2026-10-15-memory-replay-47-53-s3-after3]
  */
 const MEMORY_FORMAT =
   'Format: 1–4 past-tense sentences. First, anything the player states about themselves (name, body, belongings, past), if they state anything; ' +
   'never say what the player is or looks like unless the passage does. ' +
+  'Lines starting "> You" are the player\'s: what is said or done there is yours, kept as "you", even when the line opens with a name. ' +
   'Then the facts, decisions, discoveries and relationship changes, with every proper name kept. ' +
   'No dialogue, no prose, no commentary.\n\n';
 
