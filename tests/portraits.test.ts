@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { entityEdits } from '@app/session/entities';
 import { PORTRAIT_PX, PORTRAIT_RETRY_TURNS, queuePortraits, renderPortrait } from '@app/session/portraits';
-import { portraitPrompt, portraitStyle } from '@app/session/portraitPrompt';
+import { isPortraitStale, portraitPrompt, portraitStyle } from '@app/session/portraitPrompt';
 import { migrateEntities } from '@core/memory/assertions';
-import { createBlankAdventure, type LegacyEntity } from '@core/model';
+import { createBlankAdventure, type Entity, type LegacyEntity } from '@core/model';
 import type { ImageProvider, ImageRequest } from '@core/ports';
 import { own } from './fixtures/assertions';
 import { settled, setup } from './fixtures/session';
@@ -246,6 +246,24 @@ describe('portrait edits', () => {
     session.erase();
     await vi.waitFor(() => expect(ent()?.referenceImageId).toBeUndefined());
     expect(images.size).toBe(1);
+  });
+
+  it('a drawn portrait keeps its basis; a look change makes it stale, a style change or an upload does not', async () => {
+    const { session } = withImages(async () => new Blob(['png']), { ...lena, id: 'ent_s' });
+    const edits = entityEdits(session);
+    const ent = () => session.getSnapshot().adventure.entities.find((e) => e.id === 'ent_s');
+    const stale = () => isPortraitStale(ent() as Entity, session.getSnapshot().adventure.assertions);
+    await edits.regeneratePortrait('ent_s');
+    expect(ent()?.portraitBasis).toMatch(/\S/);
+    session.updateSettings({ image: { ...session.getSnapshot().adventure.settings.image, portraitStyle: 'pencil sketch' } });
+    expect(stale()).toBe(false);
+    edits.setIdentity('ent_s', 'A ferrywoman with a new scar.');
+    expect(stale()).toBe(true);
+    await edits.regeneratePortrait('ent_s');
+    expect(stale()).toBe(false);
+    edits.setIdentity('ent_s', 'A retired ferrywoman.');
+    await edits.uploadPortrait('ent_s', new Blob(['jpg']));
+    expect(ent()?.portraitBasis).toBeUndefined();
   });
 
   it('shows a failed redraw', async () => {

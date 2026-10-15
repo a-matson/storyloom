@@ -70,7 +70,7 @@ function renumber(a: Exported): Adventure {
     })),
     storyCards: a.storyCards.map((c) => ({ ...c, id: id(c.id) })),
     // Without the id the portrait is drawn again between turns.
-    entities: a.entities.map(({ portraitId: _portrait, referenceImageId: _reference, ...e }) => ({
+    entities: a.entities.map(({ portraitId: _portrait, portraitBasis: _basis, referenceImageId: _reference, ...e }) => ({
       ...e,
       id: id(e.id),
       relations: e.relations.map((r) => ({ ...r, to: id(r.to) })),

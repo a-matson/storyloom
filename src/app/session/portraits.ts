@@ -1,11 +1,11 @@
 import { indexAssertions } from '@core/memory';
 import { newId, type Adventure, type AppSettings, type Entity } from '@core/model';
-import { seedOf, trackJob } from '@core/trace';
+import { hashPrompt, seedOf, trackJob } from '@core/trace';
 import { downscale } from '../image';
 import { imageQueue } from './imageQueue';
 import { withProgress } from './imageProgress';
 import { imageFailure } from './images';
-import { PORTRAIT_NEGATIVE, portraitPrompt, portraitStyle } from './portraitPrompt';
+import { PORTRAIT_NEGATIVE, portraitBasis, portraitPrompt, portraitStyle } from './portraitPrompt';
 import type { GameSnapshot, PortraitState, SessionServices } from './types';
 
 export interface PortraitHost {
@@ -61,12 +61,10 @@ export async function renderPortrait(host: PortraitHost, id: string): Promise<vo
   const e = find(host, id);
   if (!e) return;
   const s = host.adv.settings.image;
+  const own = indexAssertions(host.adv.assertions).of(e.id);
+  const basis = hashPrompt(portraitBasis(e, own));
   const req = {
-    prompt: portraitPrompt(
-      e,
-      indexAssertions(host.adv.assertions).of(e.id),
-      [s.portraitStyle ?? portraitStyle(host.adv.tags), s.promptSuffix?.trim()].filter(Boolean).join(', '),
-    ),
+    prompt: portraitPrompt(e, own, [s.portraitStyle ?? portraitStyle(host.adv.tags), s.promptSuffix?.trim()].filter(Boolean).join(', ')),
     negativePrompt: [PORTRAIT_NEGATIVE, s.negativePrompt].filter(Boolean).join(', '),
     width: s.portraitSize,
     height: s.portraitSize,
@@ -88,27 +86,27 @@ export async function renderPortrait(host: PortraitHost, id: string): Promise<vo
     });
     setState(host, id, undefined);
     if (find(host, id)?.portraitId !== e.portraitId) return;
-    await setPortrait(host, id, await downscale(blob, PORTRAIT_PX));
+    await setPortrait(host, id, await downscale(blob, PORTRAIT_PX), basis);
   } catch (err) {
     setState(host, id, { status: 'failed', error: imageFailure(err, ms), turn: turns(host.adv), down: !(await provider.health()) });
     throw err;
   }
 }
 
-/** Store `blob` (already downscaled) as `id`'s portrait; the old blob is dropped. */
-export async function setPortrait(host: PortraitHost, id: string, blob: Blob): Promise<void> {
+/** Store `blob` (already downscaled) as `id`'s portrait; the old blob is dropped. `basis` only for a drawn one. */
+export async function setPortrait(host: PortraitHost, id: string, blob: Blob, basis?: string): Promise<void> {
   if (!find(host, id)) return;
   const portraitId = newId('img_');
   await host.svc.storage.putImage(host.adv.id, portraitId, blob);
   const old = find(host, id)?.portraitId;
-  update(host, id, (e) => ({ ...e, portraitId }));
+  update(host, id, ({ portraitBasis: _old, ...e }) => ({ ...e, portraitId, ...(basis !== undefined && { portraitBasis: basis }) }));
   if (old !== undefined) dropPortrait(host, old);
 }
 
 export function clearPortrait(host: PortraitHost, id: string): void {
   const old = find(host, id)?.portraitId;
   if (old === undefined) return;
-  update(host, id, ({ portraitId: _cleared, ...e }) => e);
+  update(host, id, ({ portraitId: _cleared, portraitBasis: _basis, ...e }) => e);
   dropPortrait(host, old);
 }
 

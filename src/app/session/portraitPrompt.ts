@@ -1,5 +1,6 @@
 import type { Assertion, Entity } from '@core/model';
-import { appearanceOf, identityText, textOf } from '@core/memory';
+import { appearanceOf, identityText, indexAssertions, textOf } from '@core/memory';
+import { hashPrompt } from '@core/trace';
 
 // Pure, but in app beside its only user: a core `load*()` that only lazy code calls moves its
 // `import()` into the lazy chunk, which split `preload-helper` out of the start-up chunk (+0.34 kB).
@@ -24,12 +25,21 @@ export function portraitStyle(tags: readonly string[]): string {
   return GENRE_STYLE.find(([re]) => tags.some((t) => re.test(t)))?.[1] ?? NEUTRAL_STYLE;
 }
 
-/** Looks first: SD 1.5 weighs the start of a prompt most. */
-export function portraitPrompt(e: Pick<Entity, 'canon' | 'cardId' | 'description'>, as: readonly Assertion[], style: string): string {
+/** Who the portrait shows, without the style: a style change alone does not make a portrait stale. */
+export function portraitBasis(e: Pick<Entity, 'canon' | 'cardId' | 'description'>, as: readonly Assertion[]): string {
   // Looks and states are in `appearanceOf` or not looks at all; `looked:` is the old, replaced looks.
   const looks = as
     .flatMap((a) => (a.kind === 'trait' || a.kind === 'effect' || a.kind === 'relationship' ? [textOf(a).trim()] : []))
     .filter((t) => !t.startsWith('looked: ') && APPEARANCE.test(t))
     .slice(0, 2);
-  return ['portrait, head and shoulders', appearanceOf(as), identityText(e, as).trim(), ...looks, style.trim()].filter(Boolean).join(', ');
+  return [appearanceOf(as), identityText(e, as).trim(), ...looks].filter(Boolean).join(', ');
 }
+
+/** Looks first: SD 1.5 weighs the start of a prompt most. */
+export function portraitPrompt(e: Pick<Entity, 'canon' | 'cardId' | 'description'>, as: readonly Assertion[], style: string): string {
+  return ['portrait, head and shoulders', portraitBasis(e, as), style.trim()].filter(Boolean).join(', ');
+}
+
+/** A drawn portrait whose looks changed since; an uploaded one has no basis, so it is never stale. */
+export const isPortraitStale = (e: Entity, as: readonly Assertion[]): boolean =>
+  !!e.portraitId && !!e.portraitBasis && e.portraitBasis !== hashPrompt(portraitBasis(e, indexAssertions(as).of(e.id)));

@@ -48,6 +48,8 @@ export const Entity = z.object({
   firstSeen: count,
   lastSeen: count,
   portraitId: z.optional(z.string()),
+  /** `hashPrompt` of the looks a drawn portrait was drawn from; unset for an uploaded one. */
+  portraitBasis: z.optional(z.string()),
   /** A See action's `imageId` the player chose as this character's reference; dropped with that blob. */
   referenceImageId: z.optional(z.string()),
   /** The appearance tags frozen when the reference was set: later See prompts repeat them verbatim. */
