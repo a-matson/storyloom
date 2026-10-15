@@ -1,10 +1,9 @@
 import type { ModelSettings as Model } from '@core/model';
 import { NumberInput } from './NumberInput';
-import { Section, Setting } from './Section';
+import { describedBy, Section, Setting } from './Section';
+import { MODEL_HELP, type ModelNumberKey } from './settingHelp';
 
-type NumKey = { [K in keyof Model]-?: Model[K] extends number | undefined ? K : never }[keyof Model];
-
-const NUMBERS: { label: string; key: NumKey; step: number; min: number; max?: number }[] = [
+const NUMBERS: { label: string; key: ModelNumberKey; step: number; min: number; max?: number }[] = [
   { label: 'Response length', key: 'responseLength', step: 10, min: 16, max: 2048 },
   { label: 'Temperature', key: 'temperature', step: 0.05, min: 0, max: 3 },
   { label: 'Top K', key: 'topK', step: 10, min: 0 },
@@ -21,11 +20,25 @@ const NUMBERS: { label: string; key: NumKey; step: number; min: number; max?: nu
 export function ModelSettings({ model, onChange }: { model: Model; onChange: (patch: Partial<Model>) => void }) {
   return (
     <Section title="Model settings">
-      {NUMBERS.map((n) => (
-        <Setting key={n.key} label={n.label} htmlFor={`m-${n.key}`}>
-          <NumberInput id={`m-${n.key}`} step={n.step} min={n.min} max={n.max} optional value={model[n.key]} onCommit={(v) => onChange({ [n.key]: v })} />
-        </Setting>
-      ))}
+      {NUMBERS.map((n) => {
+        const id = `m-${n.key}`;
+        const { help, warn } = MODEL_HELP[n.key];
+        const warning = warn?.(model[n.key], model);
+        return (
+          <Setting key={n.key} label={n.label} htmlFor={id} help={help} warn={warning}>
+            <NumberInput
+              id={id}
+              step={n.step}
+              min={n.min}
+              max={n.max}
+              optional
+              describedBy={describedBy(id, help, warning)}
+              value={model[n.key]}
+              onCommit={(v) => onChange({ [n.key]: v })}
+            />
+          </Setting>
+        );
+      })}
     </Section>
   );
 }

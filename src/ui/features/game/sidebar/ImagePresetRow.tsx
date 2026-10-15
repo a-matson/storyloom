@@ -71,7 +71,11 @@ export function ImagePresetRow({ image, onImage, app, onAppChange }: Props) {
 
   return (
     <>
-      <Setting label="Apply preset" htmlFor="img-preset" title="Sampler, steps, CFG, clip skip and hires pass as checkpoint pages usually give them">
+      <Setting
+        label="Apply preset"
+        htmlFor="img-preset"
+        help="Sets sampler, steps, CFG, clip skip and hires pass as checkpoint pages usually give them. Size, portraits and style stay as they are."
+      >
         <Select
           id="img-preset"
           className="h-8 w-45"

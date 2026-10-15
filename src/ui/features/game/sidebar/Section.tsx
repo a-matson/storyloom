@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { IconChevron } from '@ui/components/Icons';
+import { InfoTip } from '@ui/components/ui/info-tip';
 import { cn } from '@ui/lib/utils';
 
 export const SECTION = 'rounded-[10px] border border-border bg-secondary';
@@ -33,14 +34,35 @@ export function Section({ title, tokens, badge, defaultOpen = false, children }:
   );
 }
 
+/** Ids of a setting's help and warning, for the control's `aria-describedby`. */
+export const describedBy = (id: string, help?: string, warn?: string) => [help && `${id}-help`, warn && `${id}-warn`].filter(Boolean).join(' ') || undefined;
+
+interface SettingProps {
+  label: string;
+  htmlFor: string;
+  /** What it does, its default, when to change it. */
+  help?: string | undefined;
+  /** Shown only while the value is risky. */
+  warn?: string | undefined;
+  children: ReactNode;
+}
+
 /** Label + control row. */
-export function Setting({ label, htmlFor, title, children }: { label: string; htmlFor: string; title?: string; children: ReactNode }) {
+export function Setting({ label, htmlFor, help, warn, children }: SettingProps) {
   return (
-    <div className="flex items-center gap-2.5 text-control">
-      <label htmlFor={htmlFor} title={title} className="grow">
-        {label}
-      </label>
-      {children}
-    </div>
+    <>
+      <div className="relative flex items-center gap-2.5 text-control">
+        <span className="flex grow items-center gap-1.5">
+          <label htmlFor={htmlFor}>{label}</label>
+          {help !== undefined && <InfoTip id={`${htmlFor}-help`} text={help} />}
+        </span>
+        {children}
+      </div>
+      {warn !== undefined && (
+        <p role="note" id={`${htmlFor}-warn`} className="-mt-1 text-caption text-warning">
+          {warn}
+        </p>
+      )}
+    </>
   );
 }

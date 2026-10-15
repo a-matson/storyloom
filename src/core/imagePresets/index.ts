@@ -8,7 +8,7 @@ type ImageSettings = AdventureSettings['image'];
  * the adventure's own and stay as they are. All [provisional] until the live pair is measured.
  */
 export const IMAGE_PRESETS: ImagePreset[] = [
-  { id: 'sd15', name: 'SD 1.5 default', settings: { sampler: 'Euler a', steps: 24, cfgScale: 5, clipSkip: 1, hires: false } },
+  { id: 'sd15', name: 'SD 1.5 default', settings: { sampler: 'Euler a', steps: 24, cfgScale: 5, hires: false } },
   {
     id: 'realistic',
     name: 'Realistic',

@@ -36,6 +36,42 @@ test('an image preset is saved for every adventure, applied and deleted', async 
   await expect(preset.locator('optgroup')).toHaveCount(0);
 });
 
+test('every image and model setting has help, and clip skip 1 warns', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /^Demo \(no GPU\)/ }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Fantasy' }).click();
+  await page.getByRole('tab', { name: 'Gameplay' }).click();
+  await page.getByText('Model settings', { exact: true }).click();
+  await page.getByText('Images', { exact: true }).click();
+
+  const inputs = page.getByRole('spinbutton');
+  const count = await inputs.count();
+  expect(count).toBeGreaterThan(15);
+  for (let i = 0; i < count; i++) {
+    const ids = (await inputs.nth(i).getAttribute('aria-describedby')) ?? '';
+    const helpId = ids.split(' ').find((id) => id.endsWith('-help'));
+    expect(helpId, (await inputs.nth(i).getAttribute('id')) ?? '').toBeDefined();
+    await expect(page.locator(`[role="tooltip"][id="${helpId}"]`)).not.toBeEmpty();
+  }
+
+  // Keyboard: focus shows the tooltip, Escape hides it.
+  const about = page.locator('button[aria-describedby="img-clipSkip-help"]');
+  await about.focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#img-clipSkip-help')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#img-clipSkip-help')).toBeHidden();
+
+  const clip = page.getByRole('spinbutton', { name: 'Clip skip' });
+  await clip.fill('1');
+  await expect(page.getByRole('note').filter({ hasText: 'Blank white' })).toBeVisible();
+  await expect(clip).toHaveAttribute('aria-describedby', /img-clipSkip-warn/);
+  await clip.fill('2');
+  await expect(page.getByRole('note').filter({ hasText: 'Blank white' })).toHaveCount(0);
+});
+
 // Departure 5: clearing or zeroing a number field used to write 0 straight into the settings.
 test('a number setting cannot be left at 0', async ({ page }) => {
   await page.goto('/');

@@ -14,6 +14,7 @@ export function NumberInput({
   max,
   step,
   optional,
+  describedBy,
   onCommit,
 }: {
   id: string;
@@ -22,6 +23,7 @@ export function NumberInput({
   max?: number | undefined;
   step: number;
   optional?: boolean;
+  describedBy?: string | undefined;
   onCommit: (value: number | undefined) => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
@@ -30,6 +32,7 @@ export function NumberInput({
   return (
     <input
       id={id}
+      aria-describedby={describedBy}
       className={NUMBER_INPUT}
       type="number"
       step={step}

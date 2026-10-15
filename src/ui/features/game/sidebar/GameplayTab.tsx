@@ -8,6 +8,7 @@ import { ModelSettings } from './ModelSettings';
 import { NeverWrite } from './NeverWrite';
 import { NumberInput } from './NumberInput';
 import { Section, Setting } from './Section';
+import { MODEL_HELP } from './settingHelp';
 import { SettingSwitch } from './SettingSwitch';
 import { StateRead } from './StateRead';
 
@@ -61,14 +62,14 @@ function StoryGenerator({ s, update }: { s: Settings; update: Update }) {
       <SettingSwitch
         id="dynamic-samplers"
         label="Dynamic samplers"
-        title="Each turn nudges the loaded model's preset samplers (temperature, top-k, seed) instead of using Model settings, against sameness in long stories; the prompt and cache are unaffected"
+        help="Each turn nudges the loaded model's preset samplers (temperature, top-k, seed) instead of using Model settings, against sameness in long stories; the prompt and cache are unaffected"
         checked={s.model.dynamic}
         onChange={(on) => update({ model: { ...s.model, dynamic: on } })}
       />
       <Setting
         label="Content"
         htmlFor="content"
-        title="Sent in every system prompt. Unrestricted: adult fiction, nothing softened or skipped. Custom: your own text."
+        help="Sent in every system prompt. Unrestricted: adult fiction, nothing softened or skipped. Custom: your own text."
       >
         <Select
           id="content"
@@ -99,9 +100,10 @@ function MemorySystem({ s, update }: { s: Settings; update: Update }) {
   const context = (patch: Partial<Settings['context']>) => update({ context: { ...s.context, ...patch } });
   return (
     <Section title="Memory system" defaultOpen>
-      <Setting label="Context length" htmlFor="ctx">
+      <Setting label="Context length" htmlFor="ctx" help={MODEL_HELP.contextLength.help}>
         <input
           id="ctx"
+          aria-describedby="ctx-help"
           className="w-30"
           type="range"
           min={1024}
@@ -117,28 +119,29 @@ function MemorySystem({ s, update }: { s: Settings; update: Update }) {
       <SettingSwitch
         id="contradiction-check"
         label="Check each turn for contradictions"
-        title="One extra helper call after each turn (a few seconds on slot 1) checks the output against the scene and locked values; it runs anyway when someone with a locked value is present"
+        help="One extra helper call after each turn (a few seconds on slot 1) checks the output against the scene and locked values; it runs anyway when someone with a locked value is present"
         checked={s.memory.contradictionCheck ?? false}
         onChange={(on) => memory({ contradictionCheck: on })}
       />
       <SettingSwitch
         id="entity-facts"
         label="Send entity facts and cards"
-        title="Now-lines for who is in the scene and identities for items and who is named; off, only pinned facts of who is here or named; rules and the scene line are sent either way"
+        help="Now-lines for who is in the scene and identities for items and who is named; off, only pinned facts of who is here or named; rules and the scene line are sent either way"
         checked={s.memory.entityFacts}
         onChange={(on) => memory({ entityFacts: on })}
       />
       <SettingSwitch
         id="introductions"
         label="Create character cards as they are introduced"
-        title="One short helper call on slot 1 after a turn that names someone new"
+        help="One short helper call on slot 1 after a turn that names someone new"
         checked={s.memory.introductions}
         onChange={(on) => memory({ introductions: on })}
       />
       <StateRead value={s.memory.stateRead} onChange={(stateRead) => memory({ stateRead })} />
-      <Setting label="Bank size" htmlFor="bank">
+      <Setting label="Bank size" htmlFor="bank" help="Most memories the bank keeps for this adventure. Default 200.">
         <NumberInput
           id="bank"
+          describedBy="bank-help"
           min={10}
           max={2000}
           step={10}
@@ -151,21 +154,21 @@ function MemorySystem({ s, update }: { s: Settings; update: Update }) {
       <SettingSwitch
         id="cache-stable"
         label="Cache-stable layout"
-        title="History before cards/memories so the backend reuses its KV cache"
+        help="History before cards/memories so the backend reuses its KV cache"
         checked={s.context.cacheStableLayout}
         onChange={(on) => context({ cacheStableLayout: on })}
       />
       <SettingSwitch
         id="cache-warming"
         label="Warm cache between turns"
-        title="After each turn, prefill the next turn's stable prefix so the first token arrives faster"
+        help="After each turn, prefill the next turn's stable prefix so the first token arrives faster"
         checked={s.context.cacheWarming ?? true}
         onChange={(on) => context({ cacheWarming: on })}
       />
       <SettingSwitch
         id="retry-prefetch"
         label="Prefetch a retry"
-        title="Generate one retry alternative in the background on a second slot (needs -np 2 and spare VRAM)"
+        help="Generate one retry alternative in the background on a second slot (needs -np 2 and spare VRAM)"
         checked={s.context.retryPrefetch ?? false}
         onChange={(on) => context({ retryPrefetch: on })}
       />
@@ -181,7 +184,7 @@ function Feedback({ s, update }: { s: Settings; update: Update }) {
       <SettingSwitch
         id="context-warning"
         label="Context warning"
-        title="Red ⚠ on the context meter when story cards or plot components did not fit"
+        help="Red ⚠ on the context meter when story cards or plot components did not fit"
         checked={s.context.contextWarning ?? true}
         onChange={(on) => context({ contextWarning: on })}
       />

@@ -6,7 +6,7 @@ type Mode = AdventureSettings['memory']['stateRead'];
 
 export function StateRead({ value, onChange }: { value: Mode; onChange: (v: Mode) => void }) {
   return (
-    <Setting label="State read" htmlFor="state-read" title="One helper call after the turn read for what changed for whoever is there">
+    <Setting label="State read" htmlFor="state-read" help="One helper call after the turn read for what changed for whoever is there">
       <Select
         id="state-read"
         className="h-8 w-35"
