@@ -1,13 +1,10 @@
 import type { Entity, PlotComponents, Scene } from '../model/types';
 import { NOBODY, type SceneRead } from '../schema/extraction';
-import { knownAs, norm, sceneIds, sceneNames } from './names';
+import { knownAs, norm, sceneIds, sceneNames, withPresence } from './names';
 
 /** Location changes the Plot tab can show. [provisional] */
 export const SCENE_LOG_CAP = 50;
-/** Changes of who is present kept for witnessed-by clauses. [provisional] */
-export const PRESENCE_CAP = 200;
-
-const key = (ids: readonly string[]) => ids.toSorted().join('\n');
+export { PRESENCE_CAP } from './names';
 
 /** The outermost place `e` is part of, so a room inside the current place is not a move. */
 function outermost(places: readonly Entity[], e: Entity | undefined): Entity | undefined {
@@ -86,7 +83,6 @@ export function withScene(
   if (!scene || (r.scene === named && JSON.stringify(scene) === JSON.stringify(old))) return plot;
   const where = r.scene?.location;
   const log = r.moved && where ? [...(plot.sceneLog ?? []), { at, location: where }].slice(-SCENE_LOG_CAP) : plot.sceneLog;
-  const changed = key(plot.presence?.at(-1)?.present ?? []) !== key(scene.present);
-  const presence = changed ? [...(plot.presence ?? []), { at, present: scene.present }].slice(-PRESENCE_CAP) : plot.presence;
+  const presence = withPresence(plot, scene.present, at);
   return { ...plot, scene: { ...scene, ...source }, ...(log && { sceneLog: log }), ...(presence && { presence }) };
 }

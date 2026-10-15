@@ -86,6 +86,21 @@ describe('GameSession', () => {
     expect(session.getSnapshot().error).toBe('Could not save: disk full');
   });
 
+  // Dogfood M13-9: a hand-fixed Present never reached `presence`, so witnessed-by missed who the player sent away.
+  it('logs a hand edit of who is present at the last action', async () => {
+    const { session } = setup();
+    session.submit('do', 'look');
+    await settled(session);
+    const at = session.getSnapshot().actions.length - 1;
+    session.updatePlot({ scene: { location: 'the shop', present: ['Minos', 'Weever'] } });
+    session.updatePlot({ scene: { location: 'the shop', present: ['Weever', 'Minos'], weather: 'rain' } });
+    session.updatePlot({ scene: { location: 'the shop', present: ['Minos'] } });
+    expect(session.getSnapshot().adventure.plot.presence).toEqual([
+      { at, present: ['Minos', 'Weever'] },
+      { at, present: ['Minos'] },
+    ]);
+  });
+
   it('cancels a running turn and saves on close', async () => {
     const { session, saved } = setup();
     session.submit('do', 'go');

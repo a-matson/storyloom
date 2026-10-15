@@ -1,5 +1,5 @@
 import { ActionLog } from '@core/log';
-import { followLog } from '@core/memory';
+import { followLog, withPresence } from '@core/memory';
 import type { Adventure, AdventureSettings, AppSettings, PlotComponents, ReadKind, TurnTrace } from '@core/model';
 import type { Embedder, ScriptRunner } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
@@ -289,7 +289,13 @@ export class GameSession {
   readonly redo = () => this.mutate((log) => log.redo());
   readonly edit = (id: string, text: string) => this.mutate((log) => log.edit(id, text));
   readonly setVersion = (id: string, i: number) => this.mutate((log) => log.setActiveVersion(id, i));
-  readonly updatePlot = (patch: Partial<PlotComponents>) => this.mutate((_, adv) => (adv.plot = { ...adv.plot, ...patch }));
+  // A hand edit of who is present is logged like a turn read's, so witnessed-by sees who the player sent away.
+  readonly updatePlot = (patch: Partial<PlotComponents>) =>
+    this.mutate((_, adv) => {
+      const plot = { ...adv.plot, ...patch };
+      const presence = patch.scene && withPresence(plot, patch.scene.present, adv.actions.length - 1);
+      adv.plot = presence ? { ...plot, presence } : plot;
+    });
   readonly updateSettings = (patch: Partial<AdventureSettings>) => this.mutate((_, adv) => (adv.settings = { ...adv.settings, ...patch }));
   readonly updateMeta = (patch: Partial<Pick<Adventure, 'title' | 'description' | 'tags' | 'coverId'>>) => this.mutate((_, adv) => Object.assign(adv, patch));
   readonly setStoryCards = (cards: Adventure['storyCards']) => this.mutate((_, adv) => (adv.storyCards = cards));
