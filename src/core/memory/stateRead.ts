@@ -15,8 +15,8 @@ import { norm } from './names';
 
 /** Actions the state read reads: the last AI output and the player line before it. [measured: 2026-10-13-state-probe-m12-dogfood P8b] */
 const STATE_SPAN = 2;
-/** P8b: 5.5–6.4 s for one present character, 12 s for three. [measured: 2026-10-13-state-probe-m12-dogfood] */
-const TOKENS_EACH = 50;
+/** P8b: 5.5–6.4 s for one present character, 12 s for three; at 40, 0/24 calls hit the cap. [measured: 2026-10-15-state-s4b.json] */
+const TOKENS_EACH = 40;
 const TOKENS_CAP = 160;
 
 type Subject = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'canon' | 'cardId' | 'canonKeys'>;
@@ -70,7 +70,8 @@ export async function readState(adventure: Adventure, deps: ExtractDeps): Promis
   const hash = hashPrompt(actionText(last));
   if (adventure.scriptState.__stateAt === n && adventure.scriptState.__stateHash === hash) return out;
   const range = { fromAction: Math.max(0, n - STATE_SPAN), toAction: n };
-  const max = 2 * cast.length;
+  // A turn rarely changes more than one key per subject; 2 per subject invited echoes. [measured: 2026-10-15-state-s4b.json]
+  const max = cast.length + 1;
   const reply = await ask(adventure, cast, passageOf(adventure, range), max, deps);
   adventure.scriptState = { ...adventure.scriptState, __stateAt: n, __stateHash: hash };
   if (!reply) return out;

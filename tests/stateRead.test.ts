@@ -46,13 +46,24 @@ describe('the state read', () => {
     const schema = JSON.stringify(reqs[0]?.jsonSchema);
     expect(schema).toContain('"enum":["Mira","Amulet","you"]');
     expect(schema).not.toContain('nobody');
-    // Caps: 2 × present entries, 50 tokens each up to 160.
-    expect(reqs[0]?.maxTokens).toBe(150);
-    expect(reqs[0]?.jsonSchema).toMatchObject({ properties: { changes: { maxItems: 6 } } });
+    // Caps: present + 1 entries, 40 tokens each up to 160.
+    expect(reqs[0]?.maxTokens).toBe(120);
+    expect(reqs[0]?.jsonSchema).toMatchObject({ properties: { changes: { maxItems: 4 } } });
+    expect(schema).not.toContain('"location"');
 
     const empty = setup(['You wait.', 'Rain falls.'], [], []);
     await readState(empty.adv, empty.deps);
     expect(empty.reqs).toHaveLength(0);
+  });
+
+  it('sends no location: the scene is the only place of a character', async () => {
+    const { adv, reqs, deps } = setup(['You wait.', 'Mira sits.'], [], [mira]);
+    adv.assertions = [{ id: 'l', subject: mira.id, producer: 'turn', at: 0, basis: 'stated', since: 0, kind: 'state', key: 'location', value: 'shop floor' }];
+    await readState(adv, deps);
+    const prompt = reqs[0]?.prompt ?? '';
+    expect(prompt).not.toContain('location');
+    expect(prompt).not.toContain('shop floor');
+    expect(prompt).toContain('If nothing changed');
   });
 
   it('caps the tokens at 160', async () => {
@@ -97,7 +108,7 @@ describe('the state read', () => {
     expect((await readState(adv, deps)).rejected.map((x) => x.reason)).toEqual(['cut', 'unchanged']);
 
     // Padded toward the cap: a value ending on a function word is unfinished.
-    const padded = setup(['You wait.', 'Mira stands by the cottage.'], [{ who: 'Mira', key: 'location', now: 'near cottage in the', at: 4 }]);
+    const padded = setup(['You wait.', 'Mira stands by the cottage.'], [{ who: 'Mira', key: 'mood', now: 'calm in the', at: 4 }]);
     expect((await readState(padded.adv, padded.deps)).rejected.map((x) => x.reason)).toEqual(['cut']);
   });
 

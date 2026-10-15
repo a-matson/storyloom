@@ -22,9 +22,9 @@ describe('state bench scoring', () => {
     const rows = [
       { i: 5, cast: ['Minos'], location: 'noodle shop', present: ['Minos'] },
       { i: 27, cast: ['Minos', 'Vorthak', 'Weever'], location: 'the cottage', present: ['Minos', 'Vorthak', 'Weever'] },
-      { i: 61, cast: ['Minos', 'Vorthak', 'Weever'], location: 'bed', present: ['Minos'], record: { Minos: { location: 'Bedroom', condition: 'asleep' } } },
+      { i: 61, cast: ['Minos', 'Vorthak', 'Weever'], location: 'bed', present: ['Minos'], record: { Minos: { posture: 'sitting', condition: 'asleep' } } },
     ];
-    expect(scoreRows(rows, set)).toEqual({ turns: 3, placeOk: 2, presentOk: 3, checkpointsOk: 1, checkpoints: 4 });
+    expect(scoreRows(rows, set)).toEqual({ turns: 3, placeOk: 2, presentOk: 3, checkpointsOk: 1, checkpoints: 3 });
   });
 
   it('filters a replay to a span and seeds it from the labels', () => {
