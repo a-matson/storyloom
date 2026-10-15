@@ -1,6 +1,7 @@
 import { useId, useState, useSyncExternalStore } from 'react';
 // Not through the barrel: that would pull the session out of the start-up chunk into a shared one.
 import { entityEdits } from '@app/session/entities';
+import { isPortraitStale } from '@app/session/portraitPrompt';
 import { identityText, indexAssertions, isCurrent } from '@core/memory';
 import type { Adventure, Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
@@ -57,7 +58,7 @@ export function EntityDrawer({ entity: e, adventure, api, onClose, onOpen }: Pro
         onClose={onClose}
       />
       <DrawerBody>
-        <Portrait entity={e} api={api} edits={edits} />
+        <Portrait entity={e} stale={isPortraitStale(e, adventure.assertions)} api={api} edits={edits} />
         <label htmlFor={`${id}-name`}>
           <SectionLabel>Name</SectionLabel>
         </label>
@@ -94,7 +95,7 @@ export function EntityDrawer({ entity: e, adventure, api, onClose, onOpen }: Pro
 type Edits = ReturnType<typeof entityEdits>;
 
 /** Drawn between turns when an image server is configured; these are the player's overrides. */
-function Portrait({ entity: e, api, edits }: { entity: Entity; api: GameApi; edits: Edits }) {
+function Portrait({ entity: e, stale, api, edits }: { entity: Entity; stale: boolean; api: GameApi; edits: Edits }) {
   const [asked, setDrawing] = useState(false);
   const state = useSyncExternalStore(api.subscribe, () => api.getSnapshot().portraitState[e.id]);
   const drawing = asked || state?.status === 'queued' || state?.status === 'rendering';
@@ -131,6 +132,7 @@ function Portrait({ entity: e, api, edits }: { entity: Entity; api: GameApi; edi
           Clear
         </Button>
       )}
+      {stale && !drawing && <p className="w-full text-caption text-muted-foreground">Portrait is older than the look</p>}
       {state?.status === 'failed' && <p className="w-full text-caption text-danger">Could not draw the portrait: {state.error}</p>}
     </div>
   );

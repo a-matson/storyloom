@@ -91,6 +91,11 @@ test('a portrait is queued on open; a failed one shows why and Retry draws it', 
   // The drawer shows the portrait at 128 CSS px, not the 32 px avatar.
   await expect(drawer.locator('img')).toHaveAttribute('src', /^blob:/);
   expect((await drawer.locator('img').boundingBox())?.width).toBe(128);
+  await drawer.getByRole('textbox', { name: 'Description' }).fill('A well-warden with a fresh scar.');
+  await drawer.getByRole('textbox', { name: 'Name' }).focus();
+  await expect(drawer.getByText('Portrait is older than the look')).toBeVisible();
+  await drawer.getByRole('button', { name: 'Redraw' }).click();
+  await expect(drawer.getByText('Portrait is older than the look')).toBeHidden();
   await page.keyboard.press('Escape');
   await expect(card.locator('img')).toHaveAttribute('src', /^blob:/);
 });

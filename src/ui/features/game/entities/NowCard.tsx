@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { entityEdits } from '@app/session/entities';
+import { isPortraitStale } from '@app/session/portraitPrompt';
 import { tokenizer } from '@app/services';
 import { KEY_ORDER, nowLines } from '@core/context';
 import type { Adventure, Assertion, Entity } from '@core/model';
@@ -89,6 +90,7 @@ export function NowCard({ adventure, api }: { adventure: Adventure; api: GameApi
         {lines.map(({ entity: e, text: t, factIds, gaps = [] }) => (
           <li key={e.id} className="flex flex-col gap-1">
             <span className="text-caption">{t}</span>
+            {isPortraitStale(e, adventure.assertions) && <span className="text-caption text-muted-foreground">Portrait is older than the look</span>}
             <span className="flex flex-wrap gap-1">
               {factIds.flatMap((id) => {
                 const a = byId.get(id);
