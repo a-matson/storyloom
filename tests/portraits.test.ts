@@ -9,7 +9,14 @@ import { own } from './fixtures/assertions';
 import { settled, setup } from './fixtures/session';
 
 // No canvas under vitest; the re-encode is the browser's job.
-vi.mock('@app/image', () => ({ downscale: (b: Blob) => Promise.resolve(b), cropSquare: (b: Blob) => Promise.resolve(b) }));
+const sizes: number[] = [];
+vi.mock('@app/image', () => ({
+  downscale: (b: Blob, px: number) => {
+    sizes.push(px);
+    return Promise.resolve(b);
+  },
+  cropSquare: (b: Blob) => Promise.resolve(b),
+}));
 
 const lena: LegacyEntity = {
   id: 'ent_lena',
@@ -85,7 +92,8 @@ describe('queuePortraits', () => {
     expect(calls[0]).toMatchObject({ width: 384, height: 384, steps: 14, negativePrompt: 'text, watermark, signature, frame, caption' });
     expect(calls[0]).toMatchObject({ sampler: 'DPM++ 2M Karras', clipSkip: 2 });
     expect(calls[0]?.hires).toBeUndefined();
-    expect(PORTRAIT_PX).toBe(64);
+    expect(PORTRAIT_PX).toBe(256);
+    expect(sizes.at(-1)).toBe(256);
     await renderPortrait(session, lena.id);
     expect(calls[1]?.seed).toBe(calls[0]?.seed);
     expect(calls[0]?.seed).toBeLessThan(2 ** 32);

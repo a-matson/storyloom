@@ -18,8 +18,8 @@ export interface PortraitHost {
   emit: (patch: Partial<GameSnapshot>) => void;
 }
 
-/** 2x the 32 CSS px a portrait is shown at. */
-export const PORTRAIT_PX = 64;
+/** 2x the 128 CSS px drawer portrait; the 32 px avatars downsample it. [provisional] */
+export const PORTRAIT_PX = 256;
 /** A failed portrait is tried again after this many turns, or as soon as a down image server answers. [provisional] */
 export const PORTRAIT_RETRY_TURNS = 5;
 
@@ -76,7 +76,7 @@ export async function renderPortrait(host: PortraitHost, id: string): Promise<vo
     model: s.model,
     sampler: s.sampler,
     clipSkip: s.clipSkip,
-    // No hires pass: the picture is kept at 64 px, so a second render would buy nothing.
+    // No hires pass: the picture is kept at 256 px, so a second render would buy nothing.
   };
   const provider = await pending;
   const ms = host.svc.imageTimeoutMs;

@@ -9,14 +9,16 @@ interface Props {
   name: string;
   adventureId: string;
   portraitId?: string | undefined;
+  size?: 'sm' | 'lg';
 }
 
-const SIZE = 'size-8 text-caption';
+const SIZES = { sm: { px: 32, cls: 'size-8 rounded-full text-caption' }, lg: { px: 128, cls: 'size-32 rounded-lg text-title' } };
 
-/** 32 px everywhere: the stored portrait, else initials coloured by a hash of the name so an entity keeps its colour across sessions. */
-export function Avatar({ name, adventureId, portraitId }: Props) {
+/** 32 px (`lg`: 128 px, the drawer): the stored portrait, else initials coloured by a hash of the name so an entity keeps its colour across sessions. */
+export function Avatar({ name, adventureId, portraitId, size = 'sm' }: Props) {
+  const { px, cls } = SIZES[size];
   const url = useImageBlob(adventureId, portraitId);
-  if (url !== undefined) return <img src={url} alt="" width={32} height={32} className={cn('shrink-0 rounded-full object-cover', SIZE)} />;
+  if (url !== undefined) return <img src={url} alt="" width={px} height={px} className={cn('shrink-0 object-cover', cls)} />;
   const initials = name
     .split(/\s+/)
     .filter(Boolean)
@@ -25,7 +27,7 @@ export function Avatar({ name, adventureId, portraitId }: Props) {
     .join('');
   const tone = TONES[Number.parseInt(hashPrompt(name).slice(-6), 16) % TONES.length];
   return (
-    <span aria-hidden="true" className={cn('inline-flex shrink-0 items-center justify-center rounded-full font-sans font-semibold', SIZE, tone)}>
+    <span aria-hidden="true" className={cn('inline-flex shrink-0 items-center justify-center font-sans font-semibold', cls, tone)}>
       {initials}
     </span>
   );
