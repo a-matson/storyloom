@@ -73,7 +73,7 @@ export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retry
   return (
     <footer className="flex shrink-0 justify-center border-t border-border bg-bar px-10 pt-3.5 pb-[18px] max-sm:px-3 max-sm:pt-2.5 max-sm:pb-3.5">
       <div className="flex w-full max-w-story flex-col gap-2.5">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {MODE_IDS.map((id) => (
             <button key={id} type="button" className={cn(chip, MODES[id].chip)} aria-pressed={id === mode} onClick={() => setMode(id)} disabled={busy}>
               {MODES[id].label}
@@ -85,7 +85,7 @@ export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retry
             {status}
           </span>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           <TurnInput mode={mode} text={text} busy={busy} onText={setText} onKeyDown={onKey} onSend={send} onStop={api.cancel} onFocusChange={setFocused} />
           <Button size="lg" onClick={() => api.submit('continue', '')} disabled={busy}>
             Continue

@@ -82,6 +82,13 @@ test('game with characters tab', async ({ page }) => {
   await shot(page, 'entity-card-narrow');
 });
 
+test('game at 390 px with the last output tools', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await startGame(page);
+  await page.getByRole('button', { name: 'Erase to here' }).focus();
+  await shot(page, 'game-mobile-tools');
+});
+
 test('context viewer', async ({ page }) => {
   await startGame(page);
   await page.getByRole('button', { name: 'View context' }).last().click();
