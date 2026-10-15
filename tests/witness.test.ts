@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { presentLine } from '@core/context/cast';
-import { gapsOf, WITNESS_TOKENS, witnessClause } from '@core/context/witness';
-import type { Action, Assertion, Entity, Memory } from '@core/model';
-import { createApproxTokenizer } from '@core/text/tokenizer';
+import { gapsOf, witnessClause } from '@core/context/witness';
+import type { Assertion, Entity } from '@core/model';
 
 const minos: Entity = { id: 'ent_minos', kind: 'character', name: 'Minos', aliases: [], description: '', relations: [], firstSeen: 0, lastSeen: 0 };
 const condition = (value: string, since: number, until?: number): Assertion => ({
@@ -18,17 +17,6 @@ const condition = (value: string, since: number, until?: number): Assertion => (
   ...(until === undefined ? {} : { until }),
 });
 const all = { from: 0, to: 99 };
-const act = (i: number, type: Action['type'], text: string): Action => ({ id: `a${i}`, type, versions: [text], active: 0, createdAt: i });
-const actions = Array.from({ length: 60 }, (_, i) => act(i, i % 2 ? 'continue' : 'do', `Out ${i}. More.`));
-const mem = (text: string, fromAction: number, toAction: number): Memory => ({
-  id: text,
-  text,
-  fromAction,
-  toAction,
-  actionIds: [],
-  useCount: 0,
-  createdAt: 0,
-});
 
 describe('gapsOf', () => {
   it('is a run of presence without them, after they were first there', () => {
@@ -60,18 +48,13 @@ describe('gapsOf', () => {
 });
 
 describe('witnessClause', () => {
-  const gap = { from: 47, to: 56, kind: 'asleep' } as const;
-
-  it('quotes the memory overlapping the gap most, else the gap’s first AI output', () => {
-    const memories = [mem('Long ago. Other.', 0, 10), mem('Weever spoke of the amulet. Then left.', 45, 55), mem('Edge.', 55, 70)];
-    expect(witnessClause(gap, memories, actions)).toBe('slept through actions 47–55: Weever spoke of the amulet');
-    expect(witnessClause({ from: 31, to: 32, kind: 'away' }, [], actions)).toBe('was away for action 31: Out 31');
-    expect(witnessClause({ from: 30, to: 31, kind: 'away' }, [], actions)).toBe('was away for action 30');
+  it('names neither content nor range', () => {
+    expect(witnessClause({ from: 44, to: 50, kind: 'away' })).toBe('was away for part of the scene and does not know what was said then');
+    expect(witnessClause({ from: 31, to: 32, kind: 'away' })).toBe(witnessClause({ from: 44, to: 50, kind: 'away' }));
   });
 
-  it('keeps to the token cap', () => {
-    const clause = witnessClause(gap, [mem(Array.from({ length: 80 }, (_, i) => `word${i}`).join(' '), 47, 56)], actions);
-    expect(createApproxTokenizer().count(clause)).toBeLessThanOrEqual(WITNESS_TOKENS);
+  it('reads `slept through` for an asleep gap', () => {
+    expect(witnessClause({ from: 47, to: 56, kind: 'asleep' })).toBe('slept through part of the scene and does not know what happened then');
   });
 });
 

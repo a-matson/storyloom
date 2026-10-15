@@ -80,9 +80,9 @@ test('a character asleep is told in the prompt what they slept through', async (
   // Asleep from the next action on: nothing missed yet.
   await expect(cast).not.toContainText('slept through');
   const context = await rawPrompt(page, 'whisper the secret');
-  await expect(context).toContainText('maps): asleep; slept through action 3.');
+  await expect(context).toContainText('maps): asleep; slept through part of the scene and does not know what happened then.');
   await page.keyboard.press('Escape');
-  await expect(cast).toContainText('slept through action');
+  await expect(cast).toContainText('slept through part of the scene');
   await expect(cast.getByRole('button', { name: 'Show action 3 in the story' })).toHaveCount(2);
 });
 

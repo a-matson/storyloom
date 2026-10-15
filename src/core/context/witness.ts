@@ -1,9 +1,5 @@
-import type { Action, Assertion, Memory, PlotComponents } from '../model/types';
-import { actionStoryText } from '../text/formatting';
-import { createApproxTokenizer, trimToTokens } from '../text/tokenizer';
+import type { Assertion, PlotComponents } from '../model/types';
 
-/** Tokens one witness clause keeps, range and all. [provisional] */
-export const WITNESS_TOKENS = 30;
 /** Clauses a cast line carries, the most recent. [provisional] */
 export const MAX_GAPS = 2;
 // ponytail: a word list over the free-text `condition` value; "dozing" or "in a trance" miss. A typed `aware` key if M13-9's probe needs it.
@@ -54,19 +50,13 @@ export function gapsOf(id: string, presence: Presence, as: readonly Assertion[],
   });
 }
 
-const approx = createApproxTokenizer();
-const firstSentence = (t: string) => (t.trim().split(/(?<=[.!?])\s/)[0] ?? '').replace(/[.;]+$/, '');
-
 /**
- * `slept through actions 47–55: <text>` / `was away for action 31: <text>`, at most `WITNESS_TOKENS`.
- * `<text>`: the first sentence of the memory overlapping the gap most, else of the gap's first AI output.
+ * `slept through part of the scene and does not know what happened then` / `was away for part of the scene and …`.
+ * No content: quoting what was missed put the secret in the absent character's own line (M13-9 probe).
+ * No range either: the story model never sees action numbers [measured: docs/measurements/2026-10-15-probe-after-scene.json].
  */
-export function witnessClause(g: Gap, memories: readonly Memory[], actions: readonly Action[]): string {
-  const overlap = (m: Memory) => Math.min(m.toAction, g.to) - Math.max(m.fromAction, g.from);
-  const memory = memories.filter((m) => overlap(m) > 0).toSorted((a, b) => overlap(b) - overlap(a))[0];
-  const output = actions.slice(g.from, g.to).find((a) => a.type === 'continue');
-  const text = firstSentence(memory?.text ?? (output ? actionStoryText(output) : ''));
-  const range = g.to - g.from > 1 ? `actions ${g.from}–${g.to - 1}` : `action ${g.from}`;
-  const head = `${g.kind === 'asleep' ? 'slept through' : 'was away for'} ${range}`;
-  return trimToTokens(text ? `${head}: ${text}` : head, WITNESS_TOKENS, approx);
+export function witnessClause(g: Gap): string {
+  return g.kind === 'asleep'
+    ? 'slept through part of the scene and does not know what happened then'
+    : 'was away for part of the scene and does not know what was said then';
 }

@@ -3,7 +3,7 @@ import { type AssertionIndex, indexAssertions } from '../memory/assertionIndex';
 import { isConfirmed } from '../memory/facts';
 import { sceneNames } from '../memory/names';
 import { projectEntity } from '../memory/projection';
-import type { Action, Adventure, Entity, Memory, PlotComponents, Scene, StoryCard } from '../model/types';
+import type { Adventure, Entity, PlotComponents, Scene, StoryCard } from '../model/types';
 import { actionStoryText } from '../text/formatting';
 import { heldBy, itemsIn, MAX_ITEMS, YOU } from '../memory/items';
 import { type CastLine, identityLine, pinnedLine, presentLine } from './cast';
@@ -53,24 +53,17 @@ function cardedBy(cards: readonly StoryCard[]) {
   return (e: Entity) => (e.cardId !== undefined && names.has(e.cardId)) || names.has(e.name.trim().toLowerCase());
 }
 
-/** What witnessed-by clauses read: who was present when, the window history covers (`to`: the last action), and the text to quote. */
+/** What witnessed-by clauses read: who was present when, and the window history covers (`to`: the last action). */
 interface Witnessed {
   presence: NonNullable<PlotComponents['presence']>;
   window: { from: number; to: number };
-  memories: readonly Memory[];
-  actions: readonly Action[];
 }
 
 /** A present character's now-line with what they missed in the window, the most recent `MAX_GAPS`. */
 function castLine(e: Entity, here: Entity[], ix: AssertionIndex, carded: boolean, w: Witnessed): CastLine {
   const gaps = e.kind === 'character' ? gapsOf(e.id, w.presence, ix.of(e.id), w.window).slice(-MAX_GAPS) : [];
-  const line = presentLine(
-    e,
-    ix.of(e.id),
-    here,
-    carded,
-    gaps.map((g) => witnessClause(g, w.memories, w.actions)),
-  );
+  // The clause names no range, so two gaps of a kind read the same: send it once.
+  const line = presentLine(e, ix.of(e.id), here, carded, [...new Set(gaps.map(witnessClause))]);
   return gaps.length > 0 ? { ...line, gaps } : line;
 }
 
@@ -83,19 +76,14 @@ const hereLines = (here: Entity[], items: Entity[], ix: AssertionIndex, carded: 
  * The World tab's Now card: the prompt's scene line and its cast lines for who and what is here, by the same functions.
  * Witnessed-by reads the whole log; the prompt cuts it to its history window, so the card may show an older clause.
  */
-export function nowLines(adv: Pick<Adventure, 'plot' | 'entities' | 'assertions' | 'storyCards' | 'actions' | 'memories'>): {
+export function nowLines(adv: Pick<Adventure, 'plot' | 'entities' | 'assertions' | 'storyCards' | 'actions'>): {
   scene: string;
   lines: CastLine[];
 } {
   const ix = indexAssertions(adv.assertions);
   const entities = adv.entities.filter((e) => isConfirmed(e, ix.of(e.id)));
   const { shown, here, items } = sceneCast(adv.plot.scene, entities, adv.entities, ix);
-  const w: Witnessed = {
-    presence: adv.plot.presence ?? [],
-    window: { from: 0, to: adv.actions.length - 1 },
-    memories: adv.memories.filter((m) => !m.forgotten && !m.stale),
-    actions: adv.actions,
-  };
+  const w: Witnessed = { presence: adv.plot.presence ?? [], window: { from: 0, to: adv.actions.length - 1 } };
   return { scene: renderScene(shown, entities, ix), lines: hereLines(here, items, ix, cardedBy(adv.storyCards), w) };
 }
 
@@ -139,12 +127,7 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
 
   const carded = cardedBy(input.storyCards);
   // A gap that left the window is in a memory, which the model reads as a memory anyway.
-  const witnessed: Witnessed = {
-    presence: plot.presence ?? [],
-    window: { from: historyFrom, to: lastActionIndex },
-    memories: input.rankedMemories.map((r) => r.memory),
-    actions: input.actions,
-  };
+  const witnessed: Witnessed = { presence: plot.presence ?? [], window: { from: historyFrom, to: lastActionIndex } };
   // With entity facts off, the player's own facts (Correct, pins) still go in for who is here or named.
   const lines: CastLine[] = input.settings.pinnedFactsOnly
     ? [...here, ...items, ...mentioned].flatMap((e) => pinnedLine(e, ix.of(e.id), carded(e)))

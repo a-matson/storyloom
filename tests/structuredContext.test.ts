@@ -61,7 +61,7 @@ describe('nowLines', () => {
   it('is the scene line and the cast lines the prompt sends for who is here', () => {
     const i = derived(input(4000));
     const r = build(i);
-    const now = nowLines({ ...i, memories: [] });
+    const now = nowLines(i);
     expect(r.sections.find((s) => s.kind === 'scene')?.text).toContain(now.scene);
     // Orrin is only named by the text, so the cast has him after who is here.
     expect(now.lines.map((l) => l.text)).toEqual(cast(r)?.split('\n').slice(0, 1));
@@ -122,9 +122,14 @@ describe('structured elements', () => {
       { at: 6, present: ['e-Lena'] },
     ];
     const plot = { scene, presence };
-    expect(cast(buildContext({ ...input(4000), plot }))?.split('\n')[0]).toMatch(
-      /^Lena \(keeps the mill\): .*; was away for actions 2–5: 1 w0 w1 [^;]*; She hums\.$/,
-    );
+    // M13-9: a clause that quoted the gap's memory put the secret in the absent character's line.
+    const secret = { id: 'm', text: 'Orrin confessed the SECRET.', fromAction: 2, toAction: 6, actionIds: [], useCount: 0, createdAt: 0 };
+    const line = cast(buildContext({ ...input(4000), plot, rankedMemories: [{ memory: secret, score: 1 }] }))?.split('\n')[0];
+    expect(line).toMatch(/^Lena \(keeps the mill\): .*; was away for part of the scene and does not know what was said then; She hums\.$/);
+    expect(line).not.toContain('SECRET');
+    // Two away gaps read the same: one clause.
+    const twice = [...presence, { at: 7, present: [] }, { at: 8, present: ['e-Lena'] }];
+    expect(cast(buildContext({ ...input(4000), plot: { scene, presence: twice } }))?.match(/was away/g)).toHaveLength(1);
     expect(cast(buildContext({ ...input(4000), plot: { scene } }))).not.toContain('away');
     // A short context's history starts after action 5: the gap is a memory's business.
     expect(cast(buildContext({ ...input(400), plot }))).not.toContain('away');
