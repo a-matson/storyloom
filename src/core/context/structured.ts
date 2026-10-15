@@ -14,7 +14,7 @@ import { secretLines } from './secrets';
 import { gapsOf, MAX_GAPS, witnessClause } from './witness';
 
 /** Hard ceiling on rules, scene and cast together, under the `structuredShare` cap. [provisional] */
-export const STRUCTURED_CAP = 200;
+export const STRUCTURED_CAP = 300;
 
 export interface StructuredResult {
   structuredBudget: number;
