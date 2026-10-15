@@ -168,6 +168,16 @@ test('the focused turn input shows a thin ring in the mode colour', async ({ pag
   expect(await shadow(row)).toContain('rgb(79, 184, 166) 0px 0px 0px 1px');
 });
 
+test('the game header fits a phone and the model name truncates', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await connectDemo(page);
+  await page.getByRole('button', { name: 'Fantasy' }).click();
+  const header = page.locator('header');
+  await expect(header.getByTitle('Fake-12B-Q4_K_M.gguf')).toBeVisible();
+  expect(await header.evaluate((h) => h.scrollWidth <= h.clientWidth)).toBe(true);
+  expect(await header.getByTitle('Fake-12B-Q4_K_M.gguf').evaluate((s) => s.scrollWidth > s.clientWidth)).toBe(true);
+});
+
 test('the trace viewer shows the latest generation and its prompt', async ({ page }) => {
   await connectDemo(page);
   await page.getByRole('button', { name: 'Fantasy' }).click();
