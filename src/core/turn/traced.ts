@@ -38,9 +38,13 @@ export function startRun(kind: TurnKind): TurnRun {
   return { turnId: newId('turn_'), kind, startedAt: Date.now(), scriptLogs: [] };
 }
 
-/** Failures carry a `kind` (`ProviderError`, `StorageError`); anything else is unknown. */
+/** A failed fetch or body read rejects with a bare TypeError; each engine words it differently. */
+const NETWORK_MESSAGE = /network ?error|failed to fetch|load failed/i;
+
+/** Failures carry a `kind` (`ProviderError`, `StorageError`); a fetch TypeError is network; anything else is unknown. */
 export function errorKindOf(e: unknown): TurnErrorKind {
   const kind = typeof e === 'object' && e !== null && 'kind' in e ? e.kind : undefined;
+  if (kind === undefined && e instanceof TypeError && NETWORK_MESSAGE.test(e.message)) return 'network';
   return ErrorKinds.options.find((k) => k === kind) ?? 'unknown';
 }
 
