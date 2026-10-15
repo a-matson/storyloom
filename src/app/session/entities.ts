@@ -1,6 +1,6 @@
 // Only start-up members of the barrel: importing a lazy one splits it out of the start-up chunk.
 import { loadImagePrompt } from '@core/image';
-import { indexAssertions, loadMemoryJobs, withLooks } from '@core/memory';
+import { indexAssertions, loadMemoryJobs, repointSecrets, withLooks } from '@core/memory';
 import { newId, type Adventure, type Entity } from '@core/model';
 import { cropSquare, downscale } from '../image';
 import { withoutReference } from './images';
@@ -92,6 +92,7 @@ export function entityEdits(host: GameSession) {
         adv.assertions = [...adv.assertions.filter((a) => a.subject !== intoId && a.subject !== fromId), ...mergeOwn(into, own(intoId), own(fromId))];
         repointGates(adv, fromId, intoId);
         repointScene(adv, fromId, intoId);
+        repointSecrets(adv, fromId, intoId);
         if (from.portraitId !== undefined && from.portraitId !== merged.portraitId) dropPortrait(host, from.portraitId);
       });
     },

@@ -8,6 +8,7 @@ import { Pill } from '@ui/components/ui/pill';
 import { cn } from '@ui/lib/utils';
 import { Avatar } from './entities/Avatar';
 import { faceFor } from './entities/faceFor';
+import { MarkSecret } from './MarkSecret';
 import { OutputTools, actionGrid, caretAtEnd, textColumn } from './OutputTools';
 import { SeeBlock } from './SeeBlock';
 
@@ -83,9 +84,36 @@ export function ActionBlock(props: Props) {
   return <TextBlock {...props} />;
 }
 
+/** The player's pill. A Do/Say's is its menu (Mark secret): a button styled away, so the row looks and measures the same. */
+function Label({ action, busy, marking, onToggle }: { action: Action; busy: boolean; marking: boolean; onToggle: () => void }) {
+  if (action.type === 'story')
+    return (
+      <Pill tone="story" className="mt-[5px] justify-self-start font-sans">
+        story
+      </Pill>
+    );
+  if (!quoted(action)) return null;
+  return (
+    <button
+      type="button"
+      className="mt-[5px] flex cursor-pointer justify-self-start rounded-full border-0 bg-transparent p-0"
+      aria-label="Mark secret"
+      aria-expanded={marking}
+      title="Mark secret"
+      disabled={busy}
+      onClick={onToggle}
+    >
+      <Pill tone={action.type === 'say' ? 'say' : 'do'} className="font-sans">
+        {action.type}
+      </Pill>
+    </button>
+  );
+}
+
 function TextBlock(props: Props) {
   const { action, isLast, busy, api, speech, onViewContext, onViewTrace, contextSummary, flag } = props;
   const [editing, setEditing] = useState(false);
+  const [marking, setMarking] = useState(false);
   // Bumped when an edit ends: the paragraph remounts, so React never reconciles DOM the player rewrote.
   const [rev, setRev] = useState(0);
   const ref = useRef<HTMLParagraphElement>(null);
@@ -143,13 +171,10 @@ function TextBlock(props: Props) {
   return (
     // The id lets `SelectionBar` tell which action a selection is in.
     <div className={cn('group', actionGrid)} data-action-id={action.id}>
-      {isPlayer && (
-        <Pill tone={action.type === 'story' ? 'story' : action.type === 'say' ? 'say' : 'do'} className="mt-[5px] justify-self-start font-sans">
-          {action.type}
-        </Pill>
-      )}
+      <Label action={action} busy={busy} marking={marking} onToggle={() => setMarking(!marking)} />
       <div className={textColumn}>
         {paragraph}
+        {marking && <MarkSecret action={action} display={display} api={api} busy={busy} onClose={() => setMarking(false)} />}
         {isLast && !busy && (
           <OutputTools
             action={action}

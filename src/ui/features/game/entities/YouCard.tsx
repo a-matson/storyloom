@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { lineEdits } from '@app/session/lines';
-import { isCurrent, textOf, YOU } from '@core/memory';
+import { isYouLine, textOf, YOU } from '@core/memory';
 import type { Adventure } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Input, Select } from '@ui/components/ui/field';
@@ -18,7 +18,7 @@ export function YouCard({ adventure, api }: { adventure: Adventure; api: GameApi
   const plot = adventure.plot;
   const enabled = plot.thirdPerson?.enabled ?? false;
   const name = plot.thirdPerson?.name ?? '';
-  const mine = adventure.assertions.filter((a) => a.subject === YOU && a.producer === 'player' && isCurrent(a) && a.kind !== 'conflict');
+  const mine = adventure.assertions.filter(isYouLine);
   const add = () => {
     if (draft.trim()) edits.addLine(YOU, { kind: 'trait', text: draft.trim() });
     setDraft('');
