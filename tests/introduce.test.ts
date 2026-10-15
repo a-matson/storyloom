@@ -151,7 +151,8 @@ describe('introduce', () => {
     it('is read on a turn with no new name: a scene-only call, then the scene moves and is logged', async () => {
       const { adv, reqs, deps } = sceneOnly('You wait at the ferry.', at);
       const n = adv.actions.length;
-      expect(await introduce(adv, deps)).toMatchObject({ touched: 1, sceneUpdated: true });
+      // The place card, and Tamsin seen present.
+      expect(await introduce(adv, deps)).toMatchObject({ touched: 2, sceneUpdated: true });
       expect(reqs).toHaveLength(1);
       expect(reqs[0]?.maxTokens).toBe(80);
       expect(reqs[0]?.prompt).not.toContain('New here:');
@@ -205,6 +206,15 @@ describe('introduce', () => {
       adv.plot.scene = { location: 'the ferry', present: ['Corwin'] };
       await introduce(adv, deps);
       expect(adv.plot.scene?.present).toEqual(['Corwin', adv.entities[0]?.id]);
+    });
+
+    // Dogfood M13-9: a character the turn read carded waited ~12 actions for a second batch range before the prompt used them.
+    it('counts a read that puts a character present as a sighting', async () => {
+      const { adv, deps } = sceneOnly('You wait at the ferry.', at);
+      const n = adv.actions.length;
+      adv.entities = [{ ...tamsin(), firstSeen: 3, lastSeen: 3 }];
+      expect(await introduce(adv, deps)).toMatchObject({ touched: 2 });
+      expect(adv.entities[0]?.lastSeen).toBe(n - 1);
     });
 
     it('makes a place card for an unknown location and asks whether it is inside the previous place', async () => {
