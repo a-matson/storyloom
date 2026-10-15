@@ -98,7 +98,8 @@ export function foldEntities(
   incoming: readonly Incoming[],
   passage: string,
   range: MemoryRange,
-  opts: { twice?: boolean; log?: FoldLog } = {},
+  /** `present`: names the scene read already put in the scene, which pass without the capital test. */
+  opts: { twice?: boolean; log?: FoldLog; present?: readonly string[] } = {},
 ): number {
   let entities = adventure.entities;
   let assertions = adventure.assertions;
@@ -115,7 +116,7 @@ export function foldEntities(
     const once = () => adventure.actions.slice(0, range.toAction).filter((a) => named(actionText(a))).length < 2;
     const ix = indexAssertions(assertions);
     const old = notAName(adventure.plot, e.name) ? undefined : knownAs(entities, e.name, ix);
-    if (!old && (notAName(adventure.plot, e.name) || !named(passage) || A_KIND.test(raw))) {
+    if (!old && (notAName(adventure.plot, e.name) || (!named(passage) && !opts.present?.includes(e.name)) || A_KIND.test(raw))) {
       for (const f of facts) opts.log?.rejected.push({ entity: e.name, value: f, reason: 'entity-dropped', passageRange: range });
       continue;
     }

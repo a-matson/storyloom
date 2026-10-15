@@ -189,6 +189,17 @@ describe('introduce', () => {
       expect(empty.reqs[0]?.prompt).toContain('Previous scene: not known yet. Known characters: none yet.');
     });
 
+    // Dogfood M13-9: with only a new name in the enum the 12B wrote it for every present character until the token cap.
+    it('keeps a present name that has no card in the cast, and caps who is present at the cast', async () => {
+      const { adv, reqs, deps } = sceneOnly('You wait at the ferry.', at);
+      adv.plot.scene = { location: 'the ferry', present: ['Corwin'] };
+      await introduce(adv, deps);
+      const scene = JSON.stringify(reqs[0]?.jsonSchema);
+      expect(scene).toContain('"enum":["Tamsin","the ferrywoman","Corwin"]');
+      expect(scene.match(/"maxItems":3/g)).toHaveLength(2);
+      expect(reqs[0]?.prompt).toContain('Known characters: Tamsin, the ferrywoman, Corwin.');
+    });
+
     it('resolves an alias to the character’s id, and keeps a name nothing is known as', async () => {
       const { adv, deps } = sceneOnly('You wait at the ferry.', { ...at, present: ['the ferrywoman'] });
       adv.plot.scene = { location: 'the ferry', present: ['Corwin'] };
@@ -215,6 +226,25 @@ describe('introduce', () => {
       expect(JSON.stringify(reqs[0]?.jsonSchema)).toMatch(/"present":\{[^}]*"enum":\[[^\]]*"Tamsin"/);
       expect(adv.entities.map((e) => e.name)).toEqual(['Tamsin', 'the ferry']);
       expect(adv.plot.scene?.present).toEqual([adv.entities[0]?.id]);
+      // A card per asked name, at least one: a free list after the scene came back empty in 7 of 9 dogfood reads.
+      const cards = JSON.stringify(reqs[0]?.jsonSchema).split('"entities":')[1];
+      expect(cards).toContain('"minItems":1');
+      expect(cards).toContain('"maxItems":3');
+      expect(cards).toContain('"name":{"type":"string","enum":["Needle Map","Salt Road","Tamsin"]}');
+    });
+
+    // Dogfood M13-9: "Weever" only ever opened a sentence, so the name guard never offered her and she never got a card.
+    it('asks a card for a present name that has none when the passage names it', async () => {
+      const weever = { scene: at, entities: [{ name: 'Weever', kind: 'character', description: 'A kobold courier.' }] };
+      const { adv, reqs, deps } = setup('Weever nods. Tamsin waves.', weever);
+      adv.settings.memory = { ...adv.settings.memory, sceneEachTurn: true };
+      adv.entities = [tamsin()];
+      adv.plot.scene = { location: 'the ferry', present: ['Weever', 'Corwin'] };
+      await introduce(adv, deps);
+      expect(reqs[0]?.prompt).toMatch(/New here: [^\n]*Weever\./);
+      expect(reqs[0]?.prompt).not.toMatch(/New here: [^\n]*Corwin/);
+      // The fold's capital test would drop her too: the scene read already vouched for the name.
+      expect(adv.entities.map((e) => e.name)).toContain('Weever');
     });
 
     it('is not touched by the turn read when its setting is off', async () => {
