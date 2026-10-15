@@ -6,6 +6,7 @@ import { useBackendStatus } from './shell/useBackendStatus';
 import { useRouteAdventure } from './shell/useRouteAdventure';
 import { LibraryScreen } from './features/library/LibraryScreen';
 import { Toast } from './components/ui/toast';
+import { useVisualViewport } from './hooks/useVisualViewport';
 
 // Only the library is on the start-up path; the other screens load on first visit.
 const GameScreen = lazy(async () => ({ default: (await import('./features/game/GameScreen')).GameScreen }));
@@ -15,6 +16,7 @@ const SetupScreen = lazy(async () => ({ default: (await import('./features/setup
 /** Shell: loads settings, then renders the screen for the hash route (see router.ts). */
 export function App() {
   const route = useRoute();
+  useVisualViewport();
   const [loadError, setLoadError] = useState<string | null>(null);
   // Outlives the screen that raised it (a scenario that started with a fallback opening).
   const [warning, setWarning] = useState<string | null>(null);
