@@ -101,6 +101,13 @@ describe('the recorded history', () => {
     expect(d2.settings.model.seed).toBe(11);
     expect(() => sliceHistory(h, 5)).toThrow(/4 story turns/);
   });
+
+  it('cuts a 300-turn recording at 270', () => {
+    const h = history(makeAdventure({ actions: 601 }));
+    expect(h.turnEnds).toHaveLength(300);
+    expect(sliceHistory(h, 270).actions).toHaveLength(542);
+    expect(() => sliceHistory(h, 301)).toThrow(/300 story turns/);
+  });
 });
 
 describe('retrievalHit', () => {

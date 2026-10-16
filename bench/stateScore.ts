@@ -5,6 +5,8 @@ const Span = { from: at, to: at };
 
 /** Hand labels for one adventure backup: where the scene is and who is there after action i, and a few state values. */
 export const LabelSet = z.object({
+  /** Who labelled it and how; a set labelled by Claude stays provisional until checked by hand. */
+  note: z.optional(z.string()),
   /** The scene before the first read. */
   start: z.string(),
   place: z.array(z.object({ ...Span, place: z.string() })),
@@ -79,7 +81,9 @@ export function leftWanted(set: LabelSet, before: number, i: number): string[] {
   return (labelAt(set.present, before)?.names ?? []).filter((n) => !now.includes(n));
 }
 
-export function scoreRows(rows: readonly StateRow[], set: LabelSet) {
+/** Only labelled turns count: a long history is labelled at checkpoints, not end to end. */
+export function scoreRows(all: readonly StateRow[], set: LabelSet) {
+  const rows = all.filter((r) => labelAt(set.present, r.i));
   const ok = rows.map((r) => {
     const want = (labelAt(set.present, r.i)?.names ?? []).filter((n) => r.cast.includes(n));
     return {
@@ -88,7 +92,7 @@ export function scoreRows(rows: readonly StateRow[], set: LabelSet) {
     };
   });
   const checkpointsOk = set.checkpoints.filter((c) => {
-    const row = rows.findLast((r) => r.i <= c.at);
+    const row = all.findLast((r) => r.i <= c.at);
     return row?.record?.[c.who]?.[c.key]?.toLowerCase().includes(c.value.toLowerCase()) ?? false;
   }).length;
   return {

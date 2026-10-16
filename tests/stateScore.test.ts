@@ -27,6 +27,15 @@ describe('state bench scoring', () => {
     expect(scoreRows(rows, set)).toEqual({ turns: 3, placeOk: 2, presentOk: 3, checkpointsOk: 1, checkpoints: 3 });
   });
 
+  it('counts only turns a label covers', () => {
+    const sparse = { ...set, present: [{ from: 5, to: 5, names: ['Minos'] }] };
+    const rows = [
+      { i: 5, cast: ['Minos'], location: 'noodle shop', present: ['Minos'] },
+      { i: 7, cast: ['Minos'], location: 'noodle shop', present: [] },
+    ];
+    expect(scoreRows(rows, sparse)).toMatchObject({ turns: 1, presentOk: 1 });
+  });
+
   it('filters a replay to a span and seeds it from the labels', () => {
     expect(onlySpan('43-44')).toEqual({ from: 43, to: 44 });
     expect(onlySpan('43')).toEqual({ from: 43, to: 43 });
