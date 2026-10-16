@@ -101,6 +101,8 @@ export function stateAsk(adventure: Adventure, cast: readonly Subject[]) {
 export function applyChanges(adventure: Adventure, cast: readonly Subject[], changes: readonly StateChange[], max: number): StateUpdate {
   const out: StateUpdate = { changed: 0, rejected: [] };
   const range = stateRange(adventure.actions.length);
+  // Grounded on both actions read, not `at` alone: `at` alone sent 18 of 49 (M13). [measured: 2026-10-16-state-m17-4-m13.json]
+  const read = adventure.actions.slice(range.fromAction, range.toAction).map(actionText).join('\n');
   // Later `at` last, so its write supersedes an earlier one for the same key.
   for (const c of changes.slice(0, max).toSorted((a, b) => a.at - b.at)) {
     const s = cast.find((x) => x.name === c.who);
@@ -115,7 +117,7 @@ export function applyChanges(adventure: Adventure, cast: readonly Subject[], cha
     const now = c.now.trim();
     const held = knownAs(items(adventure), now);
     if (c.key === 'holds') write(adventure, held ?? s, { holder: s === PLAYER ? YOU : s.name }, at, out);
-    else if (!grounded(now, text)) {
+    else if (!grounded(now, read)) {
       propose(adventure, s, c.key, now, c.at);
       out.rejected.push({ value: `${c.who} ${c.key}: ${c.now}`, reason: 'ungrounded' });
       continue;
