@@ -39,7 +39,7 @@ test.skipIf(!backup)('speaker guess and batch field over hand labels', () => {
   };
   const sets: Record<string, SpeakerRules> = { v1: { subject: false }, subject: {} };
   const rules = Object.fromEntries(
-    Object.entries(sets).map(([name, r]) => [name, score(labels, (l) => nameAt(guessSpeakers(text(l.action), cast, undefined, r), l.paragraph))]),
+    Object.entries(sets).map(([name, r]) => [name, score(labels, (l) => nameAt(guessSpeakers(text(l.action), cast, r), l.paragraph))]),
   );
   const batch = score(labels, (l) => nameAt(adv.actions[l.action]?.speakers, l.paragraph));
   for (const [name, s] of Object.entries({ ...rules, batch })) {

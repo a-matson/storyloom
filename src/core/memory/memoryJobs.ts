@@ -1,4 +1,4 @@
-import type { Action, Adventure, Memory, Speaker } from '../model/types';
+import type { Action, Adventure, Memory } from '../model/types';
 import { createMemory, currentRange, dueMemoryRanges, evictToSize, isPlayerAction, type MemoryRange } from './memoryBank';
 import { MEMORY_SYSTEM, memoryPrompt } from '../text/memoryPrompts';
 import { withContent } from '../text/content';
@@ -62,8 +62,6 @@ export interface MaintenanceReport extends CutCounts {
   memoriesRejected: number;
   /** Entities created or changed by the extraction that follows each written memory. */
   entitiesTouched: number;
-  /** The helper's speaker labels by action id; the caller applies them through the log. */
-  speakers: Map<string, Speaker[]>;
   summaryUpdated: boolean;
   /** The summary was overdue and ran before the memories. */
   summaryFirst: boolean;
@@ -188,7 +186,6 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
     memoriesDropped: 0,
     memoriesRejected: 0,
     entitiesTouched: 0,
-    speakers: new Map(),
     summaryUpdated: false,
     summaryFirst: false,
     factsProposed: 0,
@@ -232,7 +229,7 @@ async function maintain(adventure: Adventure, all: MaintenanceDeps, report: Main
     }
     // The one combined helper call per two memories; a bad reply only costs the entities.
     const e = await catchUpEntities(adventure, on('batch'));
-    ({ touched: report.entitiesTouched, speakers: report.speakers } = e);
+    report.entitiesTouched = e.touched;
     report.factsProposed = e.log?.proposed ?? 0;
     report.rejected = e.log?.rejected ?? [];
     await reembed(adventure, deps);

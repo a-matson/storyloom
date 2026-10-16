@@ -149,7 +149,7 @@ export class MemoryScheduler {
     }
   }
 
-  /** The client guess fills the gutter now; the helper's attribution replaces it when its cycle reaches the turn. */
+  /** The client guess fills the gutter; no helper call labels speakers. */
   private guessSpeakers(): void {
     loadMemoryJobs().then(
       ({ guessUnlabelled }) => this.label(guessUnlabelled(this.host.adventure())),
@@ -227,7 +227,6 @@ export class MemoryScheduler {
         console.info(`memory run ${JSON.stringify({ summaryUpdated, summaryFirst, cutCalls, finishedPastCut, factsProposed, rejected, entityCalls })}`);
       if (report.memoriesWritten || report.memoriesRegenerated || report.memoriesDropped || report.entitiesTouched || report.summaryUpdated)
         this.host.changed();
-      this.label(report.speakers);
       progressed = this.host.adventure().scriptState.__entitiesAt !== entitiesAt;
     } catch (e) {
       // Background work never blocks play; it retries after the next turn.

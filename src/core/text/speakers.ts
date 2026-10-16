@@ -25,9 +25,9 @@ const CLAUSE = String.raw`(?<=^\s*|\n\s*|[.!?…;:,]\s+|§\s*|\sand\s+)`;
  * A known name or alias right before a quote (same sentence, or the sentence just before it) or
  * right after one ("…," said X). Quotes are blanked first so a name inside one never counts.
  * A paragraph gets a name only when exactly one entity matches; ties, the player and unknowns get
- * nothing, except that `fallback` names a quoted paragraph where nobody matches. [measured: 2026-10-16-speakers-m18-3.json]
+ * nothing. [measured: 2026-10-16-speakers-m18-3.json]
  */
-export function guessSpeakers(text: string, cast: readonly Named[], fallback?: string, { subject = true }: SpeakerRules = {}): Speaker[] {
+export function guessSpeakers(text: string, cast: readonly Named[], { subject = true }: SpeakerRules = {}): Speaker[] {
   const before = subject ? CLAUSE : String.raw`(?<!\p{L})`;
   const tests = cast.flatMap((c) => {
     const n = [c.name, ...c.aliases]
@@ -42,7 +42,7 @@ export function guessSpeakers(text: string, cast: readonly Named[], fallback?: s
     const bare = p.replace(QUOTE, '§');
     if (bare === p) return [];
     const hits = tests.filter((t) => t.re.test(bare));
-    const name = hits.length === 1 ? hits[0]?.name : hits.length === 0 ? fallback : undefined;
+    const name = hits.length === 1 ? hits[0]?.name : undefined;
     return name ? [{ paragraph, name }] : [];
   });
 }

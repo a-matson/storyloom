@@ -43,7 +43,7 @@ describe('guessSpeakers', () => {
     expect(guess('The scene - Tamsin bleeding on the floor. "Trouble?"')).toEqual([]);
     expect(guess('As you turn, Tamsin pauses. "One more thing."')).toEqual([{ paragraph: 0, name: 'Tamsin' }]);
     expect(guess('You: Tamsin\'s eyes narrow. "That sigil," she snarls.')).toEqual([{ paragraph: 0, name: 'Tamsin' }]);
-    expect(guessSpeakers('She examines Brann Holt first. "Poison."', cast, undefined, { subject: false })).toEqual([{ paragraph: 0, name: 'Brann Holt' }]);
+    expect(guessSpeakers('She examines Brann Holt first. "Poison."', cast, { subject: false })).toEqual([{ paragraph: 0, name: 'Brann Holt' }]);
   });
 
   it('gives nothing for narration, the player, or a name not followed by speech', () => {

@@ -42,9 +42,6 @@ export const ExtractedEntity = z.object({
   relationships: z.optional(z.array(z.object({ to: Name, stance: sentence(LOOK_CHARS) })).check(z.maxLength(2))),
 });
 
-/** Who speaks in which numbered action. */
-export const SpokenIn = z.object({ action: z.number(), name: z.string() });
-
 /** New names one introduction reply covers; a turn rarely brings more. [provisional] */
 export const MAX_INTRODUCED = 3;
 export const INTRODUCED_CHARS = 100;
@@ -125,8 +122,6 @@ export const turnRead = (cast: readonly string[], newNames: readonly string[], b
  * into the past. Short fields come first so a reply cut at `maxTokens` still has them; a cut loses
  * the last item of the list it fell in (see `extract.ts`). No rules: asking for them here took the
  * reply to its cap in 2 of 4 calls and cut facts 39 → 22. [measured: 2026-10-12-recall-m12-8-pr3-rules-d30.json]
+ * No speakers: the client guess is the more precise (1.00 against 0.79). [measured: 2026-10-16-speakers-m18-3.json]
  */
-export const ExtractionJson = z.object({
-  entities: z.array(ExtractedEntity).check(z.maxLength(MAX_ENTITIES)),
-  speakers: z.array(SpokenIn),
-});
+export const ExtractionJson = z.object({ entities: z.array(ExtractedEntity).check(z.maxLength(MAX_ENTITIES)) });

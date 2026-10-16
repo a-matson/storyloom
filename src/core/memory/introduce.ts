@@ -30,7 +30,7 @@ function notePlace(adventure: Adventure, location: string, at: number): boolean 
   if (inside) adventure.scriptState = { ...adventure.scriptState, __placeAsk: { place: said, inside: inside.name } };
   return true;
 }
-const none = (): TurnUpdate => ({ touched: 0, speakers: new Map(), sceneUpdated: false });
+const none = (): TurnUpdate => ({ touched: 0, sceneUpdated: false });
 
 // Aliases too, so a character the text calls "the dragon" resolves (the two P7c misses); new names, so one met this turn can be there;
 // and who is present without a card yet, or the enum has no word for them.
@@ -50,7 +50,7 @@ async function readEdit(adventure: Adventure, deps: ExtractDeps, i: number): Pro
   const touched = reply ? foldEntities(adventure, reply.entities, passage, range) : 0;
   const call = deps.cuts?.calls?.at(-1);
   if (call) call.accepted = touched;
-  return { touched, speakers: new Map(), sceneUpdated: false };
+  return { touched, sceneUpdated: false };
 }
 
 /**
@@ -116,6 +116,5 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps, edited?
     call.accepted = touched + (sceneUpdated ? 1 : 0) + (changed?.changed ?? 0);
     if (changed) call.rejected = changed.rejected;
   }
-  // No speakers: the short reply leaves them to the client guess and the batch call.
-  return { touched, speakers: new Map(), sceneUpdated, ...(changed && { state: changed }) };
+  return { touched, sceneUpdated, ...(changed && { state: changed }) };
 }
