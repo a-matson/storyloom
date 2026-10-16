@@ -1,5 +1,5 @@
 import { current, identityText, isCurrent, textOf, type AssertionOf } from '../memory/assertionIndex';
-import { currentStates } from '../memory/looks';
+import { currentStates, isValue } from '../memory/looks';
 import type { Assertion, Entity } from '../model/types';
 import type { Gap } from './witness';
 
@@ -65,8 +65,8 @@ export function presentLine(e: Entity, as: readonly Assertion[], present: readon
   const live = as.filter((a) => isCurrent(a) && !old(a)).toSorted((a, b) => a.since - b.since);
   const now = currentStates(as);
   const keys = KEY_ORDER.filter((k) => now[k]?.trim());
-  const stateIds = keys.flatMap((k) => as.findLast((a) => isCurrent(a) && (a.kind === 'state' || a.kind === 'look') && a.key === k)?.id ?? []);
-  // Read B's proposals guess the cause from the first other name ("hurt — Vorthak", F11): only an accepted one is sent.
+  const stateIds = keys.flatMap((k) => as.findLast((a) => isCurrent(a) && isValue(a) && a.key === k)?.id ?? []);
+  // Read B's effects are proposals until the player accepts one.
   const effects = current(live, 'effect')
     .filter((a) => a.seen !== false)
     .filter((a, i, all) => all.findIndex((b) => effect(b) === effect(a)) === i);

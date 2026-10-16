@@ -28,6 +28,17 @@ describe('presentLine', () => {
     expect(presentLine(minos, as, [minos], false).text).toBe('Minos — awake.');
   });
 
+  it('a proposed state is never sent', () => {
+    const s = { ...base, at: 1, since: 1, kind: 'state', key: 'condition' } as const;
+    const as: Assertion[] = [
+      { ...s, id: 's1', value: 'awake' },
+      { ...s, id: 's2', at: 2, since: 2, value: 'furious', basis: 'inferred', seen: false },
+    ];
+    const line = presentLine(minos, as, [minos], false);
+    expect(line.text).toBe('Minos — awake.');
+    expect(line.factIds).toEqual(['s1']);
+  });
+
   it('a seen effect is sent, once', () => {
     const as: Assertion[] = [effect('e1', 'cursed', 1), effect('e2', 'cursed', 2, true)];
     expect(presentLine(minos, as, [minos], false).text).toBe('Minos — cursed — Amulet.');

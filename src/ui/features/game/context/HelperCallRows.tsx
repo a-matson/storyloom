@@ -53,7 +53,7 @@ export function HelperCallRows({ adventureId, from, to }: Props) {
             <pre className="m-0 mt-1 font-mono whitespace-pre-wrap text-muted-foreground">{c.reply || '(empty reply)'}</pre>
             {c.rejected.map((r) => (
               <p key={`${r.value}|${r.reason}`} className="m-0 font-mono text-muted-foreground">
-                dropped {r.value} ({r.reason})
+                {r.reason === 'ungrounded' ? 'proposed' : 'dropped'} {r.value} ({r.reason})
               </p>
             ))}
           </details>

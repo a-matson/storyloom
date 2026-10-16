@@ -87,7 +87,7 @@ describe('the state read', () => {
     expect(r.rejected).toEqual([{ value: 'Mira mood: calm', reason: 'at-range' }]);
     expect(cuts.calls[0]).toMatchObject({ job: 'state', accepted: 2 });
 
-    const pronoun = setup(['You wait.', 'She smiles.'], [{ who: 'Mira', key: 'mood', now: 'happy', at: 4 }]);
+    const pronoun = setup(['You wait.', 'She smiles, happy.'], [{ who: 'Mira', key: 'mood', now: 'happy', at: 4 }]);
     await readState(pronoun.adv, pronoun.deps);
     expect(now(pronoun.adv, mira.id)).toEqual({ mood: 'happy' });
 
@@ -154,6 +154,24 @@ describe('the state read', () => {
     const effect = adv.assertions.find((a): a is Extract<Assertion, { kind: 'effect' }> => a.kind === 'effect');
     expect(effect).toMatchObject({ subject: mira.id, condition: 'weak', seen: false, cause: { kind: 'item', id: amulet.id, text: 'Amulet' } });
     expect(now(adv, mira.id)).toEqual({ condition: 'weak' });
+  });
+
+  it('names no cause from another sentence (F11)', async () => {
+    const { adv, deps } = setup(['You wait.', 'Tobin laughs. Mira falls, hurt.'], [{ who: 'Mira', key: 'condition', now: 'hurt', at: 4 }]);
+    await readState(adv, deps);
+    expect(adv.assertions.some((a) => a.kind === 'effect')).toBe(false);
+    expect(now(adv, mira.id)).toEqual({ condition: 'hurt' });
+  });
+
+  it('only proposes a value the action does not say', async () => {
+    const { adv, deps, cuts } = setup(['You wait.', 'Mira smiles at you.'], [{ who: 'Mira', key: 'condition', now: 'angry', at: 4 }], [mira]);
+    const out = await readState(adv, deps);
+    expect(out).toEqual({ changed: 0, rejected: [{ value: 'Mira condition: angry', reason: 'ungrounded' }] });
+    expect(adv.assertions.filter((a) => a.subject === mira.id)).toEqual([
+      expect.objectContaining({ kind: 'state', key: 'condition', value: 'angry', basis: 'inferred', seen: false }),
+    ]);
+    expect(now(adv, mira.id)).toEqual({});
+    expect(cuts.calls.at(-1)?.rejected).toEqual(out.rejected);
   });
 
   it('reads one output once, and again after a retry', async () => {
