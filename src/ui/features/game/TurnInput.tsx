@@ -31,11 +31,11 @@ export function TurnInput({ mode, text, busy, onText, onKeyDown, onSend, onStop,
       </label>
       <div
         className={cn(
-          'flex min-h-12 grow items-end gap-2.5 rounded-lg border border-border bg-card py-1.25 pr-2 pl-4 transition-colors motion-reduce:transition-none',
+          'flex min-h-12 grow items-center gap-2.5 rounded-lg border border-border bg-card pr-2 pl-4 transition-colors motion-reduce:transition-none',
           m.focus,
         )}
       >
-        <span className={cn('font-display text-screen-title leading-9', m.text)} aria-hidden>
+        <span className={cn('font-display text-screen-title', m.text)} aria-hidden>
           {m.prefix}
         </span>
         {/* Grows in height with the text (`field-sizing`); the width an `<input>` had keeps the row's wrapping. Enter still sends. */}
@@ -44,7 +44,7 @@ export function TurnInput({ mode, text, busy, onText, onKeyDown, onSend, onStop,
           ref={inputRef}
           rows={1}
           /* the container wears the mode-coloured ring instead of the global 4 px one */
-          className="max-h-40 w-[20ch] min-w-0 grow resize-none border-none bg-transparent py-1.5 font-prose text-[17px] leading-6 outline-none field-sizing-content focus-visible:shadow-none"
+          className="max-h-40 w-45 min-w-0 grow resize-none border-none bg-transparent py-1.5 font-prose text-[17px] leading-normal outline-none field-sizing-content focus-visible:shadow-none"
           value={text}
           onChange={(e) => onText(e.target.value)}
           onKeyDown={onKeyDown}
