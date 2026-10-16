@@ -21,10 +21,11 @@ function setup(stateRead: Adventure['settings']['memory']['stateRead'], hold = f
   let held = hold;
   const provider = fakeProvider(
     async function* (req, signal) {
-      const kind = req.prompt.includes('Who is in the scene')
-        ? 'state'
-        : req.prompt.includes('Where does the passage end')
-          ? 'scene'
+      // The merged read (`every`) holds both asks: it is the turn read.
+      const kind = req.prompt.includes('Where does the passage end')
+        ? 'scene'
+        : req.prompt.includes('Who is in the scene')
+          ? 'state'
           : req.prompt.includes(ENTITY_PROMPT)
             ? 'entity'
             : 'memory';
@@ -34,9 +35,11 @@ function setup(stateRead: Adventure['settings']['memory']['stateRead'], hold = f
         await new Promise((r) => signal?.addEventListener('abort', r));
         return;
       }
+      const changes = `"changes": [{"who": "Mira", "key": "posture", "now": "sitting", "at": ${adv.actions.length - 1}}]`;
+      const scene = '"scene": {"moved": false, "location": "", "present": ["Mira"], "left": [], "weather": "unchanged"}';
       const text = {
-        state: `{"changes": [{"who": "Mira", "key": "posture", "now": "sitting", "at": ${adv.actions.length - 1}}]}`,
-        scene: '{"scene": {"moved": false, "location": "", "present": ["Mira"], "left": [], "weather": "unchanged"}}',
+        state: `{${changes}}`,
+        scene: req.prompt.includes('Who is in the scene') ? `{${changes}, ${scene}}` : `{${scene}}`,
         entity: '{"entities": [], "speakers": []}',
         memory: 'Mira found the map.',
       }[kind];
@@ -59,17 +62,28 @@ function setup(stateRead: Adventure['settings']['memory']['stateRead'], hold = f
     flag: () => {},
   });
   const posture = () => adv.assertions.find((a) => a.subject === mira.id && a.kind === 'state' && a.key === 'posture' && a.until === undefined);
-  return { calls, scheduler, posture, asked };
+  return { calls, scheduler, posture, asked, adv };
 }
 
 describe('the state read in the scheduler', () => {
-  it('runs after the turn read and before the memory run', async () => {
+  it('every: rides on the turn read, one helper call per turn before the memory run', async () => {
     const { calls, scheduler, posture, asked } = setup('every');
     scheduler.start(new AbortController().signal);
     await vi.waitFor(() => expect(calls).toContain('memory'));
-    expect(calls.slice(0, 2)).toEqual(['scene', 'state']);
+    expect(calls[0]).toBe('scene');
+    expect(calls).not.toContain('state');
+    expect([...asked]).toEqual(['scene', 'memory', 'batch', 'summary']);
+    expect(posture()).toMatchObject({ value: 'sitting', producer: 'turn' });
+  });
+
+  it('every without a turn read: the standalone read runs', async () => {
+    const { calls, scheduler, posture, asked, adv } = setup('every');
+    adv.settings.memory = { ...adv.settings.memory, sceneEachTurn: false, introductions: false };
+    scheduler.start(new AbortController().signal);
+    await vi.waitFor(() => expect(calls).toContain('memory'));
+    expect(calls[0]).toBe('state');
     // Each read asks for its own model, so `readsOn` can route it.
-    expect([...asked]).toEqual(['scene', 'state', 'memory', 'batch', 'summary']);
+    expect([...asked]).toEqual(['state', 'memory', 'batch', 'summary']);
     expect(posture()).toMatchObject({ value: 'sitting', producer: 'turn' });
   });
 
