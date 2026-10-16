@@ -64,7 +64,6 @@ export class MemoryScheduler {
     else await this.run(idle);
   }
 
-  /** First on slot 1 so the badge comes while the player reads; typing does not cut it (a few seconds), the next turn does. */
   /** One helper job on the helper model, its calls recorded for the trace drawer even when it throws. */
   private async logged<T>(read: ReadKind, job: (deps: HelperModel & { cuts: CutCounts }) => Promise<T>): Promise<T> {
     const helper = await this.host.helperModel(read);
@@ -76,16 +75,16 @@ export class MemoryScheduler {
     }
   }
 
+  /** First on slot 1 so the badge comes while the player reads; typing does not cut it (a few seconds), the next turn does. */
   private async check(idle: AbortSignal): Promise<void> {
     const adv = this.host.adventure();
     const last = adv.actions.at(-1);
     if (last?.type !== 'continue' && last?.type !== 'start') return;
     try {
       const { checkInputs, checkOutput } = await loadMemoryJobs();
-      const output = actionText(last);
       const lines = checkInputs(adv);
       if (!lines.length) return;
-      const fact = await this.logged('check', (d) => checkOutput(output, lines, { ...d, signal: idle }));
+      const fact = await this.logged('check', (d) => checkOutput(actionText(last), lines, { ...d, signal: idle }));
       if (!idle.aborted) this.host.flag(fact === null ? null : { actionId: last.id, fact });
     } catch (e) {
       if (!idle.aborted) console.warn('contradiction check failed', e);
@@ -93,8 +92,8 @@ export class MemoryScheduler {
   }
 
   /**
-   * The turn read: the scene, and a card for each name the turn brings. Nothing cuts it: a call takes
-   * ~16 s on slot 1, longer than a player reads, and a cut call never made a card. It may overlap the next turn's start.
+   * The turn read: the scene, a card for each name the turn brings, and on `every` read B (M17-1, one call per turn). Nothing cuts it: a call takes ~16 s
+   * on slot 1, longer than a player reads, and a cut call never made a card. It may overlap the next turn's start.
    * [measured: 2026-10-09-live-play-m11-2c.json] One at a time; turns that end meanwhile share one re-run.
    */
   private introducing: Promise<void> | null = null;
@@ -119,24 +118,25 @@ export class MemoryScheduler {
   }
   private async introduceOnce(): Promise<void> {
     const { introductions, sceneEachTurn, stateRead } = this.host.adventure().settings.memory;
+    let merged = false;
     try {
       if (introductions || sceneEachTurn) {
         const { introduce } = await loadMemoryJobs();
-        const r = await this.logged('scene', (d) => introduce(this.host.adventure(), d));
+        const r = await this.logged('scene', (d) => introduce(this.host.adventure(), d, undefined, { state: stateRead === 'every' }));
+        merged = r.state !== undefined;
         let touched = r.touched;
         const edits = [...this.edits];
         this.edits.clear();
         for (const i of edits) touched += (await this.logged('scene', (d) => introduce(this.host.adventure(), d, i))).touched;
-        if (touched || r.sceneUpdated) this.host.changed();
+        if (touched || r.sceneUpdated || (r.state?.changed ?? 0)) this.host.changed();
         if (touched && this.idle && !this.idle.aborted) this.portraits(this.idle);
       }
     } catch (e) {
       console.warn('introduction call failed', e);
     }
-    // After the turn read, so it asks about the scene that read left. A failed read is skipped: the next one anchors on the stored state.
-    if (stateRead === 'every') await this.readState();
+    // Not merged (no turn read this turn): the standalone read. A failed read is skipped: the next one anchors on the stored state.
+    if (stateRead === 'every' && !merged) await this.readState();
   }
-
   /** What changed for whoever is there; `cancel` (idle mode) lets typing cut it, and a cut throws so the run waits. */
   private async readState(cancel?: AbortSignal): Promise<void> {
     try {
