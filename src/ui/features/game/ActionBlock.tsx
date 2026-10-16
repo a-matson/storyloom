@@ -55,7 +55,12 @@ function Prose({ text, action, cast, present, adventureId, onOpenEntity }: Prose
           <span className="block w-fit max-sm:mb-1 sm:absolute sm:top-0 sm:-inset-s-(--gutter)">
             {/* Only a labelled paragraph is speech; a named one already says the name. */}
             {labels[i] !== undefined && <span className="sr-only">{e.name} says</span>}
-            <button type="button" aria-label={`Open ${e.name}`} className="block cursor-pointer rounded-full" onClick={() => onOpenEntity(e.id)}>
+            <button
+              type="button"
+              aria-label={`Open ${e.name}`}
+              className="flex cursor-pointer rounded-full border-0 bg-transparent p-0"
+              onClick={() => onOpenEntity(e.id)}
+            >
               <Avatar name={e.name} adventureId={adventureId} portraitId={e.portraitId} />
             </button>
           </span>

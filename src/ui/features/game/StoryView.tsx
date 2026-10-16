@@ -3,7 +3,9 @@ import type { Action, AppSettings, Entity } from '@core/model';
 import type { OutputFlag } from '@core/trace';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { ActionBlock, PROSE } from './ActionBlock';
+import { cn } from '@ui/lib/utils';
 import { Caret } from './Caret';
+import { actionGrid, textColumn } from './OutputTools';
 
 interface Props {
   actions: Action[];
@@ -75,16 +77,21 @@ export function StoryView({
             onOpenEntity={onOpenEntity}
           />
         ))}
+        {/* In the action grid, so the stream starts at the same left edge as the finished prose. */}
         {streaming !== '' && (
-          <p aria-live="polite" className={PROSE}>
-            {streaming}
-            <Caret />
-          </p>
+          <div className={actionGrid}>
+            <p aria-live="polite" className={cn(PROSE, textColumn)}>
+              {streaming}
+              <Caret />
+            </p>
+          </div>
         )}
         {busy && streaming === '' && (
-          <p className={`${PROSE} font-sans text-control`}>
-            thinking… <Caret />
-          </p>
+          <div className={actionGrid}>
+            <p className={cn(PROSE, textColumn, 'font-sans text-control')}>
+              thinking… <Caret />
+            </p>
+          </div>
         )}
         <div ref={endRef} />
       </div>
