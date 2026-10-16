@@ -83,17 +83,6 @@ export const sceneRead = (cast: readonly string[], before: readonly string[]) =>
   return z.object({ location: sentence(LOCATION_CHARS), present: who, stay, weather: Weather });
 };
 export type SceneRead = z.output<ReturnType<typeof sceneRead>>;
-/**
- * The turn read's reply; a turn with no new name asks only the scene. `scene` first and required:
- * optional and with no worked example, the 12B left it out. [measured: 2026-10-09-recall-m11-1.json]
- */
-export const turnRead = (cast: readonly string[], newNames: readonly string[], before: readonly string[]) => {
-  const [first, ...rest] = newNames;
-  if (first === undefined) return z.object({ scene: sceneRead(cast, before) });
-  // A card per asked name, at least one: a free list after the scene came back empty in 7 of 9 reads, 0 of 8 so. [measured: 2026-10-15-turn-read-cards.json]
-  const card = z.object({ ...IntroducedEntity.shape, name: z.enum([first, ...rest]) });
-  return z.object({ scene: sceneRead(cast, before), entities: z.array(card).check(z.minLength(1), z.maxLength(Math.min(MAX_INTRODUCED, newNames.length))) });
-};
 
 /**
  * What the state read may change; `holds` becomes the item's `holder`. [measured: 2026-10-13-state-probe-m12-dogfood P8b]
@@ -109,6 +98,27 @@ export const stateChange = (who: readonly [string, ...string[]]) =>
 export type StateChange = z.output<ReturnType<typeof stateChange>>;
 /** The state read's reply. No optional keys (R1). */
 export const stateRead = (who: readonly [string, ...string[]], max: number) => z.object({ changes: z.array(stateChange(who)).check(z.maxLength(max)) });
+/** Whom read B asks about, and how many entries it may give. */
+export interface StateAsk {
+  who: readonly [string, ...string[]];
+  max: number;
+}
+
+/**
+ * The turn read's reply; a turn with no new name asks only the scene. `scene` first and required:
+ * optional and with no worked example, the 12B left it out. [measured: 2026-10-09-recall-m11-1.json]
+ * With `state` it carries read B too (M17-1). `changes` first: after the scene the 12B closed it empty on 30 of 31
+ * turns, first it wrote 47 entries with 0 cut. [measured: 2026-10-16-state-m17-1-ab.json, -ab4.json]
+ */
+export const turnRead = (cast: readonly string[], newNames: readonly string[], before: readonly string[], state?: StateAsk) => {
+  const scene = sceneRead(cast, before);
+  const changes = state && stateRead(state.who, state.max).shape;
+  const [first, ...rest] = newNames;
+  if (first === undefined) return z.object({ ...changes, scene });
+  // A card per asked name, at least one: a free list after the scene came back empty in 7 of 9 reads, 0 of 8 so. [measured: 2026-10-15-turn-read-cards.json]
+  const card = z.object({ ...IntroducedEntity.shape, name: z.enum([first, ...rest]) });
+  return z.object({ ...changes, scene, entities: z.array(card).check(z.minLength(1), z.maxLength(Math.min(MAX_INTRODUCED, newNames.length))) });
+};
 
 /**
  * The combined helper call's reply. No scene: it reads memories back, so it would move the scene

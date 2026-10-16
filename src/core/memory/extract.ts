@@ -10,9 +10,13 @@ import {
   sceneRead,
   STAYS,
   SpokenIn,
+  stateChange,
   turnRead,
   type SceneRead,
+  type StateAsk,
+  type StateChange,
 } from '../schema/extraction';
+import type { StateRecord } from '../text/statePrompt';
 import { actionStoryText } from '../text/formatting';
 import { parseJsonReply } from '../text/jsonReply';
 import { EXTRACT_SYSTEM, extractPrompt } from '../text/prompts';
@@ -70,9 +74,11 @@ export interface TurnRead {
   /** Absent when the reply's scene did not parse. */
   scene?: SceneRead;
   entities: z.output<typeof IntroducedEntity>[];
+  /** Read B's entries, when it was asked. */
+  changes?: StateChange[];
 }
 const turnAccepter =
-  (cast: readonly string[], before: readonly string[]) =>
+  (cast: readonly string[], before: readonly string[], state?: StateAsk) =>
   (cut: boolean) =>
   (data: unknown): TurnRead | null => {
     const l = lists(data, cut);
@@ -86,7 +92,11 @@ const turnAccepter =
     const verdict = (n: string) => STAYS.find((s) => s === said?.[n]) ?? (gone.includes(n) ? 'left' : 'here');
     const stay = Object.fromEntries(before.map((n) => [n, verdict(n)]));
     const scene = raw && sceneRead(cast, before).safeParse({ ...raw, present: known('present'), stay }).data;
-    return { ...(scene && { scene }), entities: l.items('entities', IntroducedEntity, MAX_INTRODUCED) };
+    return {
+      ...(scene && { scene }),
+      entities: l.items('entities', IntroducedEntity, MAX_INTRODUCED),
+      ...(state && { changes: l.items('changes', stateChange(state.who), state.max) }),
+    };
   };
 
 /** Without them a JSON read looped a key to its token cap (state probes P1, P8). JSON reads only: memory-keep is measured on the prose calls' samplers. [provisional] */
@@ -147,17 +157,34 @@ export function extractFromPassage(passage: string, knownNames: readonly string[
 const INTRODUCE_TOKENS = 200;
 /** The scene alone: a place, a few names, the weather. [provisional] */
 const SCENE_TOKENS = 80;
+/**
+ * Per entry read B may give in the merged read: the 12B pretty-prints them (~25 tokens each), and with `changes` first a
+ * cut loses the scene. With five present, read B's own 40 × subjects capped at 160 cut 2 of 31 replies, 30 per entry 1
+ * (seven entries, then a scene of five). [measured: 2026-10-16-state-m17-1-ab6.json, -ab7.json]
+ */
+const CHANGE_TOKENS = 40;
+
+/** The turn read's reply budget: the scene's, the cards' beyond it, and read B's when merged in. */
+export const turnReadTokens = (newNames: readonly string[], state?: StateAsk) =>
+  SCENE_TOKENS + (newNames.length ? INTRODUCE_TOKENS - SCENE_TOKENS : 0) + (state ? CHANGE_TOKENS * state.max : 0);
 
 /**
  * The turn read: where the passage ends, after `prev`, with `cast` (every known character name and alias)
- * as the names it may give; and kind, description and looks for each new name.
+ * as the names it may give; and kind, description and looks for each new name; with `state`, read B's changes too.
  */
-export function readTurn(passage: string, newNames: readonly string[], prev: PrevScene, cast: readonly string[], deps: ExtractDeps): Promise<TurnRead | null> {
+export function readTurn(
+  passage: string,
+  newNames: readonly string[],
+  prev: PrevScene,
+  cast: readonly string[],
+  deps: ExtractDeps,
+  state?: StateAsk & { records: readonly StateRecord[] },
+): Promise<TurnRead | null> {
   return helperJson(
-    (g) => introducePrompt(passage, newNames, g, prev, cast),
-    grammarOf(turnRead(cast, newNames, prev.present)),
-    newNames.length ? INTRODUCE_TOKENS : SCENE_TOKENS,
-    turnAccepter(cast, prev.present),
+    (g) => introducePrompt(passage, newNames, g, prev, cast, state),
+    grammarOf(turnRead(cast, newNames, prev.present, state)),
+    turnReadTokens(newNames, state),
+    turnAccepter(cast, prev.present, state),
     deps,
   );
 }

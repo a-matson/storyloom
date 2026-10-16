@@ -94,6 +94,19 @@ describe('the helper reads’ cached prefix', () => {
     expect(shared(a, b)).toMatch(/^What changed.*Keys:.*holds = .*\n\nWho is in the scene, with their record before this passage \("you" is the player\):\n$/s);
     expect(a.split('[4] Mira sits.')).toHaveLength(2);
   });
+
+  it('merges read B into the turn read: all asks first, the records, the passage once, then the cap', () => {
+    const prev = { location: 'the ferry', present: ['Tamsin'] };
+    const state = { records: [{ who: 'Tamsin', now: { mood: 'calm' } }], max: 2 };
+    const p = introducePrompt('[3] Tamsin rows.', ['Weever'], true, prev, ['Tamsin'], state);
+    expect(p).toMatch(
+      /^changes: What changed.*Where does the passage end.*For each new name.*New here: Weever.*Previous scene.*Tamsin: mood calm\n\n---\n\[3\] Tamsin rows\.\n---\n\nchanges: for each one in the records above.*at most 2\./s,
+    );
+    expect(p.split('[3] Tamsin rows.')).toHaveLength(2);
+    expect(p).toContain('Return {"changes": [...], "scene": {...}, "entities": [...]}.');
+    expect(introducePrompt('[3] Tamsin rows.', [], false, prev, ['Tamsin'], state)).toContain('{"changes": [{"who": "<Name>"');
+    expect(introducePrompt('[3] Tamsin rows.', [], true, prev, ['Tamsin'])).not.toMatch(/changes|What changed/);
+  });
 });
 
 describe('newNamesIn', () => {

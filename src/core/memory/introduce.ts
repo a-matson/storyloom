@@ -8,11 +8,12 @@ import { foldEntities, newNamesIn, notAName } from './fold';
 import { MEMORY_SPAN } from './memoryBank';
 import { sceneNames } from './names';
 import { withScene } from './scene';
+import { applyChanges, stateAsk, stateCast, type StateUpdate } from './stateRead';
 
 /** Actions an introduction reads at least: the last AI output and the player line before it. [provisional] */
 const INTRODUCE_SPAN = 2;
 
-type TurnUpdate = EntityUpdate & { sceneUpdated: boolean };
+type TurnUpdate = EntityUpdate & { sceneUpdated: boolean; state?: StateUpdate };
 
 /**
  * Makes a place card for a location no place is known as; true when it did. The new place sits top-level,
@@ -59,7 +60,7 @@ async function readEdit(adventure: Adventure, deps: ExtractDeps, i: number): Pro
  * `scriptState.__introducedAt`/`__introducedHash` mark the turn read; a retried output with other
  * text is read again. A cut call leaves the marker, so the next idle period retries it.
  */
-export async function introduce(adventure: Adventure, deps: ExtractDeps, edited?: number): Promise<TurnUpdate> {
+export async function introduce(adventure: Adventure, deps: ExtractDeps, edited?: number, opts?: { state?: boolean }): Promise<TurnUpdate> {
   if (edited !== undefined) return readEdit(adventure, deps, edited);
   const n = adventure.actions.length;
   const last = adventure.actions.at(-1);
@@ -77,8 +78,18 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps, edited?
   // ponytail: names past the grammar's cap wait for the batch call; raise MAX_INTRODUCED if openings name more.
   const names = introductions ? [...new Set([...newNamesIn(adventure, range), ...uncarded])].slice(0, MAX_INTRODUCED) : [];
   const prev = { location: now?.location, present: now?.present ?? [] };
-  const reply = names.length || sceneEachTurn ? await readTurn(passage, names, prev, castOf(adventure, names, prev.present), deps) : null;
-  adventure.scriptState = { ...adventure.scriptState, __introducedAt: n, __introducedHash: hash };
+  const asked = names.length > 0 || sceneEachTurn;
+  // Read B merged (M17-1): its subjects are the scene before this reply, since the reply carries both.
+  const subjects = asked && opts?.state ? stateCast(adventure) : [];
+  const state = subjects.length ? stateAsk(adventure, subjects) : undefined;
+  const reply = asked ? await readTurn(passage, names, prev, castOf(adventure, names, prev.present), deps, state) : null;
+  adventure.scriptState = {
+    ...adventure.scriptState,
+    __introducedAt: n,
+    __introducedHash: hash,
+    // The standalone read then skips this turn, as after its own call.
+    ...(state && { __stateAt: n, __stateHash: hash }),
+  };
   if (!reply) return none();
   // Cards first, so the scene's names resolve to them.
   let touched = names.length ? foldEntities(adventure, reply.entities, passage, range, { present: uncarded }) : 0;
@@ -98,8 +109,13 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps, edited?
     const here = new Set(plot.scene?.present);
     adventure.entities = adventure.entities.map((e) => (here.has(e.id) && e.lastSeen < n - 1 ? (touched++, { ...e, lastSeen: n - 1 }) : e));
   }
+  // After the scene and the cards, so `holds` can name an item carded this turn.
+  const changed = state && applyChanges(adventure, subjects, reply.changes ?? [], state.max);
   const call = deps.cuts?.calls?.at(-1);
-  if (call) call.accepted = touched + (sceneUpdated ? 1 : 0);
+  if (call) {
+    call.accepted = touched + (sceneUpdated ? 1 : 0) + (changed?.changed ?? 0);
+    if (changed) call.rejected = changed.rejected;
+  }
   // No speakers: the short reply leaves them to the client guess and the batch call.
-  return { touched, speakers: new Map(), sceneUpdated };
+  return { touched, speakers: new Map(), sceneUpdated, ...(changed && { state: changed }) };
 }
