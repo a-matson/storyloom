@@ -45,7 +45,7 @@ export async function refreshSummary(adventure: Adventure, deps: Omit<Maintenanc
     prompt.prompt,
     (signal) =>
       deps.provider.complete(
-        { prompt: prompt.prompt, maxTokens: 500, temperature: 0.3, topP: 0.9, stop: prompt.stop, cachePrompt: false, slotId: 1, grammar },
+        { prompt: prompt.prompt, maxTokens: 500, temperature: 0.3, topP: 0.9, stop: prompt.stop, cachePrompt: true, slotId: 1, grammar },
         signal,
       ),
     deps,

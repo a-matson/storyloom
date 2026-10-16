@@ -53,6 +53,14 @@ describe('DexieStorage helper calls', () => {
     expect(await s.listHelperCalls('elsewhere')).toHaveLength(1);
   });
 
+  it('keeps a call’s prefill time and cached tokens, and reads a row stored without them', async () => {
+    const s = await fresh();
+    const timed = { ...helper(2, 'a'), promptMs: 412.5, cachedTokens: 180 };
+    await s.putHelperCall(helper(1, 'a'));
+    await s.putHelperCall(timed);
+    expect(await s.listHelperCalls('a')).toEqual([timed, helper(1, 'a')]);
+  });
+
   it('upgrades a version-4 database to 5 and keeps adventures and traces', async () => {
     const name = `helper-${++n}`;
     const adv = makeAdventure({ actions: 3 });

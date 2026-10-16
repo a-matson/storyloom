@@ -17,6 +17,8 @@ export function recordHelperCalls(storage: Storage, adv: Adventure, calls: reado
         ms: c.ms,
         promptHash: c.promptHash,
         generatedTokens: c.generatedTokens,
+        ...(c.promptMs !== undefined && { promptMs: c.promptMs }),
+        ...(c.cachedTokens !== undefined && { cachedTokens: c.cachedTokens }),
         ...(c.stopReason !== undefined && { stopReason: c.stopReason }),
         cut: c.cut,
         reply: c.reply.slice(0, HELPER_REPLY_CAP),

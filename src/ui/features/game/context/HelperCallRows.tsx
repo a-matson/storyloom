@@ -41,6 +41,8 @@ export function HelperCallRows({ adventureId, from, to }: Props) {
                 c.model,
                 seconds(c.ms),
                 `${c.generatedTokens} tok`,
+                c.promptMs !== undefined ? `prefill ${seconds(c.promptMs)}` : undefined,
+                c.cachedTokens !== undefined ? `cached ${c.cachedTokens}` : undefined,
                 c.cut ? 'cut' : c.stopReason,
                 `kept ${c.accepted}`,
                 c.rejected.length ? `dropped ${c.rejected.length}` : undefined,

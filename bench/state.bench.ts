@@ -48,8 +48,12 @@ const READS = (process.env['MEASURE_READS'] ?? 'A,B').split(',');
 /** `MEASURE_ONLY=43-44` replays those AI turns from the labelled scene; `MEASURE_REPEAT=5` reads each one 5 times (`left` per sample). */
 const ONLY = onlySpan(process.env['MEASURE_ONLY']);
 const REPEAT = Number(process.env['MEASURE_REPEAT'] ?? '1');
+/** `MEASURE_CACHE=1` caches read A's prompt on slot 1, as core caches read B's (M17-2). */
+const CACHE = process.env['MEASURE_CACHE'] === '1';
 interface Reply {
   ms: number;
+  promptMs?: number | undefined;
+  cachedTokens?: number | undefined;
   tokens?: number | undefined;
   stop?: string | undefined;
   raw: string;
@@ -78,13 +82,21 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
         topP: 0.9,
         ...HELPER_JSON_SAMPLING,
         stop: r.stop,
-        cachePrompt: false,
+        cachePrompt: CACHE,
         slotId: 1,
         jsonSchema: grammarOf(schema),
       }),
     );
     const parsed = parses(text) ? schema.safeParse(JSON.parse(text)).data : undefined;
-    return { text, parsed, ms: Date.now() - t0, tokens: stats?.generatedTokens, stop: stats?.stopReason };
+    return {
+      text,
+      parsed,
+      ms: Date.now() - t0,
+      promptMs: stats?.promptMs,
+      cachedTokens: stats?.cachedTokens,
+      tokens: stats?.generatedTokens,
+      stop: stats?.stopReason,
+    };
   };
 
   const rows: (StateRow & { a: Reply; b?: Reply; left: LeftRow; structured: { tokens: number; text: string } })[] = [];
@@ -145,6 +157,8 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     const call = calls[0];
     const b = call && {
       ms: call.ms,
+      promptMs: call.promptMs,
+      cachedTokens: call.cachedTokens,
       tokens: call.generatedTokens,
       stop: call.stopReason,
       raw: call.reply,
@@ -179,7 +193,7 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
       location: scene.location,
       present: scene.present,
       record: structuredClone(record),
-      a: { ms: a.ms, tokens: a.tokens, stop: a.stop, raw: a.text, parsed: !!a.parsed },
+      a: { ms: a.ms, promptMs: a.promptMs, cachedTokens: a.cachedTokens, tokens: a.tokens, stop: a.stop, raw: a.text, parsed: !!a.parsed },
       left,
       ...(b && { b }),
       structured,
@@ -211,6 +225,10 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     meanMsA: mean(rows.map((r) => r.a.ms)),
     ...scoreLeft(rows.map((r) => r.left)),
     meanMsB: mean(bs.map((x) => x.ms)),
+    meanPromptMsA: mean(rows.flatMap((r) => r.a.promptMs ?? [])),
+    meanPromptMsB: mean(bs.flatMap((x) => x.promptMs ?? [])),
+    meanCachedA: mean(rows.flatMap((r) => r.a.cachedTokens ?? [])),
+    meanCachedB: mean(bs.flatMap((x) => x.cachedTokens ?? [])),
     // C8: above 20 % the next item loosens the subject rule.
     stateAccepted: bs.reduce((s, x) => s + (x.accepted ?? 0), 0),
     stateRejected: bs.reduce((s, x) => s + (x.rejected?.length ?? 0), 0),

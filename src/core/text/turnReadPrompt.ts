@@ -14,17 +14,14 @@ export interface PrevScene {
 /**
  * The turn read: the scene, then a card for each new name when there are any, so it ends while the player reads.
  * The scene wording is probe P7c's: present 27/30, place 27/30. [measured: 2026-10-13-state-probe-m12-dogfood]
+ * The ask comes before the passage and the names, so slot 1 reuses it from its prompt cache (M17-2).
  */
 export function introducePrompt(passage: string, newNames: readonly string[], grammar: boolean, prev: PrevScene, cast: readonly string[]): string {
   const cards = newNames.length > 0;
   return (
     TURN_READ_ASK +
-    (cards ? ` New here: ${newNames.join(', ')}.` : '') +
-    // No placeholder place: one the model could copy back as the location.
-    `\nPrevious scene: ${prev.location ? `location "${prev.location}", present: ${prev.present.join(', ') || 'nobody'}` : 'not known yet'}. Known characters: ${cast.join(', ') || 'none yet'}.` +
-    `\n\n---\n${passage}\n---\n\n` +
     // "You", not "the characters": with them, the location followed two characters sent to the basement (M14-S2 replay).
-    'scene is where the passage ends. location is where you are at the end, in at most four words (keep the previous wording when it is the same place). ' +
+    '\nscene is where the passage ends. location is where you are at the end, in at most four words (keep the previous wording when it is the same place). ' +
     'present lists the known characters there at the end (asleep or unconscious still counts; gone to another room does not), not the player "you". ' +
     (prev.present.length
       ? 'stay gives each character present in the previous scene: "here" if still in the same room as you at the end, ' +
@@ -35,6 +32,10 @@ export function introducePrompt(passage: string, newNames: readonly string[], gr
       ? 'For each new name that is a proper name of a character, place, item or faction in this passage, give its kind and a one-sentence description of who or what it is. ' +
         `Skip a name that is not one (a common word, an exclamation, the player "you"). ${LOOKS_ASK}\n`
       : '\n') +
+    (cards ? `New here: ${newNames.join(', ')}.\n` : '') +
+    // No placeholder place: one the model could copy back as the location.
+    `Previous scene: ${prev.location ? `location "${prev.location}", present: ${prev.present.join(', ') || 'nobody'}` : 'not known yet'}. Known characters: ${cast.join(', ') || 'none yet'}.` +
+    `\n\n---\n${passage}\n---\n\n` +
     (grammar
       ? `Return {"scene": {...}${cards ? ', "entities": [...]' : ''}}.`
       : 'Return JSON in this shape (<...> are placeholders):\n{"scene": {"location": "<place>", "present": ["<Name>"], "stay": {' +

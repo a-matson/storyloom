@@ -87,6 +87,8 @@ export const HelperCall = z.object({
   ms: count,
   promptHash: z.string(),
   generatedTokens: count,
+  promptMs: z.optional(z.number()),
+  cachedTokens: z.optional(count),
   stopReason: z.optional(z.string()),
   cut: z.boolean(),
   reply: z.string().check(z.maxLength(HELPER_REPLY_CAP)),

@@ -48,6 +48,7 @@ describe('the state read', () => {
     expect(schema).not.toContain('nobody');
     // Caps: present + 1 entries, 40 tokens each up to 160.
     expect(reqs[0]?.maxTokens).toBe(120);
+    expect(reqs[0]).toMatchObject({ cachePrompt: true, slotId: 1 });
     expect(reqs[0]?.jsonSchema).toMatchObject({ properties: { changes: { maxItems: 4 } } });
     expect(schema).not.toContain('"location"');
 
