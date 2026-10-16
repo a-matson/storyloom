@@ -22,6 +22,9 @@ export interface HelperCallLog {
   stopReason?: string | undefined;
   /** Hash of the rendered prompt: the same input read twice, or two inputs. */
   promptHash: string;
+  /** Prefill time and the prompt tokens slot 1 reused from its cache, when the backend reports them. */
+  promptMs?: number | undefined;
+  cachedTokens?: number | undefined;
   /** Entity calls: trait facts the reply carried. */
   factsProposed?: number;
   /** Set by the caller after its guards: items kept, and values dropped with why. */
@@ -85,6 +88,8 @@ export function helperCall(
       ms: Date.now() - t0,
       stopReason: stats?.stopReason,
       promptHash: hashPrompt(prompt),
+      promptMs: stats?.promptMs,
+      cachedTokens: stats?.cachedTokens,
     });
     if (call.signal.aborted) {
       if (cuts) cuts.cutCalls += 1;

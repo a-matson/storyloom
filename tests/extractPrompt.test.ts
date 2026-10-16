@@ -6,6 +6,7 @@ import { EXTRACT_JSON_SCHEMA } from '@core/memory/extractJsonSchema';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import { extractPrompt } from '@core/text/prompts';
 import { statePrompt } from '@core/text/statePrompt';
+import { introducePrompt } from '@core/text/turnReadPrompt';
 import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure } from './fixtures/memoryJobs';
 
 describe('the entity call’s prompt', () => {
@@ -49,7 +50,7 @@ describe('the entity call’s prompt', () => {
 });
 
 describe('the state read’s prompt', () => {
-  it('lists each subject’s current record, the passage, then the P8b ask, and no effect on/off', () => {
+  it('puts the P8b ask before each subject’s record and the passage, the cap after, and no effect on/off', () => {
     const p = statePrompt(
       [
         { who: 'Mira', now: { posture: 'standing', holds: 'Horn' } },
@@ -60,14 +61,38 @@ describe('the state read’s prompt', () => {
       true,
     );
     expect(p).toContain('Mira: posture standing; holds Horn\nyou: nothing yet');
-    expect(p).toContain('---\n[4] Mira sits.\n---');
     expect(p).toMatch(
-      /At most 4 entries.*at most four words.*\[number\] of the paragraph.*never repeat a value the record already has.*If nothing changed, return \{"changes":\[\]\}/s,
+      /at most four words.*\[number\] of the paragraph.*never repeat a value the record already has.*Mira: posture.*---\n\[4\] Mira sits.\n---\n\nAt most 4 entries.*If nothing changed, return \{"changes":\[\]\}/s,
     );
     expect(p).not.toMatch(/effect|<Name>/i);
     // M13-3b: awake went to mood and kneeling to location without a meaning per key.
-    expect(p).toMatch(/posture = .*kneeling.*condition = .*awake.*holds = an item listed above/s);
+    expect(p).toMatch(/posture = .*kneeling.*condition = .*awake.*holds = an item listed below/s);
     expect(statePrompt([], '', 2, false)).toContain('{"changes":[{"who":"<Name>"');
+  });
+});
+
+describe('the helper reads’ cached prefix', () => {
+  // Slot 1 reuses only an identical prefix: everything before the first variable part must not change.
+  const shared = (a: string, b: string) => {
+    let i = 0;
+    while (i < a.length && a[i] === b[i]) i++;
+    return a.slice(0, i);
+  };
+
+  it('keeps the turn read’s ask before the scene, the names and the passage', () => {
+    const prev = { location: 'the ferry', present: ['Tamsin'] };
+    const a = introducePrompt('[3] Tamsin rows.', [], true, prev, ['Tamsin']);
+    const b = introducePrompt('[9] Brannoch waits at the gate.', ['Weever'], true, { location: 'the gate', present: ['Mira'] }, ['Mira', 'Brannoch']);
+    expect(shared(a, b)).toMatch(/^Where does the passage end.*location is.*present lists.*stay gives.*weather is/s);
+    expect(shared(a, b)).not.toMatch(/Previous scene|---/);
+    expect(a.split('[3] Tamsin rows.')).toHaveLength(2);
+  });
+
+  it('keeps the state read’s ask before the records, the passage and the cap', () => {
+    const a = statePrompt([{ who: 'Mira', now: {} }], '[4] Mira sits.', 2, true);
+    const b = statePrompt([{ who: 'Tobin', now: { mood: 'calm' } }], '[8] Tobin runs.', 4, true);
+    expect(shared(a, b)).toMatch(/^What changed.*Keys:.*holds = .*\n\nWho is in the scene, with their record before this passage \("you" is the player\):\n$/s);
+    expect(a.split('[4] Mira sits.')).toHaveLength(2);
   });
 });
 

@@ -79,7 +79,7 @@ describe('entity extraction in memory maintenance', () => {
       maxTokens: 500,
       temperature: 0.2,
       slotId: 1,
-      cachePrompt: false,
+      cachePrompt: true,
       jsonSchema: expect.objectContaining({ type: 'object' }),
     });
     expect(entityReqs[0]?.prompt).toContain('[0] ');

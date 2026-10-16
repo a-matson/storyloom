@@ -117,7 +117,7 @@ async function summarise(passage: string, deps: TextDeps, given: readonly string
     120,
     prompt.prompt,
     (signal) =>
-      deps.provider.complete({ prompt: prompt.prompt, maxTokens: 120, temperature: 0.3, topP: 0.9, stop, cachePrompt: false, slotId: 1, grammar }, signal),
+      deps.provider.complete({ prompt: prompt.prompt, maxTokens: 120, temperature: 0.3, topP: 0.9, stop, cachePrompt: true, slotId: 1, grammar }, signal),
     deps,
   );
   return trimUnfinishedSentence(text, stats?.stopReason).trim();

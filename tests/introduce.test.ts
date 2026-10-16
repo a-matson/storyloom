@@ -50,7 +50,7 @@ describe('introduce', () => {
     const { adv, reqs, deps } = setup('You meet Tamsin at the ferry.');
     const cuts = { cutCalls: 0, finishedPastCut: 0, calls: [] as HelperCallLog[] };
     await introduce(adv, { ...deps, cuts });
-    expect(reqs[0]).toMatchObject({ repeatLastN: 256, presencePenalty: 0.3 });
+    expect(reqs[0]).toMatchObject({ repeatLastN: 256, presencePenalty: 0.3, cachePrompt: true, slotId: 1 });
     expect(cuts.calls).toEqual([expect.objectContaining({ job: 'entity', cut: false, accepted: 1, promptHash: hashPrompt(reqs[0]?.prompt ?? '') })]);
     expect(cuts.calls[0]?.ms).toBeGreaterThanOrEqual(0);
   });

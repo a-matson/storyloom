@@ -116,7 +116,8 @@ export async function helperJson<R>(
           topP: 0.9,
           ...HELPER_JSON_SAMPLING,
           stop: rendered.stop,
-          cachePrompt: false,
+          // Slot 1's KV is its own: a cached helper leaves the story's slot-0 prefix whole. [measured: M17-2 /slots check, DECISIONS]
+          cachePrompt: true,
           slotId: 1,
           jsonSchema: caps.jsonSchema ? jsonSchema : undefined,
         },
