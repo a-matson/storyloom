@@ -1,7 +1,7 @@
 import type { Action, Adventure, Entity, Speaker } from '../model/types';
 import { actionText, newId } from '../model/types';
 import { guessSpeakers } from '../text/speakers';
-import { matchEntity, norm, words } from './names';
+import { norm, words } from './names';
 
 export { knownAs, matchEntity } from './names';
 
@@ -64,29 +64,6 @@ export function entityNamedIn<E extends Pick<Entity, 'name' | 'aliases'>>(entiti
       if (k.trim() && t.includes(k) && k.length > (best?.len ?? 0)) best = { e, len: k.length };
     }
   return best?.e;
-}
-
-/**
- * The helper's per-action `speakers` as paragraph labels by action id, for AI output only. The text
- * decides first (the client rule over every character); an action whose one resolved speaker the
- * helper names also labels the quoted paragraphs the text names nobody in ("the dragon rumbles").
- * Names no entity resolves are dropped. Scored on the hand labels, letting the helper's lone name
- * override the text lost precision (17/21 against 22/23).
- */
-export function attributeSpeakers(
-  actions: readonly Action[],
-  speakers: readonly { action: number; name: string }[],
-  entities: readonly Entity[],
-): Map<string, Speaker[]> {
-  const cast = entities.filter((e) => e.kind === 'character');
-  const out = new Map<string, Speaker[]>();
-  for (const i of new Set(speakers.map((s) => s.action))) {
-    const a = actions[i];
-    if (!a || !isOutput(a)) continue;
-    const named = [...new Set(speakers.flatMap((s) => (s.action === i ? (matchEntity(entities, s.name)?.name ?? []) : [])))];
-    if (named.length) out.set(a.id, guessSpeakers(actionText(a), cast, named.length === 1 ? named[0] : undefined));
-  }
-  return out;
 }
 
 /** Whether `inner` is `outer` or a run of its whole words. */

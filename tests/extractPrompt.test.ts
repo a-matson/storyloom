@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { mergeEntity } from '@core/memory/entities';
 import { newNamesIn } from '@core/memory/fold';
 import { createBlankAdventure } from '@core/model/scenario';
-import { EXTRACT_JSON_SCHEMA } from '@core/memory/extractJsonSchema';
+import { EXTRACT_GRAMMAR, EXTRACT_JSON_SCHEMA } from '@core/memory/extractJsonSchema';
+import { LOOK_KEYS } from '@core/memory/looks';
+import type { CompletionRequest } from '@core/ports';
+import { EntityKind } from '@core/schema/entity';
+import { DESCRIPTION_CHARS, FACT_CHARS, LOOK_CHARS, MAX_ENTITIES } from '@core/schema/extraction';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import { extractPrompt } from '@core/text/prompts';
 import { statePrompt } from '@core/text/statePrompt';
@@ -46,6 +50,35 @@ describe('the entity call’s prompt', () => {
 
   it('asks for the JSON on one line, grammar or not', () => {
     for (const g of [true, false]) expect(extractPrompt('[0] Mira waves.', [], g)).toMatch(/on one line, with no line breaks/);
+  });
+
+  it('sends the one-line grammar in place of the schema when the backend takes both', async () => {
+    const sent = async (grammar: boolean) => {
+      const adv = memoryAdventure(30);
+      const reqs: CompletionRequest[] = [];
+      const provider = fakeProvider(
+        async function* (req) {
+          if (req.prompt.includes(ENTITY_PROMPT)) reqs.push(req);
+          yield { text: req.prompt.includes(ENTITY_PROMPT) ? '{"entities": []}' : 'Mira found the map.', done: true };
+        },
+        grammar,
+        true,
+      );
+      await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
+      return reqs[0];
+    };
+    expect(await sent(true)).toMatchObject({ grammar: EXTRACT_GRAMMAR, jsonSchema: undefined });
+    expect(await sent(false)).toMatchObject({ grammar: undefined, jsonSchema: EXTRACT_JSON_SCHEMA });
+  });
+
+  it('keeps the schema’s caps in the grammar, with no whitespace and looks only for a character', () => {
+    for (const cap of [`{0,${MAX_ENTITIES - 1}}`, `char{0,${DESCRIPTION_CHARS}}`, `char{0,${FACT_CHARS}}`, `char{0,${LOOK_CHARS}}`])
+      expect(EXTRACT_GRAMMAR).toContain(cap);
+    for (const k of [...LOOK_KEYS, ...EntityKind.options]) expect(EXTRACT_GRAMMAR).toContain(`"${k}`);
+    expect(EXTRACT_GRAMMAR).not.toMatch(/" "|\\n|\[ \\t\]/);
+    const entity = EXTRACT_GRAMMAR.split('\n').find((l) => l.startsWith('entity ::='));
+    expect(entity?.split('|')[0]).toContain('looks');
+    expect(entity?.split('|')[1]).not.toContain('looks');
   });
 });
 

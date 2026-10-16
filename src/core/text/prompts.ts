@@ -25,8 +25,7 @@ const EXTRACT_SKELETON =
   'Return JSON in this shape (<...> are placeholders):\n' +
   '{"entities": [{"name": "<Name>", "kind": "character", "aliases": ["<role>"], "description": "<one sentence>",\n' +
   '   "facts": ["<fact>"], "looks": {"<key>": "<a few words>"}, "relationships": [{"to": "<Name>", "stance": "<a few words>"}]},\n' +
-  '  {"name": "<Name>", "kind": "place", "description": "<one sentence>", "facts": []}],\n' +
-  ' "speakers": [{"action": <number>, "name": "<Name>"}]}';
+  '  {"name": "<Name>", "kind": "place", "description": "<one sentence>", "facts": []}]}';
 
 /**
  * llama-server's schema grammar allows newlines and indentation; pretty-printed, 3 of 8 entity
@@ -35,7 +34,6 @@ const EXTRACT_SKELETON =
 export const ONE_LINE = ' Write the JSON on one line, with no line breaks or indentation.';
 
 export const LOOKS_ASK = `looks is only for characters: a few words for each of ${LOOK_KEYS.join(', ')} that the passage shows; leave out the rest, and leave it out for places, items and factions.`;
-
 /**
  * The combined call. No cards of the known names and no list of new ones: with both, the 12B
  * proposed 10 facts at d30 where the bare prompt's reply kept 15. [measured: 2026-10-11-recall-m12-1-pr2-log-d30.json]
@@ -50,8 +48,8 @@ export function extractPrompt(passage: string, knownNames: readonly string[], gr
     'Give each entity a one-sentence description and 0–2 facts: short sentences about what lasts (who or what it is, what it owns, injuries, loyalties), not single actions or dialogue, and nothing the passage does not state. ' +
     `${LOOKS_ASK} relationships: 0–2, to whom (a Name, or "You" for the player) and the stance in a few words. ` +
     'No location, posture, condition or mood: those are read each turn. ' +
-    'The player is "you", not an entity. speakers names who talks in each numbered paragraph.\n' +
-    (grammar ? 'Return {"entities": [...], "speakers": [...]}.' : EXTRACT_SKELETON) +
+    'The player is "you", not an entity.\n' +
+    (grammar ? 'Return {"entities": [...]}.' : EXTRACT_SKELETON) +
     ONE_LINE
   );
 }
