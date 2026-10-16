@@ -38,6 +38,13 @@ describe('foldEntities', () => {
     expect(names).toEqual(['Tamsin']);
   });
 
+  it('folds a faction the passage cues as a place as a place, keeps an old card kind, drops an article-only word', () => {
+    const adv = story(['The cab came back from Westminster at dawn, past Tamsin. You tap the Formica, then lean on the Formica.']);
+    adv.entities = [mergeEntity(undefined, { name: 'Tamsin', kind: 'character', description: '' }, 0)];
+    const out = fold(adv, [seen('Westminster', { kind: 'faction' }), seen('Tamsin', { kind: 'place' }), seen('Formica', { kind: 'faction' })]);
+    expect(out.map((e) => `${e.kind}:${e.name}`)).toEqual(['character:Tamsin', 'place:Westminster']);
+  });
+
   it('drops a new name the description makes a kind of creature', () => {
     const out = fold(story(['You see Tamsin and the Vael beyond the river.']), [
       seen('Vael', { description: 'The Vael are a race of river spirits.' }),

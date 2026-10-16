@@ -10,6 +10,7 @@
  *   state <url> <backup> [label] [labels-set]  scene and state reads over every AI turn of a backup, scored against bench/stateLabels.json
  *   probe <url> <backup> <at> [label] [samples]  the reply to player action <at>, drawn [samples] times (default 3); graded by hand
  *   migrate <backup> [label]  entity facts to typed assertions: counts kept, dropped (conflicts on unlocked keys, stale spans), lost
+ *   names <backups> [label]  new-name candidates and kinds, action by action, no model (backups comma-separated)
  *   live <url> [label]  plays 20 scripted turns in the real app; per-turn stats, memories, summary
  *   repetition <url> [label]  the live turns alone: repeated phrases per turn, distinct 4-grams (MEASURE_SAMPLERS=64,0 for the "before")
  *   images <image-url> <url>  See mode and a cover against a real A1111 server
@@ -48,6 +49,10 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
   },
   migrate: {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/migrate'],
+    env: { MEASURE_BACKUP: a, MEASURE_LABEL: b },
+  },
+  names: {
+    cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/names'],
     env: { MEASURE_BACKUP: a, MEASURE_LABEL: b },
   },
   // `--project=live`, not `--project live`: the flag is variadic and would swallow the file.

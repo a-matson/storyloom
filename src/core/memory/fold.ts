@@ -2,8 +2,10 @@ import type { Action, Adventure } from '../model/types';
 import { actionText } from '../model/types';
 import { identityText, indexAssertions } from './assertionIndex';
 import { mergeAssertions, type Rest } from './assertionWrites';
+import { COMMON_WORDS } from './commonWords';
 import { knownAs, matchEntity, mergeEntity, namedInPassage } from './entities';
 import { sourceIn, type Source } from './invalidate';
+import { articleOnly, cuedKinds, kindOf } from './kindCues';
 import type { MemoryRange } from './memoryBank';
 import { sightingOf, uncut, type Incoming, type Rejected } from './sighting';
 import { spellingOf } from './spelling';
@@ -52,7 +54,25 @@ export function newNamesIn(adventure: Adventure, range: MemoryRange): string[] {
   const known = [...player, ...adventure.entities.flatMap((e) => [e.name, ...e.aliases])];
   const names = [...new Set(adventure.actions.slice(range.fromAction, range.toAction).flatMap((a) => candidateNames(actionText(a), known)))];
   const ix = indexAssertions(adventure.assertions);
-  return names.filter((n) => !knownAs(adventure.entities, n, ix) && !names.some((k) => partOf(n, k)));
+  return names.filter((n) => !knownAs(adventure.entities, n, ix) && !names.some((k) => partOf(n, k)) && !notNewName(adventure, n, range));
+}
+
+/** The actions up to the range's end that write `name` as a name. */
+export const sightings = (adventure: Adventure, name: string, range: MemoryRange): string[] =>
+  adventure.actions
+    .slice(0, range.toAction)
+    .map(actionText)
+    .filter((t) => namedInPassage(name, t));
+
+/**
+ * Why a new one-word name is none: a common word named in fewer than two actions so far ("Behind"), or
+ * one every sighting writes after "the" that no kind cue backs ("against the Formica"; "of the Marches" stays). [provisional]
+ */
+export function notNewName(adventure: Adventure, name: string, range: MemoryRange): 'common' | 'article' | undefined {
+  if (name.includes(' ')) return undefined;
+  const seen = sightings(adventure, name, range);
+  if (COMMON_WORDS.has(name.toLowerCase()) && seen.length < 2) return 'common';
+  return articleOnly(name, seen) && !cuedKinds(name, seen).length ? 'article' : undefined;
 }
 
 /** A description that makes the name a kind of creature, not one of them ("Kobolds are a race of…"). */
@@ -112,30 +132,32 @@ export function foldEntities(
     const { facts = [], ...e } = item;
     const raw = uncut(e.description);
     if (opts.log) opts.log.proposed += facts.length;
-    const named = (text: string) => namedInPassage(e.name, text);
-    const once = () => adventure.actions.slice(0, range.toAction).filter((a) => named(actionText(a))).length < 2;
     const ix = indexAssertions(assertions);
     const old = notAName(adventure.plot, e.name) ? undefined : knownAs(entities, e.name, ix);
-    if (!old && (notAName(adventure.plot, e.name) || (!named(passage) && !opts.present?.includes(e.name)) || A_KIND.test(raw))) {
+    const unnamed = () => !namedInPassage(e.name, passage) || !!notNewName(adventure, e.name, range);
+    if (!old && (notAName(adventure.plot, e.name) || (!opts.present?.includes(e.name) && unnamed()) || A_KIND.test(raw))) {
       for (const f of facts) opts.log?.rejected.push({ entity: e.name, value: f, reason: 'entity-dropped', passageRange: range });
       continue;
     }
     const like = old ? undefined : spellingOf(entities, e.name, e.kind);
     if (like) proposals.push({ name: e.name, of: like.id, at: range.toAction - 1 });
-    if (!old && (like || (opts.twice && once()))) {
+    const seenIn = old ? [] : sightings(adventure, e.name, range);
+    if (!old && (like || (opts.twice && seenIn.length < 2))) {
       held.push({ entity: { ...item, facts }, range });
       continue;
     }
+    // An existing card's kind is the player's.
+    const kind = old?.kind ?? kindOf(e.name, e.kind, seenIn);
     const aliases = [...(e.aliases ?? []), ...(old && !matchEntity([old], e.name) ? [e.name] : [])];
     const who = { name: old?.name ?? e.name, aliases: [...(old?.aliases ?? []), ...aliases] };
     const own = old ? assertions.filter((a) => a.subject === old.id) : [];
     const backed = new Map<string, Source>();
     const seen = sightingOf(
-      { ...item, facts, aliases },
+      { ...item, kind, facts, aliases },
       {
         actions,
         who,
-        kind: old?.kind ?? e.kind,
+        kind,
         own,
         identity: (old && identityText(old, own)) || '',
         toward: (to) => (/^you$/i.test(to) ? 'you' : knownAs(entities, to, ix)?.name),

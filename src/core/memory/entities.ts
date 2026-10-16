@@ -34,10 +34,15 @@ const WORD = /[\p{L}\p{N}]/u;
 export function namedInPassage(name: string, passage: string): boolean {
   const n = name.trim();
   if (n.toLowerCase() !== n && wholeAt(passage, n.toLowerCase()).length) return false;
-  return wholeAt(passage, n).some((i) => {
+  return midSentence(passage, n).length > 0;
+}
+
+/** What precedes each place `passage` holds `n` as whole words not at the start of a sentence. */
+export function midSentence(passage: string, n: string): string[] {
+  return wholeAt(passage, n).flatMap((i) => {
     const before = passage.slice(0, i).trimEnd();
     const prev = before.at(-1);
-    return prev !== undefined && (!OPENS_SENTENCE.test(prev) || before.at(-2) === ',');
+    return prev !== undefined && (!OPENS_SENTENCE.test(prev) || before.at(-2) === ',') ? [before] : [];
   });
 }
 
