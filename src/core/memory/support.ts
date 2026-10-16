@@ -22,14 +22,14 @@ const stem = (w: string): string => {
   return (t.length > 3 ? t.replace(/e$/, '') : t).slice(0, 5);
 };
 
-const contentWords = (s: string): string[] => [
+export const contentWords = (s: string): string[] => [
   ...new Set((s.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).filter((w) => w.length > 2 && !STOP.has(w)).map(stem)),
 ];
 
 /** Share of a value's content words one sentence must hold for `stated`; fewer is `inferred`. [provisional] */
 const STATED = 0.8;
 
-const SENTENCE = /[^.!?\n]+[.!?]*/g;
+export const SENTENCE = /[^.!?\n]+[.!?]*/g;
 
 /**
  * Evidence computed, not quoted: the 12B reworded its quotes, so they failed the substring check.

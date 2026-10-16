@@ -9,8 +9,9 @@ import { mergeAssertions, type Rest } from './assertionWrites';
 import { entityNamedIn, knownAs, within } from './entities';
 import { helperJson, passageOf, type ExtractDeps } from './extract';
 import { grammarOf } from './extractJsonSchema';
+import { causeIn, grounded } from './grounding';
 import { heldBy, holderOf, YOU } from './items';
-import { currentStates } from './looks';
+import { currentStates, valueOf } from './looks';
 import { norm } from './names';
 
 /** Actions the state read reads: the last AI output and the player line before it. [measured: 2026-10-13-state-probe-m12-dogfood P8b] */
@@ -22,7 +23,7 @@ const TOKENS_CAP = 160;
 type Subject = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'canon' | 'cardId' | 'canonKeys'>;
 const PLAYER: Subject = { id: YOU, kind: 'character', name: YOU, aliases: ['your', 'yourself'] };
 
-export type StateReject = 'at-range' | 'wrong-subject' | 'cut' | 'unchanged' | 'unknown-item';
+export type StateReject = 'at-range' | 'wrong-subject' | 'cut' | 'unchanged' | 'unknown-item' | 'ungrounded';
 export interface StateUpdate {
   changed: number;
   rejected: { value: string; reason: StateReject }[];
@@ -59,7 +60,8 @@ const isCut = (now: string) => (now.length >= NOW_CHARS && /[\p{L}\p{N}]$/u.test
  * Read B: what changed for the present cast in the last two actions. An entry stands only on the action it
  * points at (`at`), which must name its subject or nobody else of the cast. Accepted values supersede their
  * key (`producer: turn`, `basis: player` on a do/say); `holds` sets the item's holder; a `condition` whose
- * action names another character or item also proposes an effect with that cause. A retried output is read again.
+ * sentence names another character or item also proposes an effect with that cause. A value none of whose words
+ * (or condition synonyms) the action holds is only proposed (`ungrounded`). A retried output is read again.
  */
 export async function readState(adventure: Adventure, deps: ExtractDeps): Promise<StateUpdate> {
   const n = adventure.actions.length;
@@ -99,6 +101,8 @@ export function stateAsk(adventure: Adventure, cast: readonly Subject[]) {
 export function applyChanges(adventure: Adventure, cast: readonly Subject[], changes: readonly StateChange[], max: number): StateUpdate {
   const out: StateUpdate = { changed: 0, rejected: [] };
   const range = stateRange(adventure.actions.length);
+  // Grounded on both actions read, not `at` alone: `at` alone sent 18 of 49 (M13). [measured: 2026-10-16-state-m17-4-m13.json]
+  const read = adventure.actions.slice(range.fromAction, range.toAction).map(actionText).join('\n');
   // Later `at` last, so its write supersedes an earlier one for the same key.
   for (const c of changes.slice(0, max).toSorted((a, b) => a.at - b.at)) {
     const s = cast.find((x) => x.name === c.who);
@@ -113,15 +117,13 @@ export function applyChanges(adventure: Adventure, cast: readonly Subject[], cha
     const now = c.now.trim();
     const held = knownAs(items(adventure), now);
     if (c.key === 'holds') write(adventure, held ?? s, { holder: s === PLAYER ? YOU : s.name }, at, out);
-    else write(adventure, s, { [c.key]: now }, at, out);
-    // ponytail: the first other character or item the action names is the cause; wrong when it names two.
-    const cause =
-      c.key === 'condition'
-        ? entityNamedIn(
-            adventure.entities.filter((e) => e.id !== s.id && (e.kind === 'item' || e.kind === 'character')),
-            text,
-          )
-        : undefined;
+    else if (!grounded(now, read)) {
+      propose(adventure, s, c.key, now, c.at);
+      out.rejected.push({ value: `${c.who} ${c.key}: ${c.now}`, reason: 'ungrounded' });
+      continue;
+    } else write(adventure, s, { [c.key]: now }, at, out);
+    const others = adventure.entities.filter((e) => e.id !== s.id && (e.kind === 'item' || e.kind === 'character'));
+    const cause = c.key === 'condition' ? causeIn(text, now, others) : undefined;
     if (cause?.kind === 'item' || cause?.kind === 'character') {
       const effect = { kind: 'effect', condition: now, cause: { kind: cause.kind, id: cause.id, text: cause.name } } as const;
       adventure.assertions = [
@@ -166,6 +168,20 @@ function ask({ records, who, max, tokens }: ReturnType<typeof stateAsk>, passage
     deps,
     'state',
   );
+}
+
+/** A value the action does not say: a proposal (`seen: false`, `inferred`) beside the current one, once. */
+function propose(adventure: Adventure, s: Subject, key: string, value: string, at: number): void {
+  const same = (a: Adventure['assertions'][number]) =>
+    a.subject === s.id &&
+    a.until === undefined &&
+    a.seen === false &&
+    (a.kind === 'state' || a.kind === 'look') &&
+    a.key === key &&
+    norm(a.value) === norm(value);
+  if (adventure.assertions.some(same)) return;
+  const p = { id: newId('as_'), subject: s.id, producer: 'turn', at, basis: 'inferred', since: at, seen: false, ...valueOf(key, value) } as const;
+  adventure.assertions = [...adventure.assertions, p];
 }
 
 function write(adventure: Adventure, s: Subject, state: Record<string, string>, at: Rest, out: StateUpdate): void {
