@@ -7,25 +7,35 @@ interface Named {
   aliases: readonly string[];
 }
 
+/** Rule switches, so the bench can score each one; the defaults are the shipped set. */
+export interface SpeakerRules {
+  /** A name before the quote counts only where a clause starts, not as an object ("fix on Minos's form"): 0.89 → 1.00 precision. */
+  subject?: boolean;
+}
+
 const QUOTE = /"[^"]*"|“[^”]*”/g;
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 /** Second-person stories: `you say, "…"` / `"…," you say` is the player, so it ties with any name instead of losing to it. "toward you" is not. */
 const PLAYER = { name: '', re: /(?<!\p{L})you \p{L}+,?\s*§|§\s*,?\s*you(?!\p{L})/iu };
+// The start of the paragraph, a line, a sentence or a clause, right after a quote, or a second subject ("X and Y shout").
+// No dash: "the scene - Minos bleeding" is an object.
+const CLAUSE = String.raw`(?<=^\s*|\n\s*|[.!?…;:,]\s+|§\s*|\sand\s+)`;
 
 /**
  * A known name or alias right before a quote (same sentence, or the sentence just before it) or
  * right after one ("…," said X). Quotes are blanked first so a name inside one never counts.
  * A paragraph gets a name only when exactly one entity matches; ties, the player and unknowns get
- * nothing, except that `fallback` names a quoted paragraph where nobody matches. [provisional]
+ * nothing, except that `fallback` names a quoted paragraph where nobody matches. [measured: 2026-10-16-speakers-m18-3.json]
  */
-export function guessSpeakers(text: string, cast: readonly Named[], fallback?: string): Speaker[] {
+export function guessSpeakers(text: string, cast: readonly Named[], fallback?: string, { subject = true }: SpeakerRules = {}): Speaker[] {
+  const before = subject ? CLAUSE : String.raw`(?<!\p{L})`;
   const tests = cast.flatMap((c) => {
     const n = [c.name, ...c.aliases]
       .filter((s) => s.trim())
       .map(escape)
       .join('|');
     if (!n) return [];
-    return { name: c.name, re: new RegExp(`(?<!\\p{L})(?:${n})(?!\\p{L})[^.!?§]*[.!?]?\\s*§|§\\s*,?\\s*(?:\\p{L}+\\s+)?(?:${n})(?!\\p{L})`, 'iu') };
+    return { name: c.name, re: new RegExp(`${before}(?:${n})(?!\\p{L})[^.!?§]*[.!?]?\\s*§|§\\s*,?\\s*(?:\\p{L}+\\s+)?(?:${n})(?!\\p{L})`, 'iu') };
   });
   tests.push(PLAYER);
   return paragraphs(text).flatMap((p, paragraph) => {
