@@ -124,4 +124,24 @@ describe('newNamesIn', () => {
     adv.entities = [mergeEntity(undefined, { name: 'The Ashen Order', kind: 'faction', description: '' }, 0)];
     expect(newNamesIn(adv, { fromAction: 0, toAction: 1 })).toEqual(['Mira', 'Old Brannoch', "Deadman's Gulch"]);
   });
+
+  const names = (...texts: string[]) => {
+    const adv = createBlankAdventure('T', '');
+    adv.actions = texts.map((t, i) => ({ id: `a${i}`, type: 'continue' as const, versions: [t], active: 0, createdAt: 0 }));
+    return newNamesIn(adv, { fromAction: texts.length - 1, toAction: texts.length });
+  };
+
+  it('needs two actions for a common word, one for a given name', () => {
+    expect(names('The cat sits, Behind the bar.')).toEqual([]);
+    expect(names('You wait, Behind the bar.', 'The cat sits, Behind the bar.')).toEqual(['Behind']);
+    expect(names('You hand the bowl to Rose.')).toEqual(['Rose']);
+  });
+
+  it('drops a word only ever written after "the" unless a kind cue backs it', () => {
+    expect(names('You lean across the Formica tabletop.', 'He taps the Formica.', 'Rain beats through the Formica.')).toEqual([]);
+    expect(names('You walk the banks of the Thames.')).toEqual(['Thames']);
+    expect(names('You wait for the Harrows.', 'You know the Harrows are coming.')).toEqual(['Harrows']);
+    expect(names('She picks up the Amulet.')).toEqual(['Amulet']);
+    expect(names('You ride with the Ashen Order and the Ashen Order rides.')).toEqual(['Ashen Order']);
+  });
 });
