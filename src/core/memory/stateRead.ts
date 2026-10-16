@@ -62,22 +62,45 @@ const isCut = (now: string) => (now.length >= NOW_CHARS && /[\p{L}\p{N}]$/u.test
  * action names another character or item also proposes an effect with that cause. A retried output is read again.
  */
 export async function readState(adventure: Adventure, deps: ExtractDeps): Promise<StateUpdate> {
-  const out: StateUpdate = { changed: 0, rejected: [] };
   const n = adventure.actions.length;
   const last = adventure.actions.at(-1);
   const cast = stateCast(adventure);
-  if (!last || !cast.length) return out;
+  if (!last || !cast.length) return { changed: 0, rejected: [] };
   const hash = hashPrompt(actionText(last));
-  if (adventure.scriptState.__stateAt === n && adventure.scriptState.__stateHash === hash) return out;
-  const range = { fromAction: Math.max(0, n - STATE_SPAN), toAction: n };
-  // A turn rarely changes more than one key per subject; 2 per subject invited echoes. [measured: 2026-10-15-state-s4b.json]
-  const max = cast.length + 1;
-  const reply = await ask(adventure, cast, passageOf(adventure, range), max, deps);
+  if (adventure.scriptState.__stateAt === n && adventure.scriptState.__stateHash === hash) return { changed: 0, rejected: [] };
+  const q = stateAsk(adventure, cast);
+  const reply = await ask(q, passageOf(adventure, stateRange(n)), deps);
   adventure.scriptState = { ...adventure.scriptState, __stateAt: n, __stateHash: hash };
-  if (!reply) return out;
+  const out = applyChanges(adventure, cast, reply ?? [], q.max);
+  const call = deps.cuts?.calls?.at(-1);
+  if (call?.job === 'state') {
+    call.accepted = out.changed;
+    call.rejected = out.rejected;
+  }
+  return out;
+}
 
+/** The actions a change may point at: the last AI output and the player line before it, also inside a longer merged passage. */
+export const stateRange = (n: number) => ({ fromAction: Math.max(0, n - STATE_SPAN), toAction: n });
+
+/** What read B asks: each subject's record (states, and what it holds), the enum, the cap and the reply's tokens. */
+export function stateAsk(adventure: Adventure, cast: readonly Subject[]) {
+  const [first = YOU, ...rest] = cast.map((s) => s.name);
+  const ix = indexAssertions(adventure.assertions);
+  const records = cast.map((s) => {
+    const held = heldBy(adventure.entities, ix, s.id === YOU ? YOU : s.name).map((e) => e.name);
+    return { who: s.name, now: { ...currentStates(ix.of(s.id)), ...(held.length && { holds: held.join(', ') }) } };
+  });
+  // A turn rarely changes more than one key per subject; 2 per subject invited echoes. [measured: 2026-10-15-state-s4b.json]
+  return { records, who: [first, ...rest] as const, max: cast.length + 1, tokens: Math.min(TOKENS_CAP, TOKENS_EACH * cast.length) };
+}
+
+/** Writes the accepted changes of one reply over the last `STATE_SPAN` actions; the caller logs the call. */
+export function applyChanges(adventure: Adventure, cast: readonly Subject[], changes: readonly StateChange[], max: number): StateUpdate {
+  const out: StateUpdate = { changed: 0, rejected: [] };
+  const range = stateRange(adventure.actions.length);
   // Later `at` last, so its write supersedes an earlier one for the same key.
-  for (const c of reply.slice(0, max).toSorted((a, b) => a.at - b.at)) {
+  for (const c of changes.slice(0, max).toSorted((a, b) => a.at - b.at)) {
     const s = cast.find((x) => x.name === c.who);
     const action = adventure.actions[c.at];
     const text = action ? actionText(action) : '';
@@ -107,11 +130,6 @@ export async function readState(adventure: Adventure, deps: ExtractDeps): Promis
       ];
     }
   }
-  const call = deps.cuts?.calls?.at(-1);
-  if (call?.job === 'state') {
-    call.accepted = out.changed;
-    call.rejected = out.rejected;
-  }
   return out;
 }
 
@@ -133,19 +151,13 @@ function rejectOf(adventure: Adventure, cast: readonly Subject[], s: Subject, c:
   return !now || (was !== undefined && within(now, was)) ? 'unchanged' : undefined;
 }
 
-/** The call: each subject's record (states, and what it holds), then the passage. Null when the reply is unusable. */
-function ask(adventure: Adventure, cast: readonly Subject[], passage: string, max: number, deps: ExtractDeps): Promise<StateChange[] | null> {
-  const [first = YOU, ...rest] = cast.map((s) => s.name);
-  const ix = indexAssertions(adventure.assertions);
-  const records = cast.map((s) => {
-    const held = heldBy(adventure.entities, ix, s.id === YOU ? YOU : s.name).map((e) => e.name);
-    return { who: s.name, now: { ...currentStates(ix.of(s.id)), ...(held.length && { holds: held.join(', ') }) } };
-  });
-  const item = stateChange([first, ...rest]);
+/** The standalone call. Null when the reply is unusable. */
+function ask({ records, who, max, tokens }: ReturnType<typeof stateAsk>, passage: string, deps: ExtractDeps): Promise<StateChange[] | null> {
+  const item = stateChange(who);
   return helperJson(
     (g) => statePrompt(records, passage, max, g),
-    grammarOf(stateRead([first, ...rest], max)),
-    Math.min(TOKENS_CAP, TOKENS_EACH * cast.length),
+    grammarOf(stateRead(who, max)),
+    tokens,
     (cut) => (data) => {
       const list = z.object({ changes: z.array(z.unknown()) }).safeParse(data).data?.changes;
       // Repair closes a reply cut mid-entry: its last entry is unfinished.

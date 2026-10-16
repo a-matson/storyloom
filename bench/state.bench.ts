@@ -3,7 +3,7 @@ import { test } from 'vitest';
 import type { z } from 'zod/mini';
 import { LlamaServerProvider } from '@adapters/providers/llamaServer';
 import { knownAs, matchEntity, mergeEntity } from '@core/memory/entities';
-import { HELPER_JSON_SAMPLING, passageOf, updateEntities } from '@core/memory/extract';
+import { HELPER_JSON_SAMPLING, passageOf, turnReadTokens, updateEntities } from '@core/memory/extract';
 import { ENTITY_BATCH } from '@core/memory/memoryBank';
 import { grammarOf } from '@core/memory/extractJsonSchema';
 import { leaversOf, namedIn, nextScene } from '@core/memory/scene';
@@ -12,7 +12,7 @@ import { indexAssertions } from '@core/memory/assertionIndex';
 import { deriveAssertions } from '@core/memory/assertions';
 import { currentStates } from '@core/memory/looks';
 import { sceneIds } from '@core/memory/names';
-import { readState, stateCast, type StateUpdate } from '@core/memory/stateRead';
+import { readState, stateAsk, stateCast } from '@core/memory/stateRead';
 import type { Adventure, Entity, Scene } from '@core/model/types';
 import { collect } from '@core/ports/provider';
 import * as S from '@core/schema';
@@ -25,6 +25,7 @@ import { selectStructured, STRUCTURED_CAP } from '@core/context/structured';
 import type { RenderedSections } from '@core/context/types';
 import { renderTemplate } from '@core/text/templates';
 import { writeMeasurement } from './env';
+import { mergedB, parses, type Reply } from './stateReply';
 import { leftWanted, onlySpan, pickSet, sceneAt, scoreLeft, scoreRows, type LeftRow, type StateRow } from './stateScore';
 
 // Reads A (scene) and B (state of who is there) replayed over every AI turn of a backup, scored against hand labels.
@@ -34,14 +35,6 @@ const backup = process.env['MEASURE_BACKUP'];
 const LABEL = process.env['MEASURE_LABEL'] ?? 'baseline';
 const SET = process.env['MEASURE_LABELS'] ?? 'm12-dogfood';
 
-const parses = (text: string) => {
-  try {
-    JSON.parse(text);
-    return true;
-  } catch {
-    return false;
-  }
-};
 const CAST_SETTINGS = { memoryBankEnabled: false, cacheStableLayout: false, evictionChunk: 8 };
 /** `MEASURE_READS=A` skips read B; `C` replays the batch call alone. */
 const READS = (process.env['MEASURE_READS'] ?? 'A,B').split(',');
@@ -50,17 +43,9 @@ const ONLY = onlySpan(process.env['MEASURE_ONLY']);
 const REPEAT = Number(process.env['MEASURE_REPEAT'] ?? '1');
 /** `MEASURE_CACHE=1` caches read A's prompt on slot 1, as core caches read B's (M17-2). */
 const CACHE = process.env['MEASURE_CACHE'] === '1';
-interface Reply {
-  ms: number;
-  promptMs?: number | undefined;
-  cachedTokens?: number | undefined;
-  tokens?: number | undefined;
-  stop?: string | undefined;
-  raw: string;
-  parsed?: boolean;
-  accepted?: number;
-  rejected?: StateUpdate['rejected'];
-}
+/** `MEASURE_READS=AB` asks read B inside read A's call (M17-1); its row's B fields come from that reply, with no time of their own. */
+const MERGED = READS.includes('AB');
+if (MERGED) READS.push('A');
 
 test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('state reads over a backup', { timeout: 3_600_000 }, async () => {
   const adv = S.Adventure.parse(JSON.parse(readFileSync(backup ?? '', 'utf8')).adventure);
@@ -116,8 +101,13 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     const cast = [...new Set(characters.flatMap((e) => [e.name, ...e.aliases]))];
     const passage = passageOf({ ...adv, actions: adv.actions.slice(0, n) }, { fromAction: Math.max(0, n - 2), toAction: n });
 
+    // `AB` (M17-1): read B's subjects and records from the scene before this turn, asked in read A's call.
+    const known = adv.entities.filter((e) => e.firstSeen <= i);
+    const pre: Adventure = { ...adv, actions: adv.actions.slice(0, n), entities: known, assertions, plot: { ...adv.plot, scene: sceneIds(scene, known) } };
+    const subjectsAB = MERGED ? stateCast(pre) : [];
+    const q = subjectsAB.length ? stateAsk(pre, subjectsAB) : undefined;
     // Read A: the turn read from core, its scene part only (as on a turn with no new name).
-    const readA = () => ask(introducePrompt(passage, [], true, scene, cast), turnRead(cast, [], scene.present), 80);
+    const readA = () => ask(introducePrompt(passage, [], true, scene, cast, q), turnRead(cast, [], scene.present, q), turnReadTokens([], q));
     const a = await readA();
     const samples = [a];
     for (let k = 1; k < REPEAT; k++) samples.push(await readA());
@@ -136,7 +126,6 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     }
 
     // Read B from core, on the adventure as it stood after this turn, with B's own record so far.
-    const known = adv.entities.filter((e) => e.firstSeen <= i);
     const here = sceneIds(scene, known);
     // As `withScene` keeps it, so the cast prints its witnessed-by clauses.
     if (presence.at(-1)?.present.toSorted().join() !== here.present.toSorted().join()) presence.push({ at: i, present: here.present });
@@ -153,21 +142,23 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     const r = subjects.length
       ? await readState(work, { provider, template: adv.settings.template, content, cuts: { cutCalls: 0, finishedPastCut: 0, calls } })
       : undefined;
-    assertions = work.assertions;
     const call = calls[0];
-    const b = call && {
-      ms: call.ms,
-      promptMs: call.promptMs,
-      cachedTokens: call.cachedTokens,
-      tokens: call.generatedTokens,
-      stop: call.stopReason,
-      raw: call.reply,
-      parsed: parses(call.reply),
-      accepted: r?.changed ?? 0,
-      rejected: r?.rejected ?? [],
-    };
+    const b = call
+      ? {
+          ms: call.ms,
+          promptMs: call.promptMs,
+          cachedTokens: call.cachedTokens,
+          tokens: call.generatedTokens,
+          stop: call.stopReason,
+          raw: call.reply,
+          parsed: parses(call.reply),
+          accepted: r?.changed ?? 0,
+          rejected: r?.rejected ?? [],
+        }
+      : q && mergedB(work, subjectsAB, q, a);
+    assertions = work.assertions;
     const ix = indexAssertions(assertions);
-    for (const s of subjects) record[s.name] = currentStates(ix.of(s.id));
+    for (const s of MERGED ? subjectsAB : subjects) record[s.name] = currentStates(ix.of(s.id));
     // The cast block this turn would send: the backup's identities and pins as of now, B's states.
     const out: RenderedSections = new Map();
     const said = identities.filter((x) => x.at <= i);
@@ -225,6 +216,8 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     meanMsA: mean(rows.map((r) => r.a.ms)),
     ...scoreLeft(rows.map((r) => r.left)),
     meanMsB: mean(bs.map((x) => x.ms)),
+    // M17-1's bar: helper time per turn, both reads (one call under `AB`).
+    meanMsTurn: mean(rows.map((r) => r.a.ms + (r.b?.ms ?? 0))),
     meanPromptMsA: mean(rows.flatMap((r) => r.a.promptMs ?? [])),
     meanPromptMsB: mean(bs.flatMap((x) => x.promptMs ?? [])),
     meanCachedA: mean(rows.flatMap((r) => r.a.cachedTokens ?? [])),
