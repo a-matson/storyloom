@@ -8,7 +8,8 @@ import { seedCanonEntities } from '@core/memory/canon';
 import type { Action, Adventure } from '@core/model';
 import * as S from '@core/schema';
 
-export const HISTORY_FILE = 'bench/recall-history.json';
+/** `MEASURE_HISTORY` picks another recording (the 300-turn one); the 90-turn fixture stays the default. */
+export const HISTORY_FILE = process.env['MEASURE_HISTORY'] ?? 'bench/recall-history.json';
 
 /** A fact is honoured or not in its first two sentences; 120 tokens saves ~4 s a generation. [provisional] */
 export const HISTORY_SETTINGS = { seed: 7, responseLength: 120 };

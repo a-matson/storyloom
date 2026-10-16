@@ -15,6 +15,8 @@
  *   images <image-url> <url>  See mode and a cover against a real A1111 server
  *   recall-record <url>   plays the 24-fact scenario to turn 90 once and saves the history (bench/recall-history.json)
  *   recall <url> [label]  replays the recorded history and generates only the probes at turns 30/60/90 (~75 min); the memory recall baseline
+ *     both: MEASURE_HISTORY=<file> another recording (bench/recall-history-300.json); MEASURE_DEPTHS=30,90,180,270 the depths
+ *     (record plays to the deepest); MEASURE_BANK_SIZE=<n> caps the bank on each replayed slice
  */
 import { spawnSync } from 'node:child_process';
 

@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { z } from 'zod/mini';
+import { dueMemoryRanges, entitiesOverdue } from '@core/memory';
 import * as S from '@core/schema';
 import { Rule } from '@core/schema/rule';
 import { indexAssertions, textOf } from '@core/memory/assertionIndex';
@@ -36,31 +37,37 @@ export async function turn(page: Page, mode: 'Do' | 'Say', text: string, readMs 
 /** The adventure the page shows: each replay depth is its own adventure, so every read names one. */
 export const shownAdventure = (page: Page) => decodeURIComponent(/#\/adventure\/([^/?]+)/.exec(page.url())?.[1] ?? '');
 
-/** One adventure's rows straight from IndexedDB; memory embeddings are left behind. */
-export function readAdventure(page: Page, id: string) {
-  return page.evaluate(async (adventureId) => {
-    const req = indexedDB.open('storyloom');
-    const db = await new Promise<IDBDatabase>((ok, fail) => {
-      req.addEventListener('success', () => ok(req.result));
-      req.addEventListener('error', () => fail(req.error));
-    });
-    const ask = <T>(r: IDBRequest) =>
-      new Promise<T>((ok, fail) => {
-        r.addEventListener('success', () => ok(r.result as T));
-        r.addEventListener('error', () => fail(r.error));
+/** One adventure's rows straight from IndexedDB; memory embeddings are left behind unless asked for. */
+export function readAdventure(page: Page, id: string, { embeddings = false } = {}) {
+  return page.evaluate(
+    async ({ adventureId, keep }) => {
+      const req = indexedDB.open('storyloom');
+      const db = await new Promise<IDBDatabase>((ok, fail) => {
+        req.addEventListener('success', () => ok(req.result));
+        req.addEventListener('error', () => fail(req.error));
       });
-    const rows = (store: string) => ask<Record<string, unknown>[]>(db.transaction(store).objectStore(store).index('adventureId').getAll(adventureId));
-    const out = {
-      adventure: (await ask<Record<string, unknown> | undefined>(db.transaction('adventures').objectStore('adventures').get(adventureId))) ?? {},
-      actions: (await rows('actions')).toSorted((a, b) => (a['seq'] as number) - (b['seq'] as number)),
-      memories: (await rows('memories')).map(({ embedding: _e, ...m }) => m),
-      entities: await rows('entities'),
-      assertions: await rows('assertions'),
-      traces: await rows('traces'),
-    };
-    db.close();
-    return out;
-  }, id);
+      const ask = <T>(r: IDBRequest) =>
+        new Promise<T>((ok, fail) => {
+          r.addEventListener('success', () => ok(r.result as T));
+          r.addEventListener('error', () => fail(r.error));
+        });
+      const rows = (store: string) => ask<Record<string, unknown>[]>(db.transaction(store).objectStore(store).index('adventureId').getAll(adventureId));
+      const out = {
+        adventure: (await ask<Record<string, unknown> | undefined>(db.transaction('adventures').objectStore('adventures').get(adventureId))) ?? {},
+        actions: (await rows('actions')).toSorted((a, b) => (a['seq'] as number) - (b['seq'] as number)),
+        // Stored as a Float32Array; a plain array crosses back and parses as `Memory`.
+        memories: (await rows('memories')).map(({ embedding, ...m }) =>
+          keep && embedding instanceof Float32Array ? { ...m, embedding: Array.from(embedding) } : m,
+        ),
+        entities: await rows('entities'),
+        assertions: await rows('assertions'),
+        traces: await rows('traces'),
+      };
+      db.close();
+      return out;
+    },
+    { adventureId: id, keep: embeddings },
+  );
 }
 export type Rows = Awaited<ReturnType<typeof readAdventure>>;
 
@@ -81,6 +88,50 @@ export async function rewind(page: Page, id: string, base: number): Promise<void
   }
 }
 
+// Catch-up: how often to look, and how long the store must sit still (one combined call). [provisional]
+const POLL_MS = 5000;
+const SETTLED_MS = 30_000;
+// A range the model rejects twice is retried every pass and stays due, so a still store with work due
+// settles too, after longer. [measured: 2026-10-16-recall-smoke-d12-cap.json] [provisional]
+const STUCK_MS = 3 * 60_000;
+
+const Progress = z.object({
+  actions: z.array(z.object({ type: S.ActionType })),
+  memories: z.array(S.Memory),
+  entities: z.array(z.unknown()),
+  adventure: z.object({ scriptState: S.ScriptState, plot: S.PlotComponents }),
+});
+
+/**
+ * One filler turn starts maintenance; done once nothing is due and the store has sat still, or at `capMs`.
+ * `summaryAts` is every `__summaryAt` seen on the way: how often the summary moved.
+ */
+export async function catchUp(page: Page, id: string, capMs: number) {
+  const started = Date.now();
+  await turn(page, 'Do', 'look around');
+  const summaryAts = new Set<number>();
+  let seen = '';
+  let still = Date.now();
+  let due: string[] = [];
+  while (Date.now() - started < capMs) {
+    await page.waitForTimeout(POLL_MS);
+    const p = Progress.parse(await readAdventure(page, id));
+    const at = p.adventure.scriptState.__summaryAt;
+    if (at !== undefined) summaryAts.add(at);
+    due = [
+      ...dueMemoryRanges(p.actions, p.memories).map((r) => `${r.fromAction}-${r.toAction}`),
+      ...(entitiesOverdue({ memories: p.memories, scriptState: p.adventure.scriptState }) ? ['entities'] : []),
+    ];
+    const now = [p.memories.length, p.entities.length, p.adventure.scriptState.__entitiesAt, p.adventure.plot.storySummary?.length, ...due].join('|');
+    if (now !== seen) [seen, still] = [now, Date.now()];
+    // Only the newest range can stick: a pass writes past a rejected one, and the next starts after it.
+    // Anything more due is real work; a pass sat over 3 min without a write at d90.
+    else if (Date.now() - still >= (due.length === 0 ? SETTLED_MS : due.length === 1 && due[0] !== 'entities' ? STUCK_MS : Infinity))
+      return { ms: Date.now() - started, capHit: false, stuck: due, summaryAts: [...summaryAts] };
+  }
+  return { ms: Date.now() - started, capHit: true, stuck: due, summaryAts: [...summaryAts] };
+}
+
 /** The newest AI output, the prompt that produced it, and the bank and canon facts at that point. */
 export function lastTurn(r: Rows) {
   const newest = (xs: Record<string, unknown>[]) => xs.toSorted((a, b) => (a['createdAt'] as number) - (b['createdAt'] as number)).at(-1) ?? {};
@@ -93,6 +144,8 @@ export function lastTurn(r: Rows) {
     output: versions[(action['active'] ?? 0) as number] ?? '',
     prompt: (trace['prompt'] ?? '') as string,
     model: trace['modelId'] as string | undefined,
+    memoryIds: (trace['memoryIds'] ?? []) as string[],
+    sections: Object.fromEntries(((trace['sections'] ?? []) as { kind: string; tokens: number }[]).map((s) => [s.kind, s.tokens])),
     bank: memories.filter((m) => !m.forgotten && !m.stale).map((m) => m.text),
     canonFacts: entities.filter((e) => e.canon).flatMap((e) => (e.facts ?? []).map((f) => f.text)),
   };

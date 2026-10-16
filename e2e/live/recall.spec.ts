@@ -1,13 +1,13 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { z } from 'zod/mini';
-import { dueMemoryRanges, entitiesOverdue } from '@core/memory';
 import * as S from '@core/schema';
 import { FACTS, FILLERS, isOrig, retrievalHit, scenarioJson, scoreProbe, type Verdict } from '../../bench/recall';
 import { HISTORY_FILE, HISTORY_SETTINGS, RecallHistory, sliceHistory, stripAdventure, turnEnds } from '../../bench/recallHistory';
 import { writeMeasurement } from '../../bench/env';
 import { watchMemoryRuns } from '../../bench/memoryRuns';
-import { costAndState, lastTurn, readAdventure, rewind, run, shownAdventure, turn, type Rows } from '../../bench/recallPage';
+import { catchUp, costAndState, lastTurn, readAdventure, rewind, run, shownAdventure, turn, type Rows } from '../../bench/recallPage';
+import { readDepth } from '../../bench/recallReading';
 
 // `pnpm measure recall-record <url>` once per fact set, then `pnpm measure recall <url>`; never runs in CI.
 const URL = process.env['MEASURE_URL'];
@@ -17,15 +17,15 @@ const SEED = Number(process.env['MEASURE_SEED'] ?? HISTORY_SETTINGS.seed);
 
 // Probes are undone, so once caught up nothing is due between them. [provisional]
 const PROBE_READ_MS = 2000;
-// Catch-up: how often to look, how long the store must sit still (one combined call), and the cap. [provisional]
-const POLL_MS = 5000;
-const SETTLED_MS = 30_000;
-// Depth 90 re-derives ~30 memories and ~30 entity calls one after another: 20 min was not enough. [measured: 2026-10-07-recall-w2e-run1.json]
-const CATCH_UP_CAP_MS = 35 * 60_000;
+// Depth 90 re-derives ~30 memories and ~30 entity calls one after another: 20 min was not enough.
+// [measured: 2026-10-07-recall-w2e-run1.json] Deeper scales with the work (d270 ~90 memories). [provisional]
+const catchUpCapMs = (depth: number) => Math.max(35, depth / 4) * 60_000;
 // `MEASURE_DEPTHS=30,60` shortens a run; a single small depth smoke-tests the path.
 const DEPTHS = (process.env['MEASURE_DEPTHS'] ?? '30,60,90').split(',').map(Number);
 // `MEASURE_ENTITY_FACTS=1` replays with the cast's now-lines on; otherwise the recording's setting.
 const ENTITY_FACTS = process.env['MEASURE_ENTITY_FACTS'] === '1';
+// `MEASURE_BANK_SIZE=60` caps the bank on each slice, so a 300-turn replay evicts. [provisional]
+const BANK_SIZE = process.env['MEASURE_BANK_SIZE'] ? Number(process.env['MEASURE_BANK_SIZE']) : undefined;
 
 const warnings: string[] = [];
 
@@ -126,6 +126,7 @@ async function importHistory(page: Page, h: RecallHistory, depth: number): Promi
   await page.getByTitle('Storyloom JSON, or an AI Dungeon adventure export (JSON or zip)').click();
   const adventure = sliceHistory(h, depth, SEED);
   if (ENTITY_FACTS) adventure.settings.memory.entityFacts = true;
+  if (BANK_SIZE !== undefined) adventure.settings.memory.bankSize = BANK_SIZE;
   const file = { format: 'storyloom-adventure', version: 1, adventure };
   await (await chooser).setFiles({ name: `recall-d${depth}.json`, mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
   await page
@@ -136,33 +137,9 @@ async function importHistory(page: Page, h: RecallHistory, depth: number): Promi
   return shownAdventure(page);
 }
 
-const Progress = z.object({
-  actions: z.array(z.object({ type: S.ActionType })),
-  memories: z.array(S.Memory),
-  entities: z.array(z.unknown()),
-  adventure: z.object({ scriptState: S.ScriptState, plot: S.PlotComponents }),
-});
-
-/** One filler turn starts maintenance; done once nothing is due and the store has sat still. */
-async function catchUp(page: Page, id: string): Promise<number> {
-  const started = Date.now();
-  await turn(page, 'Do', 'look around');
-  let seen = '';
-  let still = Date.now();
-  while (Date.now() - started < CATCH_UP_CAP_MS) {
-    await page.waitForTimeout(POLL_MS);
-    const p = Progress.parse(await readAdventure(page, id));
-    const due = dueMemoryRanges(p.actions, p.memories).length > 0 || entitiesOverdue({ memories: p.memories, scriptState: p.adventure.scriptState });
-    const now = [p.memories.length, p.entities.length, p.adventure.scriptState.__entitiesAt, p.adventure.plot.storySummary?.length].join('|');
-    if (now !== seen || due) [seen, still] = [now, Date.now()];
-    else if (Date.now() - still >= SETTLED_MS) return Date.now() - started;
-  }
-  warnings.push(`catch-up hit its ${CATCH_UP_CAP_MS / 60_000} min cap`);
-  return Date.now() - started;
-}
-
 test('recall benchmark', async ({ page }) => {
-  test.setTimeout(3 * 60 * 60_000);
+  // A 300-turn record is ~2.5 h, its replay ~3 h. [provisional]
+  test.setTimeout(6 * 60 * 60_000);
   // Background jobs fail only into the console; the review needs to see them.
   page.on('console', (m) => void (['warning', 'error'].includes(m.type()) && warnings.push(m.text().slice(0, 300))));
   const memoryRuns = watchMemoryRuns(page);
@@ -186,25 +163,32 @@ test('recall benchmark', async ({ page }) => {
   const catchUpMs: Record<number, number> = {};
   const probesMs: Record<number, number> = {};
   const state: Record<number, ReturnType<typeof costAndState>> = {};
+  const reading: Record<number, ReturnType<typeof readDepth>> = {};
   let model: string | undefined;
   for (const depth of DEPTHS) {
     const id = await importHistory(page, history, depth);
-    catchUpMs[depth] = await catchUp(page, id);
+    const caught = await catchUp(page, id, catchUpCapMs(depth));
+    catchUpMs[depth] = caught.ms;
+    if (caught.capHit) warnings.push(`d${depth} catch-up hit its ${catchUpCapMs(depth) / 60_000} min cap`);
+    if (caught.stuck.length) warnings.push(`d${depth} caught up with ${caught.stuck.join(', ')} still due`);
     const started = Date.now();
     const base = (await readAdventure(page, id)).actions.length;
     let r: Rows | undefined;
+    const traced: Parameters<typeof readDepth>[1] = [];
     for (const f of FACTS) {
       await turn(page, f.probe[0], f.probe[1], PROBE_READ_MS);
       r = await readAdventure(page, id);
       await rewind(page, id, base);
-      const { output, prompt, model: m, bank, canonFacts } = lastTurn(r);
+      const { output, prompt, model: m, bank, canonFacts, memoryIds, sections } = lastTurn(r);
       model = m;
       const retrieved = retrievalHit(prompt, f);
+      const verdict = scoreProbe(output, f);
+      traced.push({ id: f.id, verdict, retrieved, memoryIds, sections });
       rows.push({
         depth,
         id: f.id,
         class: f.class,
-        verdict: scoreProbe(output, f),
+        verdict,
         judge: await judge(output, f.statement),
         retrieved,
         output,
@@ -215,6 +199,9 @@ test('recall benchmark', async ({ page }) => {
     }
     probesMs[depth] = Date.now() - started;
     if (r) state[depth] = costAndState(r);
+    // Probes are undone, so the bank after them is the bank they ranked.
+    const memories = z.array(S.Memory).parse((await readAdventure(page, id, { embeddings: true })).memories);
+    reading[depth] = readDepth(memories, traced, FACTS, caught.summaryAts.length);
   }
 
   const tally = (of: typeof rows) => {
@@ -237,6 +224,7 @@ test('recall benchmark', async ({ page }) => {
     seed: SEED,
     judgeBatched: true,
     entityFacts: ENTITY_FACTS,
+    bankSize: BANK_SIZE,
     depths: DEPTHS,
     stalls: run.stalls,
     catchUpMs,
@@ -244,6 +232,7 @@ test('recall benchmark', async ({ page }) => {
     byClass: tally(rows),
     // The v1.0.0 baseline's 12 facts, comparable to it and to the wave-1 runs.
     orig: tally(rows.filter((r) => orig.has(r.id))),
+    reading,
     probes: rows,
     state,
     memoryRuns,
