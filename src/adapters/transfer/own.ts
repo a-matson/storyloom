@@ -67,7 +67,14 @@ function renumber(a: Exported): Adventure {
     // The scene and its logs hold entity ids (or names, which `id` passes through).
     plot: {
       ...a.plot,
-      ...(scene && { scene: { ...scene, present: scene.present.map(id), ...(scene.location !== undefined && { location: id(scene.location) }) } }),
+      ...(scene && {
+        scene: {
+          ...scene,
+          present: scene.present.map(id),
+          ...(scene.location !== undefined && { location: id(scene.location) }),
+          ...(scene.zones && { zones: Object.fromEntries(Object.entries(scene.zones).map(([k, v]) => [id(k), v])) }),
+        },
+      }),
       ...(sceneLog && { sceneLog: sceneLog.map((s) => ({ at: s.at, location: id(s.location) })) }),
       ...(presence && { presence: presence.map((p) => ({ at: p.at, present: p.present.map(id) })) }),
     },

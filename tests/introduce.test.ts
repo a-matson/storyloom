@@ -180,9 +180,10 @@ describe('introduce', () => {
       const schema = JSON.stringify(reqs[0]?.jsonSchema);
       expect(schema).toContain('"enum":["Tamsin","the ferrywoman"]');
       expect(schema).toContain('"required":["location","present","stay","weather"]');
-      // A required verdict per character present before.
-      expect(schema).toContain('"stay":{"type":"object","properties":{"Tamsin":{"type":"string","enum":["here","left","asleep"]}},"required":["Tamsin"]');
-      expect(reqs[0]?.prompt).toContain('stay gives each character present in the previous scene');
+      // A required verdict per character present before: a word, or the room of this place they went to (M21-1).
+      expect(schema).toContain('"Tamsin":{"anyOf":[{"type":"string","enum":["here","left","asleep"]},{"type":"object","properties":{"room":');
+      expect(schema).toContain('"required":["Tamsin"]');
+      expect(reqs[0]?.prompt).toMatch(/stay gives each character present in the previous scene.*\{"room": "<the room>"\} if they went to another room/);
       expect(reqs[0]?.prompt).toContain('Previous scene: location "the ferry", present: Tamsin. Known characters: Tamsin, the ferrywoman.');
       expect(reqs[0]?.prompt).toContain('asleep or unconscious still counts; gone to another room does not');
 

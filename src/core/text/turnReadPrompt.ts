@@ -10,7 +10,15 @@ export const TURN_READ_ASK = 'Where does the passage end, and who is there?';
 export interface PrevScene {
   location?: string | undefined;
   present: readonly string[];
+  zones?: Readonly<Record<string, string>> | undefined;
 }
+
+/** `; in the basement: Vorthak, Weever` per room, so a read keeps who is in one there instead of losing them. */
+const roomsOf = (zones: PrevScene['zones']) => {
+  const by = new Map<string, string[]>();
+  for (const [n, room] of Object.entries(zones ?? {})) by.set(room, [...(by.get(room) ?? []), n]);
+  return [...by].map(([room, who]) => `; in ${room}: ${who.join(', ')}`).join('');
+};
 
 /**
  * The turn read: the scene, then a card for each new name when there are any, so it ends while the player reads.
@@ -36,7 +44,8 @@ export function introducePrompt(
     'present lists the known characters there at the end (asleep or unconscious still counts; gone to another room does not), not the player "you". ' +
     (prev.present.length
       ? 'stay gives each character present in the previous scene: "here" if still in the same room as you at the end, ' +
-        '"left" if they went to another room or away (climbing down, going upstairs or outside counts), "asleep" if asleep or unconscious there. '
+        '{"room": "<the room>"} if they went to another room of this place (climbing down to the basement, going upstairs), ' +
+        '"left" if they went away (outside, another place), "asleep" if asleep or unconscious there. '
       : '') +
     'weather is "unchanged" unless the passage states the weather, and "none" when the scene moved indoors. ' +
     (cards
@@ -45,7 +54,7 @@ export function introducePrompt(
       : '\n') +
     (cards ? `New here: ${newNames.join(', ')}.\n` : '') +
     // No placeholder place: one the model could copy back as the location.
-    `Previous scene: ${prev.location ? `location "${prev.location}", present: ${prev.present.join(', ') || 'nobody'}` : 'not known yet'}. Known characters: ${cast.join(', ') || 'none yet'}.` +
+    `Previous scene: ${prev.location ? `location "${prev.location}", present: ${prev.present.join(', ') || 'nobody'}${roomsOf(prev.zones)}` : 'not known yet'}. Known characters: ${cast.join(', ') || 'none yet'}.` +
     (state ? `\n\n${stateRecords(state.records)}` : '') +
     `\n\n---\n${passage}\n---\n\n` +
     (state ? `changes: for each one in the records above, each posture, condition, mood, wearing or holds this passage changes; at most ${state.max}.\n` : '') +
@@ -54,7 +63,7 @@ export function introducePrompt(
       : 'Return JSON in this shape (<...> are placeholders):\n{' +
         (state ? '"changes": [{"who": "<Name>", "key": "<key>", "now": "<new value>", "at": <number>}], ' : '') +
         '"scene": {"location": "<place>", "present": ["<Name>"], "stay": {' +
-        prev.present.map((n) => `"${n}": "<here|left|asleep>"`).join(', ') +
+        prev.present.map((n) => `"${n}": "<here|left|asleep>" or {"room": "<the room>"}`).join(', ') +
         '}, "weather": "unchanged"}' +
         (cards ? ', "entities": [{"name": "<Name>", "kind": "character", "description": "<one sentence>", "looks": {"<key>": "<a few words>"}}]' : '') +
         '}') +

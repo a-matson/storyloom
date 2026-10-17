@@ -292,7 +292,7 @@ export class GameSession {
   readonly updatePlot = (patch: Partial<PlotComponents>) =>
     this.mutate((_, adv) => {
       const plot = { ...adv.plot, ...patch };
-      const presence = patch.scene && withPresence(plot, patch.scene.present, adv.actions.length - 1);
+      const presence = patch.scene && withPresence(plot, patch.scene, adv.actions.length - 1);
       adv.plot = presence ? { ...plot, presence } : plot;
     });
   readonly updateSettings = (patch: Partial<AdventureSettings>) => this.mutate((_, adv) => (adv.settings = { ...adv.settings, ...patch }));

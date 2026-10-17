@@ -6,7 +6,7 @@ import { knownAs, matchEntity, mergeEntity } from '@core/memory/entities';
 import { catchUpEntities } from '@core/memory/batch';
 import { HELPER_JSON_SAMPLING, passageOf, turnReadTokens } from '@core/memory/extract';
 import { grammarOf } from '@core/memory/extractJsonSchema';
-import { leaversOf, namedIn, nextScene } from '@core/memory/scene';
+import { namedIn, nextScene } from '@core/memory/scene';
 import type { HelperCallLog } from '@core/memory';
 import { indexAssertions } from '@core/memory/assertionIndex';
 import { deriveAssertions } from '@core/memory/assertions';
@@ -26,7 +26,7 @@ import type { RenderedSections } from '@core/context/types';
 import { renderTemplate } from '@core/text/templates';
 import { writeMeasurement } from './env';
 import { mergedB, parses, type Reply } from './stateReply';
-import { leftWanted, onlySpan, pickSet, sceneAt, scoreLeft, scoreRows, type LeftRow, type StateRow } from './stateScore';
+import { leftRow, leftWanted, onlySpan, pickSet, sceneAt, scoreLeft, scoreRows, type LeftRow, type StateRow } from './stateScore';
 
 // Reads A (scene) and B (state of who is there) replayed over every AI turn of a backup, scored against hand labels.
 // `pnpm measure state <url> <backup.storyloom.json> [label] [labels-set]`; skipped without both.
@@ -38,7 +38,7 @@ const SET = process.env['MEASURE_LABELS'] ?? 'm12-dogfood';
 const CAST_SETTINGS = { memoryBankEnabled: false, cacheStableLayout: false, evictionChunk: 8 };
 /** `MEASURE_READS=A` skips read B; `C` replays the batch call alone. */
 const READS = (process.env['MEASURE_READS'] ?? 'A,B').split(',');
-/** `MEASURE_ONLY=43-44` replays those AI turns from the labelled scene; `MEASURE_REPEAT=5` reads each one 5 times (`left` per sample). */
+/** `MEASURE_ONLY=43-44` replays those AI turns from the labelled scene; `MEASURE_REPEAT=5` reads each one 5 times (`left` per sample); `MEASURE_ROOM=basement` scores rooms too (M21-1). */
 const ONLY = onlySpan(process.env['MEASURE_ONLY']);
 const REPEAT = Number(process.env['MEASURE_REPEAT'] ?? '1');
 /** `MEASURE_CACHE=1` caches read A's prompt on slot 1, as core caches read B's (M17-2). */
@@ -110,11 +110,12 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     const subjectsAB = MERGED ? stateCast(pre) : [];
     const q = subjectsAB.length ? stateAsk(pre, subjectsAB) : undefined;
     // Read A: the turn read from core, its scene part only (as on a turn with no new name).
-    const readA = () => ask(introducePrompt(passage, [], true, scene, cast, q), turnRead(cast, [], scene.present, q), turnReadTokens([], q));
+    const readA = () =>
+      ask(introducePrompt(passage, [], true, scene, cast, q), turnRead(cast, [], scene.present, q), turnReadTokens([], q, scene.present.length));
     const a = await readA();
     const samples = [a];
     for (let k = 1; k < REPEAT; k++) samples.push(await readA());
-    const left = { want: leftWanted(set, before, i), samples: samples.map((s) => (s.parsed ? leaversOf(s.parsed.scene) : null)), ms: samples.map((s) => s.ms) };
+    const left = leftRow(leftWanted(set, before, i), samples);
     before = i;
     const read = a.parsed?.scene;
     if (read) {
@@ -185,7 +186,7 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
       i,
       cast,
       location: scene.location,
-      present: scene.present,
+      present: scene.present.filter((p) => !scene.zones?.[p]), // with you, as labelled: not in another room (M21-1)
       record: structuredClone(record),
       a: { ms: a.ms, promptMs: a.promptMs, cachedTokens: a.cachedTokens, tokens: a.tokens, stop: a.stop, raw: a.text, parsed: !!a.parsed },
       left,
@@ -209,7 +210,10 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     parsedA: rows.filter((r) => r.a.parsed).length,
     parsedB: bs.filter((x) => x.parsed).length,
     meanMsA: mean(rows.map((r) => r.a.ms)),
-    ...scoreLeft(rows.map((r) => r.left)),
+    ...scoreLeft(
+      rows.map((r) => r.left),
+      process.env['MEASURE_ROOM'],
+    ),
     meanMsB: mean(bs.map((x) => x.ms)),
     // M17-1's bar: helper time per turn, both reads (one call under `AB`).
     meanMsTurn: mean(rows.map((r) => r.a.ms + (r.b?.ms ?? 0))),

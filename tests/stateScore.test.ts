@@ -47,10 +47,17 @@ describe('state bench scoring', () => {
 
   it('scores leavers only on turns where someone left', () => {
     const rows = [
-      { want: ['Vorthak', 'Weever'], samples: [['Weever', 'Vorthak'], ['Vorthak'], null], ms: [3, 1, 2] },
-      { want: [], samples: [[]], ms: [9] },
+      {
+        want: ['Vorthak', 'Weever'],
+        samples: [['Weever', 'Vorthak'], ['Vorthak'], null],
+        wheres: [{ Vorthak: 'The Basement', Weever: 'basement' }, {}, null],
+        ms: [3, 1, 2],
+      },
+      { want: [], samples: [[]], wheres: [{}], ms: [9] },
     ];
     expect(scoreLeft(rows)).toEqual({ leftOk: 1, leftSamples: 3, medianMsA: 3 });
+    expect(scoreLeft(rows, 'basement')).toMatchObject({ roomOk: 1 });
+    expect(scoreLeft([{ ...rows[0]!, wheres: [{ Vorthak: 'basement', Weever: '' }, {}, null] }], 'basement')).toMatchObject({ roomOk: 0 });
   });
 
   it('rejects an unknown set and a malformed file', () => {

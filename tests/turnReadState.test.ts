@@ -13,7 +13,7 @@ const mira = mergeEntity(undefined, { name: 'Mira', kind: 'character', descripti
 const tobin = mergeEntity(undefined, { name: 'Tobin', kind: 'character', description: '' }, 0);
 
 /** Mira is there before the turn; action 3 is the player's, 4 the AI's. The reply's scene adds Tobin. */
-function setup(changes: object[], stop: 'eos' | 'length' = 'eos') {
+function setup(changes: object[], stop: 'eos' | 'length' = 'eos', stay: object = { Mira: 'here' }) {
   const adv: Adventure = memoryAdventure(5);
   adv.actions = adv.actions.slice(-5);
   adv.settings.memory = { ...adv.settings.memory, introductions: false, sceneEachTurn: true, stateRead: 'every' };
@@ -24,7 +24,7 @@ function setup(changes: object[], stop: 'eos' | 'length' = 'eos') {
   adv.entities = [mira, tobin];
   adv.plot.scene = { location: 'the well', present: [mira.id] };
   const reqs: CompletionRequest[] = [];
-  const scene = { location: 'the well', present: ['Mira', 'Tobin'], stay: { Mira: 'here' }, weather: 'unchanged' };
+  const scene = { location: 'the well', present: ['Mira', 'Tobin'], stay, weather: 'unchanged' };
   const provider = fakeProvider(
     async function* (req) {
       reqs.push(req);
@@ -48,8 +48,8 @@ describe('the merged turn read (M17-1)', () => {
     expect(r.state?.changed).toBe(1);
     // Cards and sightings, the scene, one change.
     expect(cuts.calls[0]?.accepted).toBe(r.touched + 1 + 1);
-    // Scene budget + 40 per entry it may give (Mira, you, one more).
-    expect(reqs[0]?.maxTokens).toBe(80 + 120);
+    // Scene budget + 8 per verdict (Mira) + 40 per entry it may give (Mira, you, one more).
+    expect(reqs[0]?.maxTokens).toBe(80 + 8 + 120);
     await readState(adv, deps);
     expect(reqs).toHaveLength(1);
   });
@@ -77,6 +77,24 @@ describe('the merged turn read (M17-1)', () => {
     const { adv, deps } = setup(changes, 'length');
     await introduce(adv, deps, undefined, { state: true });
     expect(now(adv, mira.id)).toEqual({ posture: 'sitting' });
+  });
+
+  it('a room keeps the character present there (M21-1); `left` is gone', async () => {
+    const { adv, deps } = setup([], 'eos', { Mira: { room: 'the cellar' } });
+    await introduce(adv, deps);
+    expect(adv.plot.scene?.present).toEqual([mira.id, tobin.id]);
+    expect(adv.plot.scene?.zones).toEqual({ [mira.id]: 'the cellar' });
+    expect(adv.plot.presence?.at(-1)?.present).toEqual([tobin.id]);
+    const old = setup([], 'eos', { Mira: 'left' });
+    await introduce(old.adv, old.deps);
+    expect(old.adv.plot.scene?.present).toEqual([tobin.id]);
+  });
+
+  it('tells the read who is in another room, so it keeps them there', async () => {
+    const { adv, reqs, deps } = setup([]);
+    adv.plot.scene = { location: 'the well', present: [mira.id, tobin.id], zones: { [mira.id]: 'the cellar', [tobin.id]: 'the cellar' } };
+    await introduce(adv, deps);
+    expect(reqs[0]?.prompt).toContain('Previous scene: location "the well", present: Mira, Tobin; in the cellar: Mira, Tobin. Known');
   });
 
   it('asks no changes without the option', async () => {

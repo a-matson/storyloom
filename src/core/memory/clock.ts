@@ -79,7 +79,8 @@ export function travel(plot: PlotComponents, entities: readonly Entity[], place:
     },
     entities,
   );
-  const presence = alone ? withPresence(plot, [], at) : plot.presence;
+  // A move drops the rooms, so who was in another one is with you again.
+  const presence = withPresence(plot, scene, at);
   const sceneLog = [...(plot.sceneLog ?? []), { at, location: name ?? place }].slice(-SCENE_LOG_CAP);
   return { ...plot, scene, sceneLog, ...(presence && { presence }) };
 }
