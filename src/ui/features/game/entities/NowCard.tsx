@@ -115,6 +115,10 @@ export function NowCard({ adventure, api }: { adventure: Adventure; api: GameApi
     setEnded(ended.filter((x) => x.id !== a.id));
   };
   const text = [scene, ...lines.map((l) => l.text)].join('\n');
+  // A confirmed goal to act on; a nudge sends it with the next turn.
+  const wants = (e: Entity) =>
+    stored.present.includes(e.id) && adventure.assertions.some((a) => a.subject === e.id && a.kind === 'goal' && a.until === undefined && a.seen !== false);
+  const nudged = (e: Entity) => !!adventure.scriptState.__nudge?.some((n) => n.id === e.id && n.at === adventure.actions.length);
   return (
     <Section title="Now" tokens={tokenizer.count(text)} badge={<Pill tone="auto">auto</Pill>} defaultOpen>
       {scene && <p className="text-caption">{scene}</p>}
@@ -153,6 +157,11 @@ export function NowCard({ adventure, api }: { adventure: Adventure; api: GameApi
                 ))}
             </span>
             {e.kind === 'character' && <SetState entity={e} edits={edits} />}
+            {wants(e) && (
+              <Button variant="ghost" className="h-7 self-start" aria-pressed={nudged(e)} onClick={() => edits.nudge(e.id)}>
+                {nudged(e) ? 'Nudged' : 'Nudge'} {e.name}
+              </Button>
+            )}
             {stored.present.includes(e.id) && <SendTo entity={e} scene={stored} entities={adventure.entities} api={api} />}
           </li>
         ))}

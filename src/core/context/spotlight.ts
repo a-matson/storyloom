@@ -20,6 +20,15 @@ export function lastActive(e: Entity, actions: readonly Action[], ix: AssertionI
   return Math.max(spoke, ...changed.map((a) => a.since));
 }
 
+/** Actions a character can stay quiet before a confirmed goal goes on their now-line. [provisional] */
+export const QUIET_TURNS = 4;
+/** Actions since `e` last spoke or changed state, `actions` being the log up to the last action. */
+export const quietTurns = (e: Entity, actions: readonly Action[], ix: AssertionIndex) => actions.length - 1 - lastActive(e, actions, ix);
+
+/** Who the player nudged for this turn: a nudge at log length `at` is sent while the log has at most one action more (the player's). */
+export const nudgedIn = (nudges: readonly { id: string; at: number }[] = [], length: number): string[] =>
+  nudges.filter((n) => n.at >= length - 1).map((n) => n.id);
+
 /** `here` with its characters reordered in their own slots (stable); the place and anything else stay put. */
 export function spotlight(here: Entity[], actions: readonly Action[], ix: AssertionIndex, order: SpotlightOrder = SPOTLIGHT): Entity[] {
   if (order === 'fixed') return here;

@@ -91,6 +91,35 @@ test('Send to on the Now card puts a character in another room, back, or away', 
   await expect(page.getByRole('textbox', { name: 'Present' })).toHaveValue('');
 });
 
+test('a confirmed goal goes in the prompt for the one turn after a Nudge', async ({ page }) => {
+  const line = { subject: 'ent_merav', at: 2, since: 2 };
+  await openSeededAdventure(page, 3, undefined, {
+    scene: { location: 'Old Well', present: ['Merav'] },
+    assertions: [
+      // Changed state at 2: she acted recently, so only a nudge sends her goal.
+      { ...line, id: 'as_mood', producer: 'player', basis: 'player', kind: 'state', key: 'mood', value: 'calm' },
+      { ...line, id: 'as_goal', producer: 'batch', basis: 'stated', kind: 'goal', text: 'find the needle map', seen: false },
+    ],
+  });
+  await page.getByRole('button', { name: 'Characters · 1' }).click();
+  await page.getByRole('button', { name: 'Open Merav' }).click();
+  const drawer = page.getByRole('dialog', { name: 'Merav' });
+  await expect(drawer.getByText('wants: find the needle map')).toBeVisible();
+  await drawer.getByRole('button', { name: 'Confirm' }).click();
+  await expect(drawer.getByText('proposal', { exact: true })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
+  await world(page);
+  await page.getByRole('button', { name: 'Nudge Merav' }).click();
+  await expect(page.getByRole('button', { name: 'Nudged Merav' })).toBeVisible();
+  let context = await rawPrompt(page, 'wave');
+  await expect(context).toContainText('calm; wants: find the needle map.');
+  await page.keyboard.press('Escape');
+  context = await rawPrompt(page, 'wave again');
+  await expect(context).toContainText('maps): calm.');
+  await expect(context).not.toContainText('wants:');
+});
+
 test('a character asleep is told in the prompt what they slept through', async ({ page }) => {
   await openSeededAdventure(page, 3, undefined, { scene: { location: 'Old Well', present: ['Merav'] } });
   await world(page);

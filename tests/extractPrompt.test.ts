@@ -6,7 +6,17 @@ import { extractGrammar, grammarOf } from '@core/memory/extractJsonSchema';
 import { LOOK_KEYS } from '@core/memory/looks';
 import type { CompletionRequest } from '@core/ports';
 import { EntityKind } from '@core/schema/entity';
-import { DESCRIPTION_CHARS, ExtractedEntity, extractionJson, FACT_CHARS, LOOK_CHARS, MAX_ENTITIES, PHRASE_CHARS, VOICE_CHARS } from '@core/schema/extraction';
+import {
+  DESCRIPTION_CHARS,
+  ExtractedEntity,
+  extractionJson,
+  FACT_CHARS,
+  GOAL_CHARS,
+  LOOK_CHARS,
+  MAX_ENTITIES,
+  PHRASE_CHARS,
+  VOICE_CHARS,
+} from '@core/schema/extraction';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import { extractPrompt } from '@core/text/prompts';
 import { statePrompt } from '@core/text/statePrompt';
@@ -74,11 +84,15 @@ describe('the entity call’s prompt', () => {
     expect(await sent(false)).toMatchObject({ grammar: undefined, jsonSchema: EXTRACT_JSON_SCHEMA });
   });
 
-  it('asks for a voice from quoted lines, last and only for a character', () => {
-    for (const g of [true, false]) expect(extractPrompt('[0] Mira waves.', [], g)).toMatch(/voice is only for characters: .*quoted lines only/);
+  it('asks for a voice and then a goal, last and only for a character', () => {
+    for (const g of [true, false]) {
+      expect(extractPrompt('[0] Mira waves.', [], g)).toMatch(/voice is only for characters: .*quoted lines only/);
+      expect(extractPrompt('[0] Mira waves.', [], g)).toMatch(/goal is only for characters: what they want right now/);
+    }
     expect(EXTRACT_GRAMMAR).toContain(`voice ::= "\\"" char{1,${VOICE_CHARS}}`);
-    expect(EXTRACT_GRAMMAR).toMatch(/"\\"character\\"" body .* rels \( ",\\"voice\\":" voice \)\? \| kind body rels \)/);
-    expect(Object.keys(ExtractedEntity.shape).at(-1)).toBe('voice');
+    expect(EXTRACT_GRAMMAR).toContain(`goal ::= "\\"" char{1,${GOAL_CHARS}}`);
+    expect(EXTRACT_GRAMMAR).toMatch(/"\\"character\\"" body .* rels \( ",\\"voice\\":" voice \)\? \( ",\\"goal\\":" goal \)\? \| kind body rels \)/);
+    expect(Object.keys(ExtractedEntity.shape).slice(-2)).toEqual(['voice', 'goal']);
   });
 
   it('keeps the schema’s caps in the grammar, with no whitespace and looks only for a character', () => {

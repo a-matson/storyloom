@@ -11,7 +11,7 @@ import { Has } from '../ItemRows';
 import { RuleRow } from '../RuleList';
 import { AddRow, type AddKind } from './AddRow';
 import { Line } from './FactRows';
-import { ClaimLine, EffectLine, FactLine, StateLine, type Card } from './Lines';
+import { ClaimLine, EffectLine, FactLine, GoalLine, StateLine, type Card } from './Lines';
 
 interface Props {
   entity: Entity;
@@ -72,6 +72,7 @@ export function CardSections({ entity: e, adventure, api, edits, onClose, onOpen
     if (kind === 'state') edits.setValue(e.id, v.length ? k.trim() : 'condition', v.length ? v.join(':').trim() : t);
     else if (kind === 'item') edits.addItem(e.name, t);
     else if (kind === 'rule') ruleEdits(api).add(t, [e.id]);
+    else if (kind === 'goal') edits.setGoal(e.id, t);
     else if (kind === 'event') edits.addLine(e.id, { kind, text: t, who: /\byou\b/i.test(t) ? [e.id, YOU] : [e.id] });
     else edits.addLine(e.id, kind === 'effect' ? { kind, condition: t } : { kind, text: t });
   };
@@ -81,6 +82,7 @@ export function CardSections({ entity: e, adventure, api, edits, onClose, onOpen
         {[
           ...current(live, 'trait').map((a) => <FactLine key={a.id} card={card} fact={a} text={a.text} />),
           ...current(live, 'voice').map((a) => <FactLine key={a.id} card={card} fact={a} text={`speaks: ${a.text}`} />),
+          ...current(live, 'goal').map((a) => <GoalLine key={a.id} card={card} fact={a} />),
           ...stateLines(true),
         ]}
       </Section>

@@ -20,6 +20,12 @@ export const DESCRIPTION_CHARS = 120;
 export const LOOK_CHARS = 40;
 /** How a character talks: register, a tic, how they address you. 60 cost 18 estimated tokens on the now-line; the bar is 15. [provisional] */
 export const VOICE_CHARS = 48;
+/**
+ * What a character wants right now, in a few words ("get the ledger back"). 60 cost 15 estimated tokens on the now-line
+ * (the bar is 10). The 12B runs most goals to the cap: at 48 the batch reply cut 2 of 15 calls at 600 and at 650, at 40 1,
+ * at 32 none. [provisional] [measured: 2026-10-17-batch-m21-3-goals.json, -goals-650.json, -goals-40.json, -goals-32.json]
+ */
+export const GOAL_CHARS = 32;
 const sentence = (chars: number) => z.string().check(z.maxLength(chars));
 
 // The grammar then cannot write "the path": prompting alone did not stop common nouns filling the cap.
@@ -44,6 +50,8 @@ export const ExtractedEntity = z.object({
   relationships: z.optional(z.array(z.object({ to: Name, stance: sentence(LOOK_CHARS) })).check(z.maxLength(2))),
   // Last, so a reply cut at its cap loses it first; `sighting.ts` keeps it only where the range quotes them.
   voice: z.optional(sentence(VOICE_CHARS)),
+  // After the voice, so a cut loses it first; `sighting.ts` keeps it only where a sentence of the range backs it.
+  goal: z.optional(sentence(GOAL_CHARS)),
 });
 
 /** New names one introduction reply covers; a turn rarely brings more. [provisional] */

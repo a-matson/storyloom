@@ -1,5 +1,5 @@
 import type { Action, Assertion, Entity, ExtractedEntity } from '../model/types';
-import { FACT_CHARS, INTRODUCED_CHARS, LOOK_CHARS, VOICE_CHARS } from '../schema/extraction';
+import { FACT_CHARS, GOAL_CHARS, INTRODUCED_CHARS, LOOK_CHARS, VOICE_CHARS } from '../schema/extraction';
 import { textOf } from './assertionIndex';
 import { within, type Sighting } from './entities';
 import type { Source } from './invalidate';
@@ -85,12 +85,28 @@ function voiceOf(raw: string | undefined, g: Guard): string | undefined {
   return v;
 }
 
-/** What one reply entity says that the range backs: facts, stated looks, stances, a voice, and an identity only from a sentence naming it (read D). */
+// ponytail: English function words only; a cut goal in another language keeps its dangling word.
+const DANGLING = /(?:\s+(?:the|a|an|to|of|with|and|or|but|her|his|their|its|my|your|for|in|on|at|by|from|before|after|that|what|who))+$/i;
+
+/**
+ * A goal's first clause without the verb the now-line adds ("wants: to…"). The 12B ran on into the next key ("Survive the
+ * poison. RefersTo:"), and ran 19 of 23 goals to the cap, closing a letter short ("…protect her com"): a cut one loses its
+ * last word and the small words it leaves dangling. [measured: 2026-10-17-batch-m21-3-goals-650.json, -goals-40.json]
+ * Kept as a fact is: a sentence of the range backs it.
+ */
+function goalText(raw = ''): string {
+  const first = raw.split(/[.;:!?](?:\s|$)/)[0] ?? '';
+  const cut = first === raw && raw.length >= GOAL_CHARS - 2;
+  const whole = cut ? first.replace(/\s+\S*$/, '').replace(DANGLING, '') : first;
+  return whole.replace(/^\s*(?:wants?\s+)?to\s+|^\s*wants?\s+/i, '').replace(/[\s,]+$/, '');
+}
+
+/** What one reply entity says that the range backs: facts, stated looks, stances, a voice, a goal, and an identity only from a sentence naming it (read D). */
 export function sightingOf(
   item: Incoming & { facts: string[]; aliases: string[] },
   g: Guard,
-): Sighting & { relationships: { to: string; stance: string }[]; voice?: string | undefined } {
-  const { looks, relationships = [], facts, voice, ...e } = item;
+): Sighting & { relationships: { to: string; stance: string }[]; voice?: string | undefined; goal?: string | undefined } {
+  const { looks, relationships = [], facts, voice, goal, ...e } = item;
   const keep = (value: string, o: { cap?: number; about?: string; look?: boolean } = {}): string[] => {
     const v = uncut(value, o.cap);
     if (!v || EMPTY_VALUE.test(v)) return [];
@@ -130,5 +146,7 @@ export function sightingOf(
     }),
     state: kept,
     voice: voiceOf(voice, g),
+    // As a fact: a sentence of the range backs it. Without the verb the now-line adds ("wants: wants to…"); a word short of the cap, as the voice.
+    goal: g.kind === 'character' ? keep(goalText(goal))[0] : undefined,
   };
 }

@@ -50,8 +50,9 @@ const extractAccepter =
  * On one line (`extractGrammar`) replies take 260–389, so 500 is headroom. [measured: 2026-10-16-batch-m17-3.json]
  * With `events` 500 cut 3 of 6 calls, one inside `entities` in both runs; at 600, 0 of 12, the longest 590.
  * [measured: 2026-10-17-batch-m19-5-events*.json, -at600*.json, -final*.json]
+ * With `goal` 600 cut 2 of 15 calls. [measured: 2026-10-17-batch-m21-3-goals.json]
  */
-const EXTRACT_TOKENS = 600;
+const EXTRACT_TOKENS = 650;
 
 /**
  * The combined helper call: entities for one passage whose paragraphs are numbered by action index, and with `cast`

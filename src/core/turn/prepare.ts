@@ -1,4 +1,5 @@
 import { applyScriptSections, buildContext, renderBody, type ContextBuildInput, type ContextBuildResult, type ScriptCache } from '../context';
+import { nudgedIn } from '../context/spotlight';
 import { textOf } from '../memory/assertionIndex';
 import { bm25, buildIndex, tokenise } from '../memory/lexical';
 import { isActive, rankMemories, touchUsed, type RankedMemory } from '../memory/memoryBank';
@@ -29,6 +30,7 @@ function contextInput(adventure: Adventure, actions: Action[], rankedMemories: R
     storyCards: adventure.storyCards,
     entities: adventure.entities,
     assertions: adventure.assertions,
+    nudged: nudgedIn(adventure.scriptState.__nudge, actions.length),
     rules: adventure.rules,
     rankedMemories,
     frontMemory: memory.frontMemory,
@@ -63,10 +65,10 @@ async function buildExact(input: ContextBuildInput): Promise<ContextBuildResult>
 async function rankForQuery(adventure: Adventure, query: string, embedder?: Embedder): Promise<RankedMemory[]> {
   const bank = adventure.settings.memory.memoryBank ? adventure.memories.filter(isActive) : [];
   if (!bank.length) return [];
-  // What used to be facts: not the identity nor the old free-text looks; events and voices never were.
+  // What used to be facts: not the identity nor the old free-text looks; events, voices and goals never were.
   const name = new Map(adventure.entities.map((e) => [e.id, e.name]));
   const facts = adventure.assertions.flatMap((a) =>
-    a.kind === 'identity' || a.kind === 'event' || a.kind === 'voice' || (a.kind === 'look' && a.key === 'legacy')
+    a.kind === 'identity' || a.kind === 'event' || a.kind === 'voice' || a.kind === 'goal' || (a.kind === 'look' && a.key === 'legacy')
       ? []
       : [{ id: a.id, text: `${name.get(a.subject) ?? a.subject}: ${textOf(a)}` }],
   );

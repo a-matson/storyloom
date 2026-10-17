@@ -50,4 +50,6 @@ export const Assertion = z.discriminatedUnion('kind', [
   z.object({ ...common, kind: z.literal('event'), text: z.string(), who: z.array(z.string()).check(z.minLength(1)) }),
   /** How a character talks, read only from their own quoted lines; one current per subject. */
   z.object({ ...common, kind: z.literal('voice'), text: z.string() }),
+  /** What a character wants now; the batch read's is a proposal (`seen: false`) until confirmed. One current per subject. */
+  z.object({ ...common, kind: z.literal('goal'), text: z.string() }),
 ]);
