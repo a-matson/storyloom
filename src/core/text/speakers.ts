@@ -5,6 +5,7 @@ import { paragraphs } from './formatting';
 interface Named {
   name: string;
   aliases: readonly string[];
+  roles?: readonly string[] | undefined;
 }
 
 /** Rule switches, so the bench can score each one; the defaults are the shipped set. */
@@ -30,7 +31,7 @@ const CLAUSE = String.raw`(?<=^\s*|\n\s*|[.!?…;:,]\s+|§\s*|\sand\s+)`;
 export function guessSpeakers(text: string, cast: readonly Named[], { subject = true }: SpeakerRules = {}): Speaker[] {
   const before = subject ? CLAUSE : String.raw`(?<!\p{L})`;
   const tests = cast.flatMap((c) => {
-    const n = [c.name, ...c.aliases]
+    const n = [c.name, ...c.aliases, ...(c.roles ?? [])]
       .filter((s) => s.trim())
       .map(escape)
       .join('|');

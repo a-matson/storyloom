@@ -3,7 +3,8 @@ import { test } from 'vitest';
 import type { z } from 'zod/mini';
 import { LlamaServerProvider } from '@adapters/providers/llamaServer';
 import { knownAs, matchEntity, mergeEntity } from '@core/memory/entities';
-import { catchUpEntities, HELPER_JSON_SAMPLING, passageOf, turnReadTokens } from '@core/memory/extract';
+import { catchUpEntities } from '@core/memory/batch';
+import { HELPER_JSON_SAMPLING, passageOf, turnReadTokens } from '@core/memory/extract';
 import { grammarOf } from '@core/memory/extractJsonSchema';
 import { leaversOf, namedIn, nextScene } from '@core/memory/scene';
 import type { HelperCallLog } from '@core/memory';
@@ -45,9 +46,12 @@ const CACHE = process.env['MEASURE_CACHE'] === '1';
 /** `MEASURE_READS=AB` asks read B inside read A's call (M17-1); its row's B fields come from that reply, with no time of their own. */
 const MERGED = READS.includes('AB');
 if (MERGED) READS.push('A');
+/** `MEASURE_ROLES=<batch-….json>`: the roles a read C replay stored, given to the backup's characters by name (M18-2). */
+const ROLES: Record<string, string[]> = process.env['MEASURE_ROLES'] ? JSON.parse(readFileSync(process.env['MEASURE_ROLES'], 'utf8')).score.roles : {};
 
 test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('state reads over a backup', { timeout: 3_600_000 }, async () => {
   const adv = S.Adventure.parse(JSON.parse(readFileSync(backup ?? '', 'utf8')).adventure);
+  adv.entities = adv.entities.map((e) => (ROLES[e.name] ? { ...e, roles: ROLES[e.name] } : e));
   const set = pickSet(JSON.parse(readFileSync('bench/stateLabels.json', 'utf8')), SET);
   // A v1 backup keeps identities in entity fields: derive them as opening it would.
   const legacy = S.LegacyAdventure.parse(JSON.parse(readFileSync(backup ?? '', 'utf8')).adventure);
@@ -189,16 +193,8 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
       structured,
     });
     console.log('cast', i, `${structured.tokens} tokens`, `\n${structured.text}`);
-    console.log(
-      'state',
-      i,
-      `A ${a.ms} ms ${a.stop}`,
-      b ? `B ${b.ms} ms ${b.stop} ${b.raw} rejected ${JSON.stringify(b.rejected)}` : '',
-      '=>',
-      scene.location,
-      '|',
-      scene.present.join(','),
-    );
+    const bLine = b ? `B ${b.ms} ms ${b.stop} ${b.raw} rejected ${JSON.stringify(b.rejected)}` : '';
+    console.log('state', i, `A ${a.ms} ms ${a.stop}`, bLine, '=>', scene.location, '|', scene.present.join(','));
   }
   const mean = (xs: number[]) => (xs.length ? Math.round(xs.reduce((s, x) => s + x, 0) / xs.length) : 0);
   const bs = rows.flatMap((r) => (r.b ? [r.b] : []));
@@ -227,6 +223,8 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     // M17-4: proposed, not sent (the record holds sent values only); `unchanged` must not rise.
     stateUngrounded: bs.reduce((s, x) => s + (x.rejected?.filter((y) => y.reason === 'ungrounded').length ?? 0), 0),
     stateUnchanged: bs.reduce((s, x) => s + (x.rejected?.filter((y) => y.reason === 'unchanged').length ?? 0), 0),
+    // M18-2: a role ("the kobold") names its character, so these fall.
+    stateWrongSubject: bs.reduce((s, x) => s + (x.rejected?.filter((y) => y.reason === 'wrong-subject').length ?? 0), 0),
     // M13-5's bar: ≤ 200 with three present.
     maxStructured: Math.max(0, ...rows.map((r) => r.structured.tokens)),
     maxStructuredThreePresent: Math.max(0, ...rows.filter((r) => r.present.length >= 3).map((r) => r.structured.tokens)),
@@ -273,6 +271,7 @@ test.skipIf(!url || !backup || !READS.includes('C'))('batch call over a backup',
     meanMs: Math.round(replies.reduce((s, r) => s + (r.ms ?? 0), 0) / Math.max(1, replies.length)),
     factsProposed: replies.reduce((s, r) => s + (r.facts ?? 0), 0),
     cards: work.entities.map((e) => e.name),
+    roles: Object.fromEntries(work.entities.map((e) => [e.name, e.roles ?? []])),
     proposals,
   };
   console.log('batch score', JSON.stringify(score));

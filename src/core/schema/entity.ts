@@ -39,6 +39,8 @@ export const Entity = z.object({
   kind: EntityKind,
   name: z.string(),
   aliases: z.array(z.string()),
+  /** What the story calls it in place of the name ("the kobold"), lower-case, newest last; name lookups read them. Absent: none. */
+  roles: z.optional(z.array(z.string())),
   /** A canon or carded entity's card text; empty for others, whose identity is an assertion. */
   description: z.string(),
   relations: z.array(Relation),

@@ -10,10 +10,13 @@ export const norm = (s: string): string =>
     .replace(/\s+/g, ' ')
     .replace(/[.!?]+$/, '');
 
-/** The entity called `name`, by name or alias, ignoring case and spacing. */
+/** Every name an entity goes by: its name, aliases and roles ("the kobold"). Spelling checks and alias proposals read name and aliases only. */
+export const namesOf = (e: Pick<Entity, 'name' | 'aliases' | 'roles'>): string[] => [e.name, ...e.aliases, ...(e.roles ?? [])];
+
+/** The entity called `name`, by name, alias or role, ignoring case and spacing. */
 export function matchEntity(entities: readonly Entity[], name: string): Entity | undefined {
   const n = norm(name);
-  return entities.find((e) => norm(e.name) === n || e.aliases.some((a) => norm(a) === n));
+  return entities.find((e) => namesOf(e).some((a) => norm(a) === n));
 }
 
 export const words = (s: string): string =>
@@ -37,7 +40,7 @@ export function knownAs(entities: readonly Entity[], name: string, ix?: Assertio
   const exact = matchEntity(entities, name);
   if (exact) return exact;
   const n = bare(name);
-  const holds = (e: Entity, part: string) => part.trim() !== '' && [e.name, ...e.aliases].some((k) => bare(k).includes(part));
+  const holds = (e: Entity, part: string) => part.trim() !== '' && namesOf(e).some((k) => bare(k).includes(part));
   const [title = '', ...rest] = n.trim().split(' ');
   return (
     one(entities.filter((e) => holds(e, n))) ??

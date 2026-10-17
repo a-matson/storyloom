@@ -81,10 +81,11 @@ describe('adventure JSON', () => {
     const base = { kind: 'character' as const, aliases: [], description: '', facts: [], state: {}, firstSeen: 0, lastSeen: 0 };
     a.entities = [
       { ...base, id: 'ent_1', name: 'Lena', relations: [{ to: 'ent_2', label: 'sister' }], cardId: 'card_1' },
-      { ...base, id: 'ent_2', name: 'Mira', relations: [{ to: 'ent_gone', label: 'owes' }] },
+      { ...base, id: 'ent_2', name: 'Mira', relations: [{ to: 'ent_gone', label: 'owes' }], roles: ['the courier'] },
     ];
     const { adventure: b } = importAdventureJson(exportAdventureJson(a));
     const [lena, mira] = b.entities;
+    expect([lena?.roles, mira?.roles]).toEqual([undefined, ['the courier']]);
     expect(b.entities.map((e) => e.name)).toEqual(['Lena', 'Mira']);
     expect(lena?.id).not.toBe('ent_1');
     expect(lena?.id).toMatch(/^ent_/);

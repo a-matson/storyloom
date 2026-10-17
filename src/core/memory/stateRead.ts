@@ -20,7 +20,7 @@ const STATE_SPAN = 2;
 const TOKENS_EACH = 40;
 const TOKENS_CAP = 160;
 
-type Subject = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'canon' | 'cardId' | 'canonKeys'>;
+type Subject = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'roles' | 'canon' | 'cardId' | 'canonKeys'>;
 const PLAYER: Subject = { id: YOU, kind: 'character', name: YOU, aliases: ['your', 'yourself'] };
 
 export type StateReject = 'at-range' | 'wrong-subject' | 'cut' | 'unchanged' | 'unknown-item' | 'ungrounded';

@@ -26,6 +26,7 @@ const EXTRACT_SKELETON =
   '{"entities": [{"name": "<Name>", "kind": "character", "aliases": ["<role>"], "description": "<one sentence>",\n' +
   '   "facts": ["<fact>"], "looks": {"<key>": "<a few words>"}, "relationships": [{"to": "<Name>", "stance": "<a few words>"}]},\n' +
   '  {"name": "<Name>", "kind": "place", "description": "<one sentence>", "facts": []}]}';
+const EXTRACT_SKELETON_ROLES = `${EXTRACT_SKELETON.slice(0, -1)},\n "refersTo": {"<Name>": "the <role>"}}`;
 
 /**
  * llama-server's schema grammar allows newlines and indentation; pretty-printed, 3 of 8 entity
@@ -35,11 +36,18 @@ export const ONE_LINE = ' Write the JSON on one line, with no line breaks or ind
 
 export const LOOKS_ASK = `looks is only for characters: a few words for each of ${LOOK_KEYS.join(', ')} that the passage shows; leave out the rest, and leave it out for places, items and factions.`;
 /**
+ * After the passage: before it, as the cached prefix would have it, the 12B left `refersTo` empty. Without "never the
+ * name itself" it wrote each name back in 2 of 2 calls of one run. Example names no dogfood holds, so a replay is not
+ * primed. [measured: 2026-10-17-batch-m18-2-roles.json, -roles-d-r2.json]
+ */
+const REFERS_ASK =
+  'refersTo: for each name it lists, one short noun phrase the passage calls that character by in place of the name ("the gnome" for a gnome called Tib, "the old sailor"), or "" if none; never the name itself or a pronoun.\n';
+/**
  * The combined call. No cards of the known names and no list of new ones: with both, the 12B
  * proposed 10 facts at d30 where the bare prompt's reply kept 15. [measured: 2026-10-11-recall-m12-1-pr2-log-d30.json]
- * `grammar`: the reply is constrained by `EXTRACT_JSON_SCHEMA`, which already carries the shape.
+ * `grammar`: the reply is constrained by `extractionJson`, which already carries the shape. `roles`: the reply has `refersTo`.
  */
-export function extractPrompt(passage: string, knownNames: readonly string[], grammar: boolean): string {
+export function extractPrompt(passage: string, knownNames: readonly string[], grammar: boolean, roles = false): string {
   return (
     'List every named character, place, item and faction in this passage, with what it tells about each. ' +
     'Only things with a proper name; skip common nouns like "the path" or "wolves". An unnamed role ("the ferrywoman") is an alias of the named person it refers to.' +
@@ -49,7 +57,8 @@ export function extractPrompt(passage: string, knownNames: readonly string[], gr
     `${LOOKS_ASK} relationships: 0–2, to whom (a Name, or "You" for the player) and the stance in a few words. ` +
     'No location, posture, condition or mood: those are read each turn. ' +
     'The player is "you", not an entity.\n' +
-    (grammar ? 'Return {"entities": [...]}.' : EXTRACT_SKELETON) +
+    (roles ? REFERS_ASK : '') +
+    (grammar ? `Return {"entities": [...]${roles ? ', "refersTo": {...}' : ''}}.` : roles ? EXTRACT_SKELETON_ROLES : EXTRACT_SKELETON) +
     ONE_LINE
   );
 }

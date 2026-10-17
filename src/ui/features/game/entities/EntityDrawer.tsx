@@ -42,6 +42,7 @@ export function EntityDrawer({ entity: e, adventure, api, onClose, onOpen }: Pro
   // The old free-text looks: keyed looks the story sets show in the card's Is section.
   const legacy = own.findLast((a) => a.kind === 'look' && a.key === 'legacy' && isCurrent(a));
   const legacyLook = legacy?.kind === 'look' ? legacy.value : '';
+  const roles = e.roles ?? [];
   // The old name stays an alias, so the story's later mentions still find this entry.
   const rename = (name: string) => name && name !== e.name && update({ name, aliases: [...e.aliases.filter((a) => a !== name), e.name] });
 
@@ -83,6 +84,19 @@ export function EntityDrawer({ entity: e, adventure, api, onClose, onOpen }: Pro
           <SectionLabel>Also called (comma-separated)</SectionLabel>
         </label>
         <Input id={`${id}-aliases`} defaultValue={e.aliases.join(', ')} onBlur={(ev) => update({ aliases: list(ev.target.value) })} />
+        {roles.length > 0 && (
+          <fieldset className="flex flex-wrap items-center gap-1.5" aria-label="Roles">
+            <SectionLabel>Referred to as</SectionLabel>
+            {roles.map((r) => (
+              <Pill key={r} className="gap-1 normal-case">
+                {r}
+                <button type="button" aria-label={`Remove role ${r}`} onClick={() => update({ roles: roles.filter((x) => x !== r) })}>
+                  ✕
+                </button>
+              </Pill>
+            ))}
+          </fieldset>
+        )}
         {e.kind === 'item' && <ItemRows entity={e} adventure={adventure} edits={edits} />}
         <CardSections entity={e} adventure={adventure} api={api} edits={edits} onClose={onClose} onOpen={onOpen} />
         <Appearances entity={e} adventure={adventure} onClose={onClose} edits={edits} />

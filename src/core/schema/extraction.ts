@@ -125,3 +125,22 @@ export const turnRead = (cast: readonly string[], newNames: readonly string[], b
  * No speakers: the client guess is the more precise (1.00 against 0.79). [measured: 2026-10-16-speakers-m18-3.json]
  */
 export const ExtractionJson = z.object({ entities: z.array(ExtractedEntity).check(z.maxLength(MAX_ENTITIES)) });
+
+/** Characters one batch reply gives a role for, and a phrase's length ("the old doctor"). [provisional] */
+export const MAX_REFERS = 4;
+export const PHRASE_CHARS = 30;
+/** One description the passage uses for a known character in place of the name. */
+export interface RefersTo {
+  phrase: string;
+  name: string;
+}
+/**
+ * The batch reply with `refersTo` after `entities`, so a reply cut at its cap loses roles first: a required phrase
+ * per known character the passage names, "" for none. As a free list of {phrase, name} the 12B closed it empty in
+ * 2 of 2 calls whose passage said "the kobold" and "the dragon"; keyed, both roles stood in 3 of 3 runs.
+ * [measured: 2026-10-17-batch-m18-2-roles.json, -roles-b.json, -roles-f*.json] Built per call; with no character there is no key.
+ */
+export const extractionJson = (cast: readonly string[]) =>
+  cast.length
+    ? z.object({ ...ExtractionJson.shape, refersTo: z.object(Object.fromEntries(cast.map((n) => [n, z.string().check(z.maxLength(PHRASE_CHARS))]))) })
+    : ExtractionJson;

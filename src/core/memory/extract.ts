@@ -1,12 +1,9 @@
 import { jsonrepair } from 'jsonrepair';
-import type { Adventure, ExtractionJson } from '../model/types';
+import type { Adventure } from '../model/types';
 import { z } from 'zod/mini';
 import {
-  ExtractedEntity,
   IntroducedEntity,
-  MAX_ENTITIES,
   MAX_INTRODUCED,
-  ExtractionJson as Schema,
   sceneRead,
   STAYS,
   stateChange,
@@ -18,14 +15,13 @@ import {
 import type { StateRecord } from '../text/statePrompt';
 import { actionStoryText } from '../text/formatting';
 import { parseJsonReply } from '../text/jsonReply';
-import { EXTRACT_SYSTEM, extractPrompt } from '../text/prompts';
+import { EXTRACT_SYSTEM } from '../text/prompts';
 import { introducePrompt, type PrevScene } from '../text/turnReadPrompt';
 import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
 import { helperCall } from './helperCall';
-import { EXTRACT_GRAMMAR, EXTRACT_JSON_SCHEMA, grammarOf } from './extractJsonSchema';
-import { foldEntities, type FoldLog } from './fold';
-import { ENTITY_BATCH, entitiesOverdue, type MemoryRange } from './memoryBank';
+import { grammarOf } from './extractJsonSchema';
+import type { MemoryRange } from './memoryBank';
 import type { MaintenanceDeps } from './memoryJobs';
 
 /** The call needs no embedder, so the player's "Update from story" works without one. */
@@ -39,7 +35,7 @@ const List = z.array(z.unknown());
  * costs only itself; without the grammar a list may run past `max`, and the first ones are kept.
  * Repair closes a reply cut at maxTokens mid-item, so the last list it holds loses its last item.
  */
-function lists(data: unknown, cut: boolean) {
+export function lists(data: unknown, cut: boolean) {
   const loose = Envelope.safeParse(data);
   if (!loose.success) return null;
   const d = loose.data;
@@ -56,16 +52,6 @@ function lists(data: unknown, cut: boolean) {
   };
 }
 
-/** `cut`: the reply ran to its cap, which with one list falls inside `entities`. */
-type Extracted = ExtractionJson & { cut: boolean };
-const extractAccepter =
-  (cut: boolean) =>
-  (data: unknown): Extracted | null => {
-    const l = lists(data, cut);
-    if (!l) return null;
-    const r = Schema.safeParse({ ...l.data, entities: l.items('entities', ExtractedEntity, MAX_ENTITIES) });
-    return r.success ? { ...r.data, cut } : null;
-  };
 export interface TurnRead {
   /** Absent when the reply's scene did not parse. */
   scene?: SceneRead;
@@ -140,19 +126,6 @@ export async function helperJson<R>(
   return parseJsonReply(caps.jsonSchema ? text : `{${text}`, accept(stats?.stopReason === 'length'), jsonrepair);
 }
 
-/**
- * Without `state` the reply still ran past 300 and 500 in 3 of 3 calls: the grammar lets the 12B
- * pretty-print, and it fills every look key ("none"). At 300 the cut fell in `entities`, at 500 in
- * `speakers`, so 500 stays. [measured: 2026-10-13-batch-m13-4.json, 2026-10-13-batch-m13-4-at500.json]
- * On one line (`EXTRACT_GRAMMAR`) replies take 260–389, so 500 is headroom. [measured: 2026-10-16-batch-m17-3.json]
- */
-const EXTRACT_TOKENS = 500;
-
-/** The combined helper call: entities for one passage whose paragraphs are numbered by action index. Null when the reply is unusable. */
-export function extractFromPassage(passage: string, knownNames: readonly string[], deps: ExtractDeps): Promise<Extracted | null> {
-  return helperJson((g) => extractPrompt(passage, knownNames, g), EXTRACT_JSON_SCHEMA, EXTRACT_TOKENS, extractAccepter, deps, 'entity', EXTRACT_GRAMMAR);
-}
-
 /** The scene, then three entities of a description and a look each, with the JSON around them. [provisional] */
 const INTRODUCE_TOKENS = 200;
 /** The scene alone: a place, a few names, the weather. [provisional] */
@@ -189,34 +162,6 @@ export function readTurn(
   );
 }
 
-/**
- * One combined call over the oldest `ENTITY_BATCH` memories (each call costs ~26 s on slot 1, so
- * ranges share it [measured: 2026-10-08-recall-wave2-run1.json]) not yet extracted, as one passage.
- * `scriptState.__entitiesAt` advances past them once the call ends, unusable reply included,
- * but not when typing cut the call: it is retried on the next idle run. A reply cut at its cap
- * lost the entities after the cut, so it advances past the first memory only and the next call
- * reads the rest again; one memory per call is still progress. [provisional]
- */
-export async function catchUpEntities(adventure: Adventure, deps: ExtractDeps & Pick<MaintenanceDeps, 'signal'>): Promise<EntityUpdate> {
-  const done = adventure.scriptState.__entitiesAt ?? 0;
-  const due = adventure.memories.filter((m) => !m.stale && m.toAction > done).toSorted((a, b) => a.fromAction - b.fromAction);
-  const first = due[0];
-  const last = due[ENTITY_BATCH - 1];
-  if (!first || !last || (deps.signal?.aborted && !entitiesOverdue(adventure))) return { touched: 0 };
-  const r = await updateEntities(adventure, { fromAction: first.fromAction, toAction: last.toAction }, deps);
-  adventure.scriptState = { ...adventure.scriptState, __entitiesAt: r.reply?.cut ? first.toAction : last.toAction };
-  return { touched: r.touched, ...(r.log && { log: r.log }) };
-}
-
-export interface EntityUpdate {
-  /** Entities created or changed. */
-  touched: number;
-  /** The helper's reply, when there was a usable one. */
-  reply?: Extracted;
-  /** What the fold proposed and dropped, for a batch call that had a reply. */
-  log?: FoldLog;
-}
-
 /** The range's actions, numbered by index, as the helper reads them. */
 export function passageOf(adventure: Adventure, range: MemoryRange): string {
   return adventure.actions
@@ -225,21 +170,4 @@ export function passageOf(adventure: Adventure, range: MemoryRange): string {
     .filter(([, t]) => t !== '')
     .map(([n, t]) => `[${n}] ${t}`)
     .join('\n');
-}
-
-/** Extract from the range's actions and fold the result into `adventure.entities`. */
-export async function updateEntities(adventure: Adventure, range: MemoryRange, deps: ExtractDeps): Promise<EntityUpdate> {
-  const passage = passageOf(adventure, range);
-  const known = adventure.entities.map((e) => e.name);
-  const reply = passage ? await extractFromPassage(passage, known, deps) : null;
-  if (!reply) return { touched: 0 };
-  const log: FoldLog = { proposed: 0, rejected: [] };
-  const touched = foldEntities(adventure, reply.entities, passage, range, { twice: true, log }); // Calls are sequential: the last one logged is this one.
-  const call = deps.cuts?.calls?.at(-1);
-  if (call?.job === 'entity') {
-    call.factsProposed = log.proposed;
-    call.accepted = touched;
-    call.rejected = log.rejected.map((r) => ({ value: `${r.entity}: ${r.value}`, reason: r.reason }));
-  }
-  return { touched, reply, log };
 }

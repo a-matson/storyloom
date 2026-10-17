@@ -3,10 +3,11 @@ import { actionText } from '../model/types';
 import { hashPrompt } from '../trace';
 import { MAX_INTRODUCED } from '../schema/extraction';
 import { knownAs, matchEntity, mergeEntity } from './entities';
-import { passageOf, readTurn, type EntityUpdate, type ExtractDeps } from './extract';
+import type { EntityUpdate } from './batch';
+import { passageOf, readTurn, type ExtractDeps } from './extract';
 import { foldEntities, newNamesIn, notAName } from './fold';
 import { MEMORY_SPAN } from './memoryBank';
-import { sceneNames } from './names';
+import { namesOf, sceneNames } from './names';
 import { withScene } from './scene';
 import { applyChanges, stateAsk, stateCast, type StateUpdate } from './stateRead';
 
@@ -32,10 +33,10 @@ function notePlace(adventure: Adventure, location: string, at: number): boolean 
 }
 const none = (): TurnUpdate => ({ touched: 0, sceneUpdated: false });
 
-// Aliases too, so a character the text calls "the dragon" resolves (the two P7c misses); new names, so one met this turn can be there;
+// Aliases and roles too, so a character the text calls "the dragon" resolves (the two P7c misses); new names, so one met this turn can be there;
 // and who is present without a card yet, or the enum has no word for them.
 const castOf = (adventure: Adventure, names: readonly string[], present: readonly string[]) => {
-  const characters = adventure.entities.flatMap((e) => (e.kind === 'character' ? [e.name, ...e.aliases] : []));
+  const characters = adventure.entities.flatMap((e) => (e.kind === 'character' ? namesOf(e) : []));
   return [...new Set([...characters, ...names, ...present])];
 };
 

@@ -2,16 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { mergeEntity } from '@core/memory/entities';
 import { newNamesIn } from '@core/memory/fold';
 import { createBlankAdventure } from '@core/model/scenario';
-import { EXTRACT_GRAMMAR, EXTRACT_JSON_SCHEMA } from '@core/memory/extractJsonSchema';
+import { extractGrammar, grammarOf } from '@core/memory/extractJsonSchema';
 import { LOOK_KEYS } from '@core/memory/looks';
 import type { CompletionRequest } from '@core/ports';
 import { EntityKind } from '@core/schema/entity';
-import { DESCRIPTION_CHARS, FACT_CHARS, LOOK_CHARS, MAX_ENTITIES } from '@core/schema/extraction';
+import { DESCRIPTION_CHARS, extractionJson, FACT_CHARS, LOOK_CHARS, MAX_ENTITIES, PHRASE_CHARS } from '@core/schema/extraction';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import { extractPrompt } from '@core/text/prompts';
 import { statePrompt } from '@core/text/statePrompt';
 import { introducePrompt } from '@core/text/turnReadPrompt';
 import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure } from './fixtures/memoryJobs';
+
+const EXTRACT_JSON_SCHEMA = grammarOf(extractionJson([]));
+const EXTRACT_GRAMMAR = extractGrammar([]);
 
 describe('the entity call’s prompt', () => {
   it('shows a worked example only when no grammar carries the shape', () => {
@@ -79,6 +82,25 @@ describe('the entity call’s prompt', () => {
     const entity = EXTRACT_GRAMMAR.split('\n').find((l) => l.startsWith('entity ::='));
     expect(entity?.split('|')[0]).toContain('looks');
     expect(entity?.split('|')[1]).not.toContain('looks');
+  });
+
+  it('asks refersTo after entities, a required phrase per name, and has no key with no character', () => {
+    const g = extractGrammar(['Weever', 'Old "Nan"']);
+    expect(g).toMatch(/^root ::= "\{\\"entities\\":\[".*"\],\\"refersTo\\":\{.*\}\}"$/m);
+    expect(g).toContain(String.raw`"],\"refersTo\":{\"Weever\":" phrase ",\"Old \\\"Nan\\\"\":" phrase "}}"`);
+    // One phrase: no comma to list several.
+    expect(g).toContain(String.raw`phrase ::= "\"" [^",\\\x7F\x00-\x1F]{0,${PHRASE_CHARS}} "\""`);
+    expect(g).not.toMatch(/" "|\\n|\[ \\t\]/);
+    expect(EXTRACT_GRAMMAR).not.toMatch(/refersTo|phrase/);
+    expect(grammarOf(extractionJson(['Weever']))).toMatchObject({
+      required: ['entities', 'refersTo'],
+      properties: { refersTo: { required: ['Weever'], properties: { Weever: { maxLength: PHRASE_CHARS } } } },
+    });
+    expect(EXTRACT_JSON_SCHEMA).not.toHaveProperty('properties.refersTo');
+    const p = extractPrompt('[0] The kobold waves.', [], true, true);
+    expect(p).toMatch(/refersTo: for each name.*"" if none; never the name itself or a pronoun\.\nReturn \{"entities": \[\.\.\.\], "refersTo": \{\.\.\.\}\}/s);
+    expect(extractPrompt('[0] The kobold waves.', [], false, true)).toContain('"refersTo": {"<Name>": "the <role>"}}');
+    expect(extractPrompt('[0] The kobold waves.', [], true)).not.toMatch(/refersTo/);
   });
 });
 

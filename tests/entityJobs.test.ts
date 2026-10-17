@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { mergeEntity } from '@core/memory/entities';
-import { extractFromPassage } from '@core/memory/extract';
-import { EXTRACT_JSON_SCHEMA } from '@core/memory/extractJsonSchema';
+import { extractFromPassage } from '@core/memory/batch';
+import { grammarOf } from '@core/memory/extractJsonSchema';
 import { indexAssertions } from '@core/memory/assertionIndex';
 import { appearanceOf } from '@core/memory/looks';
 import { extractPrompt } from '@core/text/prompts';
 import { entitiesOverdue } from '@core/memory/memoryBank';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import type { CompletionRequest } from '@core/ports';
-import { MAX_ENTITIES } from '@core/schema/extraction';
+import { extractionJson, MAX_ENTITIES } from '@core/schema/extraction';
 import type { Adventure } from '@core/model';
 import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure } from './fixtures/memoryJobs';
 
@@ -110,7 +110,7 @@ describe('entity extraction in memory maintenance', () => {
       const entity = req.prompt.includes(ENTITY_PROMPT);
       yield { text: entity ? cut : 'Mira found the map.', done: true, stats: { stopReason: entity ? 'length' : 'eos' } };
     });
-    const reply = await extractFromPassage('[3] You wave and Mira and Odo wave back.', none, { ...fakeDeps(adv).deps, provider });
+    const reply = await extractFromPassage('[3] You wave and Mira and Odo wave back.', none, [], { ...fakeDeps(adv).deps, provider });
     expect(reply?.entities.map((e) => e.name)).toEqual(['Mira']);
     expect(reply?.cut).toBe(true);
   });
@@ -192,7 +192,7 @@ describe('entity extraction in memory maintenance', () => {
 
   it('neither asks for nor keeps the fields the schema dropped', async () => {
     expect(extractPrompt('[0] Mira waves.', none, false)).not.toMatch(/importance|threads|timeDelta|time of day|appearance/);
-    const schema = EXTRACT_JSON_SCHEMA;
+    const schema = grammarOf(extractionJson([]));
     expect(extractPrompt('[0] Mira waves.', none, false)).not.toMatch(/speakers/);
     expect(schema.required).toEqual(['entities']);
     // Required, every entity wrote looks and the reply hit the token cap.
@@ -205,7 +205,7 @@ describe('entity extraction in memory maintenance', () => {
     const provider = fakeProvider(async function* () {
       yield { text: stray.slice(1), done: true };
     });
-    const r = await extractFromPassage('[0] Mira waves.', none, { ...fakeDeps(adventure(1)).deps, provider });
+    const r = await extractFromPassage('[0] Mira waves.', none, [], { ...fakeDeps(adventure(1)).deps, provider });
     expect(r?.entities.map((e) => e.name)).toEqual(['Mira']);
     expect(r).not.toHaveProperty('importance');
     expect(r).not.toHaveProperty('threads');

@@ -95,6 +95,15 @@ describe('the state read', () => {
     expect((await readState(other.adv, other.deps)).rejected).toEqual([{ value: 'Mira mood: happy', reason: 'wrong-subject' }]);
   });
 
+  it('takes a paragraph that names a character only by a role as naming them', async () => {
+    const changes = [{ who: 'Mira', key: 'mood', now: 'happy', at: 4 }];
+    const kobold = { ...mira, roles: ['the kobold'] };
+    const { adv, deps } = setup(['You wait.', 'Tobin bows to the kobold, who grins, happy.'], changes, [kobold, tobin]);
+    adv.entities = [kobold, tobin, amulet];
+    expect((await readState(adv, deps)).rejected).toEqual([]);
+    expect(now(adv, mira.id)).toEqual({ mood: 'happy' });
+  });
+
   it('rejects a value cut mid-word at the cap and one the current value already holds', async () => {
     const { adv, deps } = setup(
       ['You wait.', 'Mira is tired.'],
