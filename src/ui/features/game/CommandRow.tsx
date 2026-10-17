@@ -114,7 +114,7 @@ export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retry
           </Button>
         </div>
         <div className="font-mono text-label text-muted-foreground">
-          Enter send · Ctrl+Enter continue · Ctrl+R retry · Ctrl+Z undo · /do /say /story /see /correct /rule /wait /time /travel
+          Enter send · Ctrl+Enter continue · Ctrl+R retry · Ctrl+Z undo · /do /say /story /see /correct /rule
         </div>
       </div>
     </footer>
