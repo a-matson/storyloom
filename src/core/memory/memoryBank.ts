@@ -147,7 +147,7 @@ const vectorSim = (a: Memory, b: Memory): number => (a.embedding && a.embedding.
 /**
  * Rank the bank by relevance to a query embedding. Brute force is fine for ≤ 800 vectors.
  * Given `lexical` (BM25 hits, best first; ids that are not memories are ignored), the cosine order
- * is fused with it by RRF and the head is reordered by MMR; score 1 is first in both lists.
+ * is fused with it by RRF and the head is reordered by MMR, near-duplicates last; score 1 is first in both lists.
  */
 export function rankMemories(memories: Memory[], query: number[] | undefined, limit = Infinity, lexical?: readonly string[]): RankedMemory[] {
   const ranked = rankByCosine(memories, query);
@@ -157,10 +157,25 @@ export function rankMemories(memories: Memory[], query: number[] | undefined, li
     const memory = byId.get(id);
     return memory ? [{ item: memory, score: (score * (RRF_K + 1)) / 2 }] : [];
   });
-  return pinnedFirst([...mmr(fused.slice(0, MMR_POOL), vectorSim), ...fused.slice(MMR_POOL)].map(({ item, score }) => ({ memory: item, score }))).slice(
-    0,
-    limit,
-  );
+  const head = pinnedFirst(mmr(fused.slice(0, MMR_POOL), vectorSim).map(asRanked));
+  const dupes = nearDuplicates(head);
+  return pinnedFirst([...head.filter((r) => !dupes.has(r)), ...fused.slice(MMR_POOL).map(asRanked), ...dupes]).slice(0, limit);
+}
+
+const asRanked = ({ item, score }: { item: Memory; score: number }): RankedMemory => ({ memory: item, score });
+
+/** Two memories this close say the same thing twice. [provisional] */
+export const DUPLICATE_COSINE = 0.9;
+
+/** Unpinned memories near one ranked above them: they go last, still there if the block has room. */
+function nearDuplicates(ranked: RankedMemory[]): Set<RankedMemory> {
+  const kept: RankedMemory[] = [];
+  const dupes = new Set<RankedMemory>();
+  for (const r of ranked) {
+    if (!r.memory.pinned && kept.some((k) => vectorSim(k.memory, r.memory) > DUPLICATE_COSINE)) dupes.add(r);
+    else kept.push(r);
+  }
+  return dupes;
 }
 
 /** The player's pinned memories lead, in their ranked order. */
