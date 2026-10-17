@@ -11,6 +11,7 @@
  *   state <url> <backup> [label] [labels-set]  scene and state reads over every AI turn of a backup, scored against bench/stateLabels.json
  *   probe <url> <backup> <at> [label] [samples]  the reply to player action <at>, drawn [samples] times (default 3); graded by hand
  *   voice <url> <backup> <batch.json> [label] [samples]  say turns replayed without and with the batch's voices; top speakers' lines, rated by hand
+ *   spotlight <url> <backup> [label] [points]  crowded scenes (4–5 present) continued per cast order; who the speaker guess labels
  *   migrate <backup> [label]  entity facts to typed assertions: counts kept, dropped (conflicts on unlocked keys, stale spans), lost
  *   names <backups> [label]  new-name candidates and kinds, action by action, no model (backups comma-separated)
  *   speakers <backup> [label]  the speaker guess and the batch's stored speakers against bench/speakerLabels.json, no model
@@ -60,6 +61,10 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
   voice: {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/voice'],
     env: { MEASURE_URL: a, MEASURE_BACKUP: b, MEASURE_VOICES: c, MEASURE_LABEL: d, MEASURE_SAMPLES: process.argv[7] },
+  },
+  spotlight: {
+    cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/spotlight'],
+    env: { MEASURE_URL: a, MEASURE_BACKUP: b, MEASURE_LABEL: c, MEASURE_POINTS: d },
   },
   migrate: {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/migrate'],
