@@ -8,6 +8,9 @@ import type { Generated, PreparedContext, TurnDeps, TurnEvent } from './types';
 /** Tokens allowed past `responseLength` to reach a paragraph break; at the margin the sentence trim stands. [provisional] */
 export const SOFT_STOP_MARGIN = 80;
 
+/** Share of `responseLength` after which the next paragraph break cuts; waiting for all of it overshot by about a fifth. [provisional] */
+export const SOFT_STOP_FROM = 0.75;
+
 /** A reply that ends on its own below this share of `responseLength` is continued once. [provisional] */
 export const LENGTH_FLOOR = 0.5;
 
@@ -106,7 +109,7 @@ async function* stream(
       if (!chunk.text) continue;
       clearTimeout(timer);
       ttftMs ??= Date.now() - startedAt;
-      if (before + ++tokens >= responseLength) softFrom ??= text.length;
+      if (before + ++tokens >= SOFT_STOP_FROM * responseLength) softFrom ??= text.length;
       text += chunk.text;
       yield { type: 'token', text: chunk.text };
       const end = softFrom === undefined ? 0 : paragraphEndAfter(text, softFrom);
@@ -128,7 +131,7 @@ async function* stream(
 
 /**
  * Stream a completion for `request`, then pass it through the onOutput hook.
- * Past `responseLength` tokens the stream is cut at the first paragraph break
+ * Past `SOFT_STOP_FROM` × `responseLength` tokens the stream is cut at the first paragraph break
  * (soft stop); if none comes before the margin runs out, the trim cleans up.
  * A reply the model ends below the length floor is continued once.
  */
