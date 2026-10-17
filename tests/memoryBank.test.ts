@@ -8,6 +8,7 @@ import {
   markStale,
   MEMORY_SPAN,
   memoryOverdue,
+  MMR_POOL,
   rankMemories,
   summaryDue,
   summaryOverdue,
@@ -161,6 +162,39 @@ describe('retrieval and eviction', () => {
     const a = mem('a', 12, 0, 2, [1, 0]);
     const ranked = rankMemories([{ ...mem('f', 0), pinned: true, forgotten: true }, { ...mem('s', 6), pinned: true, stale: true }, a], [1, 0], Infinity, []);
     expect(ranked.map((r) => r.memory.id)).toEqual(['a']);
+  });
+});
+
+describe('near-duplicate memories', () => {
+  const a = mem('a', 0, 0, 0, [1, 0, 0]);
+  const twin = mem('twin', 6, 0, 1, [0.99, 0.05, 0]);
+  const b = mem('b', 12, 0, 2, [0.6, 0.8, 0]);
+  const c = mem('c', 18, 0, 3, [0.5, 0, 0.866]);
+  const ids = (ms: Memory[]) => rankMemories(ms, [1, 0, 0], Infinity, []).map((r) => r.memory.id);
+
+  it('moves a memory almost equal to a higher-ranked one behind every distinct memory, leaving their order', () => {
+    // More than the MMR head, which only reorders: the twin must leave it.
+    const others = Array.from({ length: MMR_POOL + 2 }, (_, i) => {
+      const v = Array.from({ length: MMR_POOL + 5 }, (_v, d) => (d === 0 ? 0.5 : d === i + 2 ? 0.866 : 0));
+      return mem(`o${i}`, 24 + 6 * i, 0, 10 + i, v);
+    });
+    const pad = (m: Memory) => ({ ...m, embedding: [...(m.embedding ?? []), ...Array<number>(MMR_POOL + 2).fill(0)] });
+    const q = pad(a).embedding;
+    const rank = (ms: Memory[]) => rankMemories(ms, q, Infinity, []).map((r) => r.memory.id);
+    expect(rank([pad(twin), pad(a), ...others])).toEqual([...rank([pad(a), ...others]), 'twin']);
+  });
+
+  it('keeps a pinned near-duplicate in place and moves its unpinned twin instead', () => {
+    const ranked = ids([{ ...twin, pinned: true }, a, b, c]);
+    expect([ranked[0], ranked.at(-1)]).toEqual(['twin', 'a']);
+  });
+
+  it('never treats memories without embeddings or of another dimension as duplicates', () => {
+    const short = mem('short', 24, 0, 1, [1, 0]);
+    const long = { ...a, createdAt: 9 };
+    const bare = (id: string, at: number) => mem(id, at, 0, 5);
+    const ranked = rankMemories([bare('x', 30), long, short, bare('y', 36)], [1, 0], Infinity, []).map((r) => r.memory.id);
+    expect(ranked).toEqual(['short', 'a', 'x', 'y']);
   });
 });
 

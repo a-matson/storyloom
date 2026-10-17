@@ -2,12 +2,9 @@
  * One replay depth's reading for the long record (M17-0): what the bank, the summary and retrieval
  * do at 300 actions. Pure, so the triggers for M19-2/3/4 are tested, not eyeballed.
  */
-import { cosine } from '@core/memory/memoryBank';
+import { cosine, DUPLICATE_COSINE } from '@core/memory/memoryBank';
 import type { Memory } from '@core/model';
 import { retrievalHit, type SeededFact, type Verdict } from './recall';
-
-/** Two retrieved memories this close say the same thing twice. [provisional] */
-export const DUPLICATE_COSINE = 0.9;
 /** The sections `selectStructured` writes. */
 const STRUCTURED = ['rules', 'scene', 'cast'];
 
