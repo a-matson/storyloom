@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { mergeAssertions } from '@core/memory/assertionWrites';
 import { entityNamedIn, knownAs, matchEntity, mergeEntities, mergeEntity, namedInPassage, type Sighting } from '@core/memory/entities';
 import { isConfirmed } from '@core/memory/facts';
+import { castLabels } from '@core/memory/names';
 import { byPlayer, setValue } from '@core/memory/looks';
 import { ENTITY_ENTRY_TOKENS, projectEntity } from '@core/memory/projection';
 import type { Entity } from '@core/model';
@@ -52,6 +53,17 @@ describe('entity merge rules', () => {
     expect(matchEntity([odo, weever], 'The Kobold')).toBe(weever);
     expect(knownAs([odo, weever], 'kobold')).toBe(weever);
     expect(entityNamedIn([odo, weever], 'You hand the kobold a coin.')).toBe(weever);
+  });
+
+  it('labels characters of one name for the enums, and resolves each label', () => {
+    const card = (description: string, at: number): Entity => ({ ...mergeEntity(undefined, seen({ name: 'Lena' }), at), description, canon: true });
+    const miller = card('the miller of Ashford.', 1);
+    const soldier = card('a soldier.', 2);
+    expect([...castLabels([soldier, miller]).values()]).toEqual(['Lena (the miller of)', 'Lena (a soldier)']);
+    expect(knownAs([miller, soldier], 'Lena (a soldier)')).toBe(soldier);
+    expect(knownAs([miller, soldier], 'Lena (the miller of)')).toBe(miller);
+    expect([...castLabels([miller, card('', 3)]).values()]).toEqual(['Lena (#1)', 'Lena (#2)']);
+    expect(castLabels([miller]).size).toBe(0);
   });
 });
 

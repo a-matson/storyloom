@@ -34,9 +34,10 @@ const one = (hits: Entity[]) => (hits.length === 1 ? hits[0] : undefined);
  * whole words ("Brannoch", "Ashen Order"), else the one whose name holds all but a leading title
  * its identity (`ix`) opens with ("Captain Marr" for "Captain Ysolde Marr commands…", not for Aldric,
  * "…is Captain Ysolde Marr's brother"), else the one whose name opens it ("Gull Point lighthouse").
- * Two candidates: none.
+ * A namesake's label (`castLabels`) comes first. Two candidates: none.
  */
 export function knownAs(entities: readonly Entity[], name: string, ix?: AssertionIndex): Entity | undefined {
+  for (const [id, label] of name.includes('(') ? castLabels(entities, ix) : []) if (label === name) return entities.find((e) => e.id === id);
   const exact = matchEntity(entities, name);
   if (exact) return exact;
   const n = bare(name);
@@ -49,6 +50,31 @@ export function knownAs(entities: readonly Entity[], name: string, ix?: Assertio
       : undefined) ??
     one(entities.filter((e) => n.startsWith(bare(e.name))))
   );
+}
+
+/**
+ * The enum value, by id, of each character that shares its name with another: `Lena (the miller)` from the first
+ * words of its identity, else `Lena (#2)` by first sighting, so a read's enum tells them apart. [provisional]
+ */
+export function castLabels(entities: readonly Entity[], ix?: AssertionIndex): Map<string, string> {
+  const groups = new Map<string, Entity[]>();
+  for (const e of entities) if (e.kind === 'character') groups.set(norm(e.name), [...(groups.get(norm(e.name)) ?? []), e]);
+  const out = new Map<string, string>();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const sorted = group.toSorted((a, b) => a.firstSeen - b.firstSeen);
+    const said = sorted.map((e) =>
+      identityText(e, ix?.of(e.id) ?? [])
+        .trim()
+        .split(/\s+/)
+        .slice(0, 3)
+        .join(' ')
+        .replace(/[^\p{L}\p{N}]+$/u, ''),
+    );
+    const plain = said.every((w, i) => w !== '' && said.indexOf(w) === i);
+    sorted.forEach((e, i) => out.set(e.id, `${e.name} (${plain ? said[i] : `#${i + 1}`})`));
+  }
+  return out;
 }
 
 // A scene reference is an entity id, else a plain name: someone the turn read named without a card (M13-2d).

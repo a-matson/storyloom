@@ -9,6 +9,8 @@ import { articleOnly, cuedKinds, kindOf } from './kindCues';
 import type { MemoryRange } from './memoryBank';
 import { sightingOf, uncut, type Incoming, type Rejected } from './sighting';
 import { flagSpecies } from './species';
+import { norm } from './names';
+import { CAPITALISED, renameCues, withCues } from './renames';
 import { spellingOf } from './spelling';
 
 export { uncut, type Incoming, type Rejected } from './sighting';
@@ -20,9 +22,6 @@ export const NOT_A_NAME = /^\s*(?:you|master|mistress|sir|madam|my lord|my lady)
 export const notAName = (plot: Adventure['plot'], name: string): boolean =>
   NOT_A_NAME.test(name) || (!!plot.thirdPerson?.enabled && name.trim().toLowerCase() === plot.thirdPerson.name.trim().toLowerCase());
 
-/** Capitalised runs, a possessive inside one kept ("Deadman's Gulch"); a leading stop word is dropped ("Then Mira" → "Mira"). */
-const CAPITALISED = /\p{Lu}\p{Ll}+(?:['’]s)?(?: \p{Lu}\p{Ll}+(?:['’]s)?)*/gu;
-
 /** Capitalised mid-sentence often enough to pass `namedInPassage`, never a name. "The" stays: "The Ashen Order" is one name. [provisional] */
 const STOP = new Set('you an it they we he she but and then when day night dawn morning midday afternoon evening his her its their your our my'.split(' '));
 
@@ -30,6 +29,7 @@ const STOP = new Set('you an it they we he she but and then when day night dawn 
 export function candidateNames(text: string, known: readonly string[]): string[] {
   const seen = new Set(known.map((k) => k.toLowerCase()));
   const out: string[] = [];
+  // A leading stop word is dropped ("Then Mira" → "Mira").
   for (const [run] of text.matchAll(CAPITALISED)) {
     const words = run.split(' ');
     while (words[0] && STOP.has(words[0].toLowerCase())) words.shift();
@@ -110,7 +110,8 @@ const MAX_HELD = 20;
  * capitalised name became a card (20 against 12). [measured: 2026-10-11-recall-m12-1-pr2-hybrid-d30.json]
  * A name seen once is held (`scriptState.__pending`) and folded, with its own range, once a card
  * it resolves to exists: its first facts were lost before. A new name a known one's spelling
- * (`spellingOf`) is held too, and proposed as its alias (`__aliasProposals`) for the player to accept.
+ * (`spellingOf`) or that the passage gives as its other name (`renameCues`) is held too, and proposed as its
+ * alias (`__aliasProposals`) for the player to accept; a cue's name is proposed even if the reply left it out.
  * A fact the description or a state already says is dropped. `log` counts the trait facts proposed
  * and records every value a guard dropped. Returns how many entities changed or were proposed.
  */
@@ -128,7 +129,9 @@ export function foldEntities(
   const fallback = sourceIn(adventure.actions, range);
   const restOf = restIn(adventure.actions);
   const held: Held[] = [];
-  const proposals = [...(adventure.scriptState.__aliasProposals ?? [])];
+  const cues = renameCues(passage, entities);
+  const at = range.toAction - 1;
+  const proposals = withCues(adventure.scriptState.__aliasProposals ?? [], cues, at);
   for (const item of incoming) {
     const { facts = [], ...e } = item;
     const raw = uncut(e.description);
@@ -140,8 +143,8 @@ export function foldEntities(
       for (const f of facts) opts.log?.rejected.push({ entity: e.name, value: f, reason: 'entity-dropped', passageRange: range });
       continue;
     }
-    const like = old ? undefined : spellingOf(entities, e.name, e.kind);
-    if (like) proposals.push({ name: e.name, of: like.id, at: range.toAction - 1 });
+    const like = old ? undefined : (spellingOf(entities, e.name, e.kind) ?? entities.find((x) => x.id === cues.get(norm(e.name))?.of));
+    if (like) proposals.push({ name: e.name, of: like.id, at });
     const seenIn = old ? [] : sightings(adventure, e.name, range);
     if (!old && (like || (opts.twice && seenIn.length < 2))) {
       held.push({ entity: { ...item, facts }, range });
@@ -166,7 +169,6 @@ export function foldEntities(
         reject: (value, reason) => opts.log?.rejected.push({ entity: who.name, value, reason, passageRange: range }),
       },
     );
-    const at = range.toAction - 1;
     const merged = mergeEntity(old, seen, at);
     const producer = opts.twice ? 'batch' : 'turn';
     const mine = flagSpecies(
@@ -186,7 +188,7 @@ export function foldEntities(
   adventure.assertions = assertions;
   const pending = [...(adventure.scriptState.__pending ?? []), ...held];
   const due = pending.filter((p) => knownAs(entities, p.entity.name, indexAssertions(assertions)));
-  if (!held.length && !due.length) return touched;
+  if (!held.length && !due.length && !asked) return touched;
   // The newest proposal per name.
   const asks = proposals.filter((p, i) => !proposals.slice(i + 1).some((q) => q.name === p.name)).slice(-MAX_HELD);
   adventure.scriptState = {

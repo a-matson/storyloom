@@ -12,7 +12,7 @@ import { grammarOf } from './extractJsonSchema';
 import { causeIn, grounded } from './grounding';
 import { heldBy, holderOf, YOU } from './items';
 import { currentStates, valueOf } from './looks';
-import { norm } from './names';
+import { castLabels, norm } from './names';
 
 /** Actions the state read reads: the last AI output and the player line before it. [measured: 2026-10-13-state-probe-m12-dogfood P8b] */
 const STATE_SPAN = 2;
@@ -44,9 +44,16 @@ export function stateCast(adventure: Adventure): Subject[] {
     ...(plot.scene?.items ?? []).map((i) => of('item', i)),
     ...heldBy(entities, ix, YOU),
   ].filter((e) => e !== undefined);
-  // ponytail: two entities of one name share an enum value; the first wins.
-  const cast = [...new Map(here.map((e) => [e.name, e])).values()];
+  // Characters of one name go by their labels; two items of one name share an enum value, and the first wins.
+  const label = labelOf(adventure);
+  const cast = [...new Map(here.map((e) => [label(e), e])).values()];
   return cast.length ? [...cast, PLAYER] : [];
+}
+
+/** A subject's enum value: its name, or its label when another character shares it (`castLabels`). */
+function labelOf(adventure: Adventure): (s: Subject) => string {
+  const labels = castLabels(adventure.entities, indexAssertions(adventure.assertions));
+  return (s) => labels.get(s.id) ?? s.name;
 }
 
 const isPlayerLine = (a: Action | undefined) => a?.type === 'do' || a?.type === 'say';
@@ -87,11 +94,12 @@ export const stateRange = (n: number) => ({ fromAction: Math.max(0, n - STATE_SP
 
 /** What read B asks: each subject's record (states, and what it holds), the enum, the cap and the reply's tokens. */
 export function stateAsk(adventure: Adventure, cast: readonly Subject[]) {
-  const [first = YOU, ...rest] = cast.map((s) => s.name);
+  const label = labelOf(adventure);
+  const [first = YOU, ...rest] = cast.map(label);
   const ix = indexAssertions(adventure.assertions);
   const records = cast.map((s) => {
     const held = heldBy(adventure.entities, ix, s.id === YOU ? YOU : s.name).map((e) => e.name);
-    return { who: s.name, now: { ...currentStates(ix.of(s.id)), ...(held.length && { holds: held.join(', ') }) } };
+    return { who: label(s), now: { ...currentStates(ix.of(s.id)), ...(held.length && { holds: held.join(', ') }) } };
   });
   // A turn rarely changes more than one key per subject; 2 per subject invited echoes. [measured: 2026-10-15-state-s4b.json]
   return { records, who: [first, ...rest] as const, max: cast.length + 1, tokens: Math.min(TOKENS_CAP, TOKENS_EACH * cast.length) };
@@ -103,9 +111,10 @@ export function applyChanges(adventure: Adventure, cast: readonly Subject[], cha
   const range = stateRange(adventure.actions.length);
   // Grounded on both actions read, not `at` alone: `at` alone sent 18 of 49 (M13). [measured: 2026-10-16-state-m17-4-m13.json]
   const read = adventure.actions.slice(range.fromAction, range.toAction).map(actionText).join('\n');
+  const label = labelOf(adventure);
   // Later `at` last, so its write supersedes an earlier one for the same key.
   for (const c of changes.slice(0, max).toSorted((a, b) => a.at - b.at)) {
-    const s = cast.find((x) => x.name === c.who);
+    const s = cast.find((x) => label(x) === c.who);
     const action = adventure.actions[c.at];
     const text = action ? actionText(action) : '';
     const reason = s && (c.at < range.fromAction || c.at >= range.toAction || !text ? 'at-range' : rejectOf(adventure, cast, s, c, text));
