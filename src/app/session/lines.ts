@@ -22,15 +22,16 @@ const mapOwn = (adv: Adventure, id: string, fn: (e: Entity, own: Assertion[]) =>
 const without = (keys: readonly string[] | undefined, key: string) => (keys ?? []).filter((k) => k !== key);
 
 function reworded(a: Assertion, text: string): Assertion {
-  if (a.kind === 'identity' || a.kind === 'trait' || a.kind === 'secret' || a.kind === 'event' || a.kind === 'voice') return { ...a, text };
+  if (a.kind === 'identity' || a.kind === 'trait' || a.kind === 'secret' || a.kind === 'event' || a.kind === 'voice' || a.kind === 'goal')
+    return { ...a, text };
   if (a.kind === 'look' || a.kind === 'state') return { ...a, value: text };
   if (a.kind === 'effect') return { ...a, condition: text };
   if (a.kind === 'relationship') return { ...a, stance: text };
   return a;
 }
-// The player's words now: the story's span no longer backs them.
+// The player's words now: the story's span no longer backs them, and a proposal they rewrote is seen.
 const rewritten = (a: Assertion, text: string): Assertion => {
-  const { span: _s, ...rest } = reworded(a, text);
+  const { span: _s, seen: _n, ...rest } = reworded(a, text);
   return { ...rest, producer: 'player', basis: 'player' };
 };
 
@@ -46,6 +47,20 @@ export function lineEdits(host: GameSession) {
     deleteLine: (lineId: string) => mutate((adv) => (adv.assertions = adv.assertions.filter((a) => a.id !== lineId))),
     pinLine: (lineId: string) => mutate((adv) => mapLine(adv, lineId, (a) => ({ ...a, pinned: !a.pinned }))),
     addLine: (id: string, f: Fields) => mutate((adv, at) => (adv.assertions = [...adv.assertions, byPlayer(id, at, f)])),
+    /** A proposal (a read's goal) is the player's to send now. */
+    confirm: (lineId: string) => mutate((adv) => mapLine(adv, lineId, ({ seen: _s, ...a }) => a)),
+    /** The player's goal for `id`: it ends the current one, as a read's would. */
+    setGoal: (id: string, text: string) =>
+      mutate((adv, at) => {
+        const ended = adv.assertions.map((a) => (a.subject === id && a.kind === 'goal' && a.until === undefined ? { ...a, until: at } : a));
+        adv.assertions = [...ended, byPlayer(id, at, { kind: 'goal', text })];
+      }),
+    /** Send `id`'s confirmed goal on the next turn however recently they acted (`nudgedIn`). */
+    nudge: (id: string) =>
+      mutate((adv, at) => {
+        const kept = (adv.scriptState.__nudge ?? []).filter((n) => n.at === at && n.id !== id);
+        adv.scriptState = { ...adv.scriptState, __nudge: [...kept, { id, at }] };
+      }),
     /** The player's value for `key`; `''` clears it. */
     setValue: (id: string, key: string, value: string) => mutate((adv, at) => mapOwn(adv, id, (e, own) => setValue(e, own, key, value, at))),
     /** Lock `key` at `value`: the story can no longer change it. */

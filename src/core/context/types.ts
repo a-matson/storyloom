@@ -78,6 +78,8 @@ export interface ContextBuildInput {
   entities: Entity[];
   /** What the cast lines and item lists say about the entities. */
   assertions?: readonly Assertion[];
+  /** Characters whose confirmed goal is sent this turn however recently they acted (the Now card's Nudge). */
+  nudged?: readonly string[];
   /** Sent as `[Rules: …]` while relevant (`relevantRules`), first claim on the structured cap. */
   rules?: readonly Rule[];
   /** Memories ranked by relevance to the most recent action, best first. */

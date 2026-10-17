@@ -57,11 +57,12 @@ const lead = (e: Entity, as: readonly Assertion[], carded: boolean, parts: reado
 };
 
 /**
- * A present character's now-line: `Name (identity): in the basement; sitting, poisoned, wary, wearing a cloak; effect — cause; stance to you; witnessed-by; speaks: voice; pins. With Other: stance.`
+ * A present character's now-line: `Name (identity): in the basement; sitting, poisoned, wary, wearing a cloak; effect — cause; stance to you; witnessed-by; speaks: voice; wants: goal; pins. With Other: stance.`
  * Looks are the portrait's; only `wearing` changes the scene. Conflicts are never sent.
  * A relationship's `to` is who it is towards (`you`: the player). `missed`: `witnessClause`s, so the model does not let them answer from what they never saw (U17).
  * `speaks`: they are likely to talk this turn, so their voice goes in; otherwise it costs tokens for nothing.
  * `room`: the room of this place they are in (`Scene.zones`), first, so the model does not put them beside you.
+ * `wants`: they have been quiet a while or were nudged, so their confirmed goal goes in for the model to act on.
  */
 export function presentLine(
   e: Entity,
@@ -71,6 +72,7 @@ export function presentLine(
   missed: readonly string[] = [],
   speaks = false,
   room = '',
+  wants = false,
 ): CastLine {
   const live = as.filter((a) => isCurrent(a) && !old(a)).toSorted((a, b) => a.since - b.since);
   const now = currentStates(as);
@@ -85,6 +87,12 @@ export function presentLine(
   const toYou = rels.filter((a) => norm(a.to) === 'you');
   const pins = pinsOf(live);
   const voice = speaks ? current(live, 'voice').slice(-1) : [];
+  // The batch read's goal is a proposal until the player confirms it.
+  const goal = wants
+    ? current(live, 'goal')
+        .filter((a) => a.seen !== false)
+        .slice(-1)
+    : [];
   const parts = [
     room && `in ${room}`,
     keys.map((k) => (k === 'wearing' ? 'wearing ' : '') + short(now[k] ?? '')).join(', '),
@@ -92,6 +100,7 @@ export function presentLine(
     ...toYou.map((a) => clause(a.stance)),
     ...missed.map(clause),
     ...voice.map((a) => `speaks: ${clause(a.text)}`),
+    ...goal.map((a) => `wants: ${clause(a.text)}`),
     ...pins.map((a) => clause(textOf(a))),
   ].filter(Boolean);
   const withOthers = present.flatMap((p) => {
@@ -99,7 +108,7 @@ export function presentLine(
     return about.length ? [`With ${p.name}: ${about.map((a) => clause(a.stance)).join('; ')}.`] : [];
   });
   const text = [lead(e, as, carded, parts), ...withOthers].join(' ');
-  const sent = [...effects, ...toYou, ...voice, ...pins, ...rels.filter((a) => toward(a))].map((a) => a.id);
+  const sent = [...effects, ...toYou, ...voice, ...goal, ...pins, ...rels.filter((a) => toward(a))].map((a) => a.id);
   return { entity: e, text, factIds: [...stateIds, ...sent] };
 }
 

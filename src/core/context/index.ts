@@ -4,4 +4,5 @@ export { renderBody } from './render';
 export { applyScriptSections, type ScriptCache } from './scriptSections';
 export { nowLines } from './structured';
 export { KEY_ORDER } from './cast';
+export { SEND_GOALS } from './spotlight';
 export type { ContextBuildInput, ContextBuildResult, ContextSection, SectionKind } from './types';

@@ -91,6 +91,36 @@ test('Send to on the Now card puts a character in another room, back, or away', 
   await expect(page.getByRole('textbox', { name: 'Present' })).toHaveValue('');
 });
 
+// The send is off (SEND_GOALS, measured): a confirmed goal stays on the card, out of the prompt, with no Nudge.
+test('a goal proposal is confirmed on the card and kept out of the prompt', async ({ page }) => {
+  await openSeededAdventure(page, 3, undefined, {
+    scene: { location: 'Old Well', present: ['Merav'] },
+    assertions: [
+      { subject: 'ent_merav', at: 0, since: 0, id: 'as_goal', producer: 'batch', basis: 'stated', kind: 'goal', text: 'find the needle map', seen: false },
+    ],
+  });
+  await page.getByRole('button', { name: 'Characters · 1' }).click();
+  await page.getByRole('button', { name: 'Open Merav' }).click();
+  const drawer = page.getByRole('dialog', { name: 'Merav' });
+  await expect(drawer.getByText('wants: find the needle map')).toBeVisible();
+  await drawer.getByRole('button', { name: 'Confirm' }).click();
+  await expect(drawer.getByText('proposal', { exact: true })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
+  await world(page);
+  await expect(page.getByRole('button', { name: 'Nudge Merav' })).toHaveCount(0);
+  const context = await rawPrompt(page, 'wave');
+  await expect(context).toContainText('salt road maps).');
+  await expect(context).not.toContainText('wants:');
+  await page.keyboard.press('Escape');
+  await page.reload();
+  await page.getByRole('button', { name: 'Characters · 1' }).click();
+  // The World tab stays open over a reload, with its own Open Merav.
+  await page.getByRole('button', { name: 'Open Merav' }).first().click();
+  await expect(page.getByRole('dialog', { name: 'Merav' }).getByText('wants: find the needle map')).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Merav' }).getByText('proposal', { exact: true })).toHaveCount(0);
+});
+
 test('a character asleep is told in the prompt what they slept through', async ({ page }) => {
   await openSeededAdventure(page, 3, undefined, { scene: { location: 'Old Well', present: ['Merav'] } });
   await world(page);

@@ -106,6 +106,8 @@ export const ScriptState = z.looseObject({
   __pending: z.optional(z.array(HeldEntity)),
   /** A new name a known one's spelling (Weaver for Weever): the player says whether it is that entity (`of`, an id). Its reply waits in `__pending`. */
   __aliasProposals: z.optional(z.array(z.object({ name: z.string(), of: z.string(), at: z.number() }))),
+  /** Characters the player nudged (entity ids) at log length `at`: their confirmed goal goes on the next turn's now-line. */
+  __nudge: z.optional(z.array(z.object({ id: z.string(), at: z.number() }))),
 });
 
 export const CardGeneratorSettings = z.object({

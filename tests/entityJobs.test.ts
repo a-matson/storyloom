@@ -76,7 +76,7 @@ describe('entity extraction in memory maintenance', () => {
     const entityReqs = reqs.filter((r) => r.prompt.includes(ENTITY_PROMPT));
     expect(entityReqs).toHaveLength(2);
     expect(entityReqs[0]).toMatchObject({
-      maxTokens: 600,
+      maxTokens: 650,
       temperature: 0.2,
       slotId: 1,
       cachePrompt: true,

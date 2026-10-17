@@ -19,7 +19,8 @@ export interface Card {
 
 /** An edit of "key: value" keeps the key out of the value. */
 const valueOf = (key: string, t: string) => (t.startsWith(`${key}:`) ? t.slice(key.length + 1).trim() : t);
-const keyOf = (a: Assertion) => (a.kind === 'look' || a.kind === 'state' ? a.key : a.kind === 'relationship' ? a.to : a.kind === 'voice' ? 'speaks' : '');
+const keyOf = (a: Assertion) =>
+  a.kind === 'look' || a.kind === 'state' ? a.key : a.kind === 'relationship' ? a.to : a.kind === 'voice' ? 'speaks' : a.kind === 'goal' ? 'wants' : '';
 
 export function FactLine({ card: c, fact: f, text, children }: { card: Card; fact: Assertion; text: string; children?: ReactNode }) {
   const key = keyOf(f);
@@ -91,6 +92,22 @@ export function ClaimLine({ card: c, fact: f }: { card: Card; fact: Assertion })
         {species ? 'Keep the identity' : 'Accept the story'}
       </Button>
     </Line>
+  );
+}
+
+/** `wants: goal`; the batch read's is a proposal the cast does not send until confirmed. */
+export function GoalLine({ card: c, fact: f }: { card: Card; fact: AssertionOf<'goal'> }) {
+  return (
+    <FactLine card={c} fact={f} text={`wants: ${f.text}`}>
+      {f.seen === false && (
+        <>
+          <Pill tone="see">proposal</Pill>
+          <Button className="h-7" onClick={() => c.edits.confirm(f.id)}>
+            Confirm
+          </Button>
+        </>
+      )}
+    </FactLine>
   );
 }
 

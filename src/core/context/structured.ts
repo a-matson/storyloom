@@ -12,7 +12,7 @@ import { renderScene, renderSection } from './render';
 import { relevantRules, renderRules } from './rules';
 import type { ContextBuildInput, RenderedSections, SectionKind } from './types';
 import { secretLines } from './secrets';
-import { named, spotlight } from './spotlight';
+import { named, nudgedIn, QUIET_TURNS, quietTurns, SEND_GOALS, spotlight } from './spotlight';
 import { gapsOf, MAX_GAPS, witnessClause } from './witness';
 
 /** Hard ceiling on rules, scene and cast together, under the `structuredShare` cap. [provisional] */
@@ -63,7 +63,13 @@ interface Witnessed {
   window: { from: number; to: number };
   speaking: ReadonlySet<string>;
   rooms: Scene['zones'];
+  /** Who gets their confirmed goal on the line (`wantingIn`). */
+  wanting: ReadonlySet<string>;
 }
+
+/** Quiet for `QUIET_TURNS` actions or more, or nudged: the model is given what they want so they act on it; nobody while `SEND_GOALS` is off. [provisional] */
+const wantingIn = (actions: Adventure['actions'], here: Entity[], ix: AssertionIndex, nudged: readonly string[] = []) =>
+  ids(here.filter((e) => SEND_GOALS && e.kind === 'character' && (nudged.includes(e.id) || quietTurns(e, actions, ix) >= QUIET_TURNS)));
 
 /**
  * Who is likely to talk next, so their voice goes in: everyone here after the player's `say`, else whom the
@@ -81,7 +87,7 @@ function castLine(e: Entity, here: Entity[], ix: AssertionIndex, carded: boolean
   const gaps = e.kind === 'character' ? gapsOf(e.id, w.presence, ix.of(e.id), w.window).slice(-MAX_GAPS) : [];
   // The clause names no range, so two gaps of a kind read the same: send it once.
   const room = Object.entries(w.rooms ?? {}).find(([n]) => n === e.id || named(e, n))?.[1];
-  const line = presentLine(e, ix.of(e.id), here, carded, [...new Set(gaps.map(witnessClause))], w.speaking.has(e.id), room);
+  const line = presentLine(e, ix.of(e.id), here, carded, [...new Set(gaps.map(witnessClause))], w.speaking.has(e.id), room, w.wanting.has(e.id));
   return gaps.length > 0 ? { ...line, gaps } : line;
 }
 
@@ -94,7 +100,7 @@ const hereLines = (here: Entity[], items: Entity[], ix: AssertionIndex, carded: 
  * The World tab's Now card: the prompt's scene line and its cast lines for who and what is here, by the same functions.
  * Witnessed-by reads the whole log; the prompt cuts it to its history window, so the card may show an older clause.
  */
-export function nowLines(adv: Pick<Adventure, 'plot' | 'entities' | 'assertions' | 'storyCards' | 'actions'>): {
+export function nowLines(adv: Pick<Adventure, 'plot' | 'entities' | 'assertions' | 'storyCards' | 'actions'> & Partial<Pick<Adventure, 'scriptState'>>): {
   scene: string;
   lines: CastLine[];
 } {
@@ -102,7 +108,13 @@ export function nowLines(adv: Pick<Adventure, 'plot' | 'entities' | 'assertions'
   const entities = adv.entities.filter((e) => isConfirmed(e, ix.of(e.id)));
   const { shown, here, items } = sceneCast(adv.plot.scene, entities, adv.entities, ix);
   const to = adv.actions.length - 1;
-  const w: Witnessed = { presence: adv.plot.presence ?? [], window: { from: 0, to }, speaking: speakingIn(adv.actions, to, here), rooms: shown?.zones };
+  const w: Witnessed = {
+    presence: adv.plot.presence ?? [],
+    window: { from: 0, to },
+    speaking: speakingIn(adv.actions, to, here),
+    rooms: shown?.zones,
+    wanting: wantingIn(adv.actions, here, ix, nudgedIn(adv.scriptState?.__nudge, adv.actions.length)),
+  };
   const lines = hereLines(spotlight(here, adv.actions, ix), items, ix, cardedBy(adv.storyCards), w);
   return { scene: renderScene(shown, entities, ix), lines };
 }
@@ -157,12 +169,14 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
   });
 
   const carded = cardedBy(input.storyCards);
+  const upTo = input.actions.slice(0, lastActionIndex + 1);
   // A gap that left the window is in a memory, which the model reads as a memory anyway.
   const witnessed: Witnessed = {
     presence: plot.presence ?? [],
     window: { from: historyFrom, to: lastActionIndex },
     speaking: speakingIn(input.actions, lastActionIndex, here),
     rooms: shown?.zones,
+    wanting: wantingIn(upTo, here, ix, input.nudged),
   };
   // With entity facts off, the player's own facts (Correct, pins) still go in for who is here or named.
   // Each entry is one entity's line and its fallbacks: an asked-about line that does not fit sends the identity alone.
@@ -170,7 +184,7 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
   const lines: CastLine[][] = input.settings.pinnedFactsOnly
     ? [...here, ...items, ...mentioned].map((e) => pinnedLine(e, ix.of(e.id), carded(e)))
     : [
-        ...hereLines(spotlight(here, input.actions.slice(0, lastActionIndex + 1), ix), items, ix, carded, witnessed).map((l) => [l]),
+        ...hereLines(spotlight(here, upTo, ix), items, ix, carded, witnessed).map((l) => [l]),
         ...mentioned.map((e) => {
           const facts = asked.get(e.id) ?? [];
           const bare = identityLine(e, ix.of(e.id), carded(e));

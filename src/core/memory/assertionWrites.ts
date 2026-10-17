@@ -21,7 +21,7 @@ export interface Rest {
  * (an item's holder and place end each other), and traits deduped by containment, a model trait the
  * new one contains replaced by it, the player's and pinned never. A locked key (`canonKeys`) keeps
  * its value: a different closed one (`CLOSED_KEYS`) is a conflict, a free-text one a proposal
- * (`seen: false`), each once. A new voice ends the current one unless the player wrote or pinned it.
+ * (`seen: false`), each once. A new voice or goal ends the current one unless the player wrote or pinned it.
  */
 export function mergeAssertions(
   e: Pick<Entity, 'id' | 'kind' | 'canon' | 'cardId' | 'canonKeys'>,
@@ -32,6 +32,7 @@ export function mergeAssertions(
     state?: Record<string, string> | undefined;
     relationships?: readonly { to: string; stance: string }[] | undefined;
     voice?: string | undefined;
+    goal?: string | undefined;
   },
   atAction: number,
   opts: { producer: Assertion['producer']; source?: ((text: string) => Rest | undefined) | undefined },
@@ -82,12 +83,13 @@ export function mergeAssertions(
     list.push(make(stance, { kind: 'relationship', to, stance }));
   }
 
-  // One current voice: a new one ends the old, the player's and a pinned one stay.
-  const voice = incoming.voice?.trim();
-  const was = current(list, 'voice').at(-1);
-  if (voice && norm(voice) !== norm(was?.text ?? '') && was?.basis !== 'player' && !was?.pinned) {
+  // One current voice and goal each: a new one ends the old, the player's and a pinned one stay. A goal is a proposal until confirmed.
+  for (const kind of ['voice', 'goal'] as const) {
+    const text = incoming[kind]?.trim();
+    const was = current(list, kind).at(-1);
+    if (!text || norm(text) === norm(was?.text ?? '') || was?.basis === 'player' || was?.pinned) continue;
     if (was) list[list.indexOf(was)] = { ...was, until: atAction };
-    list.push(make(voice, { kind: 'voice', text: voice }));
+    list.push({ ...make(text, { kind, text }), ...(kind === 'goal' && { seen: false }) });
   }
 
   for (const t of incoming.facts) {
