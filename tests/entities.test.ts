@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mergeAssertions } from '@core/memory/assertionWrites';
-import { entityNamedIn, matchEntity, mergeEntities, mergeEntity, namedInPassage, type Sighting } from '@core/memory/entities';
+import { entityNamedIn, knownAs, matchEntity, mergeEntities, mergeEntity, namedInPassage, type Sighting } from '@core/memory/entities';
 import { isConfirmed } from '@core/memory/facts';
 import { byPlayer, setValue } from '@core/memory/looks';
 import { ENTITY_ENTRY_TOKENS, projectEntity } from '@core/memory/projection';
@@ -45,6 +45,14 @@ describe('entity merge rules', () => {
     expect(entityNamedIn([lena, morrow], 'The captain never drinks')).toBe(morrow);
     expect(entityNamedIn([lena, morrow], 'Magdalena is tall')).toBeUndefined();
   });
+
+  it('finds a character by a role', () => {
+    const weever: Entity = { ...mergeEntity(undefined, seen({ name: 'Weever' }), 1), roles: ['the kobold'] };
+    const odo = mergeEntity(undefined, seen({ name: 'Odo' }), 1);
+    expect(matchEntity([odo, weever], 'The Kobold')).toBe(weever);
+    expect(knownAs([odo, weever], 'kobold')).toBe(weever);
+    expect(entityNamedIn([odo, weever], 'You hand the kobold a coin.')).toBe(weever);
+  });
 });
 
 describe('mergeEntities', () => {
@@ -59,6 +67,11 @@ describe('mergeEntities', () => {
     expect(merged).toMatchObject({ id: into.id, name: 'Tamsin', portraitId: 'p1', description: '', firstSeen: 2, lastSeen: 9 });
     expect(merged.aliases).toEqual(['The ferrywoman']);
     expect(merged.relations).toEqual([{ to: 'Odo', label: 'rival' }]);
+    expect(merged).not.toHaveProperty('roles');
+    expect(mergeEntities({ ...into, roles: ['the ferrywoman'] }, { ...from, roles: ['the old woman', 'the ferrywoman'] }).roles).toEqual([
+      'the old woman',
+      'the ferrywoman',
+    ]);
   });
 });
 

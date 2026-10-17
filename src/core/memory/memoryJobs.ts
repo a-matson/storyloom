@@ -6,7 +6,7 @@ import { renderTemplate } from '../text/templates';
 import type { Provider } from '../ports/provider';
 import type { Embedder } from '../ports/embedder';
 import { joinStory, trimUnfinishedSentence } from '../text/formatting';
-import { catchUpEntities } from './extract';
+import { catchUpEntities } from './batch';
 import type { Rejected } from './fold';
 import { dropUnsupported } from './invalidate';
 import { helperCall, sentencesOnly, type CutCounts } from './helperCall';
@@ -17,7 +17,7 @@ import { youLines } from './you';
 // For the player's entity edits, which load with these jobs.
 export { entityNamedIn, guessUnlabelled, mergeEntities } from './entities';
 export { mergeOwn } from './assertionWrites';
-export { updateEntities } from './extract';
+export { updateEntities } from './batch';
 export { introduce } from './introduce';
 export { readState } from './stateRead';
 export { checkInputs, checkOutput } from './contradiction';
