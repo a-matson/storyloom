@@ -90,9 +90,17 @@ export function presentLine(e: Entity, as: readonly Assertion[], present: readon
   return { entity: e, text, factIds: [...stateIds, ...sent] };
 }
 
-/** `Name (identity).` for a mentioned entity or an item here or held; none when there is no identity to give. */
-export const identityLine = (e: Entity, as: readonly Assertion[], carded: boolean): CastLine[] =>
-  carded || !identityOf(e, as) ? [] : [{ entity: e, text: `${head(e, as, false)}.`, factIds: [] }];
+/** A fact on an absent entity's line; a stance to someone else names them, as `With X:` does on a now-line. */
+const asked = (a: Assertion) => clause(textOf(a)) + (a.kind === 'relationship' && norm(a.to) !== 'you' ? ` (${a.to.trim()})` : '');
+
+/**
+ * `Name (identity).` for a mentioned entity or an item here or held; none when there is no identity to give.
+ * `facts`: what the player's last action asks about it (M19-1), `Name (identity): a; b.`. A carded entity sends none: its card is in the prompt.
+ */
+export function identityLine(e: Entity, as: readonly Assertion[], carded: boolean, facts: readonly Assertion[] = []): CastLine[] {
+  if (carded || (!facts.length && !identityOf(e, as))) return [];
+  return [{ entity: e, text: lead(e, as, false, facts.map(asked)), factIds: facts.map((a) => a.id) }];
+}
 
 /** With entity facts off: `Name (identity): pins.`, for an entity with any. */
 export function pinnedLine(e: Entity, as: readonly Assertion[], carded: boolean): CastLine[] {

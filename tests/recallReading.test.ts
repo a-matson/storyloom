@@ -43,10 +43,9 @@ describe('readDepth', () => {
     expect(readDepth([], [probe([], { retrieved: true, verdict: 'honoured' }), probe([], { retrieved: true })], [], 0).honouredPerRetrieved).toBe(0.5);
   });
 
-  it('takes the largest structured total over the probes', () => {
-    expect(readDepth([], [probe([], { sections: { scene: 20, cast: 30, history: 900 } }), probe([], { sections: { rules: 10 } })], [], 0).structuredMax).toBe(
-      50,
-    );
+  it('takes the largest and the mean structured total over the probes', () => {
+    const r = readDepth([], [probe([], { sections: { scene: 20, cast: 30, history: 900 } }), probe([], { sections: { rules: 10 } })], [], 0);
+    expect([r.structuredMax, r.structuredMean]).toEqual([50, 30]);
   });
 });
 

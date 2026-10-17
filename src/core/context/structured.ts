@@ -6,6 +6,7 @@ import { projectEntity } from '../memory/projection';
 import type { Adventure, Entity, PlotComponents, Scene, StoryCard } from '../model/types';
 import { actionStoryText } from '../text/formatting';
 import { heldBy, itemsIn, MAX_ITEMS, YOU } from '../memory/items';
+import { askedFacts } from './asked';
 import { type CastLine, identityLine, pinnedLine, presentLine } from './cast';
 import { renderScene, renderSection } from './render';
 import { relevantRules, renderRules } from './rules';
@@ -91,7 +92,8 @@ export function nowLines(adv: Pick<Adventure, 'plot' | 'entities' | 'assertions'
 /**
  * Rules, the scene line, then the cast: a now-line per present character (and the scene's place),
  * an identity line per item here or held, then per entity the recent text names, most recent first.
- * In that order inside one cap; a line that does not fit is skipped whole. Absent entities send nothing, pins included.
+ * In that order inside one cap; a line that does not fit is skipped whole. Absent entities send no facts, pins included,
+ * but what the player's last action asks about one it names (`askedFacts`).
  * `historyFrom`: the earliest action history can reach, the witnessed-by window's start.
  */
 export function selectStructured(input: ContextBuildInput, lastActionIndex: number, historyFrom: number, cap: number, out: RenderedSections): StructuredResult {
@@ -140,16 +142,24 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
   // A gap that left the window is in a memory, which the model reads as a memory anyway.
   const witnessed: Witnessed = { presence: plot.presence ?? [], window: { from: historyFrom, to: lastActionIndex } };
   // With entity facts off, the player's own facts (Correct, pins) still go in for who is here or named.
-  const lines: CastLine[] = input.settings.pinnedFactsOnly
-    ? [...here, ...items, ...mentioned].flatMap((e) => pinnedLine(e, ix.of(e.id), carded(e)))
-    : [...hereLines(here, items, ix, carded, witnessed), ...mentioned.flatMap((e) => identityLine(e, ix.of(e.id), carded(e)))];
+  // Each entry is one entity's line and its fallbacks: an asked-about line that does not fit sends the identity alone.
+  const asked = askedFacts(input.actions[lastActionIndex], mentioned, entities, ix);
+  const lines: CastLine[][] = input.settings.pinnedFactsOnly
+    ? [...here, ...items, ...mentioned].map((e) => pinnedLine(e, ix.of(e.id), carded(e)))
+    : [
+        ...hereLines(here, items, ix, carded, witnessed).map((l) => [l]),
+        ...mentioned.map((e) => {
+          const facts = asked.get(e.id) ?? [];
+          const bare = identityLine(e, ix.of(e.id), carded(e));
+          return facts.length ? identityLine(e, ix.of(e.id), carded(e), facts).concat(bare) : bare;
+        }),
+      ];
   // Per-line cost +1 for the newline is an upper bound.
   let cost = 0;
-  const kept = lines.filter((l) => {
-    const c = tokenizer.count(l.text) + 1;
-    if (cost + c > left) return false;
-    cost += c;
-    return true;
+  const kept = lines.flatMap((alts) => {
+    const fit = alts.find((l) => cost + tokenizer.count(l.text) + 1 <= left);
+    if (fit) cost += tokenizer.count(fit.text) + 1;
+    return fit ?? [];
   });
   // `put` charges the whole section, so hand back what the secrets reserved first.
   left += secrets.reduce((n, t) => n + tokenizer.count(t) + 1, 0);

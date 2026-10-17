@@ -46,6 +46,7 @@ export function readDepth(memories: BankMemory[], probes: ProbeRow[], facts: See
   const forgotten = memories.filter((m) => m.forgotten);
   const early = earlyFacts(facts);
   const retrieved = probes.filter((p) => p.retrieved);
+  const structured = probes.map((p) => STRUCTURED.reduce((n, k) => n + (p.sections[k] ?? 0), 0));
   return {
     bank: active.length,
     forgotten: forgotten.length,
@@ -59,6 +60,7 @@ export function readDepth(memories: BankMemory[], probes: ProbeRow[], facts: See
       .filter((f) => forgotten.some((m) => retrievalHit(m.text, f)) && !active.some((m) => retrievalHit(m.text, f)))
       .map((f) => f.id),
     honouredPerRetrieved: retrieved.length ? retrieved.filter((p) => p.verdict === 'honoured').length / retrieved.length : 0,
-    structuredMax: Math.max(0, ...probes.map((p) => STRUCTURED.reduce((n, k) => n + (p.sections[k] ?? 0), 0))),
+    structuredMax: Math.max(0, ...structured),
+    structuredMean: structured.length ? structured.reduce((a, b) => a + b, 0) / structured.length : 0,
   };
 }

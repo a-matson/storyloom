@@ -2,13 +2,7 @@ import type { Action, Entity } from '../model/types';
 import { actionText } from '../model/types';
 import { entityNamedIn } from './entities';
 import type { Source } from './invalidate';
-
-/** Words that carry nothing a value could be backed by. [provisional] */
-const STOP = new Set(
-  'the and but with that this from have has had was were are his her its their they them she him who what when where which into onto over under than then there here been will would could about after before your you not'.split(
-    ' ',
-  ),
-);
+import { STOP } from './lexical';
 
 /**
  * One -ing, -ed or -s off, then a final -e, then the first five letters: "lean" meets "leans" and

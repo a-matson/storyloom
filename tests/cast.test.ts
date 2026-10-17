@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { identityOf, presentLine } from '@core/context/cast';
+import { identityLine, identityOf, presentLine } from '@core/context/cast';
 import type { Assertion, Entity } from '@core/model';
 
 const minos: Entity = { id: 'ent_minos', kind: 'character', name: 'Minos', aliases: [], description: '', relations: [], firstSeen: 0, lastSeen: 0 };
@@ -19,6 +19,23 @@ describe('identityOf', () => {
   it('identity keeps a comma clause', () => {
     const e = { ...minos, canon: true, description: 'A massive, winged creature with red scales. It sleeps.' };
     expect(identityOf(e, [])).toBe('a massive, winged creature with red scales');
+  });
+});
+
+describe('identityLine', () => {
+  const trait = (id: string, text: string): Assertion => ({ ...base, id, at: 1, since: 1, kind: 'trait', text });
+  const facts = [trait('t1', 'He fears water.'), { ...base, id: 'r1', at: 1, since: 1, kind: 'relationship', to: 'Lena', stance: 'owes her money' } as const];
+
+  it('with facts: `Name (identity): a; b.`, and the fact ids', () => {
+    const as: Assertion[] = [{ ...base, id: 'i', at: 0, since: 0, kind: 'identity', text: 'Minos is a ferryman.' }, ...facts];
+    expect(identityLine(minos, as, false, facts)).toEqual([
+      { entity: minos, text: 'Minos (a ferryman): He fears water; owes her money (Lena).', factIds: ['t1', 'r1'] },
+    ]);
+  });
+
+  it('with facts and no identity: `Name — a; b.`; carded: nothing', () => {
+    expect(identityLine(minos, facts, false, facts)[0]?.text).toBe('Minos — He fears water; owes her money (Lena).');
+    expect(identityLine(minos, facts, true, facts)).toEqual([]);
   });
 });
 

@@ -156,7 +156,17 @@ test('recall benchmark', async ({ page }) => {
   expect(history.facts, 'the recording was made for another fact set').toEqual(FACTS.map((f) => f.id));
 
   // Each probe is undone, so every probe of a depth sees the same history and no memory comes due between them.
-  type Row = { depth: number; id: string; class: string; verdict: Verdict; judge: string; retrieved: boolean; output: string; scene?: string | undefined };
+  type Row = {
+    depth: number;
+    id: string;
+    class: string;
+    verdict: Verdict;
+    judge: string;
+    retrieved: boolean;
+    output: string;
+    scene?: string | undefined;
+    cast?: string | undefined;
+  };
   // On a retrieval miss: did the bank hold the fact (a ranking miss) or not (a summary miss)?
   // On a canon probe: did memory content (a memory, or a canon entity's fact) contradict the canon?
   const rows: (Row & { miss?: { bankHit: boolean; prompt: string }; memoryContra?: boolean })[] = [];
@@ -193,6 +203,8 @@ test('recall benchmark', async ({ page }) => {
         retrieved,
         output,
         scene: /\[Scene:[^\]]*\]/.exec(prompt)?.[0],
+        // The cast lines between the scene and the author's note: which probe sent an absent entity's facts (M19-1).
+        cast: /\[Scene:[^\]]*\]\n([\s\S]*?)\n\[Author's note/.exec(prompt)?.[1],
         ...(retrieved ? {} : { miss: { bankHit: bank.some((t) => retrievalHit(t, f)), prompt } }),
         ...(f.class === 'canon' ? { memoryContra: [...bank, ...canonFacts].some((t) => scoreProbe(t, f) === 'contradicted') } : {}),
       });
