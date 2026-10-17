@@ -4,7 +4,7 @@ import { STRUCTURED_CAP } from '@core/context/structured';
 import { newSecret } from '@core/memory/secrets';
 import type { Assertion } from '@core/model/types';
 import { derived } from './fixtures/assertions';
-import { buildContext, cast, entity, fact, input, lena, orrin, scene, settings, structured, tamsin } from './fixtures/structured';
+import { actions, buildContext, cast, entity, fact, input, lena, orrin, scene, settings, structured, tamsin } from './fixtures/structured';
 
 describe('nowLines', () => {
   it('is the scene line and the cast lines the prompt sends for who is here', () => {
@@ -29,6 +29,20 @@ describe('structured elements', () => {
       expect(r.usedFacts.map((f) => f.factId)).toEqual(['as_f-Lena-2', 'as_f-Lena-3', 'as_f-Lena-4', 'as_f-Lena-5']);
       expect(r.budget.structuredUsed).toBe(structured(r).reduce((sum, s) => sum + s.tokens, 0));
     }
+  });
+
+  it('sends the quietest present character first', () => {
+    const spoke = { ...actions[30]!, speakers: [{ paragraph: 0, name: 'Orrin' }] };
+    const r = buildContext({
+      ...input(4000),
+      actions: [...actions.slice(0, 30), spoke, ...actions.slice(31)],
+      plot: { scene: { present: ['Orrin', 'Lena'] } },
+    });
+    expect(
+      cast(r)
+        ?.split('\n')
+        .map((l) => l.split(' ')[0]),
+    ).toEqual(['Lena', 'Orrin']);
   });
 
   it('sends states in key order, four words each, no location and no look but wearing', () => {
@@ -61,7 +75,8 @@ describe('structured elements', () => {
   it('gives a present character its stance to another present one', () => {
     const toOrrin = { ...lena, facts: [fact('Lena', 9, 'owes him money', { kind: 'relationship', key: 'Orrin' })] };
     const r = buildContext({ ...input(4000), entities: [toOrrin, orrin], plot: { scene: { ...scene, present: ['Orrin', 'Lena'] } } });
-    expect(cast(r)).toBe('Orrin (a ferryman): calm.\nLena (keeps the mill). With Orrin: owes him money.');
+    // Neither spoke; Lena has no state change and Orrin's mood is one, so she is the quieter.
+    expect(cast(r)).toBe('Lena (keeps the mill). With Orrin: owes him money.\nOrrin (a ferryman): calm.');
   });
 
   it('says what a present character missed while history still holds it', () => {

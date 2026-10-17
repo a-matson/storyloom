@@ -12,6 +12,7 @@ import { renderScene, renderSection } from './render';
 import { relevantRules, renderRules } from './rules';
 import type { ContextBuildInput, RenderedSections, SectionKind } from './types';
 import { secretLines } from './secrets';
+import { named, spotlight } from './spotlight';
 import { gapsOf, MAX_GAPS, witnessClause } from './witness';
 
 /** Hard ceiling on rules, scene and cast together, under the `structuredShare` cap. [provisional] */
@@ -26,9 +27,6 @@ export interface StructuredResult {
   usedRuleIds: string[];
 }
 
-// "the Old Well" in the scene names the entity "Old Well".
-const norm = (n: string) => n.trim().toLowerCase().replace(/^the /, '');
-const named = (e: Entity, n: string) => [e.name, ...e.aliases].some((k) => norm(k) === norm(n));
 const ids = (es: Entity[]) => new Set(es.map((e) => e.id));
 
 /**
@@ -99,7 +97,8 @@ export function nowLines(adv: Pick<Adventure, 'plot' | 'entities' | 'assertions'
   const { shown, here, items } = sceneCast(adv.plot.scene, entities, adv.entities, ix);
   const to = adv.actions.length - 1;
   const w: Witnessed = { presence: adv.plot.presence ?? [], window: { from: 0, to }, speaking: speakingIn(adv.actions, to, here) };
-  return { scene: renderScene(shown, entities, ix), lines: hereLines(here, items, ix, cardedBy(adv.storyCards), w) };
+  const lines = hereLines(spotlight(here, adv.actions, ix), items, ix, cardedBy(adv.storyCards), w);
+  return { scene: renderScene(shown, entities, ix), lines };
 }
 
 /**
@@ -164,7 +163,7 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
   const lines: CastLine[][] = input.settings.pinnedFactsOnly
     ? [...here, ...items, ...mentioned].map((e) => pinnedLine(e, ix.of(e.id), carded(e)))
     : [
-        ...hereLines(here, items, ix, carded, witnessed).map((l) => [l]),
+        ...hereLines(spotlight(here, input.actions.slice(0, lastActionIndex + 1), ix), items, ix, carded, witnessed).map((l) => [l]),
         ...mentioned.map((e) => {
           const facts = asked.get(e.id) ?? [];
           const bare = identityLine(e, ix.of(e.id), carded(e));
