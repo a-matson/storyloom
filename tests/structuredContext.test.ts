@@ -80,6 +80,13 @@ describe('structured elements', () => {
     expect(nowLines(i).lines[0]?.text).toMatch(/^Lena \(keeps the mill\): in the basement;/);
   });
 
+  it('names a group on the scene line and gives its faction one identity line, no now-line', () => {
+    const harrows = { ...entity('The Harrows', 'A smuggling gang.', [], { mood: 'hostile' }), kind: 'faction' as const };
+    const r = buildContext({ ...input(4000), entities: [lena, orrin, harrows], plot: { scene: { ...scene, groups: [{ id: 'The Harrows', count: 3 }] } } });
+    expect(r.sections.find((s) => s.kind === 'scene')?.text).toBe('[Scene: the mill · Present: Lena · Group: The Harrows (3) · Cold rain at night]');
+    expect(cast(r)?.split('\n').slice(1)).toEqual(['The Harrows (a smuggling gang).', 'Orrin (a ferryman).']);
+  });
+
   it('gives a present character its stance to another present one', () => {
     const toOrrin = { ...lena, facts: [fact('Lena', 9, 'owes him money', { kind: 'relationship', key: 'Orrin' })] };
     const r = buildContext({ ...input(4000), entities: [toOrrin, orrin], plot: { scene: { ...scene, present: ['Orrin', 'Lena'] } } });

@@ -1,7 +1,10 @@
 import type { Entity, PlotComponents, Scene } from '../model/types';
 import { NOBODY, type SceneRead, type Verdict } from '../schema/extraction';
 import { entityNamedIn } from './entities';
-import { knownAs, norm, outermost, sceneIds, sceneNames, withPresence } from './names';
+import { groupCount } from './groups';
+import { knownAs, matchEntity, norm, outermost, sceneIds, sceneNames, withPresence } from './names';
+
+type Group = NonNullable<Scene['groups']>[number];
 
 /** Location changes the Plot tab can show. [provisional] */
 export const SCENE_LOG_CAP = 50;
@@ -38,6 +41,7 @@ export function nextScene(
   at: number,
   places: readonly Entity[],
   named: (n: string) => boolean,
+  group: (s: string) => Group | undefined = () => undefined,
 ): { scene: Scene | undefined; moved: boolean } {
   const said = read.location.trim();
   const was = scene?.location;
@@ -62,7 +66,9 @@ export function nextScene(
     if (room !== undefined && id && named(id)) rooms.set(id, room);
   }
   const left = new Set(names(leaversOf(read)).filter((p) => named(p) && !rooms.has(p)));
-  const listed = names(read.present).filter((p) => before.includes(p) || named(p));
+  // A faction listed is its members here (F21), never a character; listed each read or gone. [provisional]
+  const groups = read.present.flatMap((x) => group(x) ?? []);
+  const listed = names(read.present.filter((x) => !group(x))).filter((p) => before.includes(p) || named(p));
   // On a move, who the read keeps "here" or "asleep" came along: a dragged, unconscious Minos was left out of `present`.
   const kept = moved ? before.filter((p) => read.stay[p] === 'here' || read.stay[p] === 'asleep') : before;
   const present = [...new Set([...kept, ...listed])].filter((p) => !left.has(p));
@@ -81,6 +87,7 @@ export function nextScene(
     ...(location !== undefined && { location }),
     present,
     ...(zones.length > 0 && { zones: Object.fromEntries(zones) }),
+    ...(groups.length > 0 && { groups }),
     ...(scene?.time && { time: scene.time }),
     // Schema order, so an unchanged scene compares equal below. The read names no items: a move drops the old place's.
     ...(weather !== undefined && { weather }),
@@ -109,7 +116,13 @@ export function withScene(
   const old = plot.scene;
   const was = old && sceneNames(old, entities);
   const places = entities.filter((e) => e.kind === 'place');
-  const r = nextScene(was, read, name, at, places, namedIn(entities, passage));
+  const factions = entities.filter((e) => e.kind === 'faction');
+  const group = (s: string): Group | undefined => {
+    const f = matchEntity(factions, s);
+    const count = f && groupCount(passage, f);
+    return f && { id: f.name, ...(count !== undefined && { count }) };
+  };
+  const r = nextScene(was, read, name, at, places, namedIn(entities, passage), group);
   const scene = r.scene && sceneIds(r.scene, entities);
   if (!scene || (r.scene === was && JSON.stringify(scene) === JSON.stringify(old))) return plot;
   const where = r.scene?.location;

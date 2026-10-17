@@ -8,6 +8,7 @@ import { passageOf, readTurn, type ExtractDeps } from './extract';
 import { foldEntities, newNamesIn, notAName } from './fold';
 import { MEMORY_SPAN } from './memoryBank';
 import { indexAssertions } from './assertionIndex';
+import { isConfirmed } from './facts';
 import { castLabels, namesOf, sceneNames } from './names';
 import { withScene } from './scene';
 import { applyChanges, stateAsk, stateCast, type StateUpdate } from './stateRead';
@@ -40,6 +41,11 @@ const castOf = (adventure: Adventure, names: readonly string[], present: readonl
   const labels = castLabels(adventure.entities, indexAssertions(adventure.assertions));
   const characters = adventure.entities.flatMap((e) => (e.kind === 'character' ? [labels.get(e.id) ?? e.name, ...namesOf(e).slice(1)] : []));
   return [...new Set([...characters, ...names, ...present])];
+};
+/** Confirmed factions, which the read may list present as a group (M21-4); an unconfirmed one is too often a misread. */
+const factionsOf = (adventure: Adventure) => {
+  const ix = indexAssertions(adventure.assertions);
+  return adventure.entities.flatMap((e) => (e.kind === 'faction' && isConfirmed(e, ix.of(e.id)) ? [e.name] : []));
 };
 
 /** An edit of an older output (F30): cards for the new names that action holds. The scene and the turn-read marker are the last turn's, so both stay. */
@@ -80,7 +86,7 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps, edited?
   const uncarded = (now?.present ?? []).filter((p) => !knownAs(adventure.entities, p) && passage.includes(p));
   // ponytail: names past the grammar's cap wait for the batch call; raise MAX_INTRODUCED if openings name more.
   const names = introductions ? [...new Set([...newNamesIn(adventure, range), ...uncarded])].slice(0, MAX_INTRODUCED) : [];
-  const prev = { location: now?.location, present: now?.present ?? [], zones: now?.zones };
+  const prev = { location: now?.location, present: now?.present ?? [], zones: now?.zones, factions: factionsOf(adventure) };
   const asked = names.length > 0 || sceneEachTurn;
   // Read B merged (M17-1): its subjects are the scene before this reply, since the reply carries both.
   const subjects = asked && opts?.state ? stateCast(adventure) : [];

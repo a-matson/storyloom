@@ -73,6 +73,7 @@ function renumber(a: Exported): Adventure {
           present: scene.present.map(id),
           ...(scene.location !== undefined && { location: id(scene.location) }),
           ...(scene.zones && { zones: Object.fromEntries(Object.entries(scene.zones).map(([k, v]) => [id(k), v])) }),
+          ...(scene.groups && { groups: scene.groups.map((g) => Object.assign({}, g, { id: id(g.id) })) }),
         },
       }),
       ...(sceneLog && { sceneLog: sceneLog.map((s) => ({ at: s.at, location: id(s.location) })) }),

@@ -129,20 +129,24 @@ export function roomsOf(places: readonly Entity[], here: Entity | undefined): st
 
 /** `zones` with each key passed through `f`. */
 const zonesBy = (zones: Scene['zones'], f: (ref: string) => string) => zones && { zones: Object.fromEntries(Object.entries(zones).map(([k, v]) => [f(k), v])) };
-
-/** `scene` with each name `knownAs` resolves (a place for the location, a character for the present and `zones`) as its id; unchanged: `scene` itself. */
+/** `groups` with each id passed through `f`. */
+const groupsBy = (groups: Scene['groups'], f: (ref: string) => string) => groups && { groups: groups.map((g) => ({ ...g, id: f(g.id) })) };
+/** `scene` with each name `knownAs` resolves (a place for the location, a character for the present and `zones`, a faction for `groups`) as its id; unchanged: `scene` itself. */
 export function sceneIds(scene: Scene, entities: readonly Entity[]): Scene {
   const places = entities.filter((e) => e.kind === 'place');
   const location = scene.location === undefined ? undefined : refFor(places, scene.location);
   const people = entities.filter((e) => e.kind === 'character');
   const present = [...new Set(scene.present.map((p) => refFor(people, p)))];
   const zones = zonesBy(scene.zones, (k) => refFor(people, k));
+  const factions = entities.filter((e) => e.kind === 'faction');
+  const groups = groupsBy(scene.groups, (k) => refFor(factions, k));
   const same =
     location === scene.location &&
     present.length === scene.present.length &&
     present.every((p, i) => p === scene.present[i]) &&
-    JSON.stringify(zones?.zones) === JSON.stringify(scene.zones);
-  return same ? scene : { ...scene, ...(location !== undefined && { location }), present, ...zones };
+    JSON.stringify(zones?.zones) === JSON.stringify(scene.zones) &&
+    JSON.stringify(groups?.groups) === JSON.stringify(scene.groups);
+  return same ? scene : { ...scene, ...(location !== undefined && { location }), present, ...zones, ...groups };
 }
 
 /** `scene` with its ids as the entities' current names, for the prompt and the player. */
@@ -151,4 +155,5 @@ export const sceneNames = (scene: Scene, entities: readonly Entity[]): Scene => 
   ...(scene.location !== undefined && { location: nameOf(entities, scene.location) }),
   present: scene.present.map((p) => nameOf(entities, p)),
   ...zonesBy(scene.zones, (k) => nameOf(entities, k)),
+  ...groupsBy(scene.groups, (k) => nameOf(entities, k)),
 });

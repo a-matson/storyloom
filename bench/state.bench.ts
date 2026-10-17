@@ -25,6 +25,7 @@ import { selectStructured, STRUCTURED_CAP } from '@core/context/structured';
 import type { RenderedSections } from '@core/context/types';
 import { renderTemplate } from '@core/text/templates';
 import { writeMeasurement } from './env';
+import { type GroupRow, groupsAt, scoreGroups } from './groups';
 import { mergedB, parses, type Reply } from './stateReply';
 import { leftRow, leftWanted, onlySpan, pickSet, sceneAt, scoreLeft, scoreRows, type LeftRow, type StateRow } from './stateScore';
 
@@ -76,18 +77,11 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
       }),
     );
     const parsed = parses(text) ? schema.safeParse(JSON.parse(text)).data : undefined;
-    return {
-      text,
-      parsed,
-      ms: Date.now() - t0,
-      promptMs: stats?.promptMs,
-      cachedTokens: stats?.cachedTokens,
-      tokens: stats?.generatedTokens,
-      stop: stats?.stopReason,
-    };
+    const { promptMs, cachedTokens, generatedTokens: tokens, stopReason: stop } = stats ?? {};
+    return { text, parsed, ms: Date.now() - t0, promptMs, cachedTokens, tokens, stop };
   };
 
-  const rows: (StateRow & { a: Reply; b?: Reply; left: LeftRow; structured: { tokens: number; text: string } })[] = [];
+  const rows: (StateRow & GroupRow & { a: Reply; b?: Reply; left: LeftRow; structured: { tokens: number; text: string } })[] = [];
   const tokenizer = createApproxTokenizer();
   let before = ONLY ? ONLY.from - 1 : 0;
   let scene: Scene = ONLY ? sceneAt(set, before) : { location: set.start, present: [] };
@@ -110,8 +104,9 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     const subjectsAB = MERGED ? stateCast(pre) : [];
     const q = subjectsAB.length ? stateAsk(pre, subjectsAB) : undefined;
     // Read A: the turn read from core, its scene part only (as on a turn with no new name).
-    const readA = () =>
-      ask(introducePrompt(passage, [], true, scene, cast, q), turnRead(cast, [], scene.present, q), turnReadTokens([], q, scene.present.length));
+    const g = groupsAt(adv.entities, i);
+    const prompt = introducePrompt(passage, [], true, { ...scene, factions: g.names }, cast, q);
+    const readA = () => ask(prompt, turnRead([...cast, ...g.names], [], scene.present, q), turnReadTokens([], q, scene.present.length));
     const a = await readA();
     const samples = [a];
     for (let k = 1; k < REPEAT; k++) samples.push(await readA());
@@ -124,7 +119,7 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
         places.push(mergeEntity(undefined, { name: read.location.trim(), kind: 'place', description: '' }, i));
         newPlaces.push(read.location.trim());
       }
-      const r = nextScene(scene, read, (s) => matchEntity(characters, s)?.name, i, places, namedIn(characters, passage));
+      const r = nextScene(scene, read, (s) => matchEntity(characters, s)?.name, i, places, namedIn(characters, passage), g.group);
       if (r.moved) moves++;
       scene = r.scene ?? scene;
     }
@@ -192,6 +187,7 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
       left,
       ...(b && { b }),
       structured,
+      ...g.row(samples, scene),
     });
     console.log('cast', i, `${structured.tokens} tokens`, `\n${structured.text}`);
     const bLine = b ? `B ${b.ms} ms ${b.stop} ${b.raw} rejected ${JSON.stringify(b.rejected)}` : '';
@@ -232,6 +228,7 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     // M13-5's bar: ≤ 200 with three present.
     maxStructured: Math.max(0, ...rows.map((r) => r.structured.tokens)),
     maxStructuredThreePresent: Math.max(0, ...rows.filter((r) => r.present.length >= 3).map((r) => r.structured.tokens)),
+    ...scoreGroups(rows),
   };
   console.log('state score', JSON.stringify(score));
   console.log('wrote', writeMeasurement(`state-${LABEL}`, { url, backup, set: SET, sampling: HELPER_JSON_SAMPLING, score, rows }));
