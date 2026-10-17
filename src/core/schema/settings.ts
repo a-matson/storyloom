@@ -17,7 +17,7 @@ export const ModelSettings = z.object({
   repetitionPenalty: z.optional(z.number()),
   /** Tokens the presence/frequency penalties look back over. 1536 starved function words into word salad; DRY covers the turn before. [measured: 2026-10-12-repetition-window-only.json] */
   repeatLastN: z._default(z.int(), 64),
-  /** DRY strength (0 = off); the Wayfarer community preset. [provisional] */
+  /** DRY strength (0 = off); the Wayfarer community preset. No effect on repeated phrases on two seeds; kept so stored defaults do not change. [measured: 2026-10-17-repetition-dry08-s7.json] */
   dryMultiplier: z._default(z.number().check(z.gte(0)), 0.8),
   seed: z.optional(z.number()),
   /** AID's "Dynamic" without weight swaps: each turn takes the next model preset's samplers instead of these. */
