@@ -7,7 +7,8 @@ import { extractGrammar, grammarOf } from './extractJsonSchema';
 import { foldEntities, type FoldLog } from './fold';
 import { ENTITY_BATCH, entitiesOverdue, type MemoryRange } from './memoryBank';
 import type { MaintenanceDeps } from './memoryJobs';
-import { namesOf, words } from './names';
+import { indexAssertions } from './assertionIndex';
+import { castLabels, namesOf, words } from './names';
 import { acceptRoles } from './roles';
 
 /** `cut`: the reply ran to its cap inside `entities`; one cut in `refersTo` lost roles only. */
@@ -85,16 +86,22 @@ export async function updateEntities(adventure: Adventure, range: MemoryRange, d
   const known = adventure.entities.map((e) => e.name);
   // The characters the passage names, latest seen first: one asked about with no mention has nothing to give.
   const text = words(passage);
+  const ix = indexAssertions(adventure.assertions);
+  const labels = castLabels(adventure.entities, ix);
   const cast = adventure.entities
     .filter((e) => e.kind === 'character' && namesOf(e).some((n) => n.trim() !== '' && text.includes(words(n))))
     .toSorted((a, b) => b.lastSeen - a.lastSeen)
-    .map((e) => e.name);
+    .map((e) => labels.get(e.id) ?? e.name);
   const reply = passage ? await extractFromPassage(passage, known, [...new Set(cast)].slice(0, MAX_REFERS), deps) : null;
   if (!reply) return { touched: 0 };
   const log: FoldLog = { proposed: 0, rejected: [] };
   const touched = foldEntities(adventure, reply.entities, passage, range, { twice: true, log });
-  adventure.entities = acceptRoles(adventure.entities, reply.refersTo, passage, (entity, value) =>
-    log.rejected.push({ entity, value, reason: 'role-rejected', passageRange: range }),
+  adventure.entities = acceptRoles(
+    adventure.entities,
+    reply.refersTo,
+    passage,
+    (entity, value) => log.rejected.push({ entity, value, reason: 'role-rejected', passageRange: range }),
+    ix,
   );
   // Calls are sequential: the last one logged is this one.
   const call = deps.cuts?.calls?.at(-1);

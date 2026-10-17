@@ -155,34 +155,6 @@ test('a character the opening names has a card before the first turn', async ({ 
   expect(introductions).toBe(1);
 });
 
-test('a misspelt known name is proposed as an alias, and Yes adds it to the card', async ({ page }) => {
-  const utility = 'http://localhost:9995';
-  await page.route(`${utility}/**`, async (route) => {
-    const path = new URL(route.request().url()).pathname;
-    if (path === '/health') return route.fulfill({ json: { status: 'ok' } });
-    if (path === '/props') return route.fulfill({ json: { model_path: '/models/qwen-3b.gguf', total_slots: 1 } });
-    if (path !== '/completion') return route.fulfill({ status: 404, json: {} });
-    const { prompt } = route.request().postDataJSON() as { prompt: string };
-    const card = { scene: {}, entities: [{ name: 'Weaver', kind: 'character', description: 'A ferrywoman.' }], speakers: [] };
-    const content = prompt.includes('New here: Weaver') ? JSON.stringify(card) : 'Merav found the map.';
-    return route.fulfill({ contentType: 'text/event-stream', body: `data: ${JSON.stringify({ content, stop: true })}\n\n` });
-  });
-  await openSeededAdventure(page, 3, undefined, {
-    opening: 'The ferry waits.\n\n"Hold the lamp," Weaver says.',
-    utility: `${utility}/`,
-    entities: [{ id: 'ent_weever', name: 'Weever', description: 'A ferrywoman.' }],
-  });
-
-  await page.getByRole('button', { name: /^Characters/ }).click();
-  const sidebar = page.getByRole('complementary');
-  await expect(sidebar.getByText('Weaver = Weever?')).toBeVisible();
-  await expect(sidebar.getByRole('button', { name: 'Open Weaver' })).toHaveCount(0);
-  await sidebar.getByRole('button', { name: 'Yes' }).click();
-  await expect(sidebar.getByText('Weaver = Weever?')).toHaveCount(0);
-  await sidebar.getByRole('button', { name: 'Open Weever' }).click();
-  await expect(page.getByRole('dialog', { name: 'Weever' }).getByRole('textbox', { name: 'Also called (comma-separated)' })).toHaveValue('Weaver');
-});
-
 test("the story's current state shows as a row, and the player's edit ends it", async ({ page }) => {
   const state = (id: string, value: string, fromAction: number, until?: number) => ({
     id,

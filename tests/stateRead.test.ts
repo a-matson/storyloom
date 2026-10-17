@@ -39,6 +39,25 @@ function setup(texts: [string, string], changes: object[], present: Entity[] = [
 const now = (adv: Adventure, id: string) => currentStates(indexAssertions(adv.assertions).of(id));
 
 describe('the state read', () => {
+  it('asks about two characters of one name by their labels, and writes to the one named', async () => {
+    const lena = (description: string, at: number): Entity => ({
+      ...mergeEntity(undefined, { name: 'Lena', kind: 'character', description: '' }, at),
+      description,
+      canon: true,
+    });
+    const [miller, soldier] = [lena('the miller.', 0), lena('a soldier.', 1)];
+    const { adv, reqs, deps } = setup(
+      ['You wait.', 'Lena sits on the floor.'],
+      [{ who: 'Lena (a soldier)', key: 'posture', now: 'sits on the floor', at: 4 }],
+      [miller, soldier],
+    );
+    adv.entities = [miller, soldier];
+    await readState(adv, deps);
+    expect(JSON.stringify(reqs[0]?.jsonSchema)).toContain('"enum":["Lena (the miller)","Lena (a soldier)","you"]');
+    expect(now(adv, soldier.id)).toMatchObject({ posture: 'sits on the floor' });
+    expect(now(adv, miller.id)).toEqual({});
+  });
+
   it('asks about the present characters and items, then you; nobody there makes no call', async () => {
     const { adv, reqs, deps } = setup(['You wait.', 'Mira sits.'], [], [mira], ['Amulet']);
     expect(stateCast(adv).map((s) => s.name)).toEqual(['Mira', 'Amulet', YOU]);

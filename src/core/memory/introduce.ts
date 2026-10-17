@@ -7,7 +7,8 @@ import type { EntityUpdate } from './batch';
 import { passageOf, readTurn, type ExtractDeps } from './extract';
 import { foldEntities, newNamesIn, notAName } from './fold';
 import { MEMORY_SPAN } from './memoryBank';
-import { namesOf, sceneNames } from './names';
+import { indexAssertions } from './assertionIndex';
+import { castLabels, namesOf, sceneNames } from './names';
 import { withScene } from './scene';
 import { applyChanges, stateAsk, stateCast, type StateUpdate } from './stateRead';
 
@@ -34,9 +35,10 @@ function notePlace(adventure: Adventure, location: string, at: number): boolean 
 const none = (): TurnUpdate => ({ touched: 0, sceneUpdated: false });
 
 // Aliases and roles too, so a character the text calls "the dragon" resolves (the two P7c misses); new names, so one met this turn can be there;
-// and who is present without a card yet, or the enum has no word for them.
+// and who is present without a card yet, or the enum has no word for them. A namesake goes by its label.
 const castOf = (adventure: Adventure, names: readonly string[], present: readonly string[]) => {
-  const characters = adventure.entities.flatMap((e) => (e.kind === 'character' ? namesOf(e) : []));
+  const labels = castLabels(adventure.entities, indexAssertions(adventure.assertions));
+  const characters = adventure.entities.flatMap((e) => (e.kind === 'character' ? [labels.get(e.id) ?? e.name, ...namesOf(e).slice(1)] : []));
   return [...new Set([...characters, ...names, ...present])];
 };
 
@@ -96,7 +98,8 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps, edited?
   let touched = names.length ? foldEntities(adventure, reply.entities, passage, range, { present: uncarded }) : 0;
   // Through the entity first: a role alias ("the ferrywoman") is not a name by itself.
   const name = (s: string) => {
-    const e = matchEntity(adventure.entities, s);
+    // ponytail: a namesake's label resolves to its name, and the scene stores names, so two namesakes share a presence; store ids if that bites.
+    const e = matchEntity(adventure.entities, s) ?? (s.includes('(') ? knownAs(adventure.entities, s, indexAssertions(adventure.assertions)) : undefined);
     const stored = e ? (e.kind === 'character' ? e.name : undefined) : s;
     return stored === undefined || notAName(adventure.plot, stored) ? undefined : stored;
   };
