@@ -77,7 +77,7 @@ function SendTo({ entity: e, scene, entities, api }: { entity: Entity; scene: Sc
   const rooms = [...new Set([...roomsOf(places, here), ...(at ? [at] : [])])];
   const send = (to: string) => {
     const { zones: _, ...rest } = scene;
-    const { [e.id]: _was, ...others } = scene.zones ?? {};
+    const others = Object.fromEntries(Object.entries(scene.zones ?? {}).filter(([k]) => k !== e.id));
     const zones = to && to !== AWAY ? { ...others, [e.id]: to } : others;
     const present = to === AWAY ? scene.present.filter((p) => p !== e.id) : scene.present;
     api.updatePlot({ scene: { ...rest, present, ...(Object.keys(zones).length > 0 && { zones }) } });
