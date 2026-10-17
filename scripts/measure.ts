@@ -5,7 +5,8 @@
  *   latency <url> [turns] TTFT, cache hit %, tok/s against a live backend (cold vs cached prefix)
  *   gatev <url>           llama-server checks: template, tokenizer error, warming, layout, evictionChunk, CORS
  *   memory-keep <url> [label]  does the memory for each planted Do/Say keep the fact? (recorded history, ~16 calls)
- *   contradiction <url> [label]  precision/recall of the contradiction check on 40 hand-labelled outputs
+ *   contradiction <url> [label] [cases]  precision/recall of the contradiction check on hand-labelled outputs (cases: comma-separated files)
+ *   contradiction-cases <backups> [file]  unlabelled check cases from backups' AI outputs (bench/contradiction-dogfood.json), no model
  *   memory-replay <url> <backup> <from-to> [label] [samples]  the memory for one action range of a backup, written [samples] times (default 5)
  *   state <url> <backup> [label] [labels-set]  scene and state reads over every AI turn of a backup, scored against bench/stateLabels.json
  *   probe <url> <backup> <at> [label] [samples]  the reply to player action <at>, drawn [samples] times (default 3); graded by hand
@@ -36,8 +37,12 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
     env: { MEASURE_URL: a, MEASURE_LABEL: b },
   },
   contradiction: {
-    cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/contradiction'],
-    env: { MEASURE_URL: a, MEASURE_LABEL: b },
+    cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/contradiction.bench'],
+    env: { MEASURE_URL: a, MEASURE_LABEL: b, MEASURE_CASES: c },
+  },
+  'contradiction-cases': {
+    cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/contradictionCases'],
+    env: { MEASURE_BACKUP: a, MEASURE_CASES: b },
   },
   'memory-replay': {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/memoryReplay'],

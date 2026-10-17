@@ -88,15 +88,15 @@ describe('MemoryScheduler', () => {
     }
     const CHECK_PROMPT = 'Established facts:';
 
-    it('makes no check call when the setting is off and nobody locked is present', async () => {
-      const { adv, calls, scheduler } = setup(false);
+    it('makes no check call when the setting is off, even with someone locked present', async () => {
+      const { adv, calls, scheduler } = setup(false, true);
       scheduler.start(new AbortController().signal);
       await vi.waitFor(() => expect(adv.memories.length).toBeGreaterThan(0));
       expect(calls).not.toContain('check');
     });
 
-    it('checks the last output before maintenance and flags it, the setting off, for a locked present entity', async () => {
-      const { adv, calls, flags, scheduler } = setup(false, true);
+    it('checks the last output before maintenance and flags it, the setting on, for a locked present entity', async () => {
+      const { adv, calls, flags, scheduler } = setup(true, true);
       scheduler.start(new AbortController().signal);
       await vi.waitFor(() => expect(adv.memories.length).toBeGreaterThan(0));
       expect(calls[0]).toBe('check');
