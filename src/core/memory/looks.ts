@@ -1,6 +1,7 @@
 import type { Assertion, Entity } from '../model/types';
 import { newId } from '../model/types';
 import { identityText, isCurrent, type AssertionOf } from './assertionIndex';
+import { isSpeciesClash, swapWord } from './species';
 
 /** State keys that say how a character looks, in the order their tags are written. [provisional] */
 export const LOOK_KEYS = ['species', 'build', 'eyes', 'hair', 'horns', 'scales', 'marks', 'wearing'] as const;
@@ -30,10 +31,13 @@ export function appearanceOf(as: readonly Assertion[]): string {
   return looks.length ? looks.join(', ') : legacy?.kind === 'look' ? legacy.value.trim() : '';
 }
 
-/** The entity as the image prompts read it: who it is as `description`, its current looks as `appearance`. */
+/**
+ * The entity as the image prompts read it: who it is as `description`, its current looks as
+ * `appearance`. While the identity's species contradicts the looks, the identity's word is left out.
+ */
 export const withLooks = <E extends Entity>(e: E, as: readonly Assertion[]): E & { appearance: string } => ({
   ...e,
-  description: identityText(e, as),
+  description: as.filter(isSpeciesClash).reduce((t, c) => swapWord(t, c.claimed, ''), identityText(e, as)),
   appearance: appearanceOf(as),
 });
 

@@ -23,6 +23,26 @@ test('a free-text locked key gets a proposal, not a conflict; accepting it keeps
   await expect(drawer.getByRole('button', { name: 'Lock hair as canon' })).toHaveAttribute('aria-pressed', 'true');
 });
 
+test('an identity that contradicts the species look: keeping the looks rewrites the identity', async ({ page }) => {
+  const line = { subject: 'ent_minos', producer: 'batch' as const, basis: 'stated' as const, at: 1, since: 1 };
+  await openSeededAdventure(page, 3, undefined, {
+    entities: [{ id: 'ent_minos', name: 'Minos' }],
+    assertions: [
+      { ...line, id: 'as_id', kind: 'identity', text: 'A massive orc at the gate.' },
+      { ...line, id: 'as_sp', kind: 'look', key: 'species', value: 'minotaur' },
+      { ...line, id: 'as_c', kind: 'conflict', key: 'species', claimed: 'orc', canon: 'minotaur', seen: false },
+    ],
+  });
+  await page.getByRole('button', { name: 'Characters · 2' }).click();
+  await page.getByRole('button', { name: 'Open Minos' }).click();
+  const drawer = page.getByRole('dialog', { name: 'Minos' });
+  const clash = drawer.getByRole('listitem').filter({ hasText: 'the identity says orc; the looks say minotaur' });
+  await expect(clash.getByRole('button', { name: 'Keep the identity' })).toBeVisible();
+  await clash.getByRole('button', { name: 'Keep the looks' }).click();
+  await expect(drawer.getByText('conflict', { exact: true })).toHaveCount(0);
+  await expect(drawer.getByLabel('Description')).toHaveValue('A massive minotaur at the gate.');
+});
+
 test('a canon conflict is shown on the fact and resolved from the drawer', async ({ page }) => {
   const fact = (id: string, value: string) => ({
     id,

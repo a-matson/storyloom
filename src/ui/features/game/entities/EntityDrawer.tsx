@@ -68,6 +68,8 @@ export function EntityDrawer({ entity: e, adventure, api, onClose, onOpen }: Pro
           <SectionLabel>Description</SectionLabel>
         </label>
         <Textarea
+          // Remounts on an edit made elsewhere (Keep canon on a species conflict).
+          key={identityText(e, own)}
           id={`${id}-desc`}
           defaultValue={identityText(e, own)}
           onBlur={(ev) => ev.target.value.trim() !== identityText(e, own) && edits.setIdentity(e.id, ev.target.value.trim())}

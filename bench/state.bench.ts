@@ -273,6 +273,10 @@ test.skipIf(!url || !backup || !READS.includes('C'))('batch call over a backup',
     cards: work.entities.map((e) => e.name),
     roles: Object.fromEntries(work.entities.map((e) => [e.name, e.roles ?? []])),
     proposals,
+    // M18-4: an identity whose species the looks contradict.
+    species: work.assertions.flatMap((a) =>
+      a.kind === 'conflict' ? [`${work.entities.find((e) => e.id === a.subject)?.name}:${a.claimed} vs ${a.canon}`] : [],
+    ),
   };
   console.log('batch score', JSON.stringify(score));
   console.log('wrote', writeMeasurement(`batch-${LABEL}`, { url, backup, sampling: HELPER_JSON_SAMPLING, score, replies }));
