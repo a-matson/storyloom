@@ -5,7 +5,7 @@ import { SectionLabel } from '@ui/components/ui/section-label';
 import { Textarea } from '@ui/components/ui/textarea';
 
 interface Props {
-  onStart: (title: string, opening: string) => void;
+  onStart: (title: string, opening: string, dice?: boolean) => void;
   /** Absent while the backend is down. Resolves when the adventure is open or the error shown. */
   onSurprise?: (() => Promise<void>) | undefined;
 }
@@ -24,7 +24,7 @@ export function QuickStart({ onStart, onSurprise }: Props) {
       <SectionLabel>Quick start</SectionLabel>
       <div className="grid grid-cols-2 gap-2">
         {QUICK_STARTS.map((q) => (
-          <Button key={q.tag} className="h-10" onClick={() => onStart(q.title, q.opening)}>
+          <Button key={q.tag} className="h-10" onClick={() => onStart(q.title, q.opening, q.dice)}>
             {q.title}
           </Button>
         ))}

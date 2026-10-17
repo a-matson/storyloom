@@ -31,7 +31,9 @@ export async function startScenario(s: Scenario, answers: Record<string, string>
 
 /** "Surprise me": a random Quick Start genre, opening written by the story model. Throws before saving anything. */
 export async function surpriseAdventure(app: AppSettings, random = Math.random): Promise<Adventure> {
-  const genre = QUICK_STARTS[Math.floor(random() * QUICK_STARTS.length)];
+  // A scripted start is a mechanic, not a genre.
+  const genres = QUICK_STARTS.filter((q) => !q.dice);
+  const genre = genres[Math.floor(random() * genres.length)];
   if (!genre) throw new Error('No Quick Start genres.');
   const deps = { provider: providerFor(app, app.defaults.providerId), template: app.defaults.template, content: contentClause(app.defaults, 'story') };
   const opening = await writeOpening({ brief: '', picks: [], prompt: surprisePrompt(genre.title.toLowerCase()) }, deps);

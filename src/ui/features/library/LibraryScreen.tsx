@@ -33,6 +33,11 @@ async function surpriseAdventure(app: AppSettings) {
   return (await import('@app/scenarios')).surpriseAdventure(app);
 }
 
+// Same reason; and loaded on demand: start-up bundle budget.
+async function diceScripts(dice: boolean) {
+  return dice ? (await import('@core/dice')).DICE_SCRIPTS : undefined;
+}
+
 async function remove(id: string): Promise<void> {
   if (!confirm('Delete this adventure? This cannot be undone.')) return;
   await storage.deleteAdventure(id);
@@ -44,12 +49,13 @@ export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissN
   const adventures = useLiveQuery(() => storage.listAdventures(), []) ?? [];
   const [error, setError] = useState<string | null>(null);
 
-  const start = (title: string, opening: string) => {
-    const adv = createBlankAdventure(title, opening, app.defaults);
-    storage.putAdventure(adv).then(
-      () => onOpen(adv.id),
-      (e: unknown) => setError(message(e)),
-    );
+  const start = (title: string, opening: string, dice = false) => {
+    const open = async () => {
+      const adv = createBlankAdventure(title, opening, app.defaults, await diceScripts(dice));
+      await storage.putAdventure(adv);
+      onOpen(adv.id);
+    };
+    open().catch((e: unknown) => setError(message(e)));
   };
 
   const surprise = async () => {

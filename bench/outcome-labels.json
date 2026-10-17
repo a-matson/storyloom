@@ -1,0 +1,28 @@
+{
+  "source": "docs/measurements/2026-10-17-dice-m21-5.json",
+  "labelledBy": "Claude",
+  "question": "Does the reply reflect the stated outcome (succeeds / succeeds at a cost / fails badly)?",
+  "labels": [
+    { "turn": 0, "roll": "14 vs 14", "outcome": "succeeds", "reflects": true, "note": "slips once, crests the wall" },
+    { "turn": 1, "roll": "7 vs 10", "outcome": "succeeds at a cost", "reflects": true, "note": "finds the grate, sinks in filth" },
+    { "turn": 2, "roll": "9 vs 14", "outcome": "succeeds at a cost", "reflects": false, "note": "spotted and blocked; reads as a failure" },
+    { "turn": 3, "roll": "8 vs 10", "outcome": "succeeds at a cost", "reflects": true, "note": "hears the plan; guards summoned" },
+    { "turn": 4, "roll": "17 vs 14", "outcome": "succeeds", "reflects": true },
+    { "turn": 5, "roll": "10 vs 10", "outcome": "succeeds", "reflects": true },
+    { "turn": 6, "roll": "16 vs 14", "outcome": "succeeds", "reflects": false, "note": "no persuasion happens; scene stalls" },
+    { "turn": 7, "roll": "14 vs 10", "outcome": "succeeds", "reflects": true },
+    { "turn": 8, "roll": "11 vs 14", "outcome": "succeeds at a cost", "reflects": true, "note": "kills the baron, stabbed in the shoulder" },
+    { "turn": 9, "roll": "4 vs 10", "outcome": "fails badly", "reflects": true, "note": "purse tears, coins scatter, alarm" },
+    { "turn": 10, "roll": "18 vs 14", "outcome": "succeeds", "reflects": true, "note": "lands hard but lands" },
+    { "turn": 11, "roll": "9 vs 10", "outcome": "succeeds at a cost", "reflects": true },
+    { "turn": 12, "roll": "5 vs 14", "outcome": "fails badly", "reflects": true, "note": "horse breaks the arm, surrounded" },
+    { "turn": 13, "roll": "20 vs 10", "outcome": "succeeds", "reflects": true },
+    { "turn": 14, "roll": "12 vs 14", "outcome": "succeeds at a cost", "reflects": true },
+    { "turn": 15, "roll": "7 vs 10", "outcome": "succeeds at a cost", "reflects": false, "note": "never crosses; caught by the ankle" },
+    { "turn": 16, "roll": "17 vs 14", "outcome": "succeeds", "reflects": false, "note": "wound reopens, swept away: a cost, not a success" },
+    { "turn": 17, "roll": "11 vs 10", "outcome": "succeeds", "reflects": true },
+    { "turn": 18, "roll": "17 vs 14", "outcome": "succeeds", "reflects": true },
+    { "turn": 19, "roll": "6 vs 10", "outcome": "succeeds at a cost", "reflects": null, "note": "trace read before its reply was saved; not labelled" }
+  ],
+  "reflects": "15/19"
+}

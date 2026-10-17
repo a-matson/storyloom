@@ -1,14 +1,14 @@
 import { ActionLog } from '@core/log';
 import { followLog, withPresence } from '@core/memory';
 import type { Adventure, AdventureSettings, AppSettings, PlotComponents, ReadKind, TurnTrace } from '@core/model';
-import type { Embedder, ScriptRunner } from '@core/ports';
+import type { Embedder } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
 import { helperModels } from './helperModel';
 import { IdleWork } from './idleWork';
 import type * as SeeMode from './images';
 import { MemoryScheduler } from './memoryScheduler';
 import { SaveQueue } from './saveQueue';
-import { sessionScripts } from './scripts';
+import { SessionScripts } from './scripts';
 import { OPENED, type GameSnapshot, type HelperModel, type Prefetched, type SessionServices } from './types';
 
 /**
@@ -40,7 +40,7 @@ export class GameSession {
   /** The story provider's embedder; queries and memories must share it so vectors compare. */
   private embedder: Embedder | undefined;
   private contextSize: number | undefined;
-  private readonly scripts: ScriptRunner;
+  private readonly scripts: SessionScripts;
   private readonly memory = new MemoryScheduler({
     adventure: () => this.adv,
     helperModel: (read) => this.helperModel(read),
@@ -73,7 +73,7 @@ export class GameSession {
     this.app = app;
     this.svc = services;
     this.snapshot = this.build(OPENED);
-    this.scripts = sessionScripts(services, adventure, (e) => this.emit({ notice: `Scenario scripts are off: ${e instanceof Error ? e.message : String(e)}` }));
+    this.scripts = new SessionScripts(services, adventure, (notice) => this.emit({ notice }));
     // Until these resolve, turns rank memories by recency only and the context length is not clamped to n_ctx.
     this.resolveEmbedder().catch((e: unknown) => console.warn('no embedder; memories rank by recency', e));
     void this.deps()
@@ -298,6 +298,7 @@ export class GameSession {
   readonly updateSettings = (patch: Partial<AdventureSettings>) => this.mutate((_, adv) => (adv.settings = { ...adv.settings, ...patch }));
   readonly updateMeta = (patch: Partial<Pick<Adventure, 'title' | 'description' | 'tags' | 'coverId'>>) => this.mutate((_, adv) => Object.assign(adv, patch));
   readonly setStoryCards = (cards: Adventure['storyCards']) => this.mutate((_, adv) => (adv.storyCards = cards));
+  readonly setScripts = (scripts: Adventure['scripts']) => this.mutate((_, adv) => ((adv.scripts = scripts), this.scripts.reload(adv)));
   readonly setCardGenerator = (s: NonNullable<Adventure['cardGenerator']>) => this.mutate((_, adv) => (adv.cardGenerator = s));
   readonly clearError = () => this.emit({ error: null });
   readonly clearNotice = () => this.emit({ notice: null });
