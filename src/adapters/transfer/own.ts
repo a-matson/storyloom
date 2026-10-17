@@ -60,9 +60,17 @@ function renumber(a: Exported): Adventure {
   const ids = new Map([...a.storyCards.map((c) => [c.id, newId('card_')] as const), ...a.entities.map((e) => [e.id, newId('ent_')] as const)]);
   const id = (old: string) => ids.get(old) ?? old;
   const actionIds = new Map(a.actions.map((x) => [x.id, newId('act_')]));
+  const { scene, sceneLog, presence } = a.plot;
   return {
     ...rest,
     id: newId('adv_'),
+    // The scene and its logs hold entity ids (or names, which `id` passes through).
+    plot: {
+      ...a.plot,
+      ...(scene && { scene: { ...scene, present: scene.present.map(id), ...(scene.location !== undefined && { location: id(scene.location) }) } }),
+      ...(sceneLog && { sceneLog: sceneLog.map((s) => ({ at: s.at, location: id(s.location) })) }),
+      ...(presence && { presence: presence.map((p) => ({ at: p.at, present: p.present.map(id) })) }),
+    },
     actions: a.actions.map(({ image, ...x }) => ({
       ...x,
       id: actionIds.get(x.id) ?? newId('act_'),
