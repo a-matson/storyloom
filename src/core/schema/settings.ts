@@ -22,6 +22,8 @@ export const ModelSettings = z.object({
   seed: z.optional(z.number()),
   /** AID's "Dynamic" without weight swaps: each turn takes the next model preset's samplers instead of these. */
   dynamic: z._default(z.boolean(), false),
+  /** Re-roll a reply that is empty, copies an earlier one or writes for the player, once per turn. [provisional] */
+  autoRetry: z._default(z.boolean(), true),
 });
 
 export const MemorySettings = z.object({

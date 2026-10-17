@@ -66,6 +66,13 @@ function StoryGenerator({ s, update }: { s: Settings; update: Update }) {
         checked={s.model.dynamic}
         onChange={(on) => update({ model: { ...s.model, dynamic: on } })}
       />
+      <SettingSwitch
+        id="auto-retry"
+        label="Re-roll repeated replies"
+        help="A reply that is empty, copies an earlier passage or writes your actions for you is generated once more with a note; the first stays in the retry stack"
+        checked={s.model.autoRetry}
+        onChange={(on) => update({ model: { ...s.model, autoRetry: on } })}
+      />
       <Setting
         label="Content"
         htmlFor="content"

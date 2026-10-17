@@ -4,6 +4,7 @@ import { GenerationStats } from './action';
 export const TurnKind = z.enum(['turn', 'retry']);
 export const TurnOutcome = z.enum(['done', 'stopped', 'error']);
 export const TurnErrorKind = z.enum(['provider', 'storage', 'script', 'cancelled', 'stalled', 'network', 'unknown']);
+export const GateReason = z.enum(['empty', 'verbatim', 'agency']);
 /** Background model calls that compete with a turn for a generation slot. `image` runs on another server, but it takes the GPU. */
 export const JobKind = z.enum(['memory', 'summary', 'warmup', 'prefetch', 'card', 'image', 'entity', 'check', 'state']);
 
@@ -68,6 +69,8 @@ export const TurnTrace = z.object({
   paragraphs: z.optional(count),
   /** Word runs this reply shares with the previous few AI outputs, longest first. */
   repeatedPhrases: z.optional(z.array(z.string())),
+  /** The output gate fired on the first reply; `retried` when a second one replaced it. Absent before M20-1 and on clean turns. */
+  gate: z.optional(z.object({ reason: GateReason, retried: z.boolean() })),
   /** What actually went wrong behind `errorKind`, `unknown` most of all. */
   error: z.optional(z.object({ message: z.string(), status: z.optional(z.number()) })),
 });

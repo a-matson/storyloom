@@ -1,5 +1,5 @@
 import type { ContextBuildResult, ScriptCache } from '@core/context';
-import type { Action, Adventure, AppSettings, TemplateId, TurnTrace } from '@core/model';
+import type { Action, Adventure, AppSettings, GateReason, TemplateId, TurnTrace } from '@core/model';
 import type { CompletionStats, Embedder, ImageProvider, Provider, ScriptRunner, Storage } from '@core/ports';
 import type { CalibratedTokenizer, Tokenizer } from '@core/text';
 
@@ -33,6 +33,8 @@ export interface GameSnapshot {
   warm: 'idle' | 'warming' | 'warm';
   /** The contradiction check flagged the last output; cleared when that output changes. Not persisted. */
   contradiction: { actionId: string; fact: string } | null;
+  /** The output gate re-rolled this turn's reply; cleared by the next action. Not persisted. */
+  gated: { actionId: string; reason: GateReason } | null;
   /** Portrait renders by entity id; absent = none wanted, or done. Not persisted: a reload retries. */
   portraitState: Readonly<Record<string, PortraitState>>;
 }
@@ -54,6 +56,7 @@ export const OPENED: Omit<GameSnapshot, 'adventure' | 'actions' | 'canUndo' | 'c
   pendingImages: [],
   warm: 'idle',
   contradiction: null,
+  gated: null,
   portraitState: {},
 };
 

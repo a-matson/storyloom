@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { z } from 'zod/mini';
 import { textOf } from '@core/memory/assertionIndex';
 import * as S from '@core/schema';
+import { GATE_WINDOW, gateOutput, previousOutputs } from '@core/turn/gate';
 import { writeMeasurement } from '../../bench/env';
 import { watchIntroductions } from '../../bench/introductions';
 import { readDb, TURNS } from '../../bench/livePlay';
@@ -138,17 +139,22 @@ test('scripted live play', async ({ page }) => {
     await expect.poll(() => rendering, { timeout: 2 * TURN_MS, intervals: [5000] }).toBe(0);
     db = await settledDb(page);
   }
-  const text = new Map(
-    z
-      .array(S.Action)
-      .parse(db.actions)
-      .map((a) => [a.id, a.versions[a.active] ?? '']),
-  );
+  const actions = z.array(S.Action).parse(db.actions);
+  const text = new Map(actions.map((a) => [a.id, a.versions[a.active] ?? '']));
+  // Flags still on the kept replies after the gate's one re-roll (M20-1).
+  const gateLeft = actions.flatMap((a, i) => {
+    if (a.type !== 'continue') return [];
+    const reason = gateOutput(text.get(a.id) ?? '', previousOutputs(actions.slice(0, i), undefined, GATE_WINDOW), {
+      playerType: actions[i - 1]?.type,
+      thirdPerson: false,
+    });
+    return reason ? [{ at: i, reason }] : [];
+  });
   const traces = z
     .array(S.TurnTrace)
     .parse(db.traces)
     .toSorted((a, b) => a.createdAt - b.createdAt);
-  const turns = traces.map(({ kind, outcome, errorKind, stopReason, actionId, timings, overlap, stats: s = {} }) => {
+  const turns = traces.map(({ kind, outcome, errorKind, stopReason, actionId, timings, overlap, gate, stats: s = {} }) => {
     const out = actionId === undefined ? '' : (text.get(actionId) ?? '');
     const { promptTokens = 0, cachedTokens = 0, generatedTokens = 0, generationMs = 0 } = s;
     return {
@@ -166,6 +172,8 @@ test('scripted live play', async ({ page }) => {
       paragraphs: out.split(/\n\s*\n/).filter((x) => x.trim()).length,
       tokPerSec: generationMs > 0 ? +((generatedTokens / generationMs) * 1000).toFixed(1) : undefined,
       ttftMs: timings.ttftMs,
+      totalMs: timings.totalMs,
+      gate,
       // Which background job held a slot during this turn (Gate V finding 19): the reason a turn is slow.
       overlap,
       tail: out.slice(-80),
@@ -201,6 +209,7 @@ test('scripted live play', async ({ page }) => {
     turns,
     stopReasons,
     stalls: turns.filter((t) => t.errorKind === 'stalled').length,
+    gate: { retried: turns.filter((t) => t.gate?.retried).length, flagged: turns.flatMap((t) => (t.gate ? [t.gate.reason] : [])), left: gateLeft },
     ...memoryRuns,
     length,
     // Rows keep embeddings as Float32Array; the output does not need them.

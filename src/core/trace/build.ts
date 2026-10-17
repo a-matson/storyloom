@@ -35,6 +35,7 @@ export interface TraceInput {
   /** Active text of the AI outputs before this one, oldest first. */
   previousOutputs?: readonly string[] | undefined;
   error?: { message: string; status?: number | undefined } | undefined;
+  gate?: TurnTrace['gate'];
 }
 
 /** What the output fields say about a reply; empty when there is none. */
@@ -104,6 +105,7 @@ export function buildTrace(i: TraceInput): TurnTrace {
     timings: { totalMs: i.totalMs, ttftMs: i.ttftMs },
     overlap: overlappingJobs(i.createdAt, i.createdAt + i.totalMs),
     ...outputFields(i.output, i.previousOutputs ?? []),
+    ...(i.gate ? { gate: i.gate } : {}),
     ...(i.error ? { error: i.error.status === undefined ? { message: i.error.message } : i.error } : {}),
   };
 }

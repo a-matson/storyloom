@@ -25,3 +25,13 @@ export async function helperModelFor(read: ReadKind, host: Host, onDown: (baseUr
   }
   return storyModel(host);
 }
+
+/** `helperModelFor` for one session, warning once when the utility server is down. */
+export function helperModels(host: Host): (read: ReadKind) => Promise<HelperModel> {
+  let down = false;
+  return (read) =>
+    helperModelFor(read, host, (url) => {
+      if (!down) console.warn(`utility model at ${url} is unreachable; helper jobs use the story model`);
+      down = true;
+    });
+}

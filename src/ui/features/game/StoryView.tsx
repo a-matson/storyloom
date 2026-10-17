@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { Action, AppSettings, Entity } from '@core/model';
+import type { Action, AppSettings, Entity, GateReason } from '@core/model';
 import type { OutputFlag } from '@core/trace';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { ActionBlock, PROSE } from './ActionBlock';
@@ -21,6 +21,7 @@ interface Props {
   onViewTrace: () => void;
   contextSummary?: string | undefined;
   flag?: OutputFlag | undefined;
+  rerolled?: GateReason | undefined;
   cast?: readonly Entity[] | undefined;
   /** The scene's present characters: the face of a reply to a `say` that names nobody. */
   present?: readonly string[] | undefined;
@@ -42,6 +43,7 @@ export function StoryView({
   onViewTrace,
   contextSummary,
   flag,
+  rerolled,
   cast,
   present,
   onOpenEntity,
@@ -72,6 +74,7 @@ export function StoryView({
             onViewTrace={onViewTrace}
             contextSummary={contextSummary}
             flag={i === lastIdx ? flag : undefined}
+            rerolled={i === lastIdx ? rerolled : undefined}
             cast={cast}
             present={actions[i - 1]?.type === 'say' ? present : undefined}
             onOpenEntity={onOpenEntity}
