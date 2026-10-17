@@ -21,30 +21,17 @@ export function askedFacts(last: Action | undefined, mentioned: readonly Entity[
   const text = last && isPlayerAction(last) ? actionText(last) : '';
   const asked = mentioned.filter((e) => entityNamedIn([e], text));
   if (!asked.length) return new Map();
-  const facts = new Map(
-    entities.flatMap((e) => {
-      const own = new Set(tokenise(namesOf(e).join(' ')));
-      return (
-        ix
-          .of(e.id)
-          .filter(factLike)
-          // A stance without whom it is towards: naming them hit "respectful colleague" on any "Brother".
-          .map(
-            (a) =>
-              [
-                a.id,
-                {
-                  a,
-                  text: tokenise(textOf(a))
-                    .filter((w) => !own.has(w))
-                    .join(' '),
-                },
-              ] as const,
-          )
-      );
-    }),
-  );
-  const index = buildIndex([...facts].map(([id, f]) => ({ id, text: f.text })));
+  // A stance goes without whom it is towards: naming them hit "respectful colleague" on any "Brother".
+  const corpus = entities.flatMap((e) => {
+    const own = new Set(tokenise(namesOf(e).join(' ')));
+    const unnamed = (a: Assertion) => tokenise(textOf(a)).filter((w) => !own.has(w));
+    return ix
+      .of(e.id)
+      .filter(factLike)
+      .map((a) => ({ a, id: a.id, text: unnamed(a).join(' ') }));
+  });
+  const facts = new Map(corpus.map((f) => [f.id, f]));
+  const index = buildIndex(corpus);
   // Ranked on the words it is admitted by: "the" would favour the longer fact.
   const query = contentTerms(tokenise(text));
   const ok = admitted(index, query);
