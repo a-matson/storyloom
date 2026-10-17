@@ -8,8 +8,7 @@ import type { SceneRead } from '@core/schema/extraction';
 
 const name = (n: string) => (n.toLowerCase() === 'you' ? undefined : n === 'the dragon' ? 'Weever' : n);
 const mill: Scene = { location: 'the mill', present: ['Lena'] };
-// An adventure saved while the clock existed.
-const oldSave: Scene = { ...mill, time: { day: 3, part: 'night' } };
+const timed: Scene = { ...mill, time: { day: 3, part: 'night' } };
 const source = { sourceId: 'a9', sourceHash: 'h' };
 const read = (r: Partial<SceneRead>): SceneRead => ({ location: 'the mill', present: [], stay: {}, weather: 'unchanged', ...r });
 const place = (n: string, partOf?: Entity) => ({
@@ -93,9 +92,11 @@ describe('nextScene', () => {
     expect(next(scene, { location: 'the road', present: ['nobody'] }).scene).toEqual({ location: 'the road', present: [], since: 7 });
   });
 
-  it('writes no time, and drops an old save’s clock on the next change', () => {
+  it('writes no time, and keeps the player’s across a read and a move', () => {
     expect(next(undefined, {}, [], 0).scene).toEqual({ location: 'the mill', present: [], since: 0 });
-    expect(next(oldSave, { weather: 'rain' }).scene).toEqual({ ...mill, weather: 'rain' });
+    expect(next(timed, { weather: 'rain' }).scene).toEqual({ ...timed, weather: 'rain' });
+    expect(next(timed, { location: 'the road' }).scene).toEqual({ location: 'the road', present: [], time: timed.time, since: 7 });
+    expect(next(timed, { present: ['Lena'] }).scene).toBe(timed);
   });
 });
 
@@ -176,8 +177,8 @@ describe('renderScene', () => {
     expect(renderScene(undefined)).toBe('');
   });
 
-  it('never sends an old save’s clock', () => {
-    expect(renderScene(oldSave)).toBe('the mill · Present: Lena');
-    expect(renderScene({ present: [], time: { day: 1, part: 'dawn' } })).toBe('');
+  it('sends the time right after the location', () => {
+    expect(renderScene(timed)).toBe('the mill · Day 3, night · Present: Lena');
+    expect(renderScene({ present: [], time: { day: 1, part: 'dawn' } })).toBe('Day 1, dawn');
   });
 });

@@ -14,8 +14,8 @@ export const HEADERS = {
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
- * `Blackmore's study · Present: Lena, Morrow · Here: the ledger, Key (Lena) · You hold: Horn · Rain`,
- * leaving out what is unknown; the item lists come from `entities` too. An old saved `time` is not sent.
+ * `Blackmore's study · Day 2, evening · Present: Lena, Morrow · Here: the ledger, Key (Lena) · You hold: Horn · Rain`,
+ * leaving out what is unknown; the item lists come from `entities` too.
  * ponytail: a third-person player's items stay under their name, not `You hold`; map it when one plays so.
  */
 export function renderScene(stored: Scene | undefined, entities: readonly Entity[] = [], ix = indexAssertions([])): string {
@@ -26,6 +26,8 @@ export function renderScene(stored: Scene | undefined, entities: readonly Entity
   const here = scene ? itemsHere(scene, entities, ix) : [];
   return [
     scene?.location?.trim(),
+    // `formatTime` inlined: importing `clock.ts` would pull it into start-up.
+    scene?.time ? `Day ${scene.time.day}, ${scene.time.part}` : '',
     scene && scene.present.length > 0 ? `Present: ${scene.present.join(', ')}` : '',
     here.length ? `Here: ${here.join(', ')}` : '',
     held.length ? `You hold: ${held.join(', ')}` : '',

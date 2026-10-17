@@ -1,11 +1,12 @@
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import { correct } from '@app/session/correct';
+import { setTime, travelTo, waitFor } from '@app/session/clock';
 import { addRule } from '@app/session/rules';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
 import { StatusDot } from '@ui/components/ui/status-dot';
 import { cn } from '@ui/lib/utils';
-import { MODE_IDS, MODES, parseSlash, type Mode } from './modes';
+import { MODE_IDS, MODES, parseSlash, type Command, type Mode } from './modes';
 import { TurnInput } from './TurnInput';
 
 interface Props {
@@ -19,12 +20,21 @@ interface Props {
   retryReady?: boolean;
 }
 
+const COMMANDS: Record<Command, (api: GameApi, text: string) => Promise<void>> = {
+  correct,
+  rule: addRule,
+  wait: waitFor,
+  time: setTime,
+  travel: travelTo,
+};
+
 const chip =
   'h-[34px] rounded-full border border-border bg-secondary px-3.5 text-control font-medium text-foreground aria-pressed:font-semibold aria-pressed:text-lantern-ink';
 
 /**
  * Take-a-turn row. Enter sends, Ctrl/⌘+Enter continues, Ctrl/⌘+R retries,
- * Ctrl/⌘+Z undoes (input empty); `/do /say /story /see` switch mode, `/correct …` pins a fact, `/rule …` adds a rule.
+ * Ctrl/⌘+Z undoes (input empty); `/do /say /story /see` switch mode, `/correct …` pins a fact, `/rule …` adds a rule,
+ * `/wait 3 hours | until night` and `/time evening, day 2` set the scene's time, `/travel <place> [alone]` its location.
  */
 export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retryReady = false }: Props) {
   const [mode, setMode] = useState<Mode>('do');
@@ -38,7 +48,7 @@ export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retry
     const slash = parseSlash(text);
     if (slash && slash.kind !== 'mode') {
       if (slash.text.trim() !== '') setText('');
-      void (slash.kind === 'rule' ? addRule : correct)(api, slash.text);
+      void COMMANDS[slash.kind](api, slash.text);
       return;
     }
     if (slash) {

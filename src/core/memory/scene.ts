@@ -37,7 +37,7 @@ export const leaversOf = (read: SceneRead): string[] => Object.keys(read.stay).f
  * location is the place's name, so paraphrases collapse. Nobody leaves without a `left` verdict, except
  * that a change of place keeps only the listed and who the read has here or asleep (C3: 27/30). The read changes someone's presence only
  * when `named` (the passage names them): a hand removal then holds (F17), and a character the passage
- * just does not mention is not "left" (M14-S2 replay). There is no clock: an old save's `time` is dropped.
+ * just does not mention is not "left" (M14-S2 replay). `time` is the player's (`clock.ts`): a read or a move keeps it.
  * Unchanged input returns `scene` itself.
  */
 export function nextScene(
@@ -68,13 +68,14 @@ export function nextScene(
   const next: Scene = {
     ...(location !== undefined && { location }),
     present,
+    ...(scene?.time && { time: scene.time }),
     // Schema order, so an unchanged scene compares equal below. The read names no items: a move drops the old place's.
     ...(weather !== undefined && { weather }),
     ...(!moved && scene?.items && { items: scene.items }),
     ...(moved ? { since: at } : scene?.since !== undefined && { since: scene.since }),
   };
   if (!next.location && !next.present.length && !next.weather && !next.items) return { scene, moved: false };
-  const { sourceId: _id, sourceHash: _hash, time: _time, ...rest } = scene ?? {};
+  const { sourceId: _id, sourceHash: _hash, ...rest } = scene ?? {};
   return { scene: JSON.stringify(next) === JSON.stringify(rest) ? scene : next, moved };
 }
 
