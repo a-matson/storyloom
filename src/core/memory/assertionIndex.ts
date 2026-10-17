@@ -27,6 +27,10 @@ export type AssertionOf<K extends Assertion['kind']> = Extract<Assertion, { kind
 export const current = <K extends Assertion['kind']>(as: readonly Assertion[], kind: K): AssertionOf<K>[] =>
   as.filter((a): a is AssertionOf<K> => a.kind === kind && isCurrent(a));
 
+/** The events `id` (an entity id or `you`) took part in, whichever of them is the subject. */
+export const eventsOf = (as: readonly Assertion[], id: string): AssertionOf<'event'>[] =>
+  as.filter((a): a is AssertionOf<'event'> => a.kind === 'event' && a.who.includes(id));
+
 /** Who it is: a canon or carded entity's card text, else its current identity assertion. */
 export const identityText = (e: Pick<Entity, 'canon' | 'cardId' | 'description'>, as: readonly Assertion[]): string =>
   e.canon || e.cardId ? e.description : (current(as, 'identity').at(-1)?.text ?? '');
@@ -37,7 +41,7 @@ export const isLegacy = (e: Entity): boolean =>
 
 /** The line a fact used to be: what pins, the contradiction check and the BM25 corpus read. */
 export function textOf(a: Assertion): string {
-  if (a.kind === 'identity' || a.kind === 'trait' || a.kind === 'secret') return a.text;
+  if (a.kind === 'identity' || a.kind === 'trait' || a.kind === 'secret' || a.kind === 'event') return a.text;
   if (a.kind === 'look' || a.kind === 'state') return a.key === 'legacy' ? a.value : `${a.key}: ${a.value}`;
   if (a.kind === 'effect') return a.condition;
   if (a.kind === 'relationship') return a.stance;

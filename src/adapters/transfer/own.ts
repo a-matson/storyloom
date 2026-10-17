@@ -91,6 +91,7 @@ function renumber(a: Exported): Adventure {
       subject: id(x.subject),
       ...(x.kind === 'effect' && x.cause?.id && { cause: { ...x.cause, id: id(x.cause.id) } }),
       ...(x.kind === 'secret' && { knownBy: x.knownBy.map(id) }),
+      ...(x.kind === 'event' && { who: x.who.map(id) }),
     })),
     memories: [], // embeddings may come from another embedder; rebuilt lazily
     updatedAt: Date.now(),

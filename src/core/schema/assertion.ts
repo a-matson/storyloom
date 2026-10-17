@@ -46,4 +46,6 @@ export const Assertion = z.discriminatedUnion('kind', [
   z.object({ ...common, kind: z.literal('conflict'), key: z.string(), claimed: z.string(), canon: z.string() }),
   /** A fact the player marked secret (`subject: you`, `at` = the marked action); `knownBy` = entity ids plus `you`. */
   z.object({ ...common, kind: z.literal('secret'), text: z.string(), knownBy: z.array(z.string()) }),
+  /** Something that happened at `at`; `who` = entity ids or `you`, `subject` = `who[0]`. */
+  z.object({ ...common, kind: z.literal('event'), text: z.string(), who: z.array(z.string()).check(z.minLength(1)) }),
 ]);
