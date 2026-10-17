@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
+import { z } from 'zod/mini';
+import * as S from '@core/schema';
 import { writeMeasurement } from '../../bench/env';
+import { readDb } from '../../bench/livePlay';
 
 // `MEASURE_URL=http://localhost:8080 pnpm exec playwright test --project=live e2e/live/dice.spec.ts`: the dice quick start
 // on a real model; every outcome and reply in full, labelled by hand (M21-5). Never runs in CI.
@@ -32,21 +35,6 @@ const ATTEMPTS = [
 
 test('dice outcomes on a real model', async ({ page }) => {
   test.setTimeout(60 * 60_000);
-  const turns: { outcome: string | undefined; action: string | undefined; output: string }[] = [];
-  page.on('requestfinished', async (r) => {
-    if (!r.url().endsWith('/completion')) return;
-    const body = r.postDataJSON() as { prompt: string; grammar?: string; n_predict: number; id_slot?: number };
-    if (body.grammar || body.n_predict === 0 || body.id_slot === 1) return;
-    const text = (await (await r.response())?.text()) ?? '';
-    const output = text
-      .split('\n')
-      .filter((l) => l.startsWith('data: '))
-      .map((l) => (JSON.parse(l.slice(6)) as { content?: string }).content ?? '')
-      .join('');
-    const lines = body.prompt.split('\n');
-    turns.push({ outcome: lines.find((l) => l.startsWith('[Outcome:')), action: lines.findLast((l) => l.startsWith('> ')), output });
-  });
-
   await page.goto('/');
   await page.getByRole('button', { name: /^llama-server/ }).click();
   await page.getByRole('textbox', { name: /Server URL/ }).fill(URL ?? '');
@@ -62,5 +50,22 @@ test('dice outcomes on a real model', async ({ page }) => {
     await expect(page.getByRole('button', { name: 'Stop generating' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 180_000 });
   }
+  // The trace keeps the script's `d20 <roll> vs <dc>` log and the reply it led to; the action before the reply is the Do.
+  // The last reply is saved after its Send button returns.
+  await expect.poll(async () => (await readDb(page)).traces.length).toBeGreaterThanOrEqual(ATTEMPTS.length);
+  const db = await readDb(page);
+  const actions = z.array(S.Action).parse(db.actions);
+  const traces = z
+    .array(S.TurnTrace)
+    .parse(db.traces)
+    .toSorted((a, b) => a.createdAt - b.createdAt);
+  const turns = traces.map(({ actionId, scriptLogs }) => {
+    const at = actions.findIndex((a) => a.id === actionId);
+    const text = (i: number) => {
+      const a = actions[i];
+      return a ? (a.versions[a.active] ?? '') : '';
+    };
+    return { roll: scriptLogs.find((l) => l.includes('d20')), action: text(at - 1), output: text(at) };
+  });
   console.log(writeMeasurement(process.env['MEASURE_LABEL'] ?? 'dice-m21-5', { turns }));
 });
