@@ -1,0 +1,34 @@
+{
+  "note": "Labelled by Claude, not blind. M21-2 live runs (MEASURE_CLOCK=1): the output right after each /wait, rated on whether it honours the scene's new time. 'silent' = no time cue either way.",
+  "runs": {
+    "live-play-m21-2-a": [
+      {
+        "turn": 6,
+        "command": "/wait 4 hours",
+        "time": "Day 1, evening",
+        "verdict": "honoured",
+        "evidence": "the dying light; torches cutting through the twilight"
+      },
+      {
+        "turn": 11,
+        "command": "/wait until morning",
+        "time": "Day 2, morning",
+        "verdict": "silent",
+        "evidence": "no time cue; the next turn has a patrol with torches"
+      },
+      { "turn": 18, "command": "/wait until night", "time": "Day 2, night", "verdict": "honoured", "evidence": "goes to bed, sleeps, wakes at dawn" }
+    ],
+    "live-play-m21-2-b": [
+      { "turn": 6, "command": "/wait 4 hours", "time": "Day 1, evening", "verdict": "honoured", "evidence": "blocks most of the fading light" },
+      {
+        "turn": 11,
+        "command": "/wait until morning",
+        "time": "Day 2, morning",
+        "verdict": "silent",
+        "evidence": "what little light penetrates the canopy; no time cue"
+      },
+      { "turn": 18, "command": "/wait until night", "time": "Day 2, night", "verdict": "honoured", "evidence": "sleeps; wakes in the gray light before dawn" }
+    ]
+  },
+  "twoDaysBehindSlips": 0
+}

@@ -122,6 +122,8 @@ test('scripted live play', async ({ page }) => {
   await page.getByRole('button', { name: 'Fantasy' }).click();
   await expect(page).toHaveURL(/#\/adventure\//);
 
+  // With MEASURE_CLOCK, every output in full: whether it honours the time is labelled by hand.
+  const clock: { turn: number; command?: string; output: string }[] = [];
   for (const [i, [mode, text]] of TURNS.entries()) {
     // A command sets the scene and writes no action: typed and sent, but not a turn.
     const command = process.env['MEASURE_CLOCK'] ? CLOCK[i] : undefined;
@@ -135,6 +137,8 @@ test('scripted live play', async ({ page }) => {
     await page.getByRole('button', { name: mode, exact: true }).click();
     await page.getByRole('textbox', { name: 'Take a turn' }).pressSequentially(text, { delay: TYPE_MS / text.length });
     await generated(page, () => send(page).click());
+    if (process.env['MEASURE_CLOCK'])
+      clock.push({ turn: i, ...(command && { command }), output: await page.locator('#story [data-action-id]').last().innerText() });
     if (i === 2) await addCards(page);
     if (i === 5) for (let r = 0; r < 2; r++) await generated(page, () => page.getByRole('button', { name: /^Retry( ·)?$/ }).click());
     if (i === 9) await editLast(page);
@@ -233,6 +237,7 @@ test('scripted live play', async ({ page }) => {
       facts: lines.flatMap((a) => (a.subject === id ? [textOf(a)] : [])),
     })),
     entityPrompt,
+    ...(clock.length && { clock }),
     ...(IMAGES && { images: IMAGES, renders, mostRendering, portraitLog, portraits: await portraits(page, entities) }),
     cards: z
       .array(S.StoryCard)
