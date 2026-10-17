@@ -32,7 +32,8 @@ test('a banned phrase flags the output; the retry carries the note', async ({ pa
 
   await page.getByRole('button', { name: 'Retry without it' }).click();
   await expect(badge).toBeHidden();
-  expect(prompts.filter((p) => p.includes('[Note: keep to this: Never write "his voice thick".]'))).toHaveLength(1);
+  // The badge hides when the retry starts, before its request is sent.
+  await expect.poll(() => prompts.filter((p) => p.includes('[Note: keep to this: Never write "his voice thick".]'))).toHaveLength(1);
 
   await page.reload();
   await page.getByRole('tab', { name: 'Gameplay' }).click();

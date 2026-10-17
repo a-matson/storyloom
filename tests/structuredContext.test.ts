@@ -72,6 +72,14 @@ describe('structured elements', () => {
     expect(cast(r)?.split('\n').slice(1)).toEqual(['Lamp (that never goes out).', 'Amulet (of the drowned queen).', 'Orrin (a ferryman).']);
   });
 
+  it('puts the room first on the now-line of who is in another room', () => {
+    const i = derived({ ...input(4000), plot: { scene: { ...scene, zones: { Lena: 'the basement' } } } });
+    const r = buildContext(i);
+    expect(r.sections.find((s) => s.kind === 'scene')?.text).toBe('[Scene: the mill · In the basement: Lena · Cold rain at night]');
+    expect(cast(r)?.split('\n')[0]).toBe('Lena (keeps the mill): in the basement; wary; poisoned — the green wine; distrusts you; She hums.');
+    expect(nowLines(i).lines[0]?.text).toMatch(/^Lena \(keeps the mill\): in the basement;/);
+  });
+
   it('gives a present character its stance to another present one', () => {
     const toOrrin = { ...lena, facts: [fact('Lena', 9, 'owes him money', { kind: 'relationship', key: 'Orrin' })] };
     const r = buildContext({ ...input(4000), entities: [toOrrin, orrin], plot: { scene: { ...scene, present: ['Orrin', 'Lena'] } } });

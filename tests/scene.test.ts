@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { renderScene } from '@core/context/render';
 import { mergeEntity } from '@core/memory/entities';
-import { sceneIds, sceneNames } from '@core/memory/names';
-import { namedIn, namedScene, nextScene, PRESENCE_CAP, SCENE_LOG_CAP, withScene } from '@core/memory/scene';
+import { roomsOf, sceneIds, sceneNames } from '@core/memory/names';
+import { namedIn, nextScene, PRESENCE_CAP, SCENE_LOG_CAP, withScene } from '@core/memory/scene';
 import type { Entity, PlotComponents, Scene } from '@core/model/types';
 import type { SceneRead } from '@core/schema/extraction';
 
@@ -19,6 +19,20 @@ const place = (n: string, partOf?: Entity) => ({
 const everyone = () => true;
 const next = (scene: Scene | undefined, r: Parameters<typeof read>[0], places: Entity[] = [], at = 7, named: (n: string) => boolean = everyone) =>
   nextScene(scene, read(r), name, at, places, named);
+
+describe('roomsOf', () => {
+  it('gives the other places inside the outermost place, from a room or the top', () => {
+    const inn = place('the inn');
+    const cellar = place('the cellar', inn);
+    const loft = place('the loft', inn);
+    const road = place('the road');
+    const all = [inn, cellar, loft, road];
+    expect(roomsOf(all, cellar)).toEqual(['the inn', 'the loft']);
+    expect(roomsOf(all, inn)).toEqual(['the cellar', 'the loft']);
+    expect(roomsOf(all, road)).toEqual([]);
+    expect(roomsOf(all, undefined)).toEqual([]);
+  });
+});
 
 describe('nextScene', () => {
   it('keeps everyone not marked left: a sleeper the reply leaves out stays, the listed join, the left go', () => {
@@ -144,7 +158,8 @@ describe('zones (M21-1)', () => {
   it('stores the room keys as ids, and reads them back as names', () => {
     const vorthak = mergeEntity(undefined, { name: 'Vorthak', kind: 'character', description: '' }, 0);
     const stored: Scene = { location: 'the mill', present: [vorthak.id], zones: { [vorthak.id]: 'the basement' } };
-    expect(namedScene(stored, [vorthak])).toEqual({ location: 'the mill', present: ['Vorthak'], zones: { Vorthak: 'the basement' } });
+    expect(sceneIds(sceneNames(stored, [vorthak]), [vorthak])).toEqual(stored);
+    expect(sceneNames(stored, [vorthak])).toEqual({ location: 'the mill', present: ['Vorthak'], zones: { Vorthak: 'the basement' } });
     const plot = withScene({ scene: { ...stored, zones: {} } }, read({ stay: { Vorthak: went('the cellar') } }), name, 4, source, [vorthak], 'Vorthak.');
     expect(plot.scene?.zones).toEqual({ [vorthak.id]: 'the cellar' });
     expect(withScene(plot, read({}), name, 5, source, [vorthak], '')).toBe(plot);
@@ -226,6 +241,14 @@ describe('renderScene', () => {
     expect(renderScene({ ...mill, items: ['the ledger'] })).toBe('the mill · Present: Lena · Here: the ledger');
     expect(renderScene({ present: [] })).toBe('');
     expect(renderScene(undefined)).toBe('');
+  });
+
+  it('lists who is in another room after who is with you, room by room in present order', () => {
+    const zones = { Vorthak: 'the basement', Pike: 'the loft', Weever: 'the basement' };
+    expect(renderScene({ ...mill, present: ['Lena', 'Vorthak', 'Pike', 'Weever'], zones })).toBe(
+      'the mill · Present: Lena · In the basement: Vorthak, Weever · In the loft: Pike',
+    );
+    expect(renderScene({ ...mill, present: ['Vorthak'], zones })).toBe('the mill · In the basement: Vorthak');
   });
 
   it('sends the time right after the location', () => {

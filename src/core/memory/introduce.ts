@@ -9,7 +9,7 @@ import { foldEntities, newNamesIn, notAName } from './fold';
 import { MEMORY_SPAN } from './memoryBank';
 import { indexAssertions } from './assertionIndex';
 import { castLabels, namesOf, sceneNames } from './names';
-import { namedScene, withScene } from './scene';
+import { withScene } from './scene';
 import { applyChanges, stateAsk, stateCast, type StateUpdate } from './stateRead';
 
 /** Actions an introduction reads at least: the last AI output and the player line before it. [provisional] */
@@ -75,7 +75,7 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps, edited?
   // From the last finished call: a call the next turn cut (it takes ~28 s) is read again with that turn. [measured: 2026-10-09-live-play-m11-2-read30.json]
   const range = { fromAction: Math.max(0, n - MEMORY_SPAN, Math.min(at ?? 0, n - INTRODUCE_SPAN)), toAction: n };
   const passage = passageOf(adventure, range);
-  const now = adventure.plot.scene && namedScene(adventure.plot.scene, adventure.entities);
+  const now = adventure.plot.scene && sceneNames(adventure.plot.scene, adventure.entities);
   // Present without a card: the name guard drops a name that only opens sentences ("Weever nods.").
   const uncarded = (now?.present ?? []).filter((p) => !knownAs(adventure.entities, p) && passage.includes(p));
   // ponytail: names past the grammar's cap wait for the batch call; raise MAX_INTRODUCED if openings name more.

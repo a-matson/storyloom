@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DEFAULT_APP_SETTINGS, embedderFor, imageProviderFor, openSession, providerFor } from '@app/services';
+import { DEFAULT_APP_SETTINGS, embedderFor, imageProviderFor, providerFor } from '@app/services';
+import { openSession } from '@app/openSession';
 import { createBlankAdventure, type AppSettings } from '@core/model';
 import type { Provider } from '@core/ports';
 
