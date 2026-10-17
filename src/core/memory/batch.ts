@@ -1,6 +1,15 @@
 import type { Adventure, ExtractionJson } from '../model/types';
 import { z } from 'zod/mini';
-import { ExtractedEntity, MAX_ENTITIES, MAX_REFERS, ExtractionJson as Schema, extractionJson, type RefersTo } from '../schema/extraction';
+import {
+  ExtractedEntity,
+  MAX_ENTITIES,
+  MAX_EVENTS,
+  MAX_REFERS,
+  ExtractionJson as Schema,
+  extractionJson,
+  type ExtractedEvent,
+  type RefersTo,
+} from '../schema/extraction';
 import { extractPrompt } from '../text/prompts';
 import { helperJson, lists, passageOf, type ExtractDeps } from './extract';
 import { extractGrammar, grammarOf } from './extractJsonSchema';
@@ -10,22 +19,28 @@ import type { MaintenanceDeps } from './memoryJobs';
 import { indexAssertions } from './assertionIndex';
 import { castLabels, namesOf, words } from './names';
 import { acceptRoles } from './roles';
+import { foldEvents } from './events';
 
-/** `cut`: the reply ran to its cap inside `entities`; one cut in `refersTo` lost roles only. */
-type Extracted = ExtractionJson & { refersTo: RefersTo[]; cut: boolean };
+/** `cut`: the reply ran to its cap inside `entities`; one cut in `refersTo` or `events` lost roles or events only. */
+type Extracted = ExtractionJson & { refersTo: RefersTo[]; events: ExtractedEvent[]; cut: boolean };
 const Phrases = z.record(z.string(), z.unknown());
+const Event = z.object({ what: z.string(), who: z.array(z.string()), at: z.int() });
 const extractAccepter =
   (cast: readonly string[]) =>
   (cut: boolean) =>
   (data: unknown): Extracted | null => {
-    const said = typeof data === 'object' && data !== null && 'refersTo' in data ? Phrases.safeParse(data.refersTo).data : undefined;
-    const l = lists(data, cut && !said);
+    const d = typeof data === 'object' && data !== null ? data : {};
+    const said = 'refersTo' in d ? Phrases.safeParse(d.refersTo).data : undefined;
+    // The reply's keys come in grammar order, so the last one present is where a cut fell.
+    const inEvents = cut && 'events' in d;
+    const inRefs = cut && !inEvents && !!said;
+    const l = lists(data, cut && !inRefs);
     if (!l) return null;
     const r = Schema.safeParse({ ...l.data, entities: l.items('entities', ExtractedEntity, MAX_ENTITIES) });
     // Repair closes a phrase cut at the cap: the last one written is unfinished.
-    const keys = Object.keys(said ?? {}).slice(0, cut ? -1 : undefined);
+    const keys = Object.keys(said ?? {}).slice(0, inRefs ? -1 : undefined);
     const refs = keys.flatMap((name) => (cast.includes(name) && typeof said?.[name] === 'string' && said[name].trim() ? [{ name, phrase: said[name] }] : []));
-    return r.success ? { ...r.data, refersTo: refs, cut: cut && !said } : null;
+    return r.success ? { ...r.data, refersTo: refs, events: l.items('events', Event, MAX_EVENTS), cut: cut && !said && !inEvents } : null;
   };
 
 /**
@@ -33,8 +48,10 @@ const extractAccepter =
  * pretty-print, and it fills every look key ("none"). At 300 the cut fell in `entities`, at 500 in
  * `speakers`, so 500 stays. [measured: 2026-10-13-batch-m13-4.json, 2026-10-13-batch-m13-4-at500.json]
  * On one line (`extractGrammar`) replies take 260–389, so 500 is headroom. [measured: 2026-10-16-batch-m17-3.json]
+ * With `events` 500 cut 3 of 6 calls, one inside `entities` in both runs; at 600, 0 of 12, the longest 590.
+ * [measured: 2026-10-17-batch-m19-5-events*.json, -at600*.json, -final*.json]
  */
-const EXTRACT_TOKENS = 500;
+const EXTRACT_TOKENS = 600;
 
 /**
  * The combined helper call: entities for one passage whose paragraphs are numbered by action index, and with `cast`
@@ -88,14 +105,17 @@ export async function updateEntities(adventure: Adventure, range: MemoryRange, d
   const text = words(passage);
   const ix = indexAssertions(adventure.assertions);
   const labels = castLabels(adventure.entities, ix);
-  const cast = adventure.entities
-    .filter((e) => e.kind === 'character' && namesOf(e).some((n) => n.trim() !== '' && text.includes(words(n))))
-    .toSorted((a, b) => b.lastSeen - a.lastSeen)
-    .map((e) => labels.get(e.id) ?? e.name);
-  const reply = passage ? await extractFromPassage(passage, known, [...new Set(cast)].slice(0, MAX_REFERS), deps) : null;
+  const byLabel = new Map(
+    adventure.entities
+      .filter((e) => e.kind === 'character' && namesOf(e).some((n) => n.trim() !== '' && text.includes(words(n))))
+      .toSorted((a, b) => b.lastSeen - a.lastSeen)
+      .map((e) => [labels.get(e.id) ?? e.name, e]),
+  );
+  const reply = passage ? await extractFromPassage(passage, known, [...byLabel.keys()].slice(0, MAX_REFERS), deps) : null;
   if (!reply) return { touched: 0 };
   const log: FoldLog = { proposed: 0, rejected: [] };
   const touched = foldEntities(adventure, reply.entities, passage, range, { twice: true, log });
+  foldEvents(adventure, reply.events, range, byLabel, (entity, value) => log.rejected.push({ entity, value, reason: 'event-rejected', passageRange: range }));
   adventure.entities = acceptRoles(
     adventure.entities,
     reply.refersTo,

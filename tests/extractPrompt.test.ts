@@ -86,20 +86,22 @@ describe('the entity call’s prompt', () => {
 
   it('asks refersTo after entities, a required phrase per name, and has no key with no character', () => {
     const g = extractGrammar(['Weever', 'Old "Nan"']);
-    expect(g).toMatch(/^root ::= "\{\\"entities\\":\[".*"\],\\"refersTo\\":\{.*\}\}"$/m);
-    expect(g).toContain(String.raw`"],\"refersTo\":{\"Weever\":" phrase ",\"Old \\\"Nan\\\"\":" phrase "}}"`);
+    expect(g).toMatch(/^root ::= "\{\\"entities\\":\[".*"\],\\"refersTo\\":\{.*\},\\"events\\":\[.*\]\}"$/m);
+    expect(g).toContain(String.raw`"],\"refersTo\":{\"Weever\":" phrase ",\"Old \\\"Nan\\\"\":" phrase "},\"events\":[`);
     // One phrase: no comma to list several.
     expect(g).toContain(String.raw`phrase ::= "\"" [^",\\\x7F\x00-\x1F]{0,${PHRASE_CHARS}} "\""`);
     expect(g).not.toMatch(/" "|\\n|\[ \\t\]/);
     expect(EXTRACT_GRAMMAR).not.toMatch(/refersTo|phrase/);
     expect(grammarOf(extractionJson(['Weever']))).toMatchObject({
-      required: ['entities', 'refersTo'],
+      required: ['entities', 'refersTo', 'events'],
       properties: { refersTo: { required: ['Weever'], properties: { Weever: { maxLength: PHRASE_CHARS } } } },
     });
     expect(EXTRACT_JSON_SCHEMA).not.toHaveProperty('properties.refersTo');
     const p = extractPrompt('[0] The kobold waves.', [], true, true);
-    expect(p).toMatch(/refersTo: for each name.*"" if none; never the name itself or a pronoun\.\nReturn \{"entities": \[\.\.\.\], "refersTo": \{\.\.\.\}\}/s);
-    expect(extractPrompt('[0] The kobold waves.', [], false, true)).toContain('"refersTo": {"<Name>": "the <role>"}}');
+    expect(p).toMatch(
+      /refersTo: for each name.*"" if none; never the name itself or a pronoun\.\nevents: .*\nReturn \{"entities": \[\.\.\.\], "refersTo": \{\.\.\.\}, "events": \[\.\.\.\]\}/s,
+    );
+    expect(extractPrompt('[0] The kobold waves.', [], false, true)).toContain('"refersTo": {"<Name>": "the <role>"},\n "events": [');
     expect(extractPrompt('[0] The kobold waves.', [], true)).not.toMatch(/refersTo/);
   });
 });

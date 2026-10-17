@@ -25,8 +25,9 @@ const EXTRACT_SKELETON =
   'Return JSON in this shape (<...> are placeholders):\n' +
   '{"entities": [{"name": "<Name>", "kind": "character", "aliases": ["<role>"], "description": "<one sentence>",\n' +
   '   "facts": ["<fact>"], "looks": {"<key>": "<a few words>"}, "relationships": [{"to": "<Name>", "stance": "<a few words>"}]},\n' +
-  '  {"name": "<Name>", "kind": "place", "description": "<one sentence>", "facts": []}]}';
-const EXTRACT_SKELETON_ROLES = `${EXTRACT_SKELETON.slice(0, -1)},\n "refersTo": {"<Name>": "the <role>"}}`;
+  '  {"name": "<Name>", "kind": "place", "description": "<one sentence>", "facts": []}]';
+const SKELETON_ROLES = ',\n "refersTo": {"<Name>": "the <role>"}';
+const SKELETON_EVENTS = ',\n "events": [{"what": "<what happened>", "who": ["<Name>", "You"], "at": <number>}]}';
 
 /**
  * llama-server's schema grammar allows newlines and indentation; pretty-printed, 3 of 8 entity
@@ -42,6 +43,10 @@ export const LOOKS_ASK = `looks is only for characters: a few words for each of 
  */
 const REFERS_ASK =
   'refersTo: for each name it lists, one short noun phrase the passage calls that character by in place of the name ("the gnome" for a gnome called Tib, "the old sailor"), or "" if none; never the name itself or a pronoun.\n';
+/** Last, as in the reply, so a cut loses events before roles. [provisional] */
+const EVENTS_ASK =
+  'events: at most 2 things in the passage that will matter later (a death, a promise, a theft, a discovery, a betrayal), each in one short sentence, ' +
+  'who took part (the one who did it first; "You" for the player), and the [number] of the paragraph it happens in. Leave it empty when nothing like that happens.\n';
 /**
  * The combined call. No cards of the known names and no list of new ones: with both, the 12B
  * proposed 10 facts at d30 where the bare prompt's reply kept 15. [measured: 2026-10-11-recall-m12-1-pr2-log-d30.json]
@@ -58,7 +63,10 @@ export function extractPrompt(passage: string, knownNames: readonly string[], gr
     'No location, posture, condition or mood: those are read each turn. ' +
     'The player is "you", not an entity.\n' +
     (roles ? REFERS_ASK : '') +
-    (grammar ? `Return {"entities": [...]${roles ? ', "refersTo": {...}' : ''}}.` : roles ? EXTRACT_SKELETON_ROLES : EXTRACT_SKELETON) +
+    EVENTS_ASK +
+    (grammar
+      ? `Return {"entities": [...]${roles ? ', "refersTo": {...}' : ''}, "events": [...]}.`
+      : EXTRACT_SKELETON + (roles ? SKELETON_ROLES : '') + SKELETON_EVENTS) +
     ONE_LINE
   );
 }

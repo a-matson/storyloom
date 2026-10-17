@@ -76,7 +76,7 @@ describe('entity extraction in memory maintenance', () => {
     const entityReqs = reqs.filter((r) => r.prompt.includes(ENTITY_PROMPT));
     expect(entityReqs).toHaveLength(2);
     expect(entityReqs[0]).toMatchObject({
-      maxTokens: 500,
+      maxTokens: 600,
       temperature: 0.2,
       slotId: 1,
       cachePrompt: true,
@@ -194,7 +194,7 @@ describe('entity extraction in memory maintenance', () => {
     expect(extractPrompt('[0] Mira waves.', none, false)).not.toMatch(/importance|threads|timeDelta|time of day|appearance/);
     const schema = grammarOf(extractionJson([]));
     expect(extractPrompt('[0] Mira waves.', none, false)).not.toMatch(/speakers/);
-    expect(schema.required).toEqual(['entities']);
+    expect(schema.required).toEqual(['entities', 'events']);
     // Required, every entity wrote looks and the reply hit the token cap.
     expect(schema).toMatchObject({ properties: { entities: { items: { required: expect.not.arrayContaining(['looks']) } } } });
     // Uncapped, one description ran past the whole reply.
