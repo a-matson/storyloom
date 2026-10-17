@@ -53,9 +53,18 @@ describe('soft stop', () => {
     expect(trace?.outcome).toBe('done');
   });
 
-  it('does not stop at a paragraph break from before responseLength', async () => {
-    const { done } = await play([' Go', '.', '\n\n', ' The', ' door', ' opens', '.', '\n\n', ' Then']);
+  it('does not stop at a paragraph break from before 75 % of responseLength', async () => {
+    const { done } = await play([' Go', '.', '\n\n', ' The', ' door', ' opens', '.', '\n\n', ' Then'], 5);
     expect(done?.text).toBe(' Go.\n\n The door opens.');
+  });
+
+  it('cuts at the first paragraph break past 75 % of responseLength, not past all of it', async () => {
+    // Paragraph breaks at tokens 31, 71, 86 and 131.
+    const para = (n: number) => [...Array.from({ length: n - 1 }, () => ' word'), '.'];
+    const tokens = [...para(30), '\n\n', ...para(39), '\n\n', ...para(14), '\n\n', ...para(44), '\n\n', ' tail'];
+    const { seen, done } = await play(tokens, 100);
+    expect(seen.read).toBe(86);
+    expect(done?.stats?.stopReason).toBe('soft');
   });
 
   it('does not stop at a sentence end alone', async () => {
