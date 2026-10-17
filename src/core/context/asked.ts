@@ -24,13 +24,24 @@ export function askedFacts(last: Action | undefined, mentioned: readonly Entity[
   const facts = new Map(
     entities.flatMap((e) => {
       const own = new Set(tokenise(namesOf(e).join(' ')));
-      return ix
-        .of(e.id)
-        .filter(factLike)
-        .map((a) => {
-          const words = tokenise(a.kind === 'relationship' && a.to !== 'you' ? `${textOf(a)} ${a.to}` : textOf(a));
-          return [a.id, { a, text: words.filter((w) => !own.has(w)).join(' ') }] as const;
-        });
+      return (
+        ix
+          .of(e.id)
+          .filter(factLike)
+          // A stance without whom it is towards: naming them hit "respectful colleague" on any "Brother".
+          .map(
+            (a) =>
+              [
+                a.id,
+                {
+                  a,
+                  text: tokenise(textOf(a))
+                    .filter((w) => !own.has(w))
+                    .join(' '),
+                },
+              ] as const,
+          )
+      );
     }),
   );
   const index = buildIndex([...facts].map(([id, f]) => ({ id, text: f.text })));
