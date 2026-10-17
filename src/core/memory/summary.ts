@@ -15,6 +15,11 @@ const RECENT_SENTENCES = 6;
 /** "Long ago": the story's opening, kept as written, then the era before Recently, retold. [provisional] */
 const OPENING_SENTENCES = 3;
 const ERA_SENTENCES = 3;
+/**
+ * Memories Recently is written from; older ones in the same refresh are retold into Long ago. Play adds 1–3 per refresh;
+ * a catch-up over 88 squeezed the opening out of a 6-sentence Recently. [measured: 2026-10-17-recall-300-m19-5-d270]
+ */
+const RECENT_MEMORIES = 6;
 
 /** A summary's Long ago and Recently; text without the labels (the player's own) is all Long ago. */
 function partsOf(summary: string): [string, string] {
@@ -76,11 +81,11 @@ export async function refreshSummary(adventure: Adventure, deps: Omit<Maintenanc
     .map((m) => markOf(adventure.assertions, adventure.entities, m) + m.text);
   const events = eventsSince(adventure.assertions, lastAt, end).map((e) => e.text);
   if (!since.length && !events.length) return false;
-  const recently = await write(summaryPrompt(since, events, youLines(adventure.assertions)), RECENT_SENTENCES, deps);
+  const recently = await write(summaryPrompt(since.slice(-RECENT_MEMORIES), events, youLines(adventure.assertions)), RECENT_SENTENCES, deps);
   if (!recently) return false;
-  // ponytail: a dirty rebuild squeezes every memory into one Recently; rebuild chunk by chunk if that loses too much.
   const [longAgo, previous] = dirty ? ['', ''] : partsOf(adventure.plot.storySummary ?? '');
-  const era = previous && ((await write(eraPrompt(previous), ERA_SENTENCES, deps)) || firstSentences(previous, ERA_SENTENCES));
+  const older = [previous, ...since.slice(0, -RECENT_MEMORIES)].filter(Boolean).join(' ');
+  const era = older && ((await write(eraPrompt(older), ERA_SENTENCES, deps)) || firstSentences(older, ERA_SENTENCES));
   const past = [firstSentences(longAgo, OPENING_SENTENCES), era].filter(Boolean).join(' ');
   adventure.plot = { ...adventure.plot, storySummary: (past ? `Long ago: ${past}\n\n` : '') + `Recently: ${recently}` };
   adventure.scriptState = { ...adventure.scriptState, __summaryAt: end, __summaryDirty: false };

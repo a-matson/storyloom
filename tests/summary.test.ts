@@ -117,6 +117,23 @@ describe('story summary', () => {
     expect(adv.plot.storySummary).toBe('Long ago: Met Tamsin. At the boat. In rain. Reached the light.\n\nRecently: Rang the bell.');
   });
 
+  it('writes Recently from the newest 6 memories of a long catch-up and retells the rest into Long ago', async () => {
+    const adv = adventure(60);
+    adv.memories = memories([0, 6, 12, 18, 24, 30, 36, 42]);
+    const prompts: string[] = [];
+    const provider = fakeProvider(async function* (req) {
+      prompts.push(req.prompt);
+      yield { text: req.prompt.includes(SUMMARY) ? 'Rang the bell.' : 'Met Tamsin.', done: true };
+    });
+    await refreshSummary(adv, { provider, template: adv.settings.template, historyStart: 48 });
+    const [recent, era] = prompts;
+    expect(recent).toContain('- mem12\n');
+    expect(recent).not.toContain('mem6');
+    expect(era).toContain('mem0 mem6');
+    expect(era).not.toContain('mem12');
+    expect(adv.plot.storySummary).toBe('Long ago: Met Tamsin.\n\nRecently: Rang the bell.');
+  });
+
   it('gives the summary the events of the evicted text as lines before the memories', async () => {
     const adv = adventure(30);
     adv.scriptState = { ...adv.scriptState, __summaryAt: 6 };
