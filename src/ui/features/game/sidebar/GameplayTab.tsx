@@ -3,6 +3,7 @@ import { MODEL_PRESETS } from '@core/text';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Input, Select } from '@ui/components/ui/field';
 import { TEMPLATES } from '@ui/features/setup/backends';
+import { DiceSwitch } from './DiceSwitch';
 import { ImagesSection } from './ImagesSection';
 import { ModelSettings } from './ModelSettings';
 import { NeverWrite } from './NeverWrite';
@@ -238,6 +239,7 @@ export function GameplayTab({
   return (
     <>
       <StoryGenerator s={s} update={api.updateSettings} />
+      <DiceSwitch adventure={adventure} api={api} />
       <MemorySystem s={s} update={api.updateSettings} />
       <ModelSettings model={s.model} onChange={(patch) => api.updateSettings({ model: { ...s.model, ...patch } })} />
       <ImagesSection s={s} app={app} onAppChange={onAppChange} update={api.updateSettings} />

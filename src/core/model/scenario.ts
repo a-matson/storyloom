@@ -120,13 +120,19 @@ export function newScenario(title = '', prompt = ''): Scenario {
 }
 
 /** A blank adventure from a free-text opening (Quick Start / "Surprise me"). */
-export function createBlankAdventure(title: string, opening: string, settings: AdventureSettings = DEFAULT_ADVENTURE_SETTINGS): Adventure {
-  const adv = createAdventureFromScenario(newScenario(title, opening), {}, settings);
+export function createBlankAdventure(
+  title: string,
+  opening: string,
+  settings: AdventureSettings = DEFAULT_ADVENTURE_SETTINGS,
+  scripts?: Scenario['scripts'],
+): Adventure {
+  const adv = createAdventureFromScenario({ ...newScenario(title, opening), scripts }, {}, settings);
   delete adv.scenarioId;
   return adv;
 }
 
-export const QUICK_STARTS: { title: string; tag: string; opening: string }[] = [
+/** `dice`: starts with `DICE_SCRIPTS` (`@core/dice`, loaded on demand: start-up bundle budget). */
+export const QUICK_STARTS: { title: string; tag: string; opening: string; dice?: boolean }[] = [
   {
     title: 'Fantasy',
     tag: 'fantasy',
@@ -150,5 +156,12 @@ export const QUICK_STARTS: { title: string; tag: string; opening: string }[] = [
     tag: 'slice-of-life',
     opening:
       'You run a two-table noodle shop under the railway arches. It is raining, the last train has gone, and the regular who never talks has just asked if you have a minute.',
+  },
+  {
+    title: 'Consequences (dice)',
+    tag: 'dice',
+    opening:
+      'You are a sellsword on the last night of a bad contract. The gate of Halven keep is barred, the wall beside it is slick with rain, and somewhere above, the man who owes you forty crowns is counting them.',
+    dice: true,
   },
 ];

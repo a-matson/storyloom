@@ -2,13 +2,21 @@ import { createFakeLlama } from '@adapters/providers/demo/fakeLlama';
 import { LlamaServerProvider } from '@adapters/providers/llamaServer';
 import { GameSession, type GameSnapshot } from '@app/session';
 import { createBlankAdventure, type Adventure, type AppSettings, type TurnTrace } from '@core/model';
-import { NoopScriptRunner, type ImageProvider, type Storage } from '@core/ports';
+import { NoopScriptRunner, type ImageProvider, type ScriptRunner, type Storage } from '@core/ports';
 import { AppSettings as AppSettingsSchema } from '@core/schema';
 import { createApproxTokenizer } from '@core/text';
 
 /** A session on the fake llama backend, plus the writes, snapshots, traces and idle callbacks it produced. */
 export function setup(
-  opts: { failSave?: boolean; prefetch?: boolean; warm?: boolean; adventure?: Adventure; images?: ImageProvider; imageTimeoutMs?: number } = {},
+  opts: {
+    failSave?: boolean;
+    prefetch?: boolean;
+    warm?: boolean;
+    adventure?: Adventure;
+    images?: ImageProvider;
+    imageTimeoutMs?: number;
+    scriptsFor?: (adv: Adventure) => Promise<ScriptRunner>;
+  } = {},
 ) {
   const handler = createFakeLlama({ wordDelayMs: 0 });
   const provider = new LlamaServerProvider('demo', 'http://demo.invalid', (i, init) => handler(new Request(i, init)));
@@ -47,7 +55,7 @@ export function setup(
         : Promise.reject(new Error('no embedder')),
     tokenizer: createApproxTokenizer(),
     tokenizerFor: () => createApproxTokenizer(),
-    scriptsFor: () => Promise.resolve(new NoopScriptRunner()),
+    scriptsFor: opts.scriptsFor ?? (() => Promise.resolve(new NoopScriptRunner())),
     storage,
     idle: (fn) => idle.push(fn),
     frame: (fn) => setTimeout(fn, 0),

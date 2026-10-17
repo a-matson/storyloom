@@ -44,12 +44,14 @@ export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissN
   const adventures = useLiveQuery(() => storage.listAdventures(), []) ?? [];
   const [error, setError] = useState<string | null>(null);
 
-  const start = (title: string, opening: string) => {
-    const adv = createBlankAdventure(title, opening, app.defaults);
-    storage.putAdventure(adv).then(
-      () => onOpen(adv.id),
-      (e: unknown) => setError(message(e)),
-    );
+  const start = (title: string, opening: string, dice = false) => {
+    const open = async () => {
+      const scripts = dice ? (await import('@core/dice')).DICE_SCRIPTS : undefined;
+      const adv = createBlankAdventure(title, opening, app.defaults, scripts);
+      await storage.putAdventure(adv);
+      onOpen(adv.id);
+    };
+    open().catch((e: unknown) => setError(message(e)));
   };
 
   const surprise = async () => {
