@@ -2,11 +2,12 @@ import type { Adventure, Assertion, Entity } from '../model/types';
 import { newId } from '../model/types';
 import { EVENT_YOU, MAX_EVENTS, type ExtractedEvent } from '../schema/extraction';
 import { actionStoryText } from '../text/formatting';
+import type { AssertionOf } from './assertionIndex';
 import type { MemoryRange } from './memoryBank';
 import { entityNamedIn, namesOf, norm, words } from './names';
 import { YOU } from './you';
 
-// Reached only through `batch.ts`, so it stays off the start-up bundle.
+// Reached only through `batch.ts` and `summary.ts`, so it stays off the start-up bundle.
 
 /** The first sentence of `text` that holds `name` as whole words: what the event rests on. */
 const sentenceWith = (text: string, name: string): string | undefined =>
@@ -14,6 +15,10 @@ const sentenceWith = (text: string, name: string): string | undefined =>
     .match(/[^.!?]+[.!?]*/g)
     ?.map((s) => s.trim())
     .find((s) => words(s).includes(words(name)));
+
+/** The events of actions `[from, to)`, oldest first: what the summary is given beside the memories. */
+export const eventsSince = (all: readonly Assertion[], from: number, to: number): AssertionOf<'event'>[] =>
+  all.filter((a): a is AssertionOf<'event'> => a.kind === 'event' && a.at >= from && a.at < to).toSorted((a, b) => a.at - b.at);
 
 const key = (at: number, who: readonly string[], text: string) => `${at}|${who.toSorted().join(',')}|${norm(text)}`;
 
