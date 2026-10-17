@@ -16,7 +16,7 @@ export const Scene = z.object({
   location: z.optional(z.string()),
   /** Character entity ids, else names nothing is known as; `sceneNames` shows them. */
   present: z.array(z.string()),
-  /** Absent until a passage states the time of day; then it moves only by stated elapsed time. */
+  /** Set only by the player (`/wait`, `/time`, the Scene fields); no read writes it. */
   time: z.optional(z.object({ day: z.int(), part: DayPart })),
   weather: z.optional(z.string()),
   /** Named items there, as written. */

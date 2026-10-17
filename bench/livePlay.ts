@@ -24,6 +24,9 @@ export const TURNS: [mode: 'Do' | 'Say', text: string][] = [
   ['Do', 'wake at dawn and check my pack'],
 ];
 
+/** Commands typed before the turn of that index: the player's clock set, then moved at three points (M21-2 bar). */
+export const CLOCK: Partial<Record<number, string>> = { 0: '/time afternoon, day 1', 6: '/wait 4 hours', 11: '/wait until morning', 18: '/wait until night' };
+
 /** Every row of the stores a live run reads; the app has one adventure. */
 export function readDb(page: Page) {
   return page.evaluate(async () => {

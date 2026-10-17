@@ -55,13 +55,16 @@ export const MODES: Record<Mode, ModeStyle> = {
 
 export const MODE_IDS: Mode[] = ['do', 'say', 'story', 'see'];
 
-export type Slash = { kind: 'mode'; mode: Mode; rest: string } | { kind: 'correct' | 'rule'; text: string };
+const COMMANDS = ['correct', 'rule', 'wait', 'time', 'travel'] as const;
+export type Command = (typeof COMMANDS)[number];
+export type Slash = { kind: 'mode'; mode: Mode; rest: string } | { kind: Command; text: string };
 
-/** `/say hello` switches mode; `/correct …` (a fact) and `/rule …` are not modes: they must not become actions. */
+/** `/say hello` switches mode; `/correct …` (a fact), `/rule …`, `/wait`, `/time`, `/travel` are not modes: they must not become actions. */
 export function parseSlash(raw: string): Slash | null {
-  const m = /^\/(do|say|story|see|correct|rule)(?:\s+(.*))?$/s.exec(raw);
+  const m = /^\/(\w+)(?:\s+(.*))?$/s.exec(raw);
   const rest = m?.[2] ?? '';
-  if (m?.[1] === 'correct' || m?.[1] === 'rule') return { kind: m[1], text: rest };
+  const command = COMMANDS.find((c) => c === m?.[1]);
+  if (command) return { kind: command, text: rest };
   const mode = MODE_IDS.find((id) => id === m?.[1]);
   return mode === undefined ? null : { kind: 'mode', mode, rest };
 }

@@ -15,8 +15,15 @@ describe('parseSlash', () => {
     expect(parseSlash('/rule Kobolds fear fire.')).toEqual({ kind: 'rule', text: 'Kobolds fear fire.' });
   });
 
+  it('returns wait, time and travel with their text', () => {
+    expect(parseSlash('/wait 3 hours')).toEqual({ kind: 'wait', text: '3 hours' });
+    expect(parseSlash('/time evening, day 2')).toEqual({ kind: 'time', text: 'evening, day 2' });
+    expect(parseSlash('/travel the docks alone')).toEqual({ kind: 'travel', text: 'the docks alone' });
+  });
+
   it('ignores anything else', () => {
     expect(parseSlash('hello')).toBeNull();
+    expect(parseSlash('/waiting')).toBeNull();
     expect(parseSlash('/corrected')).toBeNull();
     expect(parseSlash('/rules')).toBeNull();
   });

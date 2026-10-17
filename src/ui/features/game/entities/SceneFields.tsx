@@ -1,6 +1,6 @@
 import { sceneIds, sceneNames } from '@core/memory';
 import type { Entity, PlotComponents, Scene } from '@core/model';
-import { WEATHERS } from '@core/schema';
+import { DayPart, WEATHERS } from '@core/schema';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Input, Select } from '@ui/components/ui/field';
 
@@ -12,6 +12,44 @@ const list = (s: string) =>
 
 /** Location changes shown under the scene. */
 const TIMELINE = 5;
+
+/** The player's clock (`/wait`, `/time`): a part of the day and, once there is one, the day. No part: no time. */
+function TimeFields({ time, set }: { time: Scene['time']; set: (time: Scene['time']) => void }) {
+  return (
+    <>
+      <Select
+        aria-label="Time of day"
+        className="text-control"
+        value={time?.part ?? ''}
+        onChange={(e) => {
+          const part = DayPart.options.find((p) => p === e.target.value);
+          set(part && { day: time?.day ?? 1, part });
+        }}
+      >
+        <option value="">No time</option>
+        {DayPart.options.map((p) => (
+          <option key={p} value={p}>
+            {p}
+          </option>
+        ))}
+      </Select>
+      {time && (
+        <Input
+          key={`day:${time.day}`}
+          aria-label="Day"
+          type="number"
+          min={1}
+          className="text-control"
+          defaultValue={time.day}
+          onBlur={(e) => {
+            const day = Number.parseInt(e.target.value, 10);
+            if (day >= 1) set({ ...time, day });
+          }}
+        />
+      )}
+    </>
+  );
+}
 
 /** The turn read's scene as editable fields. Edits last until a later passage says otherwise. */
 export function SceneFields({
@@ -63,6 +101,7 @@ export function SceneFields({
           </option>
         ))}
       </Select>
+      <TimeFields time={scene.time} set={(time) => set({ time })} />
       {log.length > 0 && (
         <ol aria-label="Scene timeline" className="text-muted-foreground text-xs">
           {log

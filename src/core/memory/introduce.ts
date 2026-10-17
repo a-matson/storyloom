@@ -22,7 +22,7 @@ type TurnUpdate = EntityUpdate & { sceneUpdated: boolean; state?: StateUpdate };
  * and when the scene was at a known place the player is asked whether it is inside it (a room read as a
  * new place: the bedroom case). [provisional: ask vs rule, open question 1 of the M13-1 plan]
  */
-function notePlace(adventure: Adventure, location: string, at: number): boolean {
+export function notePlace(adventure: Adventure, location: string, at: number): boolean {
   const said = location.trim();
   const places = adventure.entities.filter((e) => e.kind === 'place');
   if (!said || knownAs(places, said)) return false;

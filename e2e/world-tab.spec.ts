@@ -33,7 +33,6 @@ test('a new place asks whether it is inside the last one, and Yes records it', a
   await expect(page.getByRole('combobox', { name: 'the lighthouse is inside' })).toHaveValue('ent_well');
 });
 
-// The seeded `time` is an old save's clock: it stays in the data but never reaches the prompt.
 test('a seeded scene shows in the Now card and an edit persists', async ({ page }) => {
   await openSeededAdventure(page, 3, undefined, { scene: { location: 'the Old Well', present: ['Merav'], time: { day: 2, part: 'evening' } } });
   await world(page);
@@ -44,7 +43,7 @@ test('a seeded scene shows in the Now card and an edit persists', async ({ page 
   await world(page);
   await expect(page.getByRole('combobox', { name: 'Weather' })).toHaveValue('storm');
   const context = await rawPrompt(page, 'drink from the well');
-  await expect(context.getByText('[Scene: Old Well · Present: Merav · Storm]')).toBeVisible();
+  await expect(context.getByText('[Scene: Old Well · Day 2, evening · Present: Merav · Storm]')).toBeVisible();
 });
 
 test('a state set on the Now card is in the next prompt; ✕ ends it and Undo brings it back', async ({ page }) => {
