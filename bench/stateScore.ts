@@ -1,4 +1,6 @@
 import { z } from 'zod/mini';
+import { leaversOf, roomIn } from '@core/memory/scene';
+import type { SceneRead } from '@core/schema/extraction';
 
 const at = z.int().check(z.gte(0));
 const Span = { from: at, to: at };
@@ -61,15 +63,32 @@ export function sceneAt(set: LabelSet, i: number): { location: string; present: 
 export interface LeftRow {
   want: readonly string[];
   samples: readonly (readonly string[] | null)[];
+  /** Each sample's `where` by leaver (M21-1). */
+  wheres: readonly (Readonly<Record<string, string>> | null)[];
   ms: readonly number[];
 }
 
-/** M14-S2's bar: samples naming every labelled leaver, over the turns where someone left; and the median read time. */
-export function scoreLeft(rows: readonly LeftRow[]) {
+/** A replayed turn's row from each sample's scene read (undefined: unparsed). */
+export const leftRow = (want: readonly string[], samples: readonly { parsed?: { scene: SceneRead } | undefined; ms: number }[]): LeftRow => ({
+  want,
+  samples: samples.map((s) => (s.parsed ? leaversOf(s.parsed.scene) : null)),
+  wheres: samples.map((s) => (s.parsed ? Object.fromEntries(Object.entries(s.parsed.scene.stay).map(([n, v]) => [n, roomIn(v)])) : null)),
+  ms: samples.map((s) => s.ms),
+});
+
+/**
+ * M14-S2's bar: samples naming every labelled leaver, over the turns where someone left; and the median read time.
+ * With `room` (M21-1's "basement"), samples also giving every leaver a `where` holding that word.
+ */
+export function scoreLeft(rows: readonly LeftRow[], room?: string) {
   const counted = rows.filter((r) => r.want.length > 0);
   const ms = rows.flatMap((r) => r.ms).toSorted((x, y) => x - y);
+  const inRoom = (r: LeftRow, i: number) => room !== undefined && r.want.every((w) => r.wheres[i]?.[w]?.toLowerCase().includes(room));
   return {
     leftOk: counted.flatMap((r) => r.samples.filter((s) => s !== null && r.want.every((w) => s.includes(w)))).length,
+    ...(room !== undefined && {
+      roomOk: counted.flatMap((r) => r.samples.filter((s, i) => s !== null && r.want.every((w) => s.includes(w)) && inRoom(r, i))).length,
+    }),
     leftSamples: counted.reduce((n, r) => n + r.samples.length, 0),
     medianMsA: ms[Math.floor(ms.length / 2)] ?? 0,
   };

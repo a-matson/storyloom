@@ -7,10 +7,12 @@ import {
   sceneRead,
   STAYS,
   stateChange,
+  ZONE_CHARS,
   turnRead,
   type SceneRead,
   type StateAsk,
   type StateChange,
+  type Verdict,
 } from '../schema/extraction';
 import type { StateRecord } from '../text/statePrompt';
 import { actionStoryText } from '../text/formatting';
@@ -71,7 +73,11 @@ const turnAccepter =
     // A missing or bad verdict is "here"; a `left` list (the read before M14-S2) still counts.
     const said = Envelope.safeParse(raw?.['stay']).data;
     const gone = known('left');
-    const verdict = (n: string) => STAYS.find((s) => s === said?.[n]) ?? (gone.includes(n) ? 'left' : 'here');
+    const verdict = (n: string): Verdict => {
+      const room = Envelope.safeParse(said?.[n]).data?.['room'];
+      if (typeof room === 'string') return { room: room.slice(0, ZONE_CHARS) };
+      return STAYS.find((s) => s === said?.[n]) ?? (gone.includes(n) ? 'left' : 'here');
+    };
     const stay = Object.fromEntries(before.map((n) => [n, verdict(n)]));
     const scene = raw && sceneRead(cast, before).safeParse({ ...raw, present: known('present'), stay }).data;
     return {
@@ -136,10 +142,12 @@ const SCENE_TOKENS = 80;
  * (seven entries, then a scene of five). [measured: 2026-10-16-state-m17-1-ab6.json, -ab7.json]
  */
 const CHANGE_TOKENS = 40;
+/** Per character present before: a room is `{"room": "basement storeroom"}`, ~10 tokens over "left". [provisional] */
+const STAY_TOKENS = 8;
 
-/** The turn read's reply budget: the scene's, the cards' beyond it, and read B's when merged in. */
-export const turnReadTokens = (newNames: readonly string[], state?: StateAsk) =>
-  SCENE_TOKENS + (newNames.length ? INTRODUCE_TOKENS - SCENE_TOKENS : 0) + (state ? CHANGE_TOKENS * state.max : 0);
+/** The turn read's reply budget: the scene's with a verdict per one `present` before, the cards' beyond it, and read B's when merged in. */
+export const turnReadTokens = (newNames: readonly string[], state?: StateAsk, present = 0) =>
+  SCENE_TOKENS + STAY_TOKENS * present + (newNames.length ? INTRODUCE_TOKENS - SCENE_TOKENS : 0) + (state ? CHANGE_TOKENS * state.max : 0);
 
 /**
  * The turn read: where the passage ends, after `prev`, with `cast` (every known character name and alias)
@@ -156,7 +164,7 @@ export function readTurn(
   return helperJson(
     (g) => introducePrompt(passage, newNames, g, prev, cast, state),
     grammarOf(turnRead(cast, newNames, prev.present, state)),
-    turnReadTokens(newNames, state),
+    turnReadTokens(newNames, state, prev.present.length),
     turnAccepter(cast, prev.present, state),
     deps,
   );

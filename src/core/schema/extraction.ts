@@ -68,7 +68,14 @@ export const LOCATION_CHARS = 40;
 export const NOBODY = 'nobody';
 /** Where a character present before is at the end of the passage. */
 export const STAYS = ['here', 'left', 'asleep'] as const;
-const Stay = z.enum(STAYS);
+/** A room of the place: "the basement", "upstairs". [provisional] */
+export const ZONE_CHARS = 20;
+/**
+ * A verdict, or the room of this place they went to. As `{stay, where}` with `where` required (R1), every verdict paid for a
+ * room ("here" copied the location in): 63 → 98 tokens, read A +44 % (M14-S2). [measured: 2026-10-17-state-m21-1-s2.json]
+ */
+const Stay = z.union([z.enum(STAYS), z.object({ room: sentence(ZONE_CHARS) })]);
+export type Verdict = z.output<typeof Stay>;
 
 /**
  * Where the passage ends; `scene.ts` resolves it. Every key required: optional, the 12B left keys out (R1).

@@ -97,8 +97,12 @@ const nameOf = (entities: readonly Entity[], ref: string): string => entities.fi
 export const PRESENCE_CAP = 200;
 const key = (ids: readonly string[]) => ids.toSorted().join('\n');
 
-/** `plot.presence` with `present` from action `at` on, when it differs from the last entry; a turn read and a hand edit both log here. */
-export function withPresence(plot: PlotComponents, present: readonly string[], at: number): PlotComponents['presence'] {
+/**
+ * `plot.presence` with who is with you in `scene` from action `at` on, when it differs from the last entry; a turn read and a
+ * hand edit both log here. One in another room is not with you, so witnessed-by gives them an away gap with no new kind.
+ */
+export function withPresence(plot: PlotComponents, scene: Pick<Scene, 'present' | 'zones'>, at: number): PlotComponents['presence'] {
+  const present = scene.present.filter((p) => !scene.zones?.[p]);
   if (key(plot.presence?.at(-1)?.present ?? []) === key(present)) return plot.presence;
   return [...(plot.presence ?? []), { at, present: [...present] }].slice(-PRESENCE_CAP);
 }
@@ -113,7 +117,7 @@ export function sceneIds(scene: Scene, entities: readonly Entity[]): Scene {
   return same ? scene : { ...scene, ...(location !== undefined && { location }), present };
 }
 
-/** `scene` with its ids as the entities' current names, for the prompt and the player. */
+/** `scene` with its ids as the entities' current names, for the prompt and the player. `zones` keeps ids (`zonesBy`, off the start-up chunk). */
 export const sceneNames = (scene: Scene, entities: readonly Entity[]): Scene => ({
   ...scene,
   ...(scene.location !== undefined && { location: nameOf(entities, scene.location) }),

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { presentLine } from '@core/context/cast';
 import { gapsOf, witnessClause } from '@core/context/witness';
-import type { Assertion, Entity } from '@core/model';
+import { withPresence } from '@core/memory';
+import type { Assertion, Entity, PlotComponents } from '@core/model';
 
 const minos: Entity = { id: 'ent_minos', kind: 'character', name: 'Minos', aliases: [], description: '', relations: [], firstSeen: 0, lastSeen: 0 };
 const condition = (value: string, since: number, until?: number): Assertion => ({
@@ -19,6 +20,15 @@ const condition = (value: string, since: number, until?: number): Assertion => (
 const all = { from: 0, to: 99 };
 
 describe('gapsOf', () => {
+  it('is a run in another room of the same place (M21-1), closed when they rejoin', () => {
+    const present = [minos.id, 'other'];
+    const plot: PlotComponents = {};
+    plot.presence = withPresence(plot, { present }, 2);
+    plot.presence = withPresence(plot, { present, zones: { [minos.id]: 'the basement' } }, 5);
+    plot.presence = withPresence(plot, { present }, 9);
+    expect(gapsOf(minos.id, plot.presence ?? [], [], all)).toEqual([{ from: 5, to: 9, kind: 'away' }]);
+  });
+
   it('is a run of presence without them, after they were first there', () => {
     const presence = [
       { at: 2, present: ['other'] },

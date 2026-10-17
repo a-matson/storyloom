@@ -16,6 +16,8 @@ export const Scene = z.object({
   location: z.optional(z.string()),
   /** Character entity ids, else names nothing is known as; `sceneNames` shows them. */
   present: z.array(z.string()),
+  /** A present character's id → the room of this place they are in, as written; absent: in yours. */
+  zones: z.optional(z.record(z.string(), z.string())),
   /** Set only by the player (`/wait`, `/time`, the Scene fields); no read writes it. */
   time: z.optional(z.object({ day: z.int(), part: DayPart })),
   weather: z.optional(z.string()),

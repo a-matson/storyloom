@@ -1,5 +1,5 @@
 import type { Entity, PlotComponents, Scene } from '../model/types';
-import { NOBODY, type SceneRead } from '../schema/extraction';
+import { NOBODY, type SceneRead, type Verdict } from '../schema/extraction';
 import { entityNamedIn } from './entities';
 import { knownAs, norm, sceneIds, sceneNames, withPresence } from './names';
 
@@ -27,8 +27,13 @@ export const namedIn =
   (n: string): boolean =>
     entityNamedIn([entities.find((e) => e.name === n) ?? { name: n, aliases: [] }], passage) !== undefined;
 
-/** The names a read says went away. */
-export const leaversOf = (read: SceneRead): string[] => Object.keys(read.stay).filter((n) => read.stay[n] === 'left');
+/** A verdict's word: a room counts as `left`, as it did before rooms (M21-1). */
+const wordOf = (v: Verdict | undefined) => (typeof v === 'object' ? 'left' : v);
+/** The room a verdict names, else "". */
+export const roomIn = (v: Verdict | undefined): string => (typeof v === 'object' ? v.room : '');
+
+/** The names a read says went away, to another room too. */
+export const leaversOf = (read: SceneRead): string[] => Object.keys(read.stay).filter((n) => wordOf(read.stay[n]) === 'left');
 
 /**
  * The scene after one turn read at action `at`, and whether it changed place. `name` gives a listed name
@@ -37,7 +42,7 @@ export const leaversOf = (read: SceneRead): string[] => Object.keys(read.stay).f
  * location is the place's name, so paraphrases collapse. Nobody leaves without a `left` verdict, except
  * that a change of place keeps only the listed and who the read has here or asleep (C3: 27/30). The read changes someone's presence only
  * when `named` (the passage names them): a hand removal then holds (F17), and a character the passage
- * just does not mention is not "left" (M14-S2 replay). `time` is the player's (`clock.ts`): a read or a move keeps it.
+ * just does not mention is not "left" (M14-S2 replay); so does a room (`zones`), which `here` clears. `time` is the player's (`clock.ts`): a read or a move keeps it.
  * Unchanged input returns `scene` itself.
  */
 export function nextScene(
@@ -58,16 +63,38 @@ export function nextScene(
 
   const names = (xs: readonly string[]) => xs.flatMap((x) => (x === NOBODY ? [] : (name(x) ?? [])));
   const before = scene?.present ?? [];
-  const left = new Set(names(leaversOf(read)).filter(named));
+  // A room of this place keeps them present there; your room is `here`, another place is gone. A move drops the rooms.
+  const roomOf = (where: string): string | undefined => {
+    const w = where.trim();
+    const p = w ? knownAs(places, w) : undefined;
+    return !w || moved || (p && outermost(places, p) !== from) ? undefined : w;
+  };
+  const rooms = new Map<string, string>();
+  for (const n of leaversOf(read)) {
+    const room = roomOf(roomIn(read.stay[n]));
+    const id = room === undefined ? undefined : name(n);
+    if (room !== undefined && id && named(id)) rooms.set(id, room);
+  }
+  const left = new Set(names(leaversOf(read)).filter((p) => named(p) && !rooms.has(p)));
   const listed = names(read.present).filter((p) => before.includes(p) || named(p));
   // On a move, who the read keeps "here" or "asleep" came along: a dragged, unconscious Minos was left out of `present`.
   const kept = moved ? before.filter((p) => read.stay[p] === 'here' || read.stay[p] === 'asleep') : before;
   const present = [...new Set([...kept, ...listed])].filter((p) => !left.has(p));
+  const yours = location === undefined ? undefined : knownAs(places, location);
+  const mine = (room: string) => norm(room) === norm(location ?? '') || (yours !== undefined && knownAs(places, room) === yours);
+  const back = new Set(names(Object.keys(read.stay).filter((n) => read.stay[n] === 'here')).filter(named));
+  const zones = moved
+    ? []
+    : present.flatMap((p) => {
+        const room = rooms.get(p) ?? (back.has(p) ? undefined : scene?.zones?.[p]);
+        return room !== undefined && !mine(room) ? [[p, room] as const] : [];
+      });
   const weather = read.weather === 'unchanged' ? scene?.weather : read.weather === 'none' ? undefined : read.weather;
 
   const next: Scene = {
     ...(location !== undefined && { location }),
     present,
+    ...(zones.length > 0 && { zones: Object.fromEntries(zones) }),
     ...(scene?.time && { time: scene.time }),
     // Schema order, so an unchanged scene compares equal below. The read names no items: a move drops the old place's.
     ...(weather !== undefined && { weather }),
@@ -78,6 +105,14 @@ export function nextScene(
   const { sourceId: _id, sourceHash: _hash, ...rest } = scene ?? {};
   return { scene: JSON.stringify(next) === JSON.stringify(rest) ? scene : next, moved };
 }
+
+/** `scene` with each `zones` key passed through `f`. */
+const zonesBy = (scene: Scene, f: (ref: string) => string): Scene =>
+  scene.zones ? { ...scene, zones: Object.fromEntries(Object.entries(scene.zones).map(([k, v]) => [f(k), v])) } : scene;
+
+/** `sceneNames` with the `zones` keys as names too: it leaves them ids to stay light in the start-up chunk. */
+export const namedScene = (scene: Scene, entities: readonly Entity[]): Scene =>
+  zonesBy(sceneNames(scene, entities), (k) => sceneNames({ present: [k] }, entities).present[0] ?? k);
 
 /**
  * `plot` with the scene a turn read gives, read from `source`, stored as ids (`sceneIds`, so a name
@@ -94,13 +129,13 @@ export function withScene(
   passage: string,
 ): PlotComponents {
   const old = plot.scene;
-  const was = old && sceneNames(old, entities);
+  const was = old && namedScene(old, entities);
   const places = entities.filter((e) => e.kind === 'place');
   const r = nextScene(was, read, name, at, places, namedIn(entities, passage));
-  const scene = r.scene && sceneIds(r.scene, entities);
+  const scene = r.scene && zonesBy(sceneIds(r.scene, entities), (k) => sceneIds({ present: [k] }, entities).present[0] ?? k);
   if (!scene || (r.scene === was && JSON.stringify(scene) === JSON.stringify(old))) return plot;
   const where = r.scene?.location;
   const log = r.moved && where ? [...(plot.sceneLog ?? []), { at, location: where }].slice(-SCENE_LOG_CAP) : plot.sceneLog;
-  const presence = withPresence(plot, scene.present, at);
+  const presence = withPresence(plot, scene, at);
   return { ...plot, scene: { ...scene, ...source }, ...(log && { sceneLog: log }), ...(presence && { presence }) };
 }
