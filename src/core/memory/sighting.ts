@@ -29,7 +29,16 @@ export function uncut(text: string, at = CUT_AT): string {
 export interface Rejected {
   entity: string;
   value: string;
-  reason: 'state-text' | 'no-shared-word' | 'wrong-subject' | 'entity-dropped' | 'look-inferred' | 'identity-unnamed' | 'unknown-to' | 'role-rejected';
+  reason:
+    | 'state-text'
+    | 'no-shared-word'
+    | 'wrong-subject'
+    | 'entity-dropped'
+    | 'look-inferred'
+    | 'identity-unnamed'
+    | 'unknown-to'
+    | 'role-rejected'
+    | 'event-rejected';
   passageRange: MemoryRange;
 }
 

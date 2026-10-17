@@ -73,7 +73,7 @@ describe('the batch call’s roles', () => {
     );
     const r = await updateEntities(adv, { fromAction: 0, toAction: 2 }, { ...fakeDeps(adv).deps, provider });
     // Odo is not in the passage, Gate is no character: neither is asked.
-    expect(reqs[0]?.grammar).toContain(String.raw`"],\"refersTo\":{\"Weever\":" phrase ",\"Minos\":" phrase "}}"`);
+    expect(reqs[0]?.grammar).toContain(String.raw`"],\"refersTo\":{\"Weever\":" phrase ",\"Minos\":" phrase "},\"events\":[`);
     expect(reqs[0]?.prompt).toMatch(/refersTo: for each name/);
     expect(adv.entities.map((e) => e.roles)).toEqual([['the kobold'], undefined, undefined, undefined]);
     expect(r.log?.rejected).toEqual([{ entity: 'Minos', value: 'minotaur', reason: 'role-rejected', passageRange: { fromAction: 0, toAction: 2 } }]);

@@ -248,20 +248,13 @@ test.skipIf(!url || !backup || !READS.includes('C'))('batch call over a backup',
     // How far the marker advanced: past the first memory only after a cut.
     const range = { fromAction, toAction: work.scriptState.__entitiesAt ?? 0 };
     const name = (id: string) => work.entities.find((e) => e.id === id)?.name;
-    const identities = work.assertions.flatMap((a) =>
-      a.kind === 'identity' && !before.has(a.id) ? [{ name: name(a.subject), text: a.text, span: a.span }] : [],
-    );
+    const added = work.assertions.filter((a) => !before.has(a.id));
+    const identities = added.flatMap((a) => (a.kind === 'identity' ? [{ name: name(a.subject), text: a.text, span: a.span }] : []));
+    // M19-5: by name, to label subject swaps by hand.
+    const events = added.flatMap((a) => (a.kind === 'event' ? [{ at: a.at, who: a.who.map((id) => name(id) ?? id), text: a.text, span: a.span }] : []));
     const c = calls[0];
-    replies.push({
-      range,
-      ms: c?.ms,
-      tokens: c?.generatedTokens,
-      stop: c?.stopReason,
-      facts: c?.factsProposed,
-      raw: c?.reply,
-      identities,
-      rejected: c?.rejected,
-    });
+    const call = { ms: c?.ms, tokens: c?.generatedTokens, stop: c?.stopReason, facts: c?.factsProposed, raw: c?.reply };
+    replies.push({ range, ...call, identities, events, rejected: c?.rejected });
     console.log('batch', range, `${c?.ms} ms ${c?.generatedTokens} tokens ${c?.stopReason}`, JSON.stringify(identities), JSON.stringify(c?.rejected));
   }
   const proposals = (work.scriptState.__aliasProposals ?? []).map((p) => ({ name: p.name, of: work.entities.find((e) => e.id === p.of)?.name }));
@@ -270,6 +263,8 @@ test.skipIf(!url || !backup || !READS.includes('C'))('batch call over a backup',
     cut: replies.filter((r) => r.stop === 'length').length,
     meanMs: Math.round(replies.reduce((s, r) => s + (r.ms ?? 0), 0) / Math.max(1, replies.length)),
     factsProposed: replies.reduce((s, r) => s + (r.facts ?? 0), 0),
+    events: replies.reduce((s, r) => s + r.events.length, 0),
+    maxTokens: Math.max(0, ...replies.map((r) => r.tokens ?? 0)),
     cards: work.entities.map((e) => e.name),
     roles: Object.fromEntries(work.entities.map((e) => [e.name, e.roles ?? []])),
     proposals,

@@ -134,13 +134,27 @@ export interface RefersTo {
   phrase: string;
   name: string;
 }
+/** Events one batch reply may give, and an event's length. [provisional] */
+export const MAX_EVENTS = 2;
+export const EVENT_CHARS = 80;
+/** Who took part in an event: a cast label, or `You` for the player. */
+export const EVENT_YOU = 'You';
+/** One thing that happened, as the reply gives it; `events.ts` checks it against the passage. */
+export interface ExtractedEvent {
+  what: string;
+  who: string[];
+  at: number;
+}
 /**
  * The batch reply with `refersTo` after `entities`, so a reply cut at its cap loses roles first: a required phrase
  * per known character the passage names, "" for none. As a free list of {phrase, name} the 12B closed it empty in
  * 2 of 2 calls whose passage said "the kobold" and "the dragon"; keyed, both roles stood in 3 of 3 runs.
  * [measured: 2026-10-17-batch-m18-2-roles.json, -roles-b.json, -roles-f*.json] Built per call; with no character there is no key.
+ * `events` last, so a cut loses events before roles; `who` is the cast or `You`.
  */
-export const extractionJson = (cast: readonly string[]) =>
-  cast.length
-    ? z.object({ ...ExtractionJson.shape, refersTo: z.object(Object.fromEntries(cast.map((n) => [n, z.string().check(z.maxLength(PHRASE_CHARS))]))) })
-    : ExtractionJson;
+export const extractionJson = (cast: readonly string[]) => {
+  const refersTo = z.object(Object.fromEntries(cast.map((n) => [n, z.string().check(z.maxLength(PHRASE_CHARS))])));
+  const who = z.array(z.enum([...cast, EVENT_YOU])).check(z.minLength(1), z.maxLength(2));
+  const events = z.array(z.object({ what: sentence(EVENT_CHARS), who, at: z.int() })).check(z.maxLength(MAX_EVENTS));
+  return z.object({ ...ExtractionJson.shape, ...(cast.length > 0 && { refersTo }), events });
+};
