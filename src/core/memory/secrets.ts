@@ -38,8 +38,14 @@ export function markOf(as: readonly Assertion[], entities: readonly Pick<Entity,
   return labels.length ? `(${labels.join('; ')}) ` : '';
 }
 
-/** `fromId` merged into `intoId`: whoever knew as one name knows as the other. */
+const repoint = (ids: readonly string[], fromId: string, intoId: string) => [...new Set(ids.map((k) => (k === fromId ? intoId : k)))];
+
+/** `fromId` merged into `intoId`: whoever knew or took part as one name did as the other. */
 export const repointSecrets = (adv: Pick<Adventure, 'assertions'>, fromId: string, intoId: string) =>
   (adv.assertions = adv.assertions.map((a) =>
-    a.kind === 'secret' && a.knownBy.includes(fromId) ? { ...a, knownBy: [...new Set(a.knownBy.map((k) => (k === fromId ? intoId : k)))] } : a,
+    a.kind === 'secret' && a.knownBy.includes(fromId)
+      ? { ...a, knownBy: repoint(a.knownBy, fromId, intoId) }
+      : a.kind === 'event' && a.who.includes(fromId)
+        ? { ...a, who: repoint(a.who, fromId, intoId) }
+        : a,
   ));

@@ -1,7 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from 'react';
 import type { entityEdits } from '@app/session/entities';
 import { ruleEdits } from '@app/session/rules';
-import { current, currentStates, indexAssertions, LOOK_KEYS, rivalKey, textOf } from '@core/memory';
+import { current, currentStates, eventsOf, indexAssertions, LOOK_KEYS, rivalKey, textOf, YOU } from '@core/memory';
 import type { Adventure, Assertion, Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
@@ -72,6 +72,7 @@ export function CardSections({ entity: e, adventure, api, edits, onClose, onOpen
     if (kind === 'state') edits.setValue(e.id, v.length ? k.trim() : 'condition', v.length ? v.join(':').trim() : t);
     else if (kind === 'item') edits.addItem(e.name, t);
     else if (kind === 'rule') ruleEdits(api).add(t, [e.id]);
+    else if (kind === 'event') edits.addLine(e.id, { kind, text: t, who: /\byou\b/i.test(t) ? [e.id, YOU] : [e.id] });
     else edits.addLine(e.id, kind === 'effect' ? { kind, condition: t } : { kind, text: t });
   };
   return (
@@ -101,8 +102,7 @@ export function CardSections({ entity: e, adventure, api, edits, onClose, onOpen
       </Section>
       <Rules entity={e} own={own} adventure={adventure} api={api} />
       <Section label="Happened">
-        {own
-          .filter((a) => isHistory(a) && a.kind !== 'identity')
+        {[...own.filter((a) => isHistory(a) && a.kind !== 'identity' && a.kind !== 'event'), ...eventsOf(adventure.assertions, e.id)]
           .toSorted((a, b) => a.since - b.since)
           .map((a) => (
             <FactLine key={a.id} card={card} fact={a} text={textOf(a)}>

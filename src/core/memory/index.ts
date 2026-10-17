@@ -1,7 +1,7 @@
 export * from './memoryBank';
 export { followLog, holds } from './invalidate';
 export { appearanceOf, byPlayer, currentStates, isValue, LOOK_KEYS, rivalKey, setValue, withLooks, type Fields } from './looks';
-export { current, identityText, indexAssertions, isCurrent, isLegacy, textOf, type AssertionOf } from './assertionIndex';
+export { current, eventsOf, identityText, indexAssertions, isCurrent, isLegacy, textOf, type AssertionOf } from './assertionIndex';
 export { heldBy } from './items';
 export { isSpeciesClash, swapWord } from './species';
 export { isYouLine, YOU } from './you';

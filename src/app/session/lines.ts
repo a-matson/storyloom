@@ -22,7 +22,7 @@ const mapOwn = (adv: Adventure, id: string, fn: (e: Entity, own: Assertion[]) =>
 const without = (keys: readonly string[] | undefined, key: string) => (keys ?? []).filter((k) => k !== key);
 
 function reworded(a: Assertion, text: string): Assertion {
-  if (a.kind === 'identity' || a.kind === 'trait' || a.kind === 'secret') return { ...a, text };
+  if (a.kind === 'identity' || a.kind === 'trait' || a.kind === 'secret' || a.kind === 'event') return { ...a, text };
   if (a.kind === 'look' || a.kind === 'state') return { ...a, value: text };
   if (a.kind === 'effect') return { ...a, condition: text };
   if (a.kind === 'relationship') return { ...a, stance: text };

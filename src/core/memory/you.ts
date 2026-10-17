@@ -4,9 +4,9 @@ import { isCurrent, textOf } from './assertionIndex';
 /** The `holder` value and assertion subject that mean the player. */
 export const YOU = 'you';
 
-/** The player's own current lines about themselves: not a conflict, not a secret (that is a scoped fact, not a trait). */
+/** The player's own current lines about themselves: not a conflict, not a secret nor an event (neither is a trait). */
 export const isYouLine = (a: Assertion): boolean =>
-  a.subject === YOU && a.producer === 'player' && isCurrent(a) && a.kind !== 'conflict' && a.kind !== 'secret';
+  a.subject === YOU && a.producer === 'player' && isCurrent(a) && a.kind !== 'conflict' && a.kind !== 'secret' && a.kind !== 'event';
 
 /** What the player wrote about themselves, one line each; the story's reads are left out so a helper cannot echo its own guesses. */
 export const youLines = (as: readonly Assertion[]): string[] => as.filter(isYouLine).map(textOf);
