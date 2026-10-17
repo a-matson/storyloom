@@ -1,6 +1,7 @@
-import { actionText, newId } from '../model/types';
+import { newId } from '../model/types';
 import { REPEAT_WINDOW } from '../text/repetition';
-import type { Adventure, TurnErrorKind, TurnKind, TurnOutcome, TurnTrace } from '../model/types';
+import { previousOutputs } from './gate';
+import type { Adventure, GateReason, TurnErrorKind, TurnKind, TurnOutcome, TurnTrace } from '../model/types';
 import type { CompletionRequest } from '../ports/provider';
 import { TurnErrorKind as ErrorKinds } from '../schema';
 import { buildTrace } from '../trace';
@@ -18,20 +19,14 @@ export interface TurnRun {
   /** `log()` lines and errors of every hook run in this turn. */
   scriptLogs: string[];
   error?: { message: string; status?: number | undefined };
+  /** The output gate fired on the first reply; `retried` when a second one replaced it. */
+  gate?: { reason: GateReason; retried: boolean };
 }
 
 /** `ProviderError` lives in adapters, so its HTTP status is read by shape. */
 function errorDetail(e: unknown): { message: string; status?: number | undefined } {
   const status = typeof e === 'object' && e !== null && 'status' in e && typeof e.status === 'number' ? e.status : undefined;
   return { message: e instanceof Error ? e.message : String(e), status };
-}
-
-/** The AI outputs a repetition is measured against: the last few before this turn's own action. */
-function previousOutputs(adventure: Adventure, actionId: string | undefined): string[] {
-  return adventure.actions
-    .filter((a) => (a.type === 'continue' || a.type === 'start') && a.id !== actionId)
-    .slice(-REPEAT_WINDOW)
-    .map(actionText);
 }
 
 export function startRun(kind: TurnKind): TurnRun {
@@ -74,7 +69,8 @@ export function traceOf(adventure: Adventure, deps: TurnDeps, run: PromptedRun, 
     ttftMs: run.generated?.ttftMs,
     totalMs: Date.now() - run.startedAt,
     output: run.generated?.text,
-    previousOutputs: run.generated ? previousOutputs(adventure, run.actionId) : [],
+    previousOutputs: run.generated ? previousOutputs(adventure.actions, run.actionId, REPEAT_WINDOW) : [],
+    gate: run.gate,
     error: run.error,
   });
 }

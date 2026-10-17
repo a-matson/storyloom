@@ -14,6 +14,15 @@ export function ngramOverlap(a: string, b: string, n: number): number {
   return ours.filter((g) => theirs.has(g)).length / ours.length;
 }
 
+/** Jaccard of the two texts' word n-gram sets; 0 when either has none. */
+export function ngramJaccard(a: string, b: string, n: number): number {
+  const ours = new Set(grams(tokenise(a), n));
+  const theirs = new Set(grams(tokenise(b), n));
+  if (!ours.size || !theirs.size) return 0;
+  const shared = [...ours].filter((g) => theirs.has(g)).length;
+  return shared / (ours.size + theirs.size - shared);
+}
+
 /**
  * Word n-grams of `output` already seen in `previous`, merged into maximal runs so one copied
  * sentence reports once, longest first. Lower-cased, punctuation ignored, no stemming.

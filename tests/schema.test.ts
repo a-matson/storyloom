@@ -20,6 +20,7 @@ describe('schemas', () => {
         repeatLastN: 64,
         dryMultiplier: 0.8,
         dynamic: false,
+        autoRetry: true,
       },
       memory: {
         autoSummary: true,

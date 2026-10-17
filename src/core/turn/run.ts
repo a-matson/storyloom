@@ -1,6 +1,7 @@
 import type { ActionLog } from '../log/actionLog';
 import type { Adventure, TurnTrace } from '../model/types';
 import { formatPlayerInput } from '../text/formatting';
+import { GATE_NOTES, GATE_WINDOW, gateOutput, previousOutputs } from './gate';
 import { buildRequest, generate, randomSeed } from './generate';
 import { runHook } from './hooks';
 import { prepareContext } from './prepare';
@@ -63,10 +64,31 @@ export function runTurn(
         return;
       }
       yield { type: 'context', turnId, ...prepared };
-      const { text, stats } = yield* generateFor(adventure, run, prepared, deps, signal);
-      const action = log.append('continue', text, { turnId, ...(stats ? { stats } : {}) });
+      const first = yield* generateFor(adventure, run, prepared, deps, signal);
+      const before = log.actions;
+      const reason = gateOutput(first.text, previousOutputs(before, undefined, GATE_WINDOW), {
+        playerType: input.type,
+        thirdPerson: adventure.plot.thirdPerson?.enabled ?? false,
+      });
+      const retried = reason !== undefined && adventure.settings.model.autoRetry;
+      if (reason) run.gate = { reason, retried };
+      // The first reply is logged before the re-roll so a failed retry still leaves it, and Retry can bring it back.
+      let action = log.append('continue', first.text, { turnId, ...(first.stats ? { stats: first.stats } : {}) });
       run.actionId = action.id;
       adventure.actions = log.actions;
+      let { text, stats } = first;
+      if (reason && retried) {
+        yield { type: 'regenerate', turnId, actionId: action.id, reason };
+        const again = await prepareContext(adventure, before, deps, run.scriptLogs, GATE_NOTES[reason]);
+        if ('stopped' in again) {
+          yield { type: 'stopped', turnId, reason: again.stopped };
+          return;
+        }
+        yield { type: 'context', turnId, ...again };
+        ({ text, stats } = yield* generateFor(adventure, run, again, deps, signal, randomSeed()));
+        action = log.addVersion(action.id, text) ?? action;
+        adventure.actions = log.actions;
+      }
       yield { type: 'done', turnId, action, text, stats };
     },
     signal,

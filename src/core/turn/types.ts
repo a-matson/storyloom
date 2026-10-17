@@ -1,5 +1,5 @@
 import type { ContextBuildResult, ScriptCache } from '../context';
-import type { Action, TurnErrorKind, TurnTrace } from '../model/types';
+import type { Action, GateReason, TurnErrorKind, TurnTrace } from '../model/types';
 import type { Embedder } from '../ports/embedder';
 import type { CompletionStats, Provider } from '../ports/provider';
 import type { ScriptRunner } from '../ports/scripting';
@@ -23,6 +23,8 @@ export type TurnEvent =
   | { type: 'player'; turnId: string; action: Action }
   | { type: 'context'; turnId: string; result: ContextBuildResult; prompt: string; stop: string[]; scriptCache?: ScriptCache | undefined }
   | { type: 'token'; text: string }
+  /** The gate rejected the reply streamed so far; a second one streams next. */
+  | { type: 'regenerate'; turnId: string; actionId: string; reason: GateReason }
   | { type: 'done'; turnId: string; action: Action; text: string; stats?: CompletionStats | undefined }
   | { type: 'stopped'; turnId: string; reason: string }
   | { type: 'message'; text: string }

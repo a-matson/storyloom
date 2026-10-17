@@ -1,4 +1,4 @@
-import type { Action, AppSettings } from '@core/model';
+import type { Action, AppSettings, GateReason } from '@core/model';
 import { actionText } from '@core/model';
 import type { OutputFlag } from '@core/trace';
 import type { GameApi } from '@ui/hooks/useGameSession';
@@ -18,7 +18,10 @@ interface Props {
   contextSummary?: string | undefined;
   /** Why this output is offered a retry with a note (contradiction, banned phrase, tense). */
   flag?: OutputFlag | undefined;
+  rerolled?: GateReason | undefined;
 }
+
+const REROLLED: Record<GateReason, string> = { verbatim: 're-rolled: repeated', agency: 're-rolled: wrote for you', empty: 're-rolled: empty' };
 
 const tool = 'h-7 bg-transparent px-2.5 text-caption';
 /** Revealed on hover or keyboard focus; opacity keeps the row's space so nothing shifts. */
@@ -75,10 +78,11 @@ function RetryStack({ action, api }: { action: Action; api: GameApi }) {
 }
 
 /** Under the last output: the flag (always shown), then retry stack, edit, erase, context. */
-export function OutputTools({ action, api, speech, onEdit, onViewContext, onViewTrace, contextSummary, flag }: Props) {
+export function OutputTools({ action, api, speech, onEdit, onViewContext, onViewTrace, contextSummary, flag, rerolled }: Props) {
   const voice = useSpeech();
   return (
     <div className="mt-1.5 flex flex-wrap items-center gap-2 font-sans text-caption text-muted-foreground">
+      {rerolled !== undefined && <span>{REROLLED[rerolled]}</span>}
       {flag !== undefined && (
         <output className="min-w-0">
           <Pill tone="warning" className="block max-w-[40ch] truncate max-sm:max-w-full normal-case tracking-normal" title={flag.label}>

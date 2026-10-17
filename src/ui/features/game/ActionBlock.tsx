@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Action, AppSettings, Entity } from '@core/model';
+import type { Action, AppSettings, Entity, GateReason } from '@core/model';
 import { actionText } from '@core/model';
 import { paragraphs } from '@core/text';
 import type { OutputFlag } from '@core/trace';
@@ -28,6 +28,8 @@ interface Props {
   contextSummary?: string | undefined;
   /** For the last output: why it is offered a retry with a note. */
   flag?: OutputFlag | undefined;
+  /** For the last output: the gate re-rolled it, and why. */
+  rerolled?: GateReason | undefined;
   /** The adventure's entities when speaker portraits are on. */
   cast?: readonly Entity[] | undefined;
   /** The scene's present characters, set only when this action replies to a `say`. */
@@ -116,7 +118,7 @@ function Label({ action, busy, marking, onToggle }: { action: Action; busy: bool
 }
 
 function TextBlock(props: Props) {
-  const { action, isLast, busy, api, speech, onViewContext, onViewTrace, contextSummary, flag } = props;
+  const { action, isLast, busy, api, speech, onViewContext, onViewTrace, contextSummary, flag, rerolled } = props;
   const [editing, setEditing] = useState(false);
   const [marking, setMarking] = useState(false);
   // Bumped when an edit ends: the paragraph remounts, so React never reconciles DOM the player rewrote.
@@ -190,6 +192,7 @@ function TextBlock(props: Props) {
             onViewTrace={onViewTrace}
             contextSummary={contextSummary}
             flag={flag}
+            rerolled={rerolled}
           />
         )}
       </div>

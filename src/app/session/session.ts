@@ -3,7 +3,7 @@ import { followLog, withPresence } from '@core/memory';
 import type { Adventure, AdventureSettings, AppSettings, PlotComponents, ReadKind, TurnTrace } from '@core/model';
 import type { Embedder, ScriptRunner } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
-import { helperModelFor } from './helperModel';
+import { helperModels } from './helperModel';
 import { IdleWork } from './idleWork';
 import type * as SeeMode from './images';
 import { MemoryScheduler } from './memoryScheduler';
@@ -41,8 +41,6 @@ export class GameSession {
   private embedder: Embedder | undefined;
   private contextSize: number | undefined;
   private readonly scripts: ScriptRunner;
-  /** Warn once per session when the utility server is down. */
-  private utilityDown = false;
   private readonly memory = new MemoryScheduler({
     adventure: () => this.adv,
     helperModel: (read) => this.helperModel(read),
@@ -177,6 +175,10 @@ export class GameSession {
       case 'error':
         this.emit({ error: evt.message });
         break;
+      case 'regenerate':
+        this.pending = '';
+        this.emit({ streaming: '', gated: { actionId: evt.actionId, reason: evt.reason } });
+        break;
       case 'trace':
         this.storeTrace(evt.trace);
         break;
@@ -199,16 +201,12 @@ export class GameSession {
   /** Diagnostics never block play; the next turn writes its own. */
   private readonly storeTrace = (t: TurnTrace): void => void this.svc.storage.putTrace(t).catch((e: unknown) => console.warn('could not store turn trace', e));
 
-  readonly helperModel = (read: ReadKind): Promise<HelperModel> =>
-    helperModelFor(read, this, (url) => {
-      if (!this.utilityDown) console.warn(`utility model at ${url} is unreachable; helper jobs use the story model`);
-      this.utilityDown = true;
-    });
+  readonly helperModel: (read: ReadKind) => Promise<HelperModel> = helperModels(this);
 
   /** Any player action cancels background work. */
   private beginAction(): void {
     this.idleWork.stop();
-    this.emit({ warm: 'idle', error: null, contradiction: null });
+    this.emit({ warm: 'idle', error: null, contradiction: null, gated: null });
   }
   private dropPrefetch(): void {
     this.prefetched = null;

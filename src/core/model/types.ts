@@ -18,6 +18,7 @@ export type HelperCall = z.output<typeof S.HelperCall>;
 export type TurnKind = z.output<typeof S.TurnKind>;
 export type TurnOutcome = z.output<typeof S.TurnOutcome>;
 export type TurnErrorKind = z.output<typeof S.TurnErrorKind>;
+export type GateReason = z.output<typeof S.GateReason>;
 export type JobKind = z.output<typeof S.JobKind>;
 export type PlotComponents = z.output<typeof S.PlotComponents>;
 export type Scene = z.output<typeof S.Scene>;

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { sceneNames } from '@core/memory';
 import { actionText, type Action, type Adventure, type AppSettings } from '@core/model';
 import { outputFlag, type OutputFlag } from '@core/trace';
+import type { GameSnapshot } from '@app/session';
 import { tokenizer } from '@app/services';
 import { useAdventureTheme } from '@ui/hooks/useCoverAccent';
 import { useGameSession, type GameApi } from '@ui/hooks/useGameSession';
@@ -48,6 +49,16 @@ function lastFlag(contradiction: { actionId: string; fact: string } | null, last
   return last?.type === 'continue' ? outputFlag(actionText(last), banned) : undefined;
 }
 
+function Meter({ state, onOpen }: { state: GameSnapshot; onOpen: () => void }) {
+  const adv = state.adventure;
+  const ctx = state.context?.result;
+  // Before the first turn there is no built context; estimate from the log.
+  const used = ctx?.budget.used ?? tokenizer.count(adv.actions.map((a) => a.versions[a.active] ?? '').join('\n\n'));
+  const total = ctx?.budget.total ?? adv.settings.model.contextLength;
+  const warning = ctx && (adv.settings.context.contextWarning ?? true) ? overflowWarning(ctx) : '';
+  return <ContextMeter ctx={ctx} used={used} total={total} warning={warning} onOpen={onOpen} />;
+}
+
 export function GameScreen({ adventure: initial, app, onAppChange, backendLabel, onExit }: Props) {
   const [state, api] = useGameSession(initial, app);
   const [showSidebar, setShowSidebar] = useState(sidebarOpenByDefault);
@@ -59,8 +70,6 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
   useAdventureTheme(app, adv.settings.textStyle, useImageBlob(adv.id, adv.coverId) ?? adv.coverUrl);
 
   const ctx = state.context?.result;
-  // Before the first turn there is no built context; estimate from the log.
-  const used = ctx?.budget.used ?? tokenizer.count(adv.actions.map((a) => a.versions[a.active] ?? '').join('\n\n'));
   const last = state.actions.at(-1);
   useReadAloud(app.speech, state.busy, last?.type === 'continue' ? actionText(last) : undefined);
   const openContext = () => {
@@ -78,15 +87,7 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
         canRedo={state.canRedo}
         failed={state.error !== null}
         modelLabel={adv.settings.modelId ?? backendLabel}
-        meter={
-          <ContextMeter
-            ctx={ctx}
-            used={used}
-            total={ctx?.budget.total ?? adv.settings.model.contextLength}
-            warning={ctx && (adv.settings.context.contextWarning ?? true) ? overflowWarning(ctx) : ''}
-            onOpen={openContext}
-          />
-        }
+        meter={<Meter state={state} onOpen={openContext} />}
         sidebarOpen={showSidebar}
         api={api}
         onExit={onExit}
@@ -107,6 +108,7 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
             onViewTrace={() => last && setTraceAction(last.id)}
             contextSummary={ctx ? `${ctx.triggeredCards.length} story cards · ${ctx.usedMemories.length} memories used` : undefined}
             flag={lastFlag(state.contradiction, last, adv.settings.bannedPhrases)}
+            rerolled={state.gated?.actionId === last?.id ? state.gated?.reason : undefined}
             cast={app.speakerAvatars ? adv.entities : undefined}
             present={adv.plot.scene && sceneNames(adv.plot.scene, adv.entities).present}
             onOpenEntity={setFaceId}

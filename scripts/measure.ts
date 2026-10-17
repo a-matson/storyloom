@@ -13,6 +13,7 @@
  *   names <backups> [label]  new-name candidates and kinds, action by action, no model (backups comma-separated)
  *   speakers <backup> [label]  the speaker guess and the batch's stored speakers against bench/speakerLabels.json, no model
  *   summary <url> <backup> [label]  the summary refreshed 10 times over a backup's memories from nothing; how many changed it
+ *   gate <backup> [label]  the output gate (empty, verbatim, agency) over every AI output, first and kept version, no model
  *   cast-facts <backups> [label]  the facts each player action sends for the absent it names (M19-1), no model
  *   live <url> [label]  plays 20 scripted turns in the real app; per-turn stats, memories, summary
  *   repetition <url> [label]  the live turns alone: repeated phrases per turn, distinct 4-grams (MEASURE_SAMPLERS=64,0 for the "before")
@@ -65,6 +66,10 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
   summary: {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/summary'],
     env: { MEASURE_URL: a, MEASURE_BACKUP: b, MEASURE_LABEL: c },
+  },
+  gate: {
+    cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/gate.bench'],
+    env: { MEASURE_BACKUP: a, MEASURE_LABEL: b },
   },
   'cast-facts': {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/castFacts'],
