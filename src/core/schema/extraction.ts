@@ -18,6 +18,8 @@ export const FACT_CHARS = 100;
 export const DESCRIPTION_CHARS = 120;
 /** A look, state or stance is a few words ("long grey braid"). [provisional] */
 export const LOOK_CHARS = 40;
+/** How a character talks: register, a tic, how they address you. 60 cost 18 estimated tokens on the now-line; the bar is 15. [provisional] */
+export const VOICE_CHARS = 48;
 const sentence = (chars: number) => z.string().check(z.maxLength(chars));
 
 // The grammar then cannot write "the path": prompting alone did not stop common nouns filling the cap.
@@ -40,6 +42,8 @@ export const ExtractedEntity = z.object({
   looks: z.optional(keyed(LOOK_KEYS)),
   // No `state`: the state read writes it each turn (M13-3). `to` is a name, or "You" for the player.
   relationships: z.optional(z.array(z.object({ to: Name, stance: sentence(LOOK_CHARS) })).check(z.maxLength(2))),
+  // Last, so a reply cut at its cap loses it first; `sighting.ts` keeps it only where the range quotes them.
+  voice: z.optional(sentence(VOICE_CHARS)),
 });
 
 /** New names one introduction reply covers; a turn rarely brings more. [provisional] */

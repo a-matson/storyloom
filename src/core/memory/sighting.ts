@@ -1,9 +1,10 @@
 import type { Action, Assertion, Entity, ExtractedEntity } from '../model/types';
-import { FACT_CHARS, INTRODUCED_CHARS, LOOK_CHARS } from '../schema/extraction';
+import { FACT_CHARS, INTRODUCED_CHARS, LOOK_CHARS, VOICE_CHARS } from '../schema/extraction';
 import { textOf } from './assertionIndex';
 import { within, type Sighting } from './entities';
 import type { Source } from './invalidate';
 import type { MemoryRange } from './memoryBank';
+import { norm } from './names';
 import { supportNaming, supportOf } from './support';
 
 // The guards on what one reply entity says; `fold.ts` decides which entity it is.
@@ -38,7 +39,8 @@ export interface Rejected {
     | 'identity-unnamed'
     | 'unknown-to'
     | 'role-rejected'
-    | 'event-rejected';
+    | 'event-rejected'
+    | 'no-dialogue';
   passageRange: MemoryRange;
 }
 
@@ -59,9 +61,36 @@ export interface Guard {
   reject: (value: string, reason: Rejected['reason']) => void;
 }
 
-/** What one reply entity says that the range backs: facts, stated looks, stances, and an identity only from a sentence naming it (read D). */
-export function sightingOf(item: Incoming & { facts: string[]; aliases: string[] }, g: Guard): Sighting & { relationships: { to: string; stance: string }[] } {
-  const { looks, relationships = [], facts, ...e } = item;
+/**
+ * A voice only for a character the range's speaker labels quote: the 12B gives anyone one. The labels are the
+ * client guess; an action not labelled yet counts as no dialogue.
+ */
+function voiceOf(raw: string | undefined, g: Guard): string | undefined {
+  // The 12B closes the string a word short of the cap rather than cut a word ("…lost beneath the", 45 of 48). [measured: 2026-10-17-batch-m20-4-voice.json]
+  // It also opens or ends on a comma (", whispers"), or with the verb the now-line adds ("speaks: speaks in a gravelly voice").
+  const v =
+    raw === undefined
+      ? ''
+      : uncut(raw, VOICE_CHARS - 10)
+          .replace(/^[\s,;:.]+|[\s,;:]+$/g, '')
+          .replace(/^(?:speaks|talks)\s+/i, '');
+  if (!v || EMPTY_VALUE.test(v)) return undefined;
+  const names = new Set([g.who.name, ...g.who.aliases].map(norm));
+  const quoted = g.kind === 'character' ? g.actions.findLast((a) => a.speakers?.some((s) => names.has(norm(s.name)))) : undefined;
+  if (!quoted) {
+    g.reject(v, 'no-dialogue');
+    return undefined;
+  }
+  g.backed.set(v, { sourceId: quoted.id, basis: 'stated' });
+  return v;
+}
+
+/** What one reply entity says that the range backs: facts, stated looks, stances, a voice, and an identity only from a sentence naming it (read D). */
+export function sightingOf(
+  item: Incoming & { facts: string[]; aliases: string[] },
+  g: Guard,
+): Sighting & { relationships: { to: string; stance: string }[]; voice?: string | undefined } {
+  const { looks, relationships = [], facts, voice, ...e } = item;
   const keep = (value: string, o: { cap?: number; about?: string; look?: boolean } = {}): string[] => {
     const v = uncut(value, o.cap);
     if (!v || EMPTY_VALUE.test(v)) return [];
@@ -100,5 +129,6 @@ export function sightingOf(item: Incoming & { facts: string[]; aliases: string[]
       return [];
     }),
     state: kept,
+    voice: voiceOf(voice, g),
   };
 }

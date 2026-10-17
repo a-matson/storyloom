@@ -252,9 +252,11 @@ test.skipIf(!url || !backup || !READS.includes('C'))('batch call over a backup',
     const identities = added.flatMap((a) => (a.kind === 'identity' ? [{ name: name(a.subject), text: a.text, span: a.span }] : []));
     // M19-5: by name, to label subject swaps by hand.
     const events = added.flatMap((a) => (a.kind === 'event' ? [{ at: a.at, who: a.who.map((id) => name(id) ?? id), text: a.text, span: a.span }] : []));
+    // M20-4: by name, to rate against the character's quoted lines.
+    const voices = added.flatMap((a) => (a.kind === 'voice' ? [{ name: name(a.subject), text: a.text }] : []));
     const c = calls[0];
     const call = { ms: c?.ms, tokens: c?.generatedTokens, stop: c?.stopReason, facts: c?.factsProposed, raw: c?.reply };
-    replies.push({ range, ...call, identities, events, rejected: c?.rejected });
+    replies.push({ range, ...call, identities, events, voices, rejected: c?.rejected });
     console.log('batch', range, `${c?.ms} ms ${c?.generatedTokens} tokens ${c?.stopReason}`, JSON.stringify(identities), JSON.stringify(c?.rejected));
   }
   const proposals = (work.scriptState.__aliasProposals ?? []).map((p) => ({ name: p.name, of: work.entities.find((e) => e.id === p.of)?.name }));
@@ -264,6 +266,8 @@ test.skipIf(!url || !backup || !READS.includes('C'))('batch call over a backup',
     meanMs: Math.round(replies.reduce((s, r) => s + (r.ms ?? 0), 0) / Math.max(1, replies.length)),
     factsProposed: replies.reduce((s, r) => s + (r.facts ?? 0), 0),
     events: replies.reduce((s, r) => s + r.events.length, 0),
+    voices: replies.reduce((s, r) => s + r.voices.length, 0),
+    noDialogue: replies.reduce((s, r) => s + (r.rejected?.filter((x) => x.reason === 'no-dialogue').length ?? 0), 0),
     maxTokens: Math.max(0, ...replies.map((r) => r.tokens ?? 0)),
     cards: work.entities.map((e) => e.name),
     roles: Object.fromEntries(work.entities.map((e) => [e.name, e.roles ?? []])),

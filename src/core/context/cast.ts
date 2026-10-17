@@ -57,11 +57,19 @@ const lead = (e: Entity, as: readonly Assertion[], carded: boolean, parts: reado
 };
 
 /**
- * A present character's now-line: `Name (identity): sitting, poisoned, wary, wearing a cloak; effect — cause; stance to you; witnessed-by; pins. With Other: stance.`
+ * A present character's now-line: `Name (identity): sitting, poisoned, wary, wearing a cloak; effect — cause; stance to you; witnessed-by; speaks: voice; pins. With Other: stance.`
  * Looks are the portrait's; only `wearing` changes the scene. Conflicts are never sent.
  * A relationship's `to` is who it is towards (`you`: the player). `missed`: `witnessClause`s, so the model does not let them answer from what they never saw (U17).
+ * `speaks`: they are likely to talk this turn, so their voice goes in; otherwise it costs tokens for nothing.
  */
-export function presentLine(e: Entity, as: readonly Assertion[], present: readonly Entity[], carded: boolean, missed: readonly string[] = []): CastLine {
+export function presentLine(
+  e: Entity,
+  as: readonly Assertion[],
+  present: readonly Entity[],
+  carded: boolean,
+  missed: readonly string[] = [],
+  speaks = false,
+): CastLine {
   const live = as.filter((a) => isCurrent(a) && !old(a)).toSorted((a, b) => a.since - b.since);
   const now = currentStates(as);
   const keys = KEY_ORDER.filter((k) => now[k]?.trim());
@@ -74,11 +82,13 @@ export function presentLine(e: Entity, as: readonly Assertion[], present: readon
   const toward = (a: AssertionOf<'relationship'>) => present.find((p) => p !== e && names(p).includes(norm(a.to)));
   const toYou = rels.filter((a) => norm(a.to) === 'you');
   const pins = pinsOf(live);
+  const voice = speaks ? current(live, 'voice').slice(-1) : [];
   const parts = [
     keys.map((k) => (k === 'wearing' ? 'wearing ' : '') + short(now[k] ?? '')).join(', '),
     ...effects.map(effect),
     ...toYou.map((a) => clause(a.stance)),
     ...missed.map(clause),
+    ...voice.map((a) => `speaks: ${clause(a.text)}`),
     ...pins.map((a) => clause(textOf(a))),
   ].filter(Boolean);
   const withOthers = present.flatMap((p) => {
@@ -86,7 +96,7 @@ export function presentLine(e: Entity, as: readonly Assertion[], present: readon
     return about.length ? [`With ${p.name}: ${about.map((a) => clause(a.stance)).join('; ')}.`] : [];
   });
   const text = [lead(e, as, carded, parts), ...withOthers].join(' ');
-  const sent = [...effects, ...toYou, ...pins, ...rels.filter((a) => toward(a))].map((a) => a.id);
+  const sent = [...effects, ...toYou, ...voice, ...pins, ...rels.filter((a) => toward(a))].map((a) => a.id);
   return { entity: e, text, factIds: [...stateIds, ...sent] };
 }
 

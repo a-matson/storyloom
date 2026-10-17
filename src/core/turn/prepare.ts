@@ -63,10 +63,10 @@ async function buildExact(input: ContextBuildInput): Promise<ContextBuildResult>
 async function rankForQuery(adventure: Adventure, query: string, embedder?: Embedder): Promise<RankedMemory[]> {
   const bank = adventure.settings.memory.memoryBank ? adventure.memories.filter(isActive) : [];
   if (!bank.length) return [];
-  // What used to be facts: not the identity nor the old free-text looks; events never were.
+  // What used to be facts: not the identity nor the old free-text looks; events and voices never were.
   const name = new Map(adventure.entities.map((e) => [e.id, e.name]));
   const facts = adventure.assertions.flatMap((a) =>
-    a.kind === 'identity' || a.kind === 'event' || (a.kind === 'look' && a.key === 'legacy')
+    a.kind === 'identity' || a.kind === 'event' || a.kind === 'voice' || (a.kind === 'look' && a.key === 'legacy')
       ? []
       : [{ id: a.id, text: `${name.get(a.subject) ?? a.subject}: ${textOf(a)}` }],
   );

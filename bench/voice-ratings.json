@@ -1,0 +1,19 @@
+{
+  "labelledBy": "Claude (M20-4, 2026-10-17); not blind: the arm was visible",
+  "source": "docs/measurements/2026-10-17-voice-m20-4.json (lines[] by index)",
+  "rule": "1 = same register and address form as the character's own lines in the dogfood: Tamsin plain and explanatory, calls you Rowan; Brother Aldous ominous lore, fearful, trailing ellipses, Rowan; Ewan Pike gruff constable, calls you ferryman. 0 = a different register or address form.",
+  "zeros": {
+    "12": "Aldous, before: a tavern-keeper's threat (likely Hedda's line)",
+    "98": "Aldous, before: a flat recap, none of his register",
+    "11": "Tamsin, before: cryptic, not her plain register",
+    "35": "Tamsin, after: 'the very stone bleeds wrongness', not her register",
+    "71": "Pike, after: calls you Rowan, not ferryman",
+    "100": "Pike, after: calls you Rowan, not ferryman"
+  },
+  "score": {
+    "Tamsin": { "before": "23/24", "after": "33/34" },
+    "Brother Aldous": { "before": "13/15", "after": "19/19" },
+    "Ewan Pike": { "before": "13/13", "after": "11/13" },
+    "all": { "before": "49/52 (0.94)", "after": "63/66 (0.95)" }
+  }
+}

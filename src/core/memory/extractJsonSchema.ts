@@ -1,6 +1,6 @@
 import { z } from 'zod/mini';
 import { EntityKind } from '../schema/entity';
-import { DESCRIPTION_CHARS, EVENT_CHARS, EVENT_YOU, FACT_CHARS, LOOK_CHARS, MAX_ENTITIES, MAX_EVENTS, PHRASE_CHARS } from '../schema/extraction';
+import { DESCRIPTION_CHARS, EVENT_CHARS, EVENT_YOU, FACT_CHARS, LOOK_CHARS, MAX_ENTITIES, MAX_EVENTS, PHRASE_CHARS, VOICE_CHARS } from '../schema/extraction';
 import { LOOK_KEYS } from './looks';
 
 // llama-server compiles these into grammars; the `$schema` dialect marker is noise to it.
@@ -31,7 +31,8 @@ export const extractGrammar = (cast: readonly string[]) =>
     String.raw`event ::= "{\"what\":\"" char{1,${EVENT_CHARS}} "\",\"who\":[" who ( "," who )? "],\"at\":" [0-9]{1,6} "}"`,
     `who ::= ${oneOf([...cast, EVENT_YOU])}`,
     // Looks only for a character, and at most MAX_LOOKS: one line, the 12B still filled all eight keys ("none") for factions too and ran to the cap.
-    String.raw`entity ::= "{\"name\":" name ",\"kind\":" ( "\"character\"" body ( ",\"looks\":{" look ( "," look ){0,${MAX_LOOKS - 1}} "}" )? | kind body ) rels "}"`,
+    // A voice last and only for a character, as the schema's: a cut loses it first.
+    String.raw`entity ::= "{\"name\":" name ",\"kind\":" ( "\"character\"" body ( ",\"looks\":{" look ( "," look ){0,${MAX_LOOKS - 1}} "}" )? rels ( ",\"voice\":" voice )? | kind body rels ) "}"`,
     String.raw`body ::= ( ",\"aliases\":[" ( str ( "," str )* )? "]" )? ",\"description\":" desc ",\"facts\":[" ( fact ( "," fact )? )? "]"`,
     String.raw`rels ::= ( ",\"relationships\":[" ( rel ( "," rel )? )? "]" )?`,
     `kind ::= ${oneOf(EntityKind.options.filter((k) => k !== 'character'))}`,
@@ -44,4 +45,5 @@ export const extractGrammar = (cast: readonly string[]) =>
     String.raw`desc ::= "\"" char{0,${DESCRIPTION_CHARS}} "\""`,
     String.raw`fact ::= "\"" char{0,${FACT_CHARS}} "\""`,
     String.raw`short ::= "\"" char{0,${LOOK_CHARS}} "\""`,
+    String.raw`voice ::= "\"" char{1,${VOICE_CHARS}} "\""`,
   ].join('\n');
