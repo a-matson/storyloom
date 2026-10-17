@@ -118,6 +118,8 @@ export async function prepareContext(
   const result = await buildExact({
     ...contextInput(adventure, actions, rankedMemories, deps, adventure.settings.context.cacheStableLayout),
     retryNote,
+    // Lazy: imported statically, the list re-chunked the bundle (+10 kB start-up).
+    everyday: (await import('../memory/commonWords')).COMMON_WORDS,
   });
 
   const fullText = `${result.system ? `${result.system}\n\n` : ''}${result.body}`;

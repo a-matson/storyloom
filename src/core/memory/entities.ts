@@ -1,10 +1,10 @@
 import type { Action, Adventure, Entity, Speaker } from '../model/types';
 import { actionText, newId } from '../model/types';
 import { guessSpeakers } from '../text/speakers';
-import { namesOf, norm, words } from './names';
+import { norm, words } from './names';
 import { MAX_ROLES } from './roles';
 
-export { knownAs, matchEntity } from './names';
+export { entityNamedIn, knownAs, matchEntity } from './names';
 
 const isOutput = (a: Action) => a.type === 'continue' || a.type === 'start';
 
@@ -53,18 +53,6 @@ function wholeAt(passage: string, n: string): number[] {
   for (let i = n ? passage.indexOf(n) : -1; i >= 0; i = passage.indexOf(n, i + 1))
     if (!WORD.test(passage[i - 1] ?? '') && !WORD.test(passage[i + n.length] ?? '')) out.push(i);
   return out;
-}
-
-/** The entity whose name, alias or role `text` contains as whole words; the longest wins, so "Lena Morrow" beats "Lena". */
-export function entityNamedIn<E extends Pick<Entity, 'name' | 'aliases' | 'roles'>>(entities: readonly E[], text: string): E | undefined {
-  const t = words(text);
-  let best: { e: E; len: number } | undefined;
-  for (const e of entities)
-    for (const n of namesOf(e)) {
-      const k = words(n);
-      if (k.trim() && t.includes(k) && k.length > (best?.len ?? 0)) best = { e, len: k.length };
-    }
-  return best?.e;
 }
 
 /** Whether `inner` is `outer` or a run of its whole words. */

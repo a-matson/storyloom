@@ -12,6 +12,7 @@
  *   migrate <backup> [label]  entity facts to typed assertions: counts kept, dropped (conflicts on unlocked keys, stale spans), lost
  *   names <backups> [label]  new-name candidates and kinds, action by action, no model (backups comma-separated)
  *   speakers <backup> [label]  the speaker guess and the batch's stored speakers against bench/speakerLabels.json, no model
+ *   cast-facts <backups> [label]  the facts each player action sends for the absent it names (M19-1), no model
  *   live <url> [label]  plays 20 scripted turns in the real app; per-turn stats, memories, summary
  *   repetition <url> [label]  the live turns alone: repeated phrases per turn, distinct 4-grams (MEASURE_SAMPLERS=64,0 for the "before")
  *   images <image-url> <url>  See mode and a cover against a real A1111 server
@@ -58,6 +59,10 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
   },
   speakers: {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/speakers'],
+    env: { MEASURE_BACKUP: a, MEASURE_LABEL: b },
+  },
+  'cast-facts': {
+    cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/castFacts'],
     env: { MEASURE_BACKUP: a, MEASURE_LABEL: b },
   },
   // `--project=live`, not `--project live`: the flag is variadic and would swallow the file.

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { admitted } from '@core/memory/admit';
 import { bm25, buildIndex, tokenise } from '@core/memory/lexical';
 
 const corpus = [
@@ -21,5 +22,41 @@ describe('bm25', () => {
 
   it('tokenises without punctuation or case', () => {
     expect(tokenise('"Tamsin!" said the Ferry-woman, at 3.')).toEqual(['tamsin', 'said', 'the', 'ferry', 'woman', 'at', '3']);
+  });
+});
+
+describe('admitted', () => {
+  // Ten facts: "road" in six of them, every other word in one or two.
+  const facts = buildIndex([
+    { id: 'toll', text: 'takes a toll on the road' },
+    { id: 'debt', text: 'owes the miller silver' },
+    { id: 'r1', text: 'walks the road at dawn' },
+    { id: 'r2', text: 'sings on the road' },
+    { id: 'r3', text: 'fears the road at night' },
+    { id: 'r4', text: 'mends the road' },
+    { id: 'r5', text: 'sleeps by the road' },
+    { id: 'm1', text: 'distrusts the miller' },
+    { id: 'm2', text: 'once worked for the miller' },
+    { id: 'none', text: 'hums old songs' },
+  ]);
+  const ask = (q: string) => [...admitted(facts, tokenise(q))].toSorted();
+
+  it('two distinct content words hit: in', () => {
+    expect(ask('Do you owe the miller silver?')).toEqual(['debt']);
+  });
+
+  it('one common word is not enough; one rare word is', () => {
+    expect(ask('Tell me about the road.')).toEqual([]);
+    expect(ask('Is there a toll?')).toEqual(['toll']);
+  });
+
+  it('an everyday word is never rare, however few facts hold it', () => {
+    expect([...admitted(facts, tokenise('Sing at dawn?'), new Set(['dawn']))]).toEqual([]);
+    expect(ask('Sing at dawn?')).toEqual(['r1']);
+  });
+
+  it('stop words never count, and an empty query admits nothing', () => {
+    expect(ask('the for and you')).toEqual([]);
+    expect(ask('')).toEqual([]);
   });
 });

@@ -1,0 +1,85 @@
+{
+  "note": "Labelled by Claude (Provisional until the user checks). One row per fact `pnpm measure cast-facts` sent for an absent entity the player's action names, on the M13 and M17 dogfood backups. relevant: the fact bears on what the action asks or does.",
+  "labels": [
+    {
+      "backup": "m13",
+      "at": 47,
+      "entity": "Aldwych",
+      "fact": "Connected to old tube tunnels and bomb shelters",
+      "relevant": true,
+      "why": "the action is about the old Aldwych tunnels"
+    },
+    {
+      "backup": "m17",
+      "at": 57,
+      "entity": "Kessmouth",
+      "fact": "home to the College of Cartography and other institutions",
+      "relevant": true,
+      "why": "asks about the night the college archive burned"
+    },
+    {
+      "backup": "m17",
+      "at": 97,
+      "entity": "Brother Aldous",
+      "fact": "monk studying ancient texts and rites, carries a silver cross",
+      "relevant": true,
+      "why": "you know these old rites"
+    },
+    {
+      "backup": "m17",
+      "at": 121,
+      "entity": "Brother Aldous",
+      "fact": "monk studying ancient texts and rites, carries a silver cross",
+      "relevant": true,
+      "why": "the luckiest monk on this coast"
+    },
+    {
+      "backup": "m17",
+      "at": 163,
+      "entity": "Kessmouth",
+      "fact": "home to the Drowned Lantern inn and Ewan Pike's harbor master office",
+      "relevant": true,
+      "why": "asks Pike to send word to the harbours"
+    },
+    {
+      "backup": "m17",
+      "at": 169,
+      "entity": "Brother Aldous",
+      "fact": "expert in ancient texts and confessions",
+      "relevant": true,
+      "why": "you've heard half this town's confessions"
+    },
+    {
+      "backup": "m17",
+      "at": 199,
+      "entity": "Tamsin",
+      "fact": "bloodline carries the key to the Drowned Ones' anchors",
+      "relevant": true,
+      "why": "takes the iron key, Tamsin's choice to unchain"
+    },
+    {
+      "backup": "m17",
+      "at": 251,
+      "entity": "Kessmouth",
+      "fact": "home to Rowan and the Drowned Lantern tavern",
+      "relevant": true,
+      "why": "send word to the Drowned Lantern in Kessmouth"
+    },
+    {
+      "backup": "m17",
+      "at": 251,
+      "entity": "Kessmouth",
+      "fact": "home to Drowned Lantern and other supernatural phenomena",
+      "relevant": true,
+      "why": "same; the second half is noise but the match is right"
+    },
+    {
+      "backup": "m17",
+      "at": 271,
+      "entity": "Tamsin",
+      "fact": "expert in maritime charts and navigation",
+      "relevant": true,
+      "why": "Tamsin with her charts on her knees"
+    }
+  ]
+}
