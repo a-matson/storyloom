@@ -12,8 +12,8 @@ const SAMPLERS = process.env['MEASURE_SAMPLERS'];
 test.skip(!URL, 'needs MEASURE_URL (a running llama-server)');
 
 const TURN_MS = 180_000;
-// Same seed on both sides of a before/after. [provisional]
-const SEED = '42';
+// Same seed on both sides of a before/after; MEASURE_SEED for a second seed. [provisional]
+const SEED = process.env['MEASURE_SEED'] ?? '42';
 
 const fourGrams = (text: string) => {
   const w = text.toLowerCase().match(/[a-z']+/g) ?? [];
