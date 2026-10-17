@@ -161,11 +161,13 @@ export function readTurn(
   deps: ExtractDeps,
   state?: StateAsk & { records: readonly StateRecord[] },
 ): Promise<TurnRead | null> {
+  // Factions go in the enum but not `prev.present`: a group gets no `stay` (M21-4).
+  const listable = [...new Set([...cast, ...(prev.factions ?? [])])];
   return helperJson(
     (g) => introducePrompt(passage, newNames, g, prev, cast, state),
-    grammarOf(turnRead(cast, newNames, prev.present, state)),
+    grammarOf(turnRead(listable, newNames, prev.present, state)),
     turnReadTokens(newNames, state, prev.present.length),
-    turnAccepter(cast, prev.present, state),
+    turnAccepter(listable, prev.present, state),
     deps,
   );
 }

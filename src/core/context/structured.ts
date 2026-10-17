@@ -40,8 +40,9 @@ function sceneCast(scene: Scene | undefined, entities: Entity[], all: readonly E
   // Named through every entity: an unconfirmed one present still reads as its name, not its id.
   const shown = scene && sceneNames(scene, all);
   const present = ids(here);
-  // An item here or held sends its own lore, or the model makes up new lore for it.
-  const things = [...(shown ? itemsIn(shown, entities, ix) : []), ...heldBy(entities, ix, YOU).slice(0, MAX_ITEMS)].flatMap((x) =>
+  // An item here or held sends its own lore, or the model makes up new lore for it; a group's faction too, never a now-line.
+  const groups = (scene?.groups ?? []).flatMap((g) => byId.get(g.id) ?? entities.find((e) => named(e, g.id)) ?? []);
+  const things = [...(shown ? itemsIn(shown, entities, ix) : []), ...heldBy(entities, ix, YOU).slice(0, MAX_ITEMS), ...groups].flatMap((x) =>
     typeof x === 'string' || present.has(x.id) ? [] : [x],
   );
   return { shown, here, items: [...ids(things)].flatMap((i) => byId.get(i) ?? []) };

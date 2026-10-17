@@ -11,6 +11,8 @@ export interface PrevScene {
   location?: string | undefined;
   present: readonly string[];
   zones?: Readonly<Record<string, string>> | undefined;
+  /** Factions `present` may list as a group; not in the previous scene's `present`, so no `stay` for them. */
+  factions?: readonly string[];
 }
 
 /** `; in the basement: Vorthak, Weever` per room, so a read keeps who is in one there instead of losing them. */
@@ -36,12 +38,14 @@ export function introducePrompt(
   state?: { records: readonly StateRecord[]; max: number },
 ): string {
   const cards = newNames.length > 0;
+  const factions = prev.factions ?? [];
   return (
     (state ? `changes: ${STATE_ASK}\n` : '') +
     TURN_READ_ASK +
     // "You", not "the characters": with them, the location followed two characters sent to the basement (M14-S2 replay).
     '\nscene is where the passage ends. location is where you are at the end, in at most four words (keep the previous wording when it is the same place). ' +
     'present lists the known characters there at the end (asleep or unconscious still counts; gone to another room does not), not the player "you". ' +
+    (factions.length ? 'A faction listed in present means members of it are there. ' : '') +
     (prev.present.length
       ? 'stay gives each character present in the previous scene: "here" if still in the same room as you at the end, ' +
         '{"room": "<the room>"} if they went to another room of this place (climbing down to the basement, going upstairs), ' +
@@ -55,6 +59,7 @@ export function introducePrompt(
     (cards ? `New here: ${newNames.join(', ')}.\n` : '') +
     // No placeholder place: one the model could copy back as the location.
     `Previous scene: ${prev.location ? `location "${prev.location}", present: ${prev.present.join(', ') || 'nobody'}${roomsOf(prev.zones)}` : 'not known yet'}. Known characters: ${cast.join(', ') || 'none yet'}.` +
+    (factions.length ? ` Known factions: ${factions.join(', ')}.` : '') +
     (state ? `\n\n${stateRecords(state.records)}` : '') +
     `\n\n---\n${passage}\n---\n\n` +
     (state ? `changes: for each one in the records above, each posture, condition, mood, wearing or holds this passage changes; at most ${state.max}.\n` : '') +

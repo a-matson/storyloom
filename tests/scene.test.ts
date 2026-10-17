@@ -166,6 +166,28 @@ describe('zones (M21-1)', () => {
   });
 });
 
+describe('groups (M21-4)', () => {
+  const harrows = { ...mergeEntity(undefined, { name: 'The Harrows', kind: 'faction', description: '' }, 0), aliases: ['Harrows'] };
+  const group = (s: string) => (s === 'The Harrows' ? { id: 'The Harrows' } : undefined);
+  const nextG = (scene: Scene | undefined, r: Parameters<typeof read>[0], places: Entity[] = []) => nextScene(scene, read(r), name, 7, places, everyone, group);
+
+  it('a faction listed goes to groups, never present; a character still goes to present', () => {
+    expect(nextG(mill, { present: ['Lena', 'The Harrows'] }).scene).toMatchObject({ present: ['Lena'], groups: [{ id: 'The Harrows' }] });
+  });
+
+  it('is replaced each read: unlisted next read is gone, and a move clears it', () => {
+    const withThem: Scene = { ...mill, groups: [{ id: 'The Harrows', count: 3 }] };
+    expect(nextG(withThem, { present: ['Lena'] }).scene?.groups).toBeUndefined();
+    expect(nextG(withThem, { location: 'the quay', present: [] }).scene?.groups).toBeUndefined();
+  });
+
+  it('stores the faction’s id with the count the passage gives, and reads it back as its name', () => {
+    const plot = withScene({ scene: mill }, read({ present: ['Lena', 'The Harrows'] }), name, 4, source, [harrows], 'Three Harrow enforcers wait.');
+    expect(plot.scene).toMatchObject({ present: ['Lena'], groups: [{ id: harrows.id, count: 3 }] });
+    expect(plot.scene && sceneNames(plot.scene, [harrows]).groups).toEqual([{ id: 'The Harrows', count: 3 }]);
+  });
+});
+
 describe('withScene', () => {
   const w = (plot: PlotComponents, r: Parameters<typeof read>[0], at: number) => withScene(plot, read(r), name, at, source, [], 'Lena and Minos.');
 
@@ -254,5 +276,11 @@ describe('renderScene', () => {
   it('sends the time right after the location', () => {
     expect(renderScene(timed)).toBe('the mill · Day 3, night · Present: Lena');
     expect(renderScene({ present: [], time: { day: 1, part: 'dawn' } })).toBe('Day 1, dawn');
+  });
+
+  it('names a group after who is present, with its count when known', () => {
+    expect(renderScene({ ...mill, groups: [{ id: 'the Harrows', count: 3 }, { id: 'the Watch' }] })).toBe(
+      'the mill · Present: Lena · Group: the Harrows (3), the Watch',
+    );
   });
 });
