@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { buildContext as build } from '@core/context';
 import { nudgedIn, QUIET_TURNS, quietTurns } from '@core/context/spotlight';
 import { indexAssertions } from '@core/memory/assertionIndex';
@@ -10,6 +10,9 @@ import { GOAL_CHARS } from '@core/schema/extraction';
 import { createApproxTokenizer } from '@core/text/tokenizer';
 import { cast, input } from './fixtures/structured';
 import { derived } from './fixtures/assertions';
+
+// Off in the app (measured); the rule it gates is still specified here.
+vi.mock('@core/context/spotlight', async (orig) => ({ ...(await orig<object>()), SEND_GOALS: true }));
 
 const TEXT = 'Tamsin searches the dock for the lost ledger.\n\n"Mind the rope," Tamsin says.';
 
@@ -138,6 +141,10 @@ describe('wants: on the now-line', () => {
   it('is not sent when they acted recently, nor while it is a proposal', () => {
     expect(lena(goal(), quietFor(QUIET_TURNS - 1))).not.toContain('wants:');
     expect(lena(goal({ seen: false }), quietFor(QUIET_TURNS))).not.toContain('wants:');
+  });
+
+  it('is off in the app', async () => {
+    expect((await vi.importActual<{ SEND_GOALS: boolean }>('@core/context/spotlight')).SEND_GOALS).toBe(false);
   });
 
   it('a nudge sends it however recently they acted', () => {

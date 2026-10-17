@@ -91,14 +91,12 @@ test('Send to on the Now card puts a character in another room, back, or away', 
   await expect(page.getByRole('textbox', { name: 'Present' })).toHaveValue('');
 });
 
-test('a confirmed goal goes in the prompt for the one turn after a Nudge', async ({ page }) => {
-  const line = { subject: 'ent_merav', at: 2, since: 2 };
+// The send is off (SEND_GOALS, measured): a confirmed goal stays on the card, out of the prompt, with no Nudge.
+test('a goal proposal is confirmed on the card and kept out of the prompt', async ({ page }) => {
   await openSeededAdventure(page, 3, undefined, {
     scene: { location: 'Old Well', present: ['Merav'] },
     assertions: [
-      // Changed state at 2: she acted recently, so only a nudge sends her goal.
-      { ...line, id: 'as_mood', producer: 'player', basis: 'player', kind: 'state', key: 'mood', value: 'calm' },
-      { ...line, id: 'as_goal', producer: 'batch', basis: 'stated', kind: 'goal', text: 'find the needle map', seen: false },
+      { subject: 'ent_merav', at: 0, since: 0, id: 'as_goal', producer: 'batch', basis: 'stated', kind: 'goal', text: 'find the needle map', seen: false },
     ],
   });
   await page.getByRole('button', { name: 'Characters · 1' }).click();
@@ -110,14 +108,17 @@ test('a confirmed goal goes in the prompt for the one turn after a Nudge', async
   await page.keyboard.press('Escape');
 
   await world(page);
-  await page.getByRole('button', { name: 'Nudge Merav' }).click();
-  await expect(page.getByRole('button', { name: 'Nudged Merav' })).toBeVisible();
-  let context = await rawPrompt(page, 'wave');
-  await expect(context).toContainText('calm; wants: find the needle map.');
-  await page.keyboard.press('Escape');
-  context = await rawPrompt(page, 'wave again');
-  await expect(context).toContainText('maps): calm.');
+  await expect(page.getByRole('button', { name: 'Nudge Merav' })).toHaveCount(0);
+  const context = await rawPrompt(page, 'wave');
+  await expect(context).toContainText('salt road maps).');
   await expect(context).not.toContainText('wants:');
+  await page.keyboard.press('Escape');
+  await page.reload();
+  await page.getByRole('button', { name: 'Characters · 1' }).click();
+  // The World tab stays open over a reload, with its own Open Merav.
+  await page.getByRole('button', { name: 'Open Merav' }).first().click();
+  await expect(page.getByRole('dialog', { name: 'Merav' }).getByText('wants: find the needle map')).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Merav' }).getByText('proposal', { exact: true })).toHaveCount(0);
 });
 
 test('a character asleep is told in the prompt what they slept through', async ({ page }) => {

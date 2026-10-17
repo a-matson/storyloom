@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { test } from 'vitest';
+import { test, vi } from 'vitest';
 import { LlamaServerProvider } from '@adapters/providers/llamaServer';
 import type { Adventure, Assertion } from '@core/model';
 import * as S from '@core/schema';
@@ -19,6 +19,9 @@ const url = process.env['MEASURE_URL'];
 const backup = process.env['MEASURE_BACKUP'];
 const LABEL = process.env['MEASURE_LABEL'] ?? 'm21-3';
 const POINTS = Number(process.env['MEASURE_POINTS'] ?? 40);
+
+// Off in the app since this bench measured it; the goals run needs it on.
+vi.mock('@core/context/spotlight', async (orig) => ({ ...(await orig<object>()), SEND_GOALS: true }));
 
 /** Goals a player would confirm or write, from the batch read's proposals over the M17 dogfood (labelled by Claude). */
 const GOALS: Record<string, string> = {

@@ -12,7 +12,7 @@ import { renderScene, renderSection } from './render';
 import { relevantRules, renderRules } from './rules';
 import type { ContextBuildInput, RenderedSections, SectionKind } from './types';
 import { secretLines } from './secrets';
-import { named, nudgedIn, QUIET_TURNS, quietTurns, spotlight } from './spotlight';
+import { named, nudgedIn, QUIET_TURNS, quietTurns, SEND_GOALS, spotlight } from './spotlight';
 import { gapsOf, MAX_GAPS, witnessClause } from './witness';
 
 /** Hard ceiling on rules, scene and cast together, under the `structuredShare` cap. [provisional] */
@@ -67,9 +67,9 @@ interface Witnessed {
   wanting: ReadonlySet<string>;
 }
 
-/** Quiet for `QUIET_TURNS` actions or more, or nudged: the model is given what they want so they act on it. [provisional] */
+/** Quiet for `QUIET_TURNS` actions or more, or nudged: the model is given what they want so they act on it; nobody while `SEND_GOALS` is off. [provisional] */
 const wantingIn = (actions: Adventure['actions'], here: Entity[], ix: AssertionIndex, nudged: readonly string[] = []) =>
-  ids(here.filter((e) => e.kind === 'character' && (nudged.includes(e.id) || quietTurns(e, actions, ix) >= QUIET_TURNS)));
+  ids(here.filter((e) => SEND_GOALS && e.kind === 'character' && (nudged.includes(e.id) || quietTurns(e, actions, ix) >= QUIET_TURNS)));
 
 /**
  * Who is likely to talk next, so their voice goes in: everyone here after the player's `say`, else whom the
