@@ -6,7 +6,7 @@ export { heldBy } from './items';
 export { isSpeciesClash, swapWord } from './species';
 export { isYouLine, YOU } from './you';
 export { defaultKnownBy, newSecret, repointSecrets, secretsOf } from './secrets';
-export { sceneIds, sceneNames, withPresence } from './names';
+export { roomsOf, sceneIds, sceneNames, withPresence } from './names';
 export type { MaintenanceDeps } from './memoryJobs';
 export type { CutCounts, HelperCallLog } from './helperCall';
 /** Idle-only work, loaded on first use to keep it off the start-up bundle. */

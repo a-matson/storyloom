@@ -3,7 +3,8 @@ import { entityEdits } from '@app/session/entities';
 import { isPortraitStale } from '@app/session/portraitPrompt';
 import { tokenizer } from '@app/services';
 import { KEY_ORDER, nowLines } from '@core/context';
-import type { Adventure, Assertion, Entity } from '@core/model';
+import { roomsOf } from '@core/memory';
+import type { Adventure, Assertion, Entity, Scene } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
 import { Input, Select } from '@ui/components/ui/field';
@@ -60,6 +61,37 @@ function SetState({ entity: e, edits }: { entity: Entity; edits: Edits }) {
         Set
       </Button>
     </div>
+  );
+}
+
+const AWAY = '\u0000away';
+
+/**
+ * Where a present character is: with you, a room of this place (`zones`), or away (out of `present`).
+ * The read misses a move to another room; through `updatePlot` the gap is logged, so witnessed-by sees it.
+ */
+function SendTo({ entity: e, scene, entities, api }: { entity: Entity; scene: Scene; entities: readonly Entity[]; api: GameApi }) {
+  const places = entities.filter((x) => x.kind === 'place');
+  const at = scene.zones?.[e.id] ?? '';
+  const here = places.find((p) => p.id === scene.location);
+  const rooms = [...new Set([...roomsOf(places, here), ...(at ? [at] : [])])];
+  const send = (to: string) => {
+    const { zones: _, ...rest } = scene;
+    const { [e.id]: _was, ...others } = scene.zones ?? {};
+    const zones = to && to !== AWAY ? { ...others, [e.id]: to } : others;
+    const present = to === AWAY ? scene.present.filter((p) => p !== e.id) : scene.present;
+    api.updatePlot({ scene: { ...rest, present, ...(Object.keys(zones).length > 0 && { zones }) } });
+  };
+  return (
+    <Select aria-label={`Send ${e.name} to`} className="text-caption w-40 self-start" value={at} onChange={(ev) => send(ev.target.value)}>
+      <option value="">with you</option>
+      {rooms.map((r) => (
+        <option key={r} value={r}>
+          in {r}
+        </option>
+      ))}
+      <option value={AWAY}>away</option>
+    </Select>
   );
 }
 
@@ -121,17 +153,7 @@ export function NowCard({ adventure, api }: { adventure: Adventure; api: GameApi
                 ))}
             </span>
             {e.kind === 'character' && <SetState entity={e} edits={edits} />}
-            {/* The read misses a move to another room; through `updatePlot` the gap is logged, so witnessed-by sees it. */}
-            {stored.present.includes(e.id) && (
-              <Button
-                variant="ghost"
-                className="h-6 self-start"
-                aria-label={`${e.name} is away`}
-                onClick={() => api.updatePlot({ scene: { ...stored, present: stored.present.filter((p) => p !== e.id) } })}
-              >
-                Away
-              </Button>
-            )}
+            {stored.present.includes(e.id) && <SendTo entity={e} scene={stored} entities={adventure.entities} api={api} />}
           </li>
         ))}
       </ul>

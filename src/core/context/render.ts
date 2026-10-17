@@ -14,8 +14,8 @@ export const HEADERS = {
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
- * `Blackmore's study · Day 2, evening · Present: Lena, Morrow · Here: the ledger, Key (Lena) · You hold: Horn · Rain`,
- * leaving out what is unknown; the item lists come from `entities` too.
+ * `Blackmore's study · Day 2, evening · Present: Lena, Morrow · In the basement: Weever · Here: the ledger, Key (Lena) · You hold: Horn · Rain`,
+ * leaving out what is unknown; the item lists come from `entities` too. `Present` is who is with you; one in another room (`zones`) is under it.
  * ponytail: a third-person player's items stay under their name, not `You hold`; map it when one plays so.
  */
 export function renderScene(stored: Scene | undefined, entities: readonly Entity[] = [], ix = indexAssertions([])): string {
@@ -24,11 +24,19 @@ export function renderScene(stored: Scene | undefined, entities: readonly Entity
     .slice(0, MAX_ITEMS)
     .map((e) => e.name);
   const here = scene ? itemsHere(scene, entities, ix) : [];
+  const rooms = new Map<string, string[]>();
+  for (const p of scene?.present ?? []) {
+    const room = scene?.zones?.[p] ?? '';
+    rooms.set(room, [...(rooms.get(room) ?? []), p]);
+  }
+  const withYou = rooms.get('') ?? [];
+  rooms.delete('');
   return [
     scene?.location?.trim(),
     // `formatTime` inlined: importing `clock.ts` would pull it into start-up.
     scene?.time ? `Day ${scene.time.day}, ${scene.time.part}` : '',
-    scene && scene.present.length > 0 ? `Present: ${scene.present.join(', ')}` : '',
+    withYou.length ? `Present: ${withYou.join(', ')}` : '',
+    ...[...rooms].map(([room, who]) => `In ${room}: ${who.join(', ')}`),
     here.length ? `Here: ${here.join(', ')}` : '',
     held.length ? `You hold: ${held.join(', ')}` : '',
     scene?.weather?.trim() ? cap(scene.weather.trim()) : '',

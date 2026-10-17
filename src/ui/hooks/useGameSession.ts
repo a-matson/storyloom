@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { Adventure, AppSettings } from '@core/model';
-import { openSession } from '@app/services';
+import { openSession } from '@app/openSession';
 import type { GameSession, GameSnapshot } from '@app/session';
 
 /** Opens `initial` as a session for the component's lifetime; re-renders on every snapshot. */

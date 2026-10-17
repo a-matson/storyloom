@@ -1,25 +1,11 @@
 import type { Entity, PlotComponents, Scene } from '../model/types';
 import { NOBODY, type SceneRead, type Verdict } from '../schema/extraction';
 import { entityNamedIn } from './entities';
-import { knownAs, norm, sceneIds, sceneNames, withPresence } from './names';
+import { knownAs, norm, outermost, sceneIds, sceneNames, withPresence } from './names';
 
 /** Location changes the Plot tab can show. [provisional] */
 export const SCENE_LOG_CAP = 50;
 export { PRESENCE_CAP } from './names';
-
-/** The outermost place `e` is part of, so a room inside the current place is not a move. */
-function outermost(places: readonly Entity[], e: Entity | undefined): Entity | undefined {
-  const seen = new Set<string>();
-  let p = e;
-  while (p?.partOf && !seen.has(p.id)) {
-    seen.add(p.id);
-    const up: string = p.partOf;
-    const next = places.find((x) => x.id === up);
-    if (!next) break;
-    p = next;
-  }
-  return p;
-}
 
 /** Whether `passage` names a stored name, by its card's aliases too ("the dragon"). */
 export const namedIn =
@@ -106,14 +92,6 @@ export function nextScene(
   return { scene: JSON.stringify(next) === JSON.stringify(rest) ? scene : next, moved };
 }
 
-/** `scene` with each `zones` key passed through `f`. */
-const zonesBy = (scene: Scene, f: (ref: string) => string): Scene =>
-  scene.zones ? { ...scene, zones: Object.fromEntries(Object.entries(scene.zones).map(([k, v]) => [f(k), v])) } : scene;
-
-/** `sceneNames` with the `zones` keys as names too: it leaves them ids to stay light in the start-up chunk. */
-export const namedScene = (scene: Scene, entities: readonly Entity[]): Scene =>
-  zonesBy(sceneNames(scene, entities), (k) => sceneNames({ present: [k] }, entities).present[0] ?? k);
-
 /**
  * `plot` with the scene a turn read gives, read from `source`, stored as ids (`sceneIds`, so a name
  * that got a card since resolves too); a change of place is logged by name, a change of who is present
@@ -129,10 +107,10 @@ export function withScene(
   passage: string,
 ): PlotComponents {
   const old = plot.scene;
-  const was = old && namedScene(old, entities);
+  const was = old && sceneNames(old, entities);
   const places = entities.filter((e) => e.kind === 'place');
   const r = nextScene(was, read, name, at, places, namedIn(entities, passage));
-  const scene = r.scene && zonesBy(sceneIds(r.scene, entities), (k) => sceneIds({ present: [k] }, entities).present[0] ?? k);
+  const scene = r.scene && sceneIds(r.scene, entities);
   if (!scene || (r.scene === was && JSON.stringify(scene) === JSON.stringify(old))) return plot;
   const where = r.scene?.location;
   const log = r.moved && where ? [...(plot.sceneLog ?? []), { at, location: where }].slice(-SCENE_LOG_CAP) : plot.sceneLog;

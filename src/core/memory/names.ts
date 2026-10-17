@@ -107,19 +107,48 @@ export function withPresence(plot: PlotComponents, scene: Pick<Scene, 'present' 
   return [...(plot.presence ?? []), { at, present: [...present] }].slice(-PRESENCE_CAP);
 }
 
-/** `scene` with each name `knownAs` resolves (a place for the location, a character for the present) as its id; unchanged: `scene` itself. */
+/** The outermost place `e` is part of, so a room inside the current place is not a move. */
+export function outermost(places: readonly Entity[], e: Entity | undefined): Entity | undefined {
+  const seen = new Set<string>();
+  let p = e;
+  while (p?.partOf && !seen.has(p.id)) {
+    seen.add(p.id);
+    const up: string = p.partOf;
+    const next = places.find((x) => x.id === up);
+    if (!next) break;
+    p = next;
+  }
+  return p;
+}
+
+/** The other places inside `here`'s outermost place, by name: the rooms someone can go to without leaving. */
+export function roomsOf(places: readonly Entity[], here: Entity | undefined): string[] {
+  const top = outermost(places, here);
+  return top ? places.filter((p) => p !== here && outermost(places, p) === top).map((p) => p.name) : [];
+}
+
+/** `zones` with each key passed through `f`. */
+const zonesBy = (zones: Scene['zones'], f: (ref: string) => string) => zones && { zones: Object.fromEntries(Object.entries(zones).map(([k, v]) => [f(k), v])) };
+
+/** `scene` with each name `knownAs` resolves (a place for the location, a character for the present and `zones`) as its id; unchanged: `scene` itself. */
 export function sceneIds(scene: Scene, entities: readonly Entity[]): Scene {
   const places = entities.filter((e) => e.kind === 'place');
   const location = scene.location === undefined ? undefined : refFor(places, scene.location);
   const people = entities.filter((e) => e.kind === 'character');
   const present = [...new Set(scene.present.map((p) => refFor(people, p)))];
-  const same = location === scene.location && present.length === scene.present.length && present.every((p, i) => p === scene.present[i]);
-  return same ? scene : { ...scene, ...(location !== undefined && { location }), present };
+  const zones = zonesBy(scene.zones, (k) => refFor(people, k));
+  const same =
+    location === scene.location &&
+    present.length === scene.present.length &&
+    present.every((p, i) => p === scene.present[i]) &&
+    JSON.stringify(zones?.zones) === JSON.stringify(scene.zones);
+  return same ? scene : { ...scene, ...(location !== undefined && { location }), present, ...zones };
 }
 
-/** `scene` with its ids as the entities' current names, for the prompt and the player. `zones` keeps ids (`zonesBy`, off the start-up chunk). */
+/** `scene` with its ids as the entities' current names, for the prompt and the player. */
 export const sceneNames = (scene: Scene, entities: readonly Entity[]): Scene => ({
   ...scene,
   ...(scene.location !== undefined && { location: nameOf(entities, scene.location) }),
   present: scene.present.map((p) => nameOf(entities, p)),
+  ...zonesBy(scene.zones, (k) => nameOf(entities, k)),
 });
