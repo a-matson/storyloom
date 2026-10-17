@@ -25,6 +25,18 @@ export const words = (s: string): string =>
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .trim()} `;
 
+/** The entity whose name, alias or role `text` contains as whole words; the longest wins, so "Lena Morrow" beats "Lena". */
+export function entityNamedIn<E extends Pick<Entity, 'name' | 'aliases' | 'roles'>>(entities: readonly E[], text: string): E | undefined {
+  const t = words(text);
+  let best: { e: E; len: number } | undefined;
+  for (const e of entities)
+    for (const n of namesOf(e)) {
+      const k = words(n);
+      if (k.trim() && t.includes(k) && k.length > (best?.len ?? 0)) best = { e, len: k.length };
+    }
+  return best?.e;
+}
+
 /** The words of a name without a leading "the", so "Ashen Order" is "The Ashen Order". */
 const bare = (name: string) => words(name).replace(/^ the /, ' ');
 const one = (hits: Entity[]) => (hits.length === 1 ? hits[0] : undefined);

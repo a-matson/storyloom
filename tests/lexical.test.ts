@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { admitted, bm25, buildIndex, tokenise } from '@core/memory/lexical';
+import { admitted } from '@core/memory/admit';
+import { bm25, buildIndex, tokenise } from '@core/memory/lexical';
 
 const corpus = [
   { id: 'common', text: 'The road runs to the river and the road runs back.' },
@@ -47,6 +48,11 @@ describe('admitted', () => {
   it('one common word is not enough; one rare word is', () => {
     expect(ask('Tell me about the road.')).toEqual([]);
     expect(ask('Is there a toll?')).toEqual(['toll']);
+  });
+
+  it('an everyday word is never rare, however few facts hold it', () => {
+    expect([...admitted(facts, tokenise('Sing at dawn?'), new Set(['dawn']))]).toEqual([]);
+    expect(ask('Sing at dawn?')).toEqual(['r1']);
   });
 
   it('stop words never count, and an empty query admits nothing', () => {

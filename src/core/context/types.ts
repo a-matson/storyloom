@@ -88,6 +88,8 @@ export interface ContextBuildInput {
   overrides?: { plotEssentials?: string | undefined; authorsNote?: string | undefined };
   /** Retry with a note: the fact the retried output broke, for this one generation. */
   retryNote?: string | undefined;
+  /** Words too common to admit an asked-about fact alone (`COMMON_WORDS`); none without. */
+  everyday?: ReadonlySet<string>;
   settings: ContextBuildSettings;
   tokenizer: Tokenizer;
 }

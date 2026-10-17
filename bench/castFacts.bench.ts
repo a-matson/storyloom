@@ -3,6 +3,7 @@ import { test } from 'vitest';
 import { parseOwn } from '@adapters/transfer/own';
 import { askedFacts } from '@core/context/asked';
 import { indexAssertions, textOf } from '@core/memory/assertionIndex';
+import { COMMON_WORDS } from '@core/memory/commonWords';
 import { isConfirmed } from '@core/memory/facts';
 import { actionText, type Adventure, type Assertion } from '@core/model';
 import { writeMeasurement } from './env';
@@ -33,7 +34,7 @@ function replay(adv: Adventure) {
     const here = new Set(adv.plot.presence?.findLast((p) => p.at <= i)?.present ?? []);
     const entities = adv.entities.filter((e) => e.firstSeen < i && isConfirmed(e, ix.of(e.id)));
     const absent = entities.filter((e) => !here.has(e.id) && !e.cardId);
-    const all = [...askedFacts(action, absent, entities, ix)];
+    const all = [...askedFacts(action, absent, entities, ix, COMMON_WORDS)];
     if (all.length) named++;
     const asked = all.filter(([, facts]) => facts.length);
     if (!asked.length) return [];

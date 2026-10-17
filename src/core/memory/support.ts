@@ -2,7 +2,7 @@ import type { Action, Entity } from '../model/types';
 import { actionText } from '../model/types';
 import { entityNamedIn } from './entities';
 import type { Source } from './invalidate';
-import { STOP } from './lexical';
+import { STOP } from './admit';
 
 /**
  * One -ing, -ed or -s off, then a final -e, then the first five letters: "lean" meets "leans" and
