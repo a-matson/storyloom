@@ -18,7 +18,7 @@ const gate: Entity = {
 };
 
 type Over = Partial<Pick<Assertion, 'subject' | 'at' | 'span' | 'basis'>>;
-const line = (id: string, f: Fields, over: Over = {}): Assertion => ({
+const line = (id: string, f: Fields, over: Over = {}, unseen = false): Assertion => ({
   id,
   subject: gate.id,
   producer: 'turn',
@@ -27,6 +27,7 @@ const line = (id: string, f: Fields, over: Over = {}): Assertion => ({
   since: 0,
   ...f,
   ...over,
+  ...(unseen && { seen: false }),
 });
 // Read before sources were kept: no edit drops them.
 const gateLines = [
@@ -206,6 +207,18 @@ describe('GameSession entity edits', () => {
     session.adv.assertions = [...session.adv.assertions, line('c2', { kind: 'conflict', key: 'eyes', claimed: 'red', canon: 'blue' })];
     edits.unlock(gate.id, 'eyes');
     expect(of(session, gate.id).some((a) => a.kind === 'conflict')).toBe(false);
+  });
+
+  it('a species conflict: Keep canon rewrites the identity, Accept sets the look', () => {
+    const clash = (id: string) => line(id, { kind: 'conflict', key: 'species', claimed: 'orc', canon: 'minotaur' }, {}, true);
+    const { session } = withGate();
+    const edits = entityEdits(session);
+    session.adv.assertions = [line('as_i', { kind: 'identity', text: 'A massive Orc, a massive orc.' }), clash('k1')];
+    edits.keepCanon('k1');
+    expect(of(session, gate.id).map(textOf)).toEqual(['A massive Minotaur, a massive minotaur.']);
+    session.adv.assertions = [...session.adv.assertions, clash('k2')];
+    edits.accept('k2');
+    expect(of(session, gate.id).filter((a) => a.kind !== 'identity')).toEqual([expect.objectContaining({ kind: 'look', key: 'species', value: 'orc' })]);
   });
 
   it('setIdentity: a non-canon entity gets the player’s identity line, a canon one its card text', () => {

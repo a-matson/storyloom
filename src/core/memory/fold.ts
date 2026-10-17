@@ -8,6 +8,7 @@ import { sourceIn, type Source } from './invalidate';
 import { articleOnly, cuedKinds, kindOf } from './kindCues';
 import type { MemoryRange } from './memoryBank';
 import { sightingOf, uncut, type Incoming, type Rejected } from './sighting';
+import { flagSpecies } from './species';
 import { spellingOf } from './spelling';
 
 export { uncut, type Incoming, type Rejected } from './sighting';
@@ -167,7 +168,14 @@ export function foldEntities(
     );
     const at = range.toAction - 1;
     const merged = mergeEntity(old, seen, at);
-    const mine = mergeAssertions(merged, own, seen, at, { producer: opts.twice ? 'batch' : 'turn', source: (t) => restOf(backed.get(t) ?? fallback(t)) });
+    const producer = opts.twice ? 'batch' : 'turn';
+    const mine = flagSpecies(
+      merged,
+      own,
+      mergeAssertions(merged, own, seen, at, { producer, source: (t) => restOf(backed.get(t) ?? fallback(t)) }),
+      at,
+      producer,
+    );
     entities = old ? entities.map((x) => (x === old ? merged : x)) : [...entities, merged];
     assertions = [...assertions.filter((a) => a.subject !== merged.id), ...mine];
   }

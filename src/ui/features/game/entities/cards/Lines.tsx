@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { entityEdits } from '@app/session/entities';
-import { isValue, textOf, type AssertionOf } from '@core/memory';
+import { isSpeciesClash, isValue, textOf, type AssertionOf } from '@core/memory';
 import type { Adventure, Assertion, Entity } from '@core/model';
 import { Button } from '@ui/components/ui/button';
 import { Pill } from '@ui/components/ui/pill';
@@ -73,15 +73,22 @@ export function StateLine({ card: c, k, v }: { card: Card; k: string; v: string 
 /** A conflict on a closed key, or a proposal on a free-text one: the player is the author and takes a side. */
 export function ClaimLine({ card: c, fact: f }: { card: Card; fact: Assertion }) {
   const proposal = f.kind !== 'conflict';
-  const text = f.kind === 'look' || f.kind === 'state' ? `the story says ${f.key} is ${f.value}` : textOf(f);
+  // Both sides are the story's here, so the buttons name them.
+  const species = isSpeciesClash(f);
+  const text =
+    f.kind === 'look' || f.kind === 'state'
+      ? `the story says ${f.key} is ${f.value}`
+      : species
+        ? `the identity says ${f.claimed}; the looks say ${f.canon}`
+        : textOf(f);
   return (
     <Line text={text} fact={f} adventure={c.adventure} onShow={c.onShow} onDelete={() => c.edits.deleteLine(f.id)}>
       <Pill tone="see">{proposal ? 'proposal' : 'conflict'}</Pill>
-      <Button className="h-7" onClick={() => c.edits.deleteLine(f.id)}>
-        Keep canon
+      <Button className="h-7" onClick={() => c.edits.keepCanon(f.id)}>
+        {species ? 'Keep the looks' : 'Keep canon'}
       </Button>
       <Button className="h-7" onClick={() => c.edits.accept(f.id)}>
-        Accept the story
+        {species ? 'Keep the identity' : 'Accept the story'}
       </Button>
     </Line>
   );

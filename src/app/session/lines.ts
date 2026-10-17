@@ -1,5 +1,5 @@
 // Only start-up members of the barrel: importing a lazy one splits it out of the start-up chunk.
-import { byPlayer, setValue, type Fields } from '@core/memory';
+import { byPlayer, current, isSpeciesClash, setValue, swapWord, type Fields } from '@core/memory';
 import { newId, type Adventure, type Assertion, type Entity } from '@core/model';
 import type { GameSession } from './session';
 
@@ -70,6 +70,15 @@ export function lineEdits(host: GameSession) {
         adv.assertions = adv.assertions.filter((x) => x.id !== lineId);
         mapOwn(adv, a.subject, (e, own) => setValue(e, own, a.key, value, at));
         if (a.kind === 'conflict') patch(adv, a.subject, { canonKeys: without(adv.entities.find((e) => e.id === a.subject)?.canonKeys, a.key) });
+      }),
+    /** Keep canon: the conflict goes; on an identity-vs-looks one the identity takes the look's species word. */
+    keepCanon: (lineId: string) =>
+      mutate((adv) => {
+        const a = adv.assertions.find((x) => x.id === lineId);
+        adv.assertions = adv.assertions.filter((x) => x.id !== lineId);
+        if (!a || !isSpeciesClash(a)) return;
+        const id = current(adv.assertions, 'identity').findLast((x) => x.subject === a.subject);
+        if (id) mapLine(adv, id.id, (x) => (x.kind === 'identity' ? { ...x, text: swapWord(x.text, a.claimed, a.canon) } : x));
       }),
     /** A canon or carded entity's card text; any other's identity becomes the player's, which no edit of the story drops. */
     setIdentity: (id: string, text: string) =>
