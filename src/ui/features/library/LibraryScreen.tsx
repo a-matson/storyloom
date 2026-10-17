@@ -33,6 +33,11 @@ async function surpriseAdventure(app: AppSettings) {
   return (await import('@app/scenarios')).surpriseAdventure(app);
 }
 
+// Same reason; and loaded on demand: start-up bundle budget.
+async function diceScripts(dice: boolean) {
+  return dice ? (await import('@core/dice')).DICE_SCRIPTS : undefined;
+}
+
 async function remove(id: string): Promise<void> {
   if (!confirm('Delete this adventure? This cannot be undone.')) return;
   await storage.deleteAdventure(id);
@@ -46,8 +51,7 @@ export function LibraryScreen({ app, backendLabel, backendOk, notice, onDismissN
 
   const start = (title: string, opening: string, dice = false) => {
     const open = async () => {
-      const scripts = dice ? (await import('@core/dice')).DICE_SCRIPTS : undefined;
-      const adv = createBlankAdventure(title, opening, app.defaults, scripts);
+      const adv = createBlankAdventure(title, opening, app.defaults, await diceScripts(dice));
       await storage.putAdventure(adv);
       onOpen(adv.id);
     };
