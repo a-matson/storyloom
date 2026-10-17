@@ -142,12 +142,12 @@ describe('memory maintenance', () => {
     const adv = adventure(18);
     adv.settings.memory.autoSummary = true;
     const provider = fakeProvider(async function* (req) {
-      const text = req.prompt.includes('Write the updated summary') ? 'Mira owes the ferryman. She hid the' : 'Mira found the map. The rider ha';
+      const text = req.prompt.includes('Write what happened') ? 'Mira owes the ferryman. She hid the' : 'Mira found the map. The rider ha';
       yield { text, done: true, stats: { stopReason: 'length' } };
     });
     await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider, historyStart: 12 });
     expect(adv.memories[0]?.text).toBe('Mira found the map.');
-    expect(adv.plot.storySummary).toBe('Mira owes the ferryman.');
+    expect(adv.plot.storySummary).toBe('Recently: Mira owes the ferryman.');
   });
 
   it('asks the memory to keep what the player states about themselves, with no worked example', () => {
@@ -167,7 +167,7 @@ describe('memory maintenance', () => {
   it("gives the player's own lines to the memory and the summary, before the passage", async () => {
     const prompt = memoryPrompt('> You wave.', ['a noodle-shop owner']);
     expect(prompt.indexOf('Given about the player:\n- a noodle-shop owner')).toBeLessThan(prompt.indexOf('---'));
-    expect(summaryPrompt('', ['Mira left.'], ['a noodle-shop owner'])).toMatch(/^Given about the player:\n- a noodle-shop owner\n\nNew memories/);
+    expect(summaryPrompt(['Mira left.'], [], ['a noodle-shop owner'])).toMatch(/^Given about the player:\n- a noodle-shop owner\n\nNew memories/);
 
     const adv = adventure(15);
     adv.settings.memory.autoSummary = true;
@@ -183,7 +183,7 @@ describe('memory maintenance', () => {
     // Dirty: the summary rebuilds from the memory just written.
     adv.scriptState = { ...adv.scriptState, __summaryDirty: true };
     await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider, historyStart: 12 });
-    const helper = prompts.filter((p) => p.includes('Memory:') || p.includes('Write the updated summary'));
+    const helper = prompts.filter((p) => p.includes('Memory:') || p.includes('Write what happened'));
     expect(helper).toHaveLength(2);
     for (const p of helper) {
       expect(p).toContain('- a noodle-shop owner');
@@ -203,10 +203,10 @@ describe('memory maintenance', () => {
     adv.scriptState = { ...adv.scriptState, __summaryDirty: true };
     await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider, historyStart: 12 });
     expect(prompts.filter((p) => p.includes('Memory:')).join()).not.toContain('sold the keys');
-    const summary = prompts.find((p) => p.includes('Write the updated summary'));
+    const summary = prompts.find((p) => p.includes('Write what happened'));
     expect(summary).toContain('- (known only to you) Mira found the map.');
     expect(summary).toContain('Keep each "(known only to …)" mark as written');
-    expect(summaryPrompt('', ['Mira left.'])).not.toContain('Keep each');
+    expect(summaryPrompt(['Mira left.'])).not.toContain('Keep each');
   });
 
   it('keeps a memory as written, even one naming a place the passage lacks', async () => {
@@ -219,7 +219,7 @@ describe('memory maintenance', () => {
     expect(adv.memories[0]?.text).toBe(text);
   });
 
-  it('constrains memories to 4 and the summary to 12 sentences when the backend has grammar', async () => {
+  it("constrains memories to 4 and the summary's Recently to 6 sentences when the backend has grammar", async () => {
     const adv = adventure(18);
     adv.settings.memory.autoSummary = true;
     const reqs: CompletionRequest[] = [];
@@ -234,7 +234,7 @@ describe('memory maintenance', () => {
       sentence ::= [^.!?"“”\\n> ] [^.!?"“”\\n>]* [.!?] " "?
       "
     `);
-    expect(reqs.at(-1)).toMatchObject({ maxTokens: 500, grammar: expect.stringContaining('root ::= sentence{1,12}') });
+    expect(reqs.at(-1)).toMatchObject({ maxTokens: 300, grammar: expect.stringContaining('root ::= sentence{1,6}') });
     reqs.length = 0;
     await runMemoryMaintenance(adventure(15), { ...fakeDeps(adv).deps, provider: fakeProvider(answer, false) });
     expect(reqs[0]?.grammar).toBeUndefined();
@@ -247,7 +247,7 @@ describe('memory maintenance', () => {
     const model = (job: string) => ({
       template: adv.settings.template,
       provider: fakeProvider(async function* (req) {
-        seen[job]?.push(req.prompt.includes(ENTITY_PROMPT) ? 'entity' : req.prompt.includes('Write the updated summary') ? 'summary' : 'memory');
+        seen[job]?.push(req.prompt.includes(ENTITY_PROMPT) ? 'entity' : req.prompt.includes('Write what happened') ? 'summary' : 'memory');
         yield { text: req.prompt.includes(ENTITY_PROMPT) ? '{"entities": [], "speakers": []}' : 'Mira found the map.', done: true };
       }),
     });

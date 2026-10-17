@@ -48,7 +48,7 @@ test.skipIf(!url)('memories keep planted facts', { timeout: 900_000 }, async () 
   const leaked = rows.filter((r) => leaks(r.memory).length).length;
   // The summary over these memories, as the app's first one: the M12 dogfood's invented the player's past.
   const memories = rows.map((r) => r.memory).filter((m) => m !== '' && !m.startsWith('no range'));
-  const prompt = renderTemplate(settings.template, SUMMARY_SYSTEM, summaryPrompt('', memories));
+  const prompt = renderTemplate(settings.template, SUMMARY_SYSTEM, summaryPrompt(memories));
   const summary = memories.length
     ? (
         await collect(

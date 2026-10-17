@@ -27,22 +27,36 @@ export function memoryPrompt(passage: string, given: readonly string[] = []): st
   return `${MEMORY_FORMAT}${givenBlock(given)}Summarise this passage.\n\n---\n${passage}\n---\n\nMemory:`;
 }
 
+/**
+ * The model writes the summary's parts from new text only; `refreshSummary` assembles them. Given its whole old summary
+ * to extend under a 12-sentence grammar, it copied it 10 of 10 times (35 of 35 in the M17 dogfood); told to write
+ * "Recently" first, it wrote only the new memories and dropped the past. [measured: 2026-10-17-summary-m19-5-before, -a]
+ */
 export const SUMMARY_SYSTEM =
-  'You maintain a running summary of an interactive story. Extend the summary with the new memories; ' +
-  'keep every earlier event; do not drop details. Keep it information-dense and chronological, in two parts: ' +
-  '"Long ago:" (at most 6 sentences) then "Recently:" (at most 6 sentences). When Recently would pass 6 sentences, ' +
-  'fold its oldest sentences into Long ago. Output only the summary.';
+  'You summarise an interactive story. Output only the summary: information-dense, past tense, chronological, ' +
+  'every proper name kept, no dialogue, no commentary.';
 
 /** Sent only when a memory or the summary carries a secret's mark, so other summaries keep their measured prompt. [provisional] */
 const KEEP_MARKS = 'Keep each "(known only to …)" mark as written, with the fact it marks.\n\n';
 
-export function summaryPrompt(previousSummary: string, newMemories: string[], given: readonly string[] = []): string {
-  const marked = [previousSummary, ...newMemories].some((t) => t.includes('(known only to '));
+const marksIn = (texts: readonly string[]) => (texts.some((t) => t.includes('(known only to ')) ? KEEP_MARKS : '');
+const listed = (title: string, lines: readonly string[]) => (lines.length ? `${title}\n${lines.map((l) => `- ${l}`).join('\n')}\n\n` : '');
+
+/** The summary's "Recently": the memories of newly evicted text, and the events the batch read stored there. */
+export function summaryPrompt(newMemories: readonly string[], events: readonly string[] = [], given: readonly string[] = []): string {
   return (
     givenBlock(given) +
-    (previousSummary ? `Current summary:\n${previousSummary}\n\n` : '') +
-    (newMemories.length ? `New memories since then:\n${newMemories.map((m) => `- ${m}`).join('\n')}\n\n` : '') +
-    (marked ? KEEP_MARKS : '') +
-    'Write the updated summary:'
+    listed('Events since the last summary:', events) +
+    listed('New memories:', newMemories) +
+    marksIn([...events, ...newMemories]) +
+    'Write what happened, in at most 6 sentences:'
+  );
+}
+
+/** The old "Recently", retold short for "Long ago". */
+export function eraPrompt(recently: string): string {
+  return (
+    `Story:\n${recently}\n\n${marksIn([recently])}` +
+    'Retell this in at most 3 sentences. Keep who met whom and where, deaths, promises, betrayals and discoveries:'
   );
 }

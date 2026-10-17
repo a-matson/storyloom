@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
-import { coveredEnd } from '@core/memory/summary';
+import { byPlayer } from '@core/memory/looks';
+import { coveredEnd, refreshSummary } from '@core/memory/summary';
+import { YOU } from '@core/memory/you';
 import type { Memory } from '@core/model';
-import { SUMMARY_SYSTEM } from '@core/text/memoryPrompts';
-import { ENTITY_PROMPT, fakeDeps, memoryAdventure as adventure } from './fixtures/memoryJobs';
+import { ENTITY_PROMPT, fakeDeps, fakeProvider, memoryAdventure as adventure } from './fixtures/memoryJobs';
 
-const SUMMARY = 'Write the updated summary';
+const SUMMARY = 'Write what happened';
 
 function memories(froms: number[]): Memory[] {
   return froms.map((from) => ({ id: `m${from}`, text: `mem${from}`, fromAction: from, toAction: from + 6, actionIds: [], useCount: 0, createdAt: from }));
@@ -66,7 +67,8 @@ describe('story summary', () => {
     adv.memories = memories([0, 6, 12, 18]);
     const { deps, calls } = fakeDeps(adv);
     await runMemoryMaintenance(adv, { ...deps, historyStart: 18 });
-    expect(calls.at(-1)).toContain(`- mem6\n- mem12\n\n${SUMMARY}:`);
+    expect(calls.at(-1)).toContain(`New memories:\n- mem6\n- mem12\n\n${SUMMARY}`);
+    expect(calls.at(-1)).not.toContain('Events since');
     for (const absent of ['mem0', 'mem18', 'Most recent passage']) expect(calls.at(-1)).not.toContain(absent);
     expect(adv.scriptState.__summaryAt).toBe(18);
   });
@@ -83,22 +85,47 @@ describe('story summary', () => {
     expect(calls.some((c) => c.includes(SUMMARY))).toBe(false);
   });
 
-  it('builds the next summary on top of the player-edited one', async () => {
+  it('keeps the player-edited summary as the opening of Long ago, out of the prompt', async () => {
     const adv = adventure(18);
     adv.settings.memory.autoSummary = true;
     adv.plot.storySummary = 'The player rewrote this: Mira owes the ferryman.';
     const { deps, calls } = fakeDeps(adv);
     const report = await runMemoryMaintenance(adv, { ...deps, historyStart: 14 });
     expect(report.summaryUpdated).toBe(true);
-    expect(calls.at(-1)).toContain('Current summary:\nThe player rewrote this: Mira owes the ferryman.');
+    expect(calls.at(-1)).not.toContain('Mira owes the ferryman');
+    expect(adv.plot.storySummary).toBe('Long ago: The player rewrote this: Mira owes the ferryman.\n\nRecently: sum:text');
     // the newest memory ends short of the history start
     expect(adv.memories.at(-1)?.toAction).toBe(12);
     expect(adv.scriptState.__summaryAt).toBe(12);
   });
 
-  it('asks the summary to extend, keep every event, and split long ago from recently', () => {
-    expect(SUMMARY_SYSTEM).toContain('keep every earlier event; do not drop details');
-    expect(SUMMARY_SYSTEM).toContain('"Long ago:" (at most 6 sentences) then "Recently:" (at most 6 sentences)');
-    expect(SUMMARY_SYSTEM).not.toContain('no longer matter');
+  it('writes Recently from new text only, keeps the opening and retells the old Recently short', async () => {
+    const adv = adventure(30);
+    adv.scriptState = { ...adv.scriptState, __summaryAt: 6 };
+    adv.memories = memories([0, 6, 12]);
+    adv.plot.storySummary = 'Long ago: Met Tamsin. At the boat. In rain. Lost the map.\n\nRecently: Crossed the reef. Found the light.';
+    const prompts: string[] = [];
+    const provider = fakeProvider(async function* (req) {
+      prompts.push(req.prompt);
+      yield { text: req.prompt.includes(SUMMARY) ? 'Rang the bell.' : 'Reached the light.', done: true };
+    });
+    expect(await refreshSummary(adv, { provider, template: adv.settings.template, historyStart: 18 })).toBe(true);
+    const [recent, era] = prompts;
+    expect(recent).not.toMatch(/Tamsin|reef/);
+    expect(era).toContain('Crossed the reef. Found the light.');
+    expect(era).not.toContain('Tamsin');
+    expect(adv.plot.storySummary).toBe('Long ago: Met Tamsin. At the boat. In rain. Reached the light.\n\nRecently: Rang the bell.');
+  });
+
+  it('gives the summary the events of the evicted text as lines before the memories', async () => {
+    const adv = adventure(30);
+    adv.scriptState = { ...adv.scriptState, __summaryAt: 6 };
+    adv.memories = memories([0, 6, 12]);
+    const event = (at: number, text: string) => byPlayer(YOU, at, { kind: 'event', text, who: [YOU] });
+    adv.assertions = [event(13, 'You broke the oath.'), event(2, 'Too old.'), event(7, 'You met Tamsin.'), event(18, 'Still in history.')];
+    const { deps, calls } = fakeDeps(adv);
+    await refreshSummary(adv, { ...deps, historyStart: 18 });
+    expect(calls[0]).toContain('Events since the last summary:\n- You met Tamsin.\n- You broke the oath.\n\nNew memories:');
+    for (const absent of ['Too old', 'Still in history']) expect(calls[0]).not.toContain(absent);
   });
 });
