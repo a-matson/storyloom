@@ -55,17 +55,29 @@ function cardedBy(cards: readonly StoryCard[]) {
   return (e: Entity) => (e.cardId !== undefined && names.has(e.cardId)) || names.has(e.name.trim().toLowerCase());
 }
 
-/** What witnessed-by clauses read: who was present when, and the window history covers (`to`: the last action). */
+/** What witnessed-by clauses read: who was present when, and the window history covers (`to`: the last action); and who is `speakingIn` it. */
 interface Witnessed {
   presence: NonNullable<PlotComponents['presence']>;
   window: { from: number; to: number };
+  speaking: ReadonlySet<string>;
+}
+
+/**
+ * Who is likely to talk next, so their voice goes in: everyone here after the player's `say`, else whom the
+ * last AI output quoted (its speaker labels). [provisional]
+ */
+function speakingIn(actions: Adventure['actions'], last: number, here: Entity[]): Set<string> {
+  if (actions[last]?.type === 'say') return ids(here);
+  const output = actions.slice(0, last + 1).findLast((a) => a.type === 'continue' || a.type === 'start');
+  const quoted = output?.speakers ?? [];
+  return ids(here.filter((e) => quoted.some((s) => named(e, s.name))));
 }
 
 /** A present character's now-line with what they missed in the window, the most recent `MAX_GAPS`. */
 function castLine(e: Entity, here: Entity[], ix: AssertionIndex, carded: boolean, w: Witnessed): CastLine {
   const gaps = e.kind === 'character' ? gapsOf(e.id, w.presence, ix.of(e.id), w.window).slice(-MAX_GAPS) : [];
   // The clause names no range, so two gaps of a kind read the same: send it once.
-  const line = presentLine(e, ix.of(e.id), here, carded, [...new Set(gaps.map(witnessClause))]);
+  const line = presentLine(e, ix.of(e.id), here, carded, [...new Set(gaps.map(witnessClause))], w.speaking.has(e.id));
   return gaps.length > 0 ? { ...line, gaps } : line;
 }
 
@@ -85,7 +97,8 @@ export function nowLines(adv: Pick<Adventure, 'plot' | 'entities' | 'assertions'
   const ix = indexAssertions(adv.assertions);
   const entities = adv.entities.filter((e) => isConfirmed(e, ix.of(e.id)));
   const { shown, here, items } = sceneCast(adv.plot.scene, entities, adv.entities, ix);
-  const w: Witnessed = { presence: adv.plot.presence ?? [], window: { from: 0, to: adv.actions.length - 1 } };
+  const to = adv.actions.length - 1;
+  const w: Witnessed = { presence: adv.plot.presence ?? [], window: { from: 0, to }, speaking: speakingIn(adv.actions, to, here) };
   return { scene: renderScene(shown, entities, ix), lines: hereLines(here, items, ix, cardedBy(adv.storyCards), w) };
 }
 
@@ -140,7 +153,11 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
 
   const carded = cardedBy(input.storyCards);
   // A gap that left the window is in a memory, which the model reads as a memory anyway.
-  const witnessed: Witnessed = { presence: plot.presence ?? [], window: { from: historyFrom, to: lastActionIndex } };
+  const witnessed: Witnessed = {
+    presence: plot.presence ?? [],
+    window: { from: historyFrom, to: lastActionIndex },
+    speaking: speakingIn(input.actions, lastActionIndex, here),
+  };
   // With entity facts off, the player's own facts (Correct, pins) still go in for who is here or named.
   // Each entry is one entity's line and its fallbacks: an asked-about line that does not fit sends the identity alone.
   const asked = askedFacts(input.actions[lastActionIndex], mentioned, entities, ix);

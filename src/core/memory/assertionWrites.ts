@@ -21,7 +21,7 @@ export interface Rest {
  * (an item's holder and place end each other), and traits deduped by containment, a model trait the
  * new one contains replaced by it, the player's and pinned never. A locked key (`canonKeys`) keeps
  * its value: a different closed one (`CLOSED_KEYS`) is a conflict, a free-text one a proposal
- * (`seen: false`), each once.
+ * (`seen: false`), each once. A new voice ends the current one unless the player wrote or pinned it.
  */
 export function mergeAssertions(
   e: Pick<Entity, 'id' | 'kind' | 'canon' | 'cardId' | 'canonKeys'>,
@@ -31,6 +31,7 @@ export function mergeAssertions(
     facts: readonly string[];
     state?: Record<string, string> | undefined;
     relationships?: readonly { to: string; stance: string }[] | undefined;
+    voice?: string | undefined;
   },
   atAction: number,
   opts: { producer: Assertion['producer']; source?: ((text: string) => Rest | undefined) | undefined },
@@ -79,6 +80,14 @@ export function mergeAssertions(
     if (was?.kind === 'relationship' && norm(was.stance) === norm(stance)) continue;
     if (was) list[old] = { ...was, until: atAction };
     list.push(make(stance, { kind: 'relationship', to, stance }));
+  }
+
+  // One current voice: a new one ends the old, the player's and a pinned one stay.
+  const voice = incoming.voice?.trim();
+  const was = current(list, 'voice').at(-1);
+  if (voice && norm(voice) !== norm(was?.text ?? '') && was?.basis !== 'player' && !was?.pinned) {
+    if (was) list[list.indexOf(was)] = { ...was, until: atAction };
+    list.push(make(voice, { kind: 'voice', text: voice }));
   }
 
   for (const t of incoming.facts) {

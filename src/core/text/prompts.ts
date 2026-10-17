@@ -24,7 +24,7 @@ export const EXTRACT_SYSTEM = 'You keep a record of the people, places, items an
 const EXTRACT_SKELETON =
   'Return JSON in this shape (<...> are placeholders):\n' +
   '{"entities": [{"name": "<Name>", "kind": "character", "aliases": ["<role>"], "description": "<one sentence>",\n' +
-  '   "facts": ["<fact>"], "looks": {"<key>": "<a few words>"}, "relationships": [{"to": "<Name>", "stance": "<a few words>"}]},\n' +
+  '   "facts": ["<fact>"], "looks": {"<key>": "<a few words>"}, "relationships": [{"to": "<Name>", "stance": "<a few words>"}], "voice": "<a few words>"},\n' +
   '  {"name": "<Name>", "kind": "place", "description": "<one sentence>", "facts": []}]';
 const SKELETON_ROLES = ',\n "refersTo": {"<Name>": "the <role>"}';
 const SKELETON_EVENTS = ',\n "events": [{"what": "<what happened>", "who": ["<Name>", "You"], "at": <number>}]}';
@@ -36,6 +36,9 @@ const SKELETON_EVENTS = ',\n "events": [{"what": "<what happened>", "who": ["<Na
 export const ONE_LINE = ' Write the JSON on one line, with no line breaks or indentation.';
 
 export const LOOKS_ASK = `looks is only for characters: a few words for each of ${LOOK_KEYS.join(', ')} that the passage shows; leave out the rest, and leave it out for places, items and factions.`;
+/** Only from quotes: `sighting.ts` drops a voice for anyone the passage does not quote. [provisional] */
+const VOICE_ASK =
+  'voice is only for characters: how they always talk, from their own quoted lines only (register, a tic, how they address you), not their mood now, in a few words; leave it out if they say nothing.';
 /**
  * After the passage: before it, as the cached prefix would have it, the 12B left `refersTo` empty. Without "never the
  * name itself" it wrote each name back in 2 of 2 calls of one run. Example names no dogfood holds, so a replay is not
@@ -60,6 +63,7 @@ export function extractPrompt(passage: string, knownNames: readonly string[], gr
     (knownNames.length ? `Already recorded (use these exact names when the passage means them): ${knownNames.join(', ')}.\n` : '') +
     'Give each entity a one-sentence description and 0–2 facts: short sentences about what lasts (who or what it is, what it owns, injuries, loyalties), not single actions or dialogue, and nothing the passage does not state. ' +
     `${LOOKS_ASK} relationships: 0–2, to whom (a Name, or "You" for the player) and the stance in a few words. ` +
+    `${VOICE_ASK} ` +
     'No location, posture, condition or mood: those are read each turn. ' +
     'The player is "you", not an entity.\n' +
     (roles ? REFERS_ASK : '') +

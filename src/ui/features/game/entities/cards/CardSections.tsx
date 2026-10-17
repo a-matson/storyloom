@@ -77,7 +77,13 @@ export function CardSections({ entity: e, adventure, api, edits, onClose, onOpen
   };
   return (
     <>
-      <Section label="Is">{[...current(live, 'trait').map((a) => <FactLine key={a.id} card={card} fact={a} text={a.text} />), ...stateLines(true)]}</Section>
+      <Section label="Is">
+        {[
+          ...current(live, 'trait').map((a) => <FactLine key={a.id} card={card} fact={a} text={a.text} />),
+          ...current(live, 'voice').map((a) => <FactLine key={a.id} card={card} fact={a} text={`speaks: ${a.text}`} />),
+          ...stateLines(true),
+        ]}
+      </Section>
       <Section label="Now">
         {[
           ...stateLines(false),

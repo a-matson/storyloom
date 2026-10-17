@@ -19,7 +19,7 @@ export interface Card {
 
 /** An edit of "key: value" keeps the key out of the value. */
 const valueOf = (key: string, t: string) => (t.startsWith(`${key}:`) ? t.slice(key.length + 1).trim() : t);
-const keyOf = (a: Assertion) => (a.kind === 'look' || a.kind === 'state' ? a.key : a.kind === 'relationship' ? a.to : '');
+const keyOf = (a: Assertion) => (a.kind === 'look' || a.kind === 'state' ? a.key : a.kind === 'relationship' ? a.to : a.kind === 'voice' ? 'speaks' : '');
 
 export function FactLine({ card: c, fact: f, text, children }: { card: Card; fact: Assertion; text: string; children?: ReactNode }) {
   const key = keyOf(f);

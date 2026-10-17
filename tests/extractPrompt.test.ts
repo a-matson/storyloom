@@ -6,7 +6,7 @@ import { extractGrammar, grammarOf } from '@core/memory/extractJsonSchema';
 import { LOOK_KEYS } from '@core/memory/looks';
 import type { CompletionRequest } from '@core/ports';
 import { EntityKind } from '@core/schema/entity';
-import { DESCRIPTION_CHARS, extractionJson, FACT_CHARS, LOOK_CHARS, MAX_ENTITIES, PHRASE_CHARS } from '@core/schema/extraction';
+import { DESCRIPTION_CHARS, ExtractedEntity, extractionJson, FACT_CHARS, LOOK_CHARS, MAX_ENTITIES, PHRASE_CHARS, VOICE_CHARS } from '@core/schema/extraction';
 import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import { extractPrompt } from '@core/text/prompts';
 import { statePrompt } from '@core/text/statePrompt';
@@ -72,6 +72,13 @@ describe('the entity call’s prompt', () => {
     };
     expect(await sent(true)).toMatchObject({ grammar: EXTRACT_GRAMMAR, jsonSchema: undefined });
     expect(await sent(false)).toMatchObject({ grammar: undefined, jsonSchema: EXTRACT_JSON_SCHEMA });
+  });
+
+  it('asks for a voice from quoted lines, last and only for a character', () => {
+    for (const g of [true, false]) expect(extractPrompt('[0] Mira waves.', [], g)).toMatch(/voice is only for characters: .*quoted lines only/);
+    expect(EXTRACT_GRAMMAR).toContain(`voice ::= "\\"" char{1,${VOICE_CHARS}}`);
+    expect(EXTRACT_GRAMMAR).toMatch(/"\\"character\\"" body .* rels \( ",\\"voice\\":" voice \)\? \| kind body rels \)/);
+    expect(Object.keys(ExtractedEntity.shape).at(-1)).toBe('voice');
   });
 
   it('keeps the schema’s caps in the grammar, with no whitespace and looks only for a character', () => {
