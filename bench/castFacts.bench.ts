@@ -5,23 +5,13 @@ import { askedFacts } from '@core/context/asked';
 import { indexAssertions, textOf } from '@core/memory/assertionIndex';
 import { COMMON_WORDS } from '@core/memory/commonWords';
 import { isConfirmed } from '@core/memory/facts';
-import { actionText, type Adventure, type Assertion } from '@core/model';
+import { actionText, type Adventure } from '@core/model';
 import { writeMeasurement } from './env';
+import { storeAt } from './storeAt';
 
 // The facts each player action of a backup asks for, no model. `pnpm measure cast-facts <backups> [label]`.
 const backups = process.env['MEASURE_BACKUP']?.split(',') ?? [];
 const LABEL = process.env['MEASURE_LABEL'] ?? 'baseline';
-
-/** The store as it stood before action `i`: said earlier, and still true then. */
-const storeAt = (all: readonly Assertion[], i: number): Assertion[] =>
-  all
-    .filter((a) => a.at < i)
-    .map((a) => {
-      if (a.until === undefined || a.until < i) return a;
-      const c = structuredClone(a);
-      delete c.until;
-      return c;
-    });
 
 /**
  * Per player action: each absent entity that got facts, and the facts. The final cards stand in for the

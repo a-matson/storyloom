@@ -22,9 +22,11 @@ const CHECK_TOKENS = 60;
 
 /**
  * What an output is checked against: the scene line and the locked values of who is present
- * (`Mira: hair is grey`). A locked value present runs the check whatever the setting. Empty means no call.
+ * (`Mira: hair is grey`). Empty means no call. Off unless the setting is on, locked values too: on dogfood
+ * outputs it flagged 2 lines, both wrong. [measured: 2026-10-17-contradiction-m20-2.json]
  */
 export function checkInputs(adv: Pick<Adventure, 'entities' | 'assertions' | 'plot' | 'settings'>): string[] {
+  if (!adv.settings.memory.contradictionCheck) return [];
   const scene = renderScene(adv.plot.scene && sceneNames(adv.plot.scene, adv.entities));
   const ix = indexAssertions(adv.assertions);
   const present = (adv.plot.scene?.present ?? []).flatMap((p) => adv.entities.find((e) => e.id === p) ?? knownAs(adv.entities, p) ?? []);
@@ -32,7 +34,6 @@ export function checkInputs(adv: Pick<Adventure, 'entities' | 'assertions' | 'pl
     const now = currentStates(ix.of(e.id));
     return (e.canonKeys ?? []).flatMap((k) => (now[k] ? [`${e.name}: ${k} is ${now[k]}`] : []));
   });
-  if (!locked.length && !adv.settings.memory.contradictionCheck) return [];
   return [...(scene ? [`Scene: ${scene}`] : []), ...locked];
 }
 

@@ -1,0 +1,578 @@
+[
+  {
+    "probe": "2026-10-15-dogfood-m13@4",
+    "output": "Minos sets down his chopsticks, leaving a smear of broth across the table. His scarred knuckles rap against the wood as he leans forward. \"You think I come here for the food?\" His voice rumbles like an approaching subway train. \"There's a rat problem in the tunnels. Human-sized rats. They've been eating kids who miss the last train.\"\n\nHe reaches inside his jacket and slides a photograph across the table toward you. The image shows a mangled corpse lying near the tunnel entrance - small, bloodied, partially devoured. \"I need it done before they move their nest somewhere else. Payment's two hundred pounds, cash.\"",
+    "lines": [
+      "Scene: Present: Minos",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@6",
+    "output": "Minos grins, revealing yellowed tusks, and nods approvingly. \"Smart boy. These things - they're not like regular rats.\" He stands in one fluid motion, his massive frame nearly scraping the ceiling of the archway shop. \"We go now, before they settle down for the night.\"\n\nHe pulls a second photograph from his jacket - this one showing multiple human-sized creatures hunched over a fire, their elongated snouts sniffing at something cooking in a makeshift pot. The image was taken from the shadows, but their movements are unnaturally fast and coordinated.\n\nAs you both move toward the door, Minos pauses and turns back. \"There's one more thing. The leader of these things - he calls himself King Rat. Says he's been down here since the Blitz, feeding on what crawls out of the tunnels after dark.\"",
+    "lines": [
+      "Scene: Present: Minos",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@10",
+    "output": "Vorthak's massive red bulk fills the doorway first, his breath fogging the chilled air inside the shop. Behind him, Weever's smaller green-scaled form moves with deadly purpose, carrying a battered duffel bag that clinks ominously. The kobold's yellow eyes flick from Minos to you and back, her nostrils flaring as she catches the scents of old blood and fear hanging in the space.\n\n\"Minos the butcher,\" Vorthak rumbles, his voice dripping with hungry interest. \"Haven't seen you topside since that incident with the dock workers last year.\" The dragon's tongue flicks out, tasting the tension in the air.\n\nWeever sets her bag down on the nearest table and pulls out a flamethrower, checking its fuel lines with careful expertise. \"So what are we hunting, exactly?\" she asks without looking up. \"The photos didn't do these things justice.\"\n\nMinos taps the second photograph with one massive finger. \"King Rat's got himself an army down there. We need to flush them out before they move on.\"",
+    "lines": [
+      "Scene: Present: Minos",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@12",
+    "output": "Minos settles into the largest chair with a satisfied grunt, his massive hands already reaching for bowls of steaming broth and heaps of meatballs. Vorthak folds his enormous frame into a corner booth, the wood groaning under his weight as he inhales three bowls in quick succession. Weever perches on the counter, her claws clicking against the Formica as she devours a plate of noodles with terrifying speed.\n\nThe shop's usual sounds fill the space - slurping, the scrape of utensils, the occasional appreciative murmur. Outside, the rain pounds against the archway entrance with increasing fury, and through the grimy windows you can see the shadows of your crew's equipment growing more ominous in the dim glow.\n\nVorthak wipes his mouth with the back of one clawed hand and rumbles, \"About time we did this. Been too long since I've tasted something with a spine.\" His yellow eyes fix on Minos with hungry interest. \"These tunnel rats - they'll make for interesting sport.\"",
+    "lines": [
+      "Scene: Present: Minos, Vorthak, Weever",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame",
+      "Vorthak: build is massive red bulk",
+      "Vorthak: species is dragon",
+      "Vorthak: scales is red scales",
+      "Vorthak: hair is scales",
+      "Vorthak: eyes is yellow eyes"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@16",
+    "output": "Minos' claws dig into the table as his knuckles whiten around them. \"Personal experience,\" he growls, the scars along his face twisting with old pain. \"Found my daughter's purse down there three weeks ago.\" His voice drops to a dangerous whisper that makes the other creatures in the room lean in despite themselves. \"Still had blood on it.\"\n\nVorthak's massive head tilts as understanding dawns. \"The missing kids from Westminster,\" he rumbles with dark satisfaction. \"Thought the cops were just being incompetent.\" His tongue flicks out again, tasting the fresh air of a potential hunt.\n\nWeever's yellow eyes narrow to slits as she processes this information. \"If they've been operating this long, they're well-established,\" she hisses. \"Probably have guard rotations, multiple escape routes.\" Her claws scrape against the map as she traces several possible paths through the tunnel system. \"We'll need to coordinate our approach carefully.\"",
+    "lines": [
+      "Scene: Present: Minos, Vorthak, Weever",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame",
+      "Vorthak: build is massive red bulk",
+      "Vorthak: species is dragon",
+      "Vorthak: scales is red scales",
+      "Vorthak: hair is scales",
+      "Vorthak: eyes is yellow eyes"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@18",
+    "output": "Vorthak's wings rustle with a sound like leather being unfolded as he considers your question. \"I need to know if there are any civilian access points near the target area,\" he rumbles, his massive head swiveling toward the map. \"Can't have humans wandering into this fight.\" His claws trace a circle around several stations. \"And I'll need you to stay topside as our lookout. Someone needs to monitor the surface exits.\"\n\nWeever's scaled tail flicks impatiently as she taps one claw against the table. \"I need you to prep some flash bangs and smoke grenades,\" she hisses, her yellow eyes glinting with dangerous focus. \"The tunnels will amplify sound, so anything that confuses them will give us an advantage.\" She pulls out a small notebook and begins sketching tunnel layouts from memory. \"And make sure we have rope - those creatures move fast.\"\n\nMinos stands suddenly, his chair scraping against the floor with a sharp screech. The other creatures instinctively step back as he slams his fist onto the table, sending cracks spreading through the Formica. \"We don't need gear,\" he snarls, his voice echoing off the archway walls. \"We need to go now, before they sense us coming.\"",
+    "lines": [
+      "Scene: Present: Minos, Vorthak, Weever",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: marks is scars along face",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame",
+      "Vorthak: build is massive red bulk",
+      "Vorthak: marks is scars along face",
+      "Vorthak: species is dragon",
+      "Vorthak: scales is red scales",
+      "Vorthak: hair is scales",
+      "Vorthak: eyes is yellow eyes"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@22",
+    "output": "The flashlight's weight settles comfortably in your palm as you sling the medical kit over one shoulder. The first-aid supplies clink together - bandages, antiseptic, morphine - items that have saved lives in this part of London before.\n\nWeever shoulders her duffel with a grunt of satisfaction and moves toward the door, her scaled boots clicking against the wet pavement outside. Vorthak follows, his massive frame leaving scorch marks on the archway's metal supports where his claws catch the edges.\n\nMinos pushes the door open with one broad shoulder, immediately drawing a collective breath from all four creatures as the stench of rotting meat and old blood hits your nostrils. The alleyway beyond shimmers with unnatural moisture, and something moves in the shadows between the brick walls - too large to be rats, too silent to be human footsteps.\n\nThe tunnel entrance yawns ahead like a hungry mouth, its concrete walls slick with condensation and something darker that glistens in the flickering light of a distant maintenance bulb.",
+    "lines": [
+      "Scene: Present: Minos, Vorthak, Weever",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: marks is scars along face",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame",
+      "Vorthak: build is massive red bulk",
+      "Vorthak: marks is scars along face",
+      "Vorthak: species is dragon",
+      "Vorthak: scales is red scales",
+      "Vorthak: hair is scales",
+      "Vorthak: eyes is yellow eyes"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@24",
+    "output": "Damp concrete and rusty metal clank beneath your boots as you descend into the tunnel's throat. The beam of your flashlight reveals graffiti-covered walls dripping with moisture that might be condensation - or something else entirely. A distant scratching echoes from the tunnel ahead, followed by a sound like chittering laughter that makes Weever's scales ripple with tension.\n\nMinos moves without hesitation, his massive bulk squeezing through the narrow passage with surprising silence for his size. Behind you, Vorthak's claws scrape against the tunnel walls as he adjusts his wings to fit the cramped space. The kobold's breathing becomes audible - shallow and quick - as the confined darkness presses down on her small frame.\n\nThe chittering grows louder as you progress further into the underground labyrinth. Something scurries across the overhead pipes with inhuman speed, and a wet, sliding sound follows from deeper in the tunnel system. Minos raises one fist, signaling a halt, and points toward a junction ahead where multiple passages converge in the gloom. Fresh bloodstains mark the concrete floor near the intersection, still glistening wetly in the reflected light of your flashlight.",
+    "lines": [
+      "Scene: Present: Weever, Vorthak, Minos",
+      "Vorthak: build is massive red bulk",
+      "Vorthak: marks is scars along face",
+      "Vorthak: species is dragon",
+      "Vorthak: scales is red scales",
+      "Vorthak: hair is scales",
+      "Vorthak: eyes is yellow eyes",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: marks is scars along face",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@28",
+    "output": "Fire erupts from Weever's flamethrower in a brilliant orange column that engulfs the lead creature. The thing's scream cuts off mid-note as its fur ignites, but it doesn't fall - instead it charges forward through the flames, its burned flesh sizzling as it closes the distance with impossible speed.\n\nVorthak roars and unleashes a torrent of dragon fire down the left tunnel, filling the passage with searing heat that makes the concrete walls crack and pop. The remaining two creatures scuttle backward, their chittering calls echoing off the tunnel walls in what sounds like alarm or laughter.\n\nMinos swings his cleaver in a brutal arc that connects with the burning creature's skull just as it reaches him. The blade bites deep, but the thing keeps coming even as black blood sprays across the tunnel floor. Its claws rake across Minos' chest, tearing through his jacket and opening four parallel gashes that immediately start to bleed.\n\nThe creature's body finally slumps to the ground, twitching, while Minos staggers back against the wall, his breathing labored from shock.",
+    "lines": [
+      "Scene: Present: Weever, Vorthak, Minos",
+      "Weever: species is kobold",
+      "Vorthak: build is massive red bulk",
+      "Vorthak: marks is scars along face",
+      "Vorthak: species is dragon",
+      "Vorthak: scales is red scales",
+      "Vorthak: hair is scales",
+      "Vorthak: eyes is yellow eyes",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: marks is scars along face",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@30",
+    "output": "Minos' blood seeps through the bandages faster than you can apply pressure, the wounds gaping like open mouths. His skin is cold beneath your hands as he presses himself against the tunnel wall for support. \"They're coming,\" he rasps, pointing toward the smoke-filled passages where more chittering echoes.\n\nWeever's flamethrower sputters and dies, leaving her hissing in frustration as she fumbles for backup fuel tanks. Vorthak backs toward the stairway entrance, his massive form shielding the passage as something large and hairy scuttles through the smoke behind him. The dragon's claws catch the creature mid-leap, but its teeth sink deep into his shoulder before he can shake it off.\n\n\"Burn the nest!\" Minos bellows, his voice cracking with pain and rage. \"They're not just hiding down here—they're breeding!\" Blood streams down his chest as he gestures toward the main tunnel where more creatures are gathering in the gloom, their eyes reflecting your flashlight like scattered stars.",
+    "lines": [
+      "Scene: Present: Weever, Vorthak, Minos",
+      "Weever: species is kobold",
+      "Vorthak: build is massive red bulk",
+      "Vorthak: marks is scars along face",
+      "Vorthak: species is dragon",
+      "Vorthak: scales is red scales",
+      "Vorthak: hair is scales",
+      "Vorthak: eyes is yellow eyes",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: marks is scars along face",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@34",
+    "output": "Blood pools beneath Minos as you drag him through the rain-slicked alley, his massive weight threatening to pull you both into the puddles of dirty water that swirl with oil and refuse. The creatures' pursuit echoes from behind—claws scraping against brick, wet breathing filling the confined space like a storm surge.\n\nWeever stumbles through the shop's doorway, her broken arm hanging useless at her side while green blood seeps through her scales. \"They're following,\" she hisses, already pulling out a box of emergency flares from her duffel. The kobold's eyes dart toward the rear exit as more shadows move in the alley's mouth.\n\nVorthak slams his bulk against the door just as something massive crashes into it from outside. The wood groans under the impact, splintering along one edge where a clawed hand appears through the widening crack. His wings spread wide to shield the entrance while his tail lashes out, crushing the approaching shapes with wet, satisfying sounds.",
+    "lines": [
+      "Scene: Present: Weever, Vorthak, Minos",
+      "Weever: species is kobold",
+      "Vorthak: build is massive red bulk",
+      "Vorthak: marks is scars along face",
+      "Vorthak: species is dragon",
+      "Vorthak: scales is red scales",
+      "Vorthak: hair is scales",
+      "Vorthak: eyes is yellow eyes",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: marks is scars along face",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@36",
+    "output": "Minos groans as you position the counter against the entrance, his massive frame still bleeding steadily onto your shop's floor. The makeshift barricade holds for now, but through the gaps around the door's edges, you can see the tunnel creatures pacing like caged animals in the rain. Their chittering calls drift through the night air, calling to something deeper in the darkness below.\n\nVorthak's breathing slows as the immediate pressure eases, his scaled hide still smoking from the earlier fire. \"Those things don't give up easy,\" he rumbles, testing the counter's strength with one massive claw. \"They'll be back with reinforcements.\" His yellow eyes scan the shop's interior for potential weapons - anything that could become a blade or club.\n\nWeever pulls out her first aid kit with her good hand, setting it on the nearest table before examining Minos' wounds more carefully. \"These gashes are deeper than they look,\" she hisses, her clawed fingers probing the torn flesh. \"Something in their claws slows blood clotting.\"",
+    "lines": [
+      "Scene: Present: Weever, Vorthak, Minos",
+      "Weever: species is kobold",
+      "Vorthak: build is massive red bulk",
+      "Vorthak: marks is scars along face",
+      "Vorthak: species is dragon",
+      "Vorthak: scales is red scales",
+      "Vorthak: hair is scales",
+      "Vorthak: eyes is yellow eyes",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: marks is scars along face",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@40",
+    "output": "Vorthak's massive head swivels toward you with sharp interest as the engine noise grows louder outside. \"The loan sharks,\" he rumbles, his claws scraping against the concrete floor. \"They've got timing like vultures.\" His wings fold tighter against his back as he positions himself in front of the rear exit, blocking any potential escape route.\n\nWeever hisses through her pain as she struggles to her feet, broken arm cradled against her chest. \"Six thousand pounds won't matter if those tunnel creatures break through,\" she hisses, but you see understanding in her yellow eyes. She knows the Harrow brothers don't negotiate - they collect, or they take something more valuable. Her good hand grips the nearest chair like a weapon.\n\nThe van doors slam outside, followed by heavy footsteps approaching your shop. Through the rain-streaked window, you catch glimpses of at least three figures in dark coats moving through the alley with deliberate purpose. One carries a baseball bat wrapped in barbed wire, another holds what looks like a crowbar with rusty metal teeth.",
+    "lines": [
+      "Scene: Present: Weever, Vorthak, Minos",
+      "Weever: species is kobold",
+      "Vorthak: build is massive frame",
+      "Vorthak: scales is red scales",
+      "Vorthak: marks is smoking from earlier fire",
+      "Vorthak: species is dragon",
+      "Vorthak: hair is scales",
+      "Vorthak: eyes is yellow eyes",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: marks is scars along face",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@42",
+    "output": "Vorthak shakes his massive head with a low growl that reverberates through the shop. \"You're bleeding out,\" he rumbles, gesturing toward Minos's still form. \"That orc needs medical attention, and those tunnel things are still out there waiting.\" His yellow eyes fix on the approaching footsteps outside as they pause just beyond the alley mouth.\n\nWeever limps toward the hatch despite her injuries, her good hand gripping the metal handle with white-knuckled desperation. \"The Harrows won't wait,\" she hisses, but there's uncertainty in her voice. \"They never do.\" Her tail coils around a fallen chair as she prepares to defend the basement entrance.\n\nThe baseball bat-wielding figure appears in the shop's front window, his scarred face twisted into a hungry grin as he spots Minos's prone form on the blood-stained floor. \"Looks like our boy here had an accident,\" he calls out, his voice carrying through the rain. His two companions move to flank the shop's sides, one producing a set of lock picks while the other hefts the crowbar with obvious experience.",
+    "lines": [
+      "Scene: Present: Weever, Vorthak, Minos",
+      "Weever: species is kobold",
+      "Vorthak: build is massive frame",
+      "Vorthak: scales is red scales",
+      "Vorthak: marks is smoking from earlier fire",
+      "Vorthak: species is dragon",
+      "Vorthak: hair is scales",
+      "Vorthak: eyes is yellow eyes",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: marks is scars along face",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame"
+    ],
+    "contradicts": "Minos: species is minotaur"
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@46",
+    "output": "Blood seeps from the puncture wounds in your shoulder as you hold out the cash box toward the scarred leader. His yellowed teeth catch the neon glow when he grins, reaching for both payment and deed with practiced speed. \"Smart man,\" he purrs, tucking the documents inside his coat. The two men flanking him step back as their leader signals a retreat.\n\nMinos groans and pushes himself up on one elbow, his massive frame still shaking from blood loss. \"You paid them,\" he rasps, his gaze fixed on your wounds with fierce intensity. \"The tunnel creatures - we can't just leave them down there.\" His clawed hand trembles as he tries to stand, but his legs buckle immediately, sending him crashing back onto the bloodstained floor.\n\nOutside, the Harrow men's vans rumble away through the rain-soaked alley, their taillights disappearing around the corner. The scratching at the door intensifies momentarily before falling silent again - as if the tunnel creatures were waiting to see what would happen next.",
+    "lines": [
+      "Scene: Present: Minos",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: marks is scars along face",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@48",
+    "output": "Minos's breathing stops completely as your words sink in, his yellowed eyes widening with raw, unfiltered rage. Blood from his wounds drips steadily onto the floor as his massive frame tenses like a coiled spring, muscles bulging beneath scarred skin. \"You sold them,\" he growls, each word a low rumble that vibrates through the shop's floorboards.\n\nThe tunnel scratching outside suddenly stops - an ominous silence that feels like a predator holding its breath before striking. Minos slowly pushes himself upright, his cleaver still gripped in one massive hand despite his obvious weakness. \"That money you took,\" he snarls, spittle flying from his tusks, \"paid for every child those things have eaten since then.\"\n\nYou can hear Weever's whispered curses echoing up from the basement as she struggles with her broken arm. The hatch creaks under pressure from something heavy moving below. Minos stares at you with such burning hatred that it feels like acid on your skin.",
+    "lines": [
+      "Scene: Present: Minos",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: marks is scars along face",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@52",
+    "output": "Vorthak's massive head turns toward you, his nostrils flaring as he catches the scents of old blood and fresh violence hanging in the air. \"Angry doesn't begin to cover it,\" the dragon rumbles, his claws scraping against the concrete floor as he positions himself between Minos and the tunnel entrance. \"Whatever's between you two, it goes deeper than those claw marks on his chest.\"\n\nWeever limps forward despite her broken arm, her good hand still gripping the chair as she studies the charged silence. \"The way he's looking at you,\" she hisses, her yellow eyes narrowing with keen assessment, \"that's not just anger over a lost fight. That's personal.\" Her scaled tail coils around the fallen chair like a spring ready to snap.\n\nMinos slowly turns to face the other creatures, his massive frame shaking with controlled rage as blood continues seeping from his wounds. \"Get out,\" he snarls again, his voice thick with fury and old pain. \"This has nothing to do with you two.\" His cleaver trembles in his grip as he points it toward the shop's rear exit. \"The tunnel creatures can wait until this is settled.\"",
+    "lines": [
+      "Scene: Present: Minos, Vorthak, Weever",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: marks is scars along face",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame",
+      "Vorthak: build is massive frame",
+      "Vorthak: scales is red scales",
+      "Vorthak: marks is smoking from earlier fire",
+      "Vorthak: species is dragon",
+      "Vorthak: hair is scales",
+      "Vorthak: eyes is yellow eyes",
+      "Weever: species is kobold"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@54",
+    "output": "Dawn breaks over London's industrial quarter, painting the grimy brick buildings in pale gray light. Your group emerges from the alleyway behind your shop, moving carefully through the wet cobblestones slick with rain and something darker. Minos stumbles as he walks, blood still seeping from the claw wounds across his chest despite your bandages.\n\nThe Smithfield market comes alive at this hour, its vendors setting up stalls under flickering gas lamps that cast wavering shadows across the meat counters and fishmonger's displays. The doctor you know operates from a converted ambulance parked in the corner - a middle-aged woman with sharp eyes and steady hands who doesn't ask questions about injuries sustained in the wrong places.\n\nShe examines Minos first, her fingers probing the puncture wounds with careful attention. \"Poison,\" she mutters, pulling out a syringe of antivenom. \"These aren't just claw marks.\" The needle pierces his skin as she administers the antidote, then wraps clean bandages around his torso before moving to Weever's broken arm.",
+    "lines": [
+      "Scene: Present: Minos, Vorthak, Weever",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: marks is scars along face",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame",
+      "Vorthak: scales is scales",
+      "Vorthak: marks is smoking from earlier fire",
+      "Vorthak: species is dragon",
+      "Vorthak: hair is scales",
+      "Vorthak: build is massive frame",
+      "Vorthak: eyes is yellow eyes",
+      "Weever: species is kobold"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@59",
+    "output": "Doctor Okafor ties off the last suture with swift, careful motions before straightening to meet your gaze. The morning light catches the silver streaks in her hair as she wipes her hands on a clean towel. \"The antivenom is working,\" she says, her voice flat and measured. \"But if we hadn't gotten here when we did, he'd be dead within hours.\" She gestures toward Minos with the bloodied towel. \"That poison moves fast - whatever those creatures put in their claws was designed to kill.\"\n Behind the fish stall, a hooded girl named Sefa watches you with a rat's skull on a cord around her neck.\nPell hobbles closer from behind his fish stall, his knobby fingers twitching with nervous energy. \"Aye, the King's got his own alchemy down there,\" the goblin croaks. \"Been hearing whispers about it from folks who don't come back up.\" His yellowed teeth chatter as he speaks, whether from cold or fear. \"Word is he's been brewing that poison for years, saving it for special occasions.\"",
+    "lines": [
+      "Scene: Smithfield night market · Present: Minos, Vorthak, Weever, Doctor Okafor, Pell",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: marks is scars along face",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame",
+      "Vorthak: scales is scales",
+      "Vorthak: marks is smoking from earlier fire",
+      "Vorthak: species is dragon",
+      "Vorthak: hair is scales",
+      "Vorthak: build is massive frame",
+      "Vorthak: eyes is yellow eyes",
+      "Weever: species is kobold"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-15-dogfood-m13@61",
+    "output": "The hooded girl doesn't turn as you approach, her fingers tracing the bone's contours with ritualistic care. When she speaks, her voice carries an accent that places her origins somewhere in the East End slums. \"Found it in the Aldwych tunnels,\" she says without looking up from the skull. \"Been following King Rat's crew for months now. Trying to find my brother.\"\n\nShe lifts her gaze to meet yours, revealing eyes hollowed by sleepless nights and the kind of grief that never fully fades. \"Last I saw of him, he was carrying a child toward the deep tunnels.\" Her knuckles whiten as she grips the skull tighter. \"They told me he'd joined King Rat's inner circle, that he was helping with... recruitment.\"\n\nDoctor Okafor pauses in her work on Minos to glance toward your conversation, her expression darkening with recognition. Pell spits into the fish slush at his feet, his gnarled fingers twitching with remembered terror. \"That brother of yours,\" the goblin croaks, \"he had red hair and a tattoo of a broken clock on his wrist?\"",
+    "lines": [
+      "Scene: Smithfield night market · Present: Minos, Vorthak, Weever, Doctor Okafor, Pell",
+      "Minos: horns is gnarled horns",
+      "Minos: eyes is pupils glinting in dim light",
+      "Minos: marks is scars along face",
+      "Minos: species is minotaur",
+      "Minos: build is massive frame",
+      "Vorthak: scales is scales",
+      "Vorthak: marks is smoking from earlier fire",
+      "Vorthak: species is dragon",
+      "Vorthak: hair is scales",
+      "Vorthak: build is massive frame",
+      "Vorthak: eyes is yellow eyes",
+      "Weever: species is kobold"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@14",
+    "output": "Brother Aldous releases your wrist and leans back in his chair, his fingers working at a frayed hole in the knees of his habit. \"The Drowned Ones,\" he says, his voice steadying as he focuses on the storm outside. \"Ancient things that live in the deep water around here. The old charts called them something else - R'lyeh was their prison once, or so the stories say.\"\n\nTamsin gasps softly at the name, her hand flying to her mouth. Hedda's face darkens like a storm cloud as she recognizes something in what the monk has said.\n\n\"The lighthouse keeper wasn't wrong about the beacon flickering,\" Brother Aldous continues, turning to face you with haunted eyes. \"But he doesn't know the truth - the Drowned Ones are trying to find a way back to the surface. They need someone to guide them, someone with knowledge of the currents and the reefs.\"\n\nA sudden gust of wind slams the window shut, making the oil lamp sputter and die. The room plunges into darkness save for lightning flashes that reveal Tamsin clutching her charts like armor.",
+    "lines": ["Scene: Present: Rowan, Tamsin, Hedda, Brother Aldous", "Rowan: species is human", "Tamsin: species is human"],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@28",
+    "output": "The light from the vial flickers as Tamsin steps fully into your room, her eyes reflecting the same unnatural glow that pulses from the glass. \"Blood,\" she says simply, her voice devoid of emotion. \"My father's blood. I found it in his workshop three years ago when I was searching for answers about what really happened on the Skerry.\"\n\nShe extends her free hand toward you, palm up, and the knife wavers in your grip as something in her expression shifts. \"Rowan, this isn't what you think. I need to show you something before we leave for the Skerry at dawn.\" The vial swings forward as she steps closer, the dark liquid inside now clearly visible as arterial blood mixed with some kind of luminous sediment.\n\n\"I've been studying my father's notes,\" she continues, her words coming faster now. \"He wasn't just mapping the sea floor - he was trying to understand why certain locations draw these symbols. The blood carries his memories, his knowledge about what lives beneath the waves.\"",
+    "lines": ["Scene: Present: Tamsin", "Tamsin: eyes is blue", "Tamsin: species is human"],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@42",
+    "output": "The rope burns through your hands as you haul in the last mooring line, blood welling between your fingers where the wet hemp cuts deep. Behind you, Hedda's boots splash onto the Gull's deck while she drags Brother Aldous across like a sack of grain, his brown habit now heavy with harbor water. Tamsin collapses against the cabin wall, one hand still pressed against her burned shoulder as her vials swing wildly in the wind.\n\n\"Move your ass, pilot,\" Hedda snarls, checking the mooring cleats for security. \"Those things are coming up through the cellar.\" You glance back to see pale shapes writhing in the murky water where you emerged - dozens of them, their surfaces pulsing with the same phosphorescent glow that emanates from Tamsin's blood vials.\n\nThe engine coughs to life on your second try, diesel smoke mixing with the acrid brine as you back the Gull away from the dock. Through the rain and darkness, something massive breaches the harbor water behind you - a tentacled horror easily thirty feet across that towers above the wharf buildings with wet, clicking sounds that seem to hurt your ears even at this distance.",
+    "lines": ["Scene: Present: Tamsin, Hedda, Brother Aldous", "Tamsin: eyes is blue", "Tamsin: species is human"],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@56",
+    "output": "Lazarus's skeletal fingers twitch with visible frustration as he watches Tamsin stumble into the lighthouse with her burned shoulder leaving a dark trail on the stone steps. \"Time is precious, ferryman,\" he rasps, his watery eyes fixed on the cartographer's blood. \"The monk will die regardless of whether he lies on cold stone or warm floor.\"\n\nHedda shoulders Brother Aldous more firmly, her massive frame shaking with exhaustion as she navigates the narrow stairwell leading to a cramped living quarters. The monk's breathing grows more labored, his lips now nearly black with the poison coursing through his system. \"Stove's out,\" she mutters, spitting into the darkness. \"No fuel left.\"\n\nThe lighthouse keeper's smile widens in the flickering lamplight as he gestures toward a corner of the room where a rusted grate hangs over cold ashes. \"But I have something better than fire to offer you,\" Lazarus whispers, his skeletal hand reaching into a coat pocket. \"Something that will save the monk's life - and grant Tamsin the answers she seeks about her father's work.\"",
+    "lines": ["Scene: Present: Tamsin, Hedda, Brother Aldous, Lazarus", "Tamsin: eyes is blue", "Tamsin: species is human"],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@70",
+    "output": "Lazarus presses himself against the cold stone wall as your blade's tip draws a bead of blood from his skeletal chest. His watery eyes dart from you to the others with something between fear and calculation flickering in their depths. \"The old keeper,\" he rasps, a wet sound like bubbling tar escaping his throat, \"he still... walks these halls sometimes when the tide is low.\"\n\nHis skeletal fingers twitch as he gestures toward the spiral staircase descending into darkness below. \"Down there, in the machinery room where the old steam engine once turned the light mechanism. But be warned, ferryman - what remains of him is not what you remember.\" The keeper's lips peel back in what might pass for a smile on a living man. \"He still clings to life after three years, feeding on the scraps I leave for him when visitors bring... fresh blood.\"\n\nBrother Aldous struggles to his feet, his voice stronger now but still carrying the echo of death that clung to him moments before. \"The Drowned Ones don't simply kill their victims, Rowan. They preserve them in their own image, turning them into servants who serve their masters for decades.\" His pale eyes fix on Tamsin with newfound horror. \"Your father isn't dead - he's something worse.\"",
+    "lines": ["Scene: Present: Tamsin, Hedda, Brother Aldous, Lazarus", "Tamsin: eyes is blue", "Tamsin: species is human", "Tamsin: hair is dark"],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@84",
+    "output": "Hedda's scarred face twists with confusion as she looks around the cramped living quarters, her massive frame moving toward the window where rain lashes against the glass. \"The skeletal bastard was here a moment ago,\" she rumbles, spitting into the darkness beyond. \"I kept my blade on him while you were down there with the... thing.\"\n\nHer pale eyes narrow as she searches the room, noting the empty space where Lazarus stood moments before. The oil lamps flicker in sudden drafts, casting writhing shadows across the stone walls while wind howls through gaps in the lighthouse's ancient construction. Brother Aldous clutches his cross tighter against his chest, his voice cracking with growing panic as he stares at the door leading back down to the machinery room.\n\n\"He's gone,\" Tamsin whispers, fresh blood seeping through her bandages as she moves toward the spiral staircase. Her vials swing with her movement, the contents pulsing with phosphorescent light that seems to grow stronger in the keeper's absence. \"And so is his blood.\"",
+    "lines": ["Scene: Present: Tamsin, Hedda, Brother Aldous, Lazarus", "Tamsin: eyes is blue", "Tamsin: species is human", "Tamsin: hair is dark"],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@106",
+    "output": "You watch her movements as she secures the document, her bandaged shoulder leaving fresh crimson streaks on the paper's edges. The cartographer's pale eyes meet yours with grim understanding - this deception may be their only chance at survival. Behind you, Lazarus shivers against his chains, blackish blood continuing to seep from his lipless mouth as he tracks Tamsin's every movement.\n\n\"Finished,\" she whispers, her voice hoarse from the strain of working through the night. The false coordinates lead to a deep underwater trench where nothing should exist, matching real oceanographic data while creating an illusion of plausibility. Brother Aldous pushes himself upright from his crouched position against the wall, fever-bright eyes reflecting the pale morning light as he studies the completed chart.\n\nThe monk's breathing comes in labored gasps as he speaks, \"The false coordinates... they'll draw the deep ones away from this lighthouse and into deeper waters where they can't surface.\" His silver cross gleams in the grey dawn as he turns toward you with desperate hope. \"But we must leave now - every moment we delay gives them time to sense the deception.\"",
+    "lines": [
+      "Scene: Present: Hedda, Lazarus, Tamsin, Brother Aldous",
+      "Lazarus: eyes is watery eyes",
+      "Lazarus: build is skeletal",
+      "Tamsin: eyes is pale eyes",
+      "Tamsin: species is human",
+      "Tamsin: hair is dark",
+      "Tamsin: build is pale, bandaged shoulder, ink-stained"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@120",
+    "output": "The pale thing's eyeless head tilts as it considers the false coordinates, phosphorescent foam bubbling around its elongated form like hungry breath. Then the creature sinks beneath the grey depths, taking the chart with it into darkness. The surface of the water becomes suddenly calm, almost peaceful.\n\nHedda spits over the gunwale and releases the tiller, her scarred hands unsteady as she points toward where Brother Aldous floats among debris. \"The monk! He's alive!\" Tamsin scrambles to the bow as you turn the Gull toward him, her bandaged shoulder leaving fresh streaks on the wet planking.\n\nLazarus's skeletal frame convulses against the mast chains, his watery gaze fixed on the spot where the creature vanished. \"The deep ones... they didn't accept the deception,\" he gurgles, blackish blood continuing to seep from his lipless mouth. \"Your cartographer's father was right - they can taste truth and lies like different waters.\"",
+    "lines": [
+      "Scene: Present: Hedda, Lazarus, Tamsin",
+      "Lazarus: eyes is watery eyes",
+      "Lazarus: build is skeletal",
+      "Tamsin: species is human",
+      "Tamsin: hair is pale",
+      "Tamsin: eyes is pale eyes",
+      "Tamsin: build is pale, bandaged shoulder, ink-stained"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@134",
+    "output": "Ewan Pike watches you disappear up the steep cobblestones, his grey eyes fixed on your retreating back as he considers your words. \"Before my time,\" he mutters to himself, shoving the salt-stained telegram into his coat pocket before turning toward the customs house where Lazarus waits in chains. The phosphorescent foam still clinging to your boat's hull catches the harbor lights as he passes, and Pike spits into the churning water where pale shapes continue moving just beneath the surface.\n\nInside the Drowned Lantern's common room, warm lamplight flickers over scattered chairs and overturned tables from the night's chaos. Brother Aldous lies stretched out on a bench near the hearth, wrapped in your coat with Hedda keeping watch while Tamsin tends her bleeding shoulder at a nearby table. The cartographer's pale fingers work methodically as she unwinds fresh bandages, her ink-stained hands leaving dark streaks across the clean fabric.\n\nTamsin looks up as you enter, her pale eyes reflecting the firelight with grim understanding. \"The keeper... Lazarus confirmed what we suspected,\" she whispers, her voice hoarse from exertion and cold. \"My father wasn't mapping underwater coordinates - he was translating the Drowned Ones' language itself.\"",
+    "lines": ["Scene: Present: Ewan Pike, Rowan", "Rowan: eyes is dark", "Rowan: build is lean", "Rowan: hair is dark", "Rowan: species is human"],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@148",
+    "output": "Tamsin's pale fingers twitch against the iron door as she absorbs your words, her voice hoarse from exertion and pain. \"The journals... they burned in the archive fire,\" she whispers, dark streaks from her bloodied bandages spreading across the cell walls. \"But not before I copied the relevant passages about the bloodlines - three families whose blood could open what my father called the 'Great Chamber' beneath the Skerry rocks.\"\n\nHer ink-stained hands clench into fists as she continues. \"The break... he mentioned something about 'breaking the chains of obligation through sacrifice,' but it was always connected to his death ritual. The passage described a way to sever the connection between keeper and deep ones, but it required the keeper's complete destruction rather than just containment.\"\n\nEwan Pike's grey eyes narrow as he processes this information, his scarred hands unconsciously moving toward his service pistol. \"If this keeper's been feeding on more than just cartographers, then half my harbor records might be lies,\" he mutters, spitting into the corridor's stone floor. \"And if whatever killed Reed three years ago needs all three of your bloodlines together...\"",
+    "lines": [
+      "Scene: Present: Rowan, Tamsin, Ewan Pike",
+      "Rowan: eyes is dark",
+      "Rowan: build is lean",
+      "Rowan: hair is dark",
+      "Rowan: species is human",
+      "Tamsin: species is human",
+      "Tamsin: eyes is pale",
+      "Tamsin: hair is pale",
+      "Tamsin: build is pale, bandaged shoulder, ink-stained"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@162",
+    "output": "Brother Aldous pushes himself upright with unsteady hands, his fever-bright eyes scanning the ancient text as he begins reading from your father's notes. \"The Great Chamber beneath the Skerry rocks... requires three bloodlines bled together at the nexus point,\" he whispers, his voice hoarse with terror as the words leave phosphorescent streaks across the parchment. \"Not simply presence, but willing sacrifice of all three souls to the deep ones who hunger for more than mere flesh.\"\n\nEwan Pike spits into the hearth as he leans forward, his grey eyes fixed on the text with growing recognition. \"Your father wasn't just documenting coordinates, cartographer - he was translating a death ritual,\" he mutters, pointing to passages about \"ancient pathways opened by willing blood\" and \"the great seal holding back the tide of time.\" The phosphorescent foam seeps under the inn's threshold as the monk continues reading, his words growing louder as panic grips him.",
+    "lines": [
+      "Scene: Present: Rowan, Tamsin, Ewan Pike, Hedda, Brother Aldous",
+      "Rowan: eyes is dark",
+      "Rowan: build is lean",
+      "Rowan: hair is dark",
+      "Rowan: species is human",
+      "Tamsin: species is human",
+      "Tamsin: eyes is pale",
+      "Tamsin: hair is pale",
+      "Tamsin: build is pale, bandaged shoulder, ink-stained"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@176",
+    "output": "The phosphorescent creatures that had been circling the breakwater earlier are nowhere to be seen now as the Gull cuts through the calm waters. Ewan spits into the ocean and leans against the gunwale, his grey eyes scanning the horizon where the Skerry Light's beam flickers erratically. \"Three years of living with that guilt, and now you're taking us all back to answer for it,\" he mutters, more to himself than anyone else. \"I should've put that keeper in chains the night of the archive fire instead of just locking him away.\"\n\nTamsin moves across the deck to examine a chart spread over the crates near the mast, her pale fingers leaving crimson smears on the parchment as she marks the final coordinates. The wind picks up slightly, carrying the sharp tang of brine and something darker underneath. \"The current's running counter to what it should be,\" she whispers, pointing to a spot where two shipping lanes converge. \"This isn't natural weather patterns anymore - this is deliberate.\"",
+    "lines": [
+      "Scene: Present: Rowan, Tamsin, Ewan Pike, Hedda, Brother Aldous",
+      "Rowan: eyes is dark",
+      "Rowan: build is lean",
+      "Rowan: hair is dark",
+      "Rowan: species is human",
+      "Tamsin: species is human",
+      "Tamsin: eyes is pale",
+      "Tamsin: hair is pale",
+      "Tamsin: build is pale, bandaged shoulder, ink-stained",
+      "Ewan Pike: eyes is grey",
+      "Brother Aldous: eyes is fever-bright"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@190",
+    "output": "Ewan Pike holsters his empty service pistol with unsteady hands, grey eyes fixed on the suddenly peaceful waters where no movement disturbs the surface. \"The rhythm stopped,\" he mutters, his voice carrying across the silence that now surrounds the Skerry rocks. \"Whatever you just did... it worked.\" The stout harbour master spits into the ocean, then turns to study your bloodied palms and the bell rope that still sways overhead.\n\nBehind you, Brother Aldous collapses completely against the base of the tower, his fever-bright eyes dimming as consciousness leaves him. Tamsin staggers forward despite her wounded shoulder, fresh blood seeping through her bandages as she examines the now-steady beam of the Skerry Light. \"The nexus is closed,\" she whispers, her pale fingers tracing symbols that have ceased pulsing with unnatural light.\n\nPhosphorescent foam no longer swirls around the Skerry's base - instead, the water reflects the moonlight in calm, natural patterns.",
+    "lines": [
+      "Scene: Present: Rowan, Tamsin, Ewan Pike, Hedda, Brother Aldous",
+      "Rowan: eyes is dark",
+      "Rowan: build is lean",
+      "Rowan: hair is dark",
+      "Rowan: species is human",
+      "Tamsin: species is human",
+      "Tamsin: eyes is pale",
+      "Tamsin: hair is pale",
+      "Tamsin: build is pale, bandaged shoulder, ink-stained",
+      "Ewan Pike: eyes is grey",
+      "Brother Aldous: eyes is fever-bright"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@204",
+    "output": "Phosphorescent foam swirls around your ankles as you sweep the remnants of Caradoc Reed into the clay jar, each grain of salted sand marking the final dissolution of something that was once human. Tamsin clutches the empty iron chains in her bloodied fingers, fresh tears cutting clean tracks through the grime on her face as she watches her father's essence scatter in the ocean wind.\n\nThe journey back to Kessmouth feels like walking across broken glass - Ewan Pike's grey eyes never leave your bleeding hands, Brother Aldous' fevered muttering about blood sacrifice echoing off the boat's hull, and Tamsin who stumbles as she tries to chart the exact moment her father stopped being human. The Gull scrapes against its moorings with a sound like grinding teeth as you tie up at dawn.\n\nFor three days, the harbor master keeps you all at his tavern while workers patch holes in the dock and replace the phosphorescent-stained planks with fresh wood. You sleep in the same room where you first met Tamsin again, dreaming of old silver and eyeless faces turning toward your boat in the dark.",
+    "lines": [
+      "Scene: Present: Rowan, Tamsin, Brother Aldous",
+      "Rowan: eyes is dark",
+      "Rowan: build is lean",
+      "Rowan: hair is dark",
+      "Rowan: species is human",
+      "Tamsin: species is human",
+      "Tamsin: eyes is pale",
+      "Tamsin: hair is pale",
+      "Tamsin: build is pale, bandaged shoulder, ink-stained",
+      "Brother Aldous: eyes is fever-bright"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@218",
+    "output": "Warden Morwenna Hale observes the bloodstains on your shirt as she taps her fingers against the table, leaving faint impressions in the wood. The vial of phosphorescent liquid pulses faster in her grip as she processes your deflection. \"Deep Bay Harbor,\" she says, her voice carrying an edge like broken glass. \"It's twelve miles northeast through the shipping lanes where the Drowned Ones have been feeding most recently.\"\n\nShe opens the iron box fully, revealing the ash and bone fragments in greater detail. The symbols etched into the fragments pulse with sickly light, their rhythm matching the steady drip of blood from Tamsin's wounded shoulder. \"The binding anchors at Deep Bay are more unstable than Skerry Light,\" she explains, her pale eyes fixed on you with deadly focus. \"Your father's transformation there was... more violent. The keeper there was found fused to the lighthouse machinery, his bones still singing the deep ones' songs.\"\n\nTamsin Reed gasps as she recognizes the same phosphorescent veins that once marked her father's flesh.",
+    "lines": [
+      "Scene: Present: Rowan, Tamsin, Brother Aldous, Morwenna Hale",
+      "Rowan: eyes is dark",
+      "Rowan: build is lean",
+      "Rowan: hair is dark",
+      "Rowan: species is human",
+      "Tamsin: species is human",
+      "Tamsin: eyes is pale",
+      "Tamsin: hair is pale",
+      "Tamsin: build is pale, bandaged shoulder, ink-stained",
+      "Brother Aldous: eyes is fever-bright"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@232",
+    "output": "The hinges scream in protest as the door swings open, revealing the lighthouse interior where phosphorescent stains streak down the walls like tears of ancient horror. The smell hits you immediately - decay mixed with something metallic and wrong that makes your stomach clench. Your lamp illuminates a spiral staircase leading up into darkness, its wooden steps cracked and twisted as if something with enormous weight had descended them recently.\n\nMorwenna Hale steps through behind you, her pale fingers leaving deeper impressions in the metal as she processes what she sees. \"The keeper's bones,\" she says, her voice carrying an edge like broken glass. \"They're still warm.\" Indeed, phosphorescent foam continues seeping from gaps in the stonework where something massive forced its way through from within. Brother Aldous stumbles forward despite his fever, his silver cross pulsing with its own strange light as he recognizes the same bone fragments that Tamsin carries in her vials.\n\nJosie Crane's raspy voice echoes from below: \"The bell rope... it's still intact up there. But the keeper who tried to ring it...\" She gestures toward a trail of black ichor leading up the stairs.",
+    "lines": ["Scene: Present: Morwenna Hale, Brother Aldous", "Brother Aldous: eyes is fever-bright"],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@246",
+    "output": "Tamsin nods slowly as she processes what you've said, her pale fingers tracing patterns in the dust near her feet that mirror the symbols from her father's notes. She eats with careful control, each bite measured as if tasting something unfamiliar. The wound on her shoulder continues bleeding despite the pressure bandage, leaving dark spots on her shirt that smell faintly of phosphorescence.\n\n\"Lazarus lasted six weeks before the transformation consumed him completely,\" she says quietly, her voice almost lost beneath the wind outside. \"My father's notes suggested that the deep ones require a certain... length of time to fully claim a bloodline.\" Her eyes reflect the firelight as she stares at the phosphorescent foam gathering near the hut's foundation stones. \"The keeper here was different somehow - his bones crumbled too quickly for a full claiming.\"\n\nMorwenna Hale observes your conversation with sharp attention, her pale fingers leaving deeper impressions in the metal as symbols pulse along their surface. \"The ritual binding,\" she says, her voice carrying an edge like broken glass. \"It accelerates when the bloodline resists.\" The iron box in her grip warms as she notices the way Tamsin's wound continues bleeding.",
+    "lines": ["Scene: Present: Morwenna Hale, Brother Aldous, Josie", "Brother Aldous: eyes is fever-bright"],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@260",
+    "output": "Morwenna Hale's pale fingers trace deeper impressions in the metal box as she observes your conversation with sharp attention. The warden processes the implications of what you're asking - that Tamsin revealed something critical about her father and their connection to the archive arson three years ago. She moves closer, recognizing that whatever Tamsin said in this room may be the key to understanding how the deep ones selected their victims.\n\nTamsin lifts her head from the journal spread across the table, her pale fingers stained with blood from her wounded shoulder. The phosphorescent vials around her neck pulse with unnatural light as she processes your question. \"I told you about my father's research,\" she says, her voice carrying exhaustion and something else - the beginning of understanding. \"About the coordinates he discovered beneath the Skerry. I said...\" She pauses, her eyes reflecting the firelight as she recalls that first night. \"I said that someone had burned those maps because they contained knowledge that should never have existed.\"",
+    "lines": [
+      "Scene: Present: Morwenna Hale, Brother Aldous, Tamsin, Hedda",
+      "Brother Aldous: eyes is fever-bright",
+      "Tamsin: species is human",
+      "Tamsin: eyes is pale",
+      "Tamsin: hair is pale",
+      "Tamsin: build is pale, bandaged shoulder, ink-stained"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@274",
+    "output": "Tamsin lifts her head from the charts as you speak, her pale fingers leaving fresh crimson streaks across the parchment. The afternoon wind off the water makes her bloodied bandages flutter like small red flags against the grey stone of the harbor wall. \"The shoulder,\" she says, her voice carrying the exhaustion of someone who's been working through mathematical impossibilities all morning. \"It reopened when I leaned over the charts.\" She stands slowly, ink-stained hands pressed against the wound as it throbs in time with her pulse.\n\nEwan Pike follows you both up the quay toward the Drowned Lantern, his boots echoing against the worn stone steps. \"That needle and gut won't be enough for what's needed,\" he mutters, scanning the harbor where phosphorescent foam still gathers around the damaged docks. \"We need proper medical supplies from the village apothecary.\"\n\nInside the tavern, Hedda's voice rises above the clatter of dishes in the kitchen. \"Needle and gut behind the bar,\" she calls without looking up from her work.",
+    "lines": [
+      "Scene: Present: Ewan Pike, Tamsin",
+      "Ewan Pike: eyes is grey",
+      "Tamsin: species is human",
+      "Tamsin: eyes is pale",
+      "Tamsin: hair is pale",
+      "Tamsin: build is pale, bandaged shoulder, ink-stained"
+    ],
+    "contradicts": null
+  },
+  {
+    "probe": "2026-10-17-dogfood-m17@288",
+    "output": "Ewan Pike jerks backward as the bronze bell crashes into life, his hands pressed against his ears while phosphorescent shapes beneath the platform recoil from the sound. The rope burns through your palms as you haul it down and up, down and up, the pattern carving itself into your flesh like something alive. Tamsin counts each rhythm against her father's journal notes, her ink-stained hands leaving fresh crimson streaks across the salt-encrusted hemp fibers as she calculates the disruption spreading through the deep water currents.\n\nThe massive tentacled creature that destroyed your dock earlier surfaces with a sound like tearing metal, its bulk forcing Pike to scramble backward as acidic spray hisses against the platform. Other creatures follow suit, their pale forms writhing in agony as the reversed bell pattern tears at something fundamental in their existence. Tamsin stumbles as her wounded shoulder gives way, fresh blood soaking through her bandages as she watches the water around the harbor mouth churn with phosphorescent foam.",
+    "lines": [
+      "Scene: Present: Ewan Pike, Tamsin",
+      "Ewan Pike: eyes is grey",
+      "Tamsin: eyes is dark",
+      "Tamsin: hair is dark",
+      "Tamsin: species is human",
+      "Tamsin: build is pale, bandaged shoulder, ink-stained"
+    ],
+    "contradicts": null
+  }
+]

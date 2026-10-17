@@ -44,14 +44,16 @@ describe('checkInputs', () => {
     ],
   });
 
-  it('takes the scene and the locked values of who is present, nothing else, even with the setting off', () => {
+  it('takes the scene and the locked values of who is present, nothing else, with the setting on', () => {
     const adv = adventure([mira, entity('Aldric', { canon: true, description: 'Her brother.' })], { location: 'The quay', present: ['ent_Mira'] });
-    expect(adv.settings.memory.contradictionCheck).toBe(false);
+    adv.settings.memory.contradictionCheck = true;
     expect(checkInputs(adv)).toEqual(['Scene: The quay · Present: Mira', 'Mira: hair is grey']);
   });
 
-  it('is empty with no locked value present and the setting off', () => {
-    expect(checkInputs(adventure([mira], { location: 'The quay', present: [] }))).toEqual([]);
+  it('is empty with the setting off, even with a locked value present', () => {
+    const adv = adventure([mira], { location: 'The quay', present: ['ent_Mira'] });
+    expect(adv.settings.memory.contradictionCheck).toBe(false);
+    expect(checkInputs(adv)).toEqual([]);
   });
 
   it('with the setting on, takes the scene alone when nobody locked is present', () => {
