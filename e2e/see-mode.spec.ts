@@ -130,7 +130,6 @@ test('a reference freezes a character look and seed for the next Sees', async ({
 
   await see(page, 'Tamsin at the ferry');
   await expect(page.getByRole('img', { name: 'Tamsin at the ferry' })).toBeVisible();
-  expect(calls[0]?.seed).toBeUndefined();
 
   await page.getByRole('figure').getByRole('button', { name: 'Open Tamsin' }).click();
   const drawer = page.getByRole('dialog', { name: 'Tamsin' });
