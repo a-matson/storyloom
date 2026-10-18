@@ -1,5 +1,6 @@
 import { VISIBLE_WORDS } from '../memory/bodyPlan';
 import { tag } from '../memory/looks';
+import { COLOUR_WORDS } from '../memory/tagify';
 import type { SheetFamily } from './sheet';
 
 /** Booru checkpoints read "<colour> eyes", not "eyes: <colour>". [provisional] */
@@ -33,9 +34,11 @@ export function tags(parts: readonly (string | undefined)[]): string {
   return [...unique.values()].join(', ');
 }
 
-/** Words that show a place: buildings, land, water, material and colour. [provisional] */
-const VISUAL =
-  /\b(?:keep|castle|fort|fortress|tower|wall|gate|hall|house|hut|cottage|inn|tavern|temple|shrine|chapel|ruin|bridge|road|street|alley|market|square|village|town|city|port|harbou?r|dock|jetty|pier|mill|farm|field|meadow|forest|wood|grove|swamp|marsh|bog|river|stream|lake|sea|shore|beach|coast|cliff|hill|mountain|peak|valley|canyon|cave|cavern|desert|dune|island|plain|glacier|waterfall|garden|courtyard|cellar|dungeon|crypt|tomb|library|chamber|room|camp|tent|ship|stone|wooden|iron|brick|marble|granite|timber|thatched|glass|golden|silver|black|white|red|green|blue|grey|gray|brown|dark|ruined|snowy|misty|crumbling)(?:e?s)?\b/i;
+/** Words that show a place: buildings, land, water, and the material and colour a look has too. [provisional] */
+const VISUAL = new RegExp(
+  `\\b(?:keep|castle|fort|fortress|tower|wall|gate|hall|house|hut|cottage|inn|tavern|temple|shrine|chapel|ruin|bridge|road|street|alley|market|square|village|town|city|port|harbou?r|dock|jetty|pier|mill|farm|field|meadow|forest|wood|grove|swamp|marsh|bog|river|stream|lake|sea|shore|beach|coast|cliff|hill|mountain|peak|valley|canyon|cave|cavern|desert|dune|island|plain|glacier|waterfall|garden|courtyard|cellar|dungeon|crypt|tomb|library|chamber|room|camp|tent|ship|thatched|ruined|snowy|misty|crumbling|${COLOUR_WORDS.join('|')})(?:e?s)?\\b`,
+  'i',
+);
 /** Past six words a place is a sentence, not a tag. [provisional] */
 const PLACE_WORDS = 6;
 

@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { draftOf, nextRound, saveDraft, type Draft } from '@app/session/builder';
 import { lineEdits } from '@app/session/lines';
-import { currentStates, indexAssertions, isComplete, REQUIRED, SHEET_KEYS, statusOf, type SheetKey } from '@core/memory';
+import { currentStates, indexAssertions, isComplete, REQUIRED, SHEET_KEYS, statusOf, tagify, type SheetKey } from '@core/memory';
 import type { Adventure, Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
@@ -10,6 +10,7 @@ import { Input } from '@ui/components/ui/field';
 import { SectionLabel } from '@ui/components/ui/section-label';
 import { cn } from '@ui/lib/utils';
 import { FinalSheet, useFinish } from './FinalSheet';
+import { LookChips } from './LookChips';
 import { RoundSheet, useRoundSheet } from './RoundSheet';
 
 interface Props {
@@ -53,7 +54,9 @@ export function CharacterBuilder({ entity: e, adventure, api, onClose }: Props) 
   };
   const own = indexAssertions(adventure.assertions).of(e.id);
   const now = currentStates(own);
-  const answer = (k: SheetKey, v: string) => v !== (now[k] ?? '') && lineEdits(api).setValue(e.id, k, v);
+  const save = (k: SheetKey, v: string) => v !== (now[k] ?? '') && lineEdits(api).setValue(e.id, k, v);
+  // Stored as tags, not the sentence: the chips below show what the picture will get.
+  const answer = (k: SheetKey, v: string) => save(k, tagify(v).join(', '));
   const skip = (k: SheetKey) => update({ ...draft, asked: draft.asked.filter((x) => x !== k), skipped: [...draft.skipped, k] });
   // A key from the checklist joins this round; asking a skipped one again un-skips it.
   const refine = (k: SheetKey) =>
@@ -104,6 +107,8 @@ export function CharacterBuilder({ entity: e, adventure, api, onClose }: Props) 
             Done
           </Button>
         </div>
+        {/* Under the buttons: chips that appear on blur would move Next round from under the click. */}
+        <LookChips looks={now} onSave={save} />
         <FinalSheet adventure={adventure} id={e.id} skipped={draft.skipped} status={done.status} />
       </DrawerBody>
     </Drawer>

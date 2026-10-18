@@ -5,6 +5,7 @@ export { current, eventsOf, identityText, indexAssertions, isCurrent, isLegacy, 
 export { heldBy } from './items';
 export { isComplete, nextQuestions, REQUIRED, statusOf, type SheetKey } from './sheet';
 export { isSpeciesClash, swapWord } from './species';
+export { tagify } from './tagify';
 export { isYouLine, playerName, YOU } from './you';
 export { andList, defaultKnownBy, newSecret, repointSecrets, secretsOf } from './secrets';
 export { roomsOf, sceneIds, sceneNames, withPresence } from './names';
