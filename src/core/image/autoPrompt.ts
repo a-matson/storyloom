@@ -4,7 +4,7 @@ import { collect, type Provider } from '../ports/provider';
 import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
 import { trackJob } from '../trace';
-import { CAST_CAP, composeSeePrompt, isImplicit, lookFor, namedIn, subjectsIn } from './compose';
+import { CAST_CAP, composeSeePrompt, isImplicit, lookFor, namedCast, namedIn, subjectsIn } from './compose';
 import type { SheetFamily } from './sheet';
 
 export { looksOf } from './compose';
@@ -101,7 +101,8 @@ export async function seePrompt(req: SeeRequest, helper: () => Promise<ImageProm
   const cast = subjectsIn(req.brief, req.scene, req.entities).slice(0, CAST_CAP);
   const line = await autoImagePrompt({ ...req, cast: cast.map((e) => ({ name: e.name, looks: lookFor(e) })) }, await helper());
   // No scene: the helper already placed it. The line is the story block; the subject block still comes from the cast.
-  return pick(composeSeePrompt({ brief: line, entities: req.entities, style: req.style, family: req.family, cast }));
+  const named = namedCast(req.brief, req.entities);
+  return pick(composeSeePrompt({ brief: line, entities: req.entities, style: req.style, family: req.family, cast, named }));
 }
 
 /** First non-empty line, no quotes or label, cut at a comma so a long reply never ends mid-tag. */

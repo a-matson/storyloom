@@ -23,7 +23,7 @@ export const PROMPT_BUDGET = 300;
 export const budgetFor = (family: SheetFamily): number => (family === 'sdxl' ? 2 * PROMPT_BUDGET : PROMPT_BUDGET);
 
 /** `description`, `appearance`, `looks` and `states` as `withLooks` resolves them from the assertions; `holds` are item ids. */
-type Character = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'description' | 'look'> & {
+type Character = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'description' | 'look' | 'portraitId'> & {
   appearance?: string;
   looks?: Readonly<Record<string, string>>;
   states?: Readonly<Record<string, string>>;
@@ -116,10 +116,15 @@ const topKeys = (l: Readonly<Record<string, string>>, keep: number): Record<stri
       .slice(0, keep),
   );
 
-/** One character with a frozen look keeps their face across Sees; a fixed seed for any other cast would only repeat the layout. [provisional] */
-export const seedFor = (cast: readonly Character[]): number | undefined => {
+/**
+ * One character with a frozen look keeps their face across Sees, and so does one the brief names who has a portrait
+ * (drawn on the same seed); a fixed seed for any other cast would only repeat the layout. [provisional]
+ */
+export const seedFor = (cast: readonly Character[], named: readonly Character[]): number | undefined => {
   const [only] = cast;
-  return cast.length === 1 && only?.look !== undefined ? seedOf(only.id) : undefined;
+  if (cast.length !== 1 || !only) return undefined;
+  const drawn = only.portraitId !== undefined && named.some((e) => e.id === only.id);
+  return only.look !== undefined || drawn ? seedOf(only.id) : undefined;
 };
 
 // "golden dragon" beside `dragon, gold scales` says it twice. [provisional]
@@ -152,6 +157,8 @@ export interface ComposeInput {
   family: SheetFamily;
   /** Who the picture shows when the brief cannot say: a helper's line names nobody. */
   cast?: readonly Character[] | undefined;
+  /** Who the player's brief names, when `brief` is a helper's line: only they may borrow a portrait's seed. */
+  named?: readonly Character[] | undefined;
 }
 
 export type Blocks = Record<'subject' | 'state' | 'story' | 'scene' | 'style', string>;
@@ -208,7 +215,7 @@ export function composeSeePrompt(input: ComposeInput): { prompt: string; entityI
       build([all, 0], false, false),
       ...fewer,
     ].find((b) => joined(b).length <= budget) ?? build([0, 0], false, false);
-  const seed = seedFor(people);
+  const seed = seedFor(people, input.named ?? namedCast(view.brief, entities));
   return { prompt: cut(joined(blocks), budget), entityIds: shown.map((e) => e.id), ...(seed !== undefined && { seed }), blocks };
 }
 
