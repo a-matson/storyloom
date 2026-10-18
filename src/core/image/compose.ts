@@ -1,8 +1,10 @@
 import type { Entity, Scene } from '../model/types';
+import { YOU } from '../memory/you';
 import { seedOf } from '../trace';
 import type { SheetFamily } from './sheet';
 import { stateTags } from './stateTags';
 import { countTag, lookTags, placeTag, tags } from './tags';
+import { saysYou, viewOf } from './view';
 
 /**
  * A See input is a brief: what the picture shows. The prompt sent to the image server is composed
@@ -103,6 +105,7 @@ const saysItAll = (l: Readonly<Record<string, string>>) => Boolean(l['species']?
 
 /** One character in the subject block: the frozen look verbatim, else the noun and the looks as tags; with `full` off, the noun. */
 function subject(e: Character, full: boolean, family: SheetFamily): string {
+  if (e.id === YOU) return tags(['pov', full ? lookTags(e.looks ?? {}, family) : '']);
   if (!full || e.kind !== 'character') return noun(e);
   if (e.look !== undefined) return e.look;
   if (!e.looks || Object.keys(e.looks).length === 0) return looks(e, true);
@@ -132,22 +135,26 @@ function placeIn(location: string | undefined, entities: readonly Character[]): 
 }
 
 /**
- * `count, subject (each shown character's looks), state, brief (names → nouns), location, weather, style`.
+ * `count, subject (each shown character's looks), state, view, brief (names → nouns), location, weather, style`.
  * Looks never enter the brief: spliced in, their last tag fused with the verb after it. Over budget it
  * drops, in order: the second character's looks, the state, the weather, the first character's looks, then cuts at a comma.
  */
 export function composeSeePrompt(input: ComposeInput): { prompt: string; entityIds: string[]; seed?: number; blocks: Blocks } {
   const { brief, scene, entities, style, family } = input;
-  const shown = (input.cast ?? subjectsIn(brief, scene, entities)).slice(0, CAST_CAP);
+  const view = viewOf(brief);
+  // The player is drawn only as the camera, and only when the brief says "you" and the You card has looks.
+  const you = saysYou(brief) ? entities.find((e) => e.id === YOU && Object.keys(e.looks ?? {}).length > 0) : undefined;
+  const others = (input.cast ?? subjectsIn(view.brief, scene, entities)).filter((e) => e.id !== YOU);
+  const shown = [...others.slice(0, you ? CAST_CAP - 1 : CAST_CAP), ...(you ? [you] : [])];
   const people = shown.filter((e) => e.kind === 'character');
   // Every entity's name goes, shown or not; a possessive goes with it ("Bram's hat" → "a toll keeper hat").
-  const story = namedIn(brief, entities).reduce((t, e) => t.replace(mentionRe(e), () => noun(e)), brief);
+  const story = namedIn(view.brief, entities).reduce((t, e) => t.replace(mentionRe(e), () => noun(e)), view.brief);
   const held = (e: Character) => (e.holds ?? []).flatMap((id) => entities.filter((x) => x.id === id).map(noun));
   const state = tags(people.map((e) => stateTags(e.states ?? {}, held(e), family, brief)));
   const build = (full: readonly boolean[], withState: boolean, weather: boolean): Blocks => ({
     subject: tags([countTag(people.length, family), ...shown.map((e, i) => subject(e, full[i] ?? false, family))]),
     state: withState ? state : '',
-    story: tags([story]),
+    story: tags([...view.tags, story]),
     scene: tags([placeIn(scene?.location, entities), weather ? scene?.weather : '']),
     style: tags([style]),
   });
