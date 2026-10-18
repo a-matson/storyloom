@@ -3,6 +3,7 @@ import type { entityEdits } from '@app/session/entities';
 import { useImageBlob } from '@ui/hooks/useImageBlob';
 import { cn } from '@ui/lib/utils';
 import { Button } from '@ui/components/ui/button';
+import { Pill } from '@ui/components/ui/pill';
 import { SectionLabel } from '@ui/components/ui/section-label';
 
 export type Update = (patch: Partial<Entity>) => void;
@@ -61,7 +62,16 @@ export function Appearances({ entity: e, adventure, onClose, edits }: { entity: 
       </div>
       {e.look !== undefined && (
         <p className="m-0 flex flex-wrap items-center gap-2 text-caption text-muted-foreground">
-          <span className="min-w-0 grow">Frozen look: {e.look}</span>
+          <span className="flex min-w-0 grow flex-wrap items-center gap-1">
+            Frozen look:{' '}
+            {typeof e.look === 'string'
+              ? e.look
+              : Object.entries(e.look).map(([k, v]) => (
+                  <Pill key={k} className="normal-case tracking-normal">
+                    {k === 'legacy' ? v : `${k} ${v}`}
+                  </Pill>
+                ))}
+          </span>
           <Button variant="ghost" className="h-7" onClick={() => edits.unfreeze(e.id)}>
             Unfreeze
           </Button>

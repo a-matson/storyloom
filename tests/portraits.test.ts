@@ -237,7 +237,7 @@ describe('portrait edits', () => {
     const edits = entityEdits(session);
     const ent = () => session.getSnapshot().adventure.entities.find((e) => e.id === 'ent_r');
     await edits.setReference('ent_r', imageId);
-    expect(ent()).toMatchObject({ referenceImageId: imageId, look: 'a ferrywoman, grey hair' });
+    expect(ent()).toMatchObject({ referenceImageId: imageId, look: { legacy: 'a ferrywoman, grey hair' } });
     await edits.portraitFromReference('ent_r', imageId);
     expect(ent()?.portraitId).toBeDefined();
     edits.unfreeze('ent_r');
