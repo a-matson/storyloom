@@ -11,9 +11,13 @@ export const presentAt = (presence: PlotComponents['presence'], at: number): str
 /** Who knows a secret marked at `at`, unless the player says otherwise: you and whoever was there. */
 export const defaultKnownBy = (plot: Pick<PlotComponents, 'presence'>, at: number): string[] => [YOU, ...presentAt(plot.presence, at)];
 
-/** A secret the player marked on action `at`: pinned, so no edit of the story drops it. */
-export const newSecret = (at: number, text: string, knownBy: readonly string[]): Assertion => ({
+/**
+ * A secret the player marked on action `at`: pinned, so no edit of the story drops it. `span` is the gist when the
+ * action's text holds it (the prefilled first sentence), so redaction cuts only those words; else the whole action.
+ */
+export const newSecret = (at: number, text: string, knownBy: readonly string[], action = ''): Assertion => ({
   ...byPlayer(YOU, at, { kind: 'secret', text, knownBy: [...new Set([YOU, ...knownBy])] }),
+  ...(text && action.includes(text) ? { span: text } : {}),
   pinned: true,
 });
 

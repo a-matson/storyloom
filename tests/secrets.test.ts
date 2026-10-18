@@ -22,6 +22,11 @@ describe('secrets', () => {
     expect(S.Assertion.parse(s)).toMatchObject({ kind: 'secret', subject: YOU, at: 47, since: 47, pinned: true, knownBy: [YOU, 'ent_minos'] });
   });
 
+  it('rest on the gist as their span when the action holds it', () => {
+    expect(newSecret(4, 'You sold the keys.', [], '> You sold the keys. You wink.')).toMatchObject({ span: 'You sold the keys.' });
+    expect(newSecret(4, 'The keys are sold.', [], '> You sold the keys.')).not.toHaveProperty('span');
+  });
+
   it('are not lines about the player', () => {
     expect(youLines([newSecret(1, 'A secret.', [])])).toEqual([]);
   });

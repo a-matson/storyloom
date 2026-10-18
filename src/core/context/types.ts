@@ -3,6 +3,13 @@ import type { RankedMemory } from '../memory/memoryBank';
 import type { Action, Assertion, Entity, Memory, PlotComponents, Rule, StoryCard } from '../model/types';
 import type { Tokenizer } from '../text/tokenizer';
 
+/** One cut: what was taken out of which section, for which secret. */
+export interface Redaction {
+  secretId: string;
+  section: SectionKind;
+  text: string;
+}
+
 export type SectionKind =
   | 'instructions'
   | 'plotEssentials'
@@ -120,6 +127,8 @@ export interface ContextBuildResult {
   lastActionIndex: number;
   historyFullyIncluded: boolean;
   droppedSections: SectionKind[];
+  /** What was cut for secrets an outsider in the cast does not know; empty with no outsider. */
+  redactions: Redaction[];
   warnings: string[];
 }
 

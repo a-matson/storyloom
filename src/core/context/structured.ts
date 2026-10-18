@@ -11,7 +11,6 @@ import { type CastLine, identityLine, pinnedLine, presentLine } from './cast';
 import { renderScene, renderSection } from './render';
 import { relevantRules, renderRules } from './rules';
 import type { ContextBuildInput, RenderedSections, SectionKind } from './types';
-import { secretLines } from './secrets';
 import { named, nudgedIn, QUIET_TURNS, quietTurns, SEND_GOALS, spotlight } from './spotlight';
 import { gapsOf, MAX_GAPS, witnessClause } from './witness';
 
@@ -25,6 +24,8 @@ export interface StructuredResult {
   /** Entities with a cast line in the prompt. */
   usedEntityIds: string[];
   usedRuleIds: string[];
+  /** Everyone the scene line names (unconfirmed too), here, or named by the text: whom a secret is kept from. */
+  inCast: Entity[];
 }
 
 const ids = (es: Entity[]) => new Set(es.map((e) => e.id));
@@ -158,16 +159,6 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
   const scene = renderScene(shown, entities, ix);
   if (scene && tokenizer.count(renderSection('scene', scene)) <= left) put('scene', renderSection('scene', scene));
 
-  // Before the cast lines in the budget, after them in the text: a leaked secret costs more than a missing identity.
-  // Everyone the scene line names counts, unconfirmed too: Sefa, present but unconfirmed, retold the secret as a rumour.
-  const inScene = (plot.scene?.present ?? []).flatMap((n) => input.entities.find((e) => e.id === n || named(e, n)) ?? []);
-  const secrets = secretLines(input.assertions ?? [], [...new Set([...inScene, ...here, ...mentioned])], input.entities).filter((t) => {
-    const c = tokenizer.count(t) + 1;
-    if (c > left) return false;
-    left -= c;
-    return true;
-  });
-
   const carded = cardedBy(input.storyCards);
   const upTo = input.actions.slice(0, lastActionIndex + 1);
   // A gap that left the window is in a memory, which the model reads as a memory anyway.
@@ -198,9 +189,9 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
     if (fit) cost += tokenizer.count(fit.text) + 1;
     return fit ?? [];
   });
-  // `put` charges the whole section, so hand back what the secrets reserved first.
-  left += secrets.reduce((n, t) => n + tokenizer.count(t) + 1, 0);
-  if (kept.length || secrets.length) put('cast', [...kept.map((l) => l.text), ...secrets].join('\n'));
+  if (kept.length) put('cast', kept.map((l) => l.text).join('\n'));
+  // Everyone the scene line names counts, unconfirmed too: Sefa, present but unconfirmed, retold a secret as a rumour.
+  const inScene = (plot.scene?.present ?? []).flatMap((n) => input.entities.find((e) => e.id === n || named(e, n)) ?? []);
 
   return {
     structuredBudget: budget,
@@ -208,5 +199,6 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
     usedFacts: kept.flatMap((l) => l.factIds.map((factId) => ({ entityId: l.entity.id, factId }))),
     usedEntityIds: [...new Set(kept.map((l) => l.entity.id))],
     usedRuleIds: rules.map((r) => r.id),
+    inCast: [...new Set([...inScene, ...here, ...mentioned])],
   };
 }

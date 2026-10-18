@@ -1,7 +1,8 @@
-import { markOf } from '../memory/secrets';
+import { markOf, secretsOf } from '../memory/secrets';
 import { selectCards } from './cards';
 import { historyWindowStart, selectHistory } from './history';
 import { selectMemories, type MemoriesResult } from './memories';
+import { redactSecrets, secretsToCut } from './redact';
 import { renderBody } from './render';
 import { selectRequired } from './required';
 import { selectStructured } from './structured';
@@ -40,13 +41,17 @@ export function buildContext(input: ContextBuildInput): ContextBuildResult {
   const end = req.lastActionIndex; // history excludes the last action
   const history = selectHistory(actions, end, dynamicAvailable, cards, settings, tokenizer, out, warnings);
 
+  // A cut secret's mark names its knowers, so it is not sent either.
+  const cut = secretsToCut(secretsOf(input.assertions ?? []), structured.inCast);
+  const cutIds = new Set(cut.map((s) => s.id));
+  const marked = (input.assertions ?? []).filter((a) => !cutIds.has(a.id));
   const memoriesBudget = settings.memoryBankEnabled ? Math.max(0, dynamicAvailable - cards.cardsUsed - history.historyUsed) : 0;
   const useMemories = settings.memoryBankEnabled && !history.historyFullyIncluded && memoriesBudget > 0 && input.rankedMemories.length > 0;
   const memories: MemoriesResult = useMemories
-    ? selectMemories(input.rankedMemories, memoriesBudget, history.historyRange?.from ?? end, end, tokenizer, out, (m) =>
-        markOf(input.assertions ?? [], input.entities, m),
-      )
+    ? selectMemories(input.rankedMemories, memoriesBudget, history.historyRange?.from ?? end, end, tokenizer, out, (m) => markOf(marked, input.entities, m))
     : { memoriesBudget, memoriesUsed: 0, usedMemories: [] };
+  // After every stage: a cut only shrinks a section, so the budgets above still hold.
+  const redactions = redactSecrets(out, cut, actions, input.entities, tokenizer);
 
   if (req.lastActionText) out.set('lastAction', { text: req.lastActionText, tokens: req.lastTokens, trimmed: false });
   if (req.frontMemory) out.set('frontMemory', { text: req.frontMemory, tokens: req.frontTokens, trimmed: false });
@@ -84,6 +89,7 @@ export function buildContext(input: ContextBuildInput): ContextBuildResult {
     lastActionIndex: req.lastActionIndex,
     historyFullyIncluded: history.historyFullyIncluded,
     droppedSections,
+    redactions,
     warnings,
   };
 }
