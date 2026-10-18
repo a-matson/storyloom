@@ -27,6 +27,7 @@ const HIRES_NUMBERS: ImageNumber[] = [
 const PORTRAIT_NUMBERS: ImageNumber[] = [
   { label: 'Portrait size', key: 'portraitSize', step: 64, min: 256 },
   { label: 'Portrait steps', key: 'portraitSteps', step: 1, min: 1 },
+  { label: 'Sheet steps', key: 'sheetSteps', step: 1, min: 1 },
 ];
 
 /** Blank means "whatever the image server already has". */

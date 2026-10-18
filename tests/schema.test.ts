@@ -49,6 +49,7 @@ describe('schemas', () => {
         portraits: true,
         portraitSize: 384,
         portraitSteps: 14,
+        sheetSteps: 12,
         hires: false,
         hiresScale: 1.5,
         hiresDenoise: 0.55,

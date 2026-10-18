@@ -10,6 +10,7 @@ export type ImageNumberKey =
   | 'cfgScale'
   | 'portraitSize'
   | 'portraitSteps'
+  | 'sheetSteps'
   | 'clipSkip'
   | 'hiresScale'
   | 'hiresDenoise'
@@ -48,6 +49,7 @@ export const IMAGE_HELP: Record<ImageNumberKey, Help<Image>> = {
   hiresSteps: { help: 'Steps for the hires redraw. Blank uses the same as Steps.' },
   portraitSize: { help: 'Portraits are square at this size. Default 384; the checkpoint’s native size (512 or 1024) looks best but is slower.' },
   portraitSteps: { help: 'Denoising steps for portraits. Default 14, so drawing between turns stays quick.' },
+  sheetSteps: { help: 'Denoising steps for the character builder’s sheets. Default 12, a quick look; more is slower.' },
 };
 
 /** Unweighted SD 1.5 lost every stated colour on a sheet. [measured: docs/measurements/2026-10-18-sheet-bar.json] */

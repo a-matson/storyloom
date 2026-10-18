@@ -1,4 +1,4 @@
-import { familyOf, loadImagePrompt, SHEET_NEGATIVE, SHEET_SIZE, SHEET_STEPS, SHEET_WEIGHT, sheetPrompt } from '@core/image';
+import { familyOf, loadImagePrompt, SHEET_NEGATIVE, SHEET_SIZE, SHEET_WEIGHT, sheetPrompt } from '@core/image';
 import { indexAssertions, nextQuestions, withLooks, type SheetKey } from '@core/memory';
 import { newId, type Adventure } from '@core/model';
 import type { ImageProvider, ImageRequest } from '@core/ports';
@@ -51,7 +51,7 @@ export function sheetRequest(adv: Adventure, id: string, skipped: readonly strin
     prompt: sheetPrompt(indexAssertions(adv.assertions).of(id), skipped, SHEET_WEIGHT[family]),
     negativePrompt: [SHEET_NEGATIVE, s.negativePrompt].filter(Boolean).join(', '),
     ...SHEET_SIZE[family],
-    steps: SHEET_STEPS,
+    steps: s.sheetSteps,
     cfgScale: s.cfgScale,
     seed: seedOf(id),
     model: s.model,
