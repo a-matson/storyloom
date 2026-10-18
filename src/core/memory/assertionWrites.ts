@@ -4,6 +4,7 @@ import { current, isCurrent } from './assertionIndex';
 import { within } from './entities';
 import { currentStates, isValue, rivalKey, valueOf, type Fields } from './looks';
 import { norm } from './names';
+import { speciesIn } from './species';
 
 /** Locked keys a story value can only contradict: a different one is a conflict, a free-text one a proposal. [provisional] */
 export const CLOSED_KEYS: readonly string[] = ['species', 'eyes', 'horns'];
@@ -21,7 +22,8 @@ export interface Rest {
  * (an item's holder and place end each other), and traits deduped by containment, a model trait the
  * new one contains replaced by it, the player's and pinned never. A locked key (`canonKeys`) keeps
  * its value: a different closed one (`CLOSED_KEYS`) is a conflict, a free-text one a proposal
- * (`seen: false`), each once. A new voice or goal ends the current one unless the player wrote or pinned it.
+ * (`seen: false`), each once. A closed key the player declared (`basis: 'player'`) is locked the same way, its
+ * conflict `seen: false`; a species naming the same species word is no conflict. A new voice or goal ends the current one unless the player wrote or pinned it.
  */
 export function mergeAssertions(
   e: Pick<Entity, 'id' | 'kind' | 'canon' | 'cardId' | 'canonKeys'>,
@@ -58,14 +60,22 @@ export function mergeAssertions(
     const v = raw.trim();
     const old = now[key];
     if (!norm(v) || (old !== undefined && norm(old) === norm(v))) continue;
-    if (old !== undefined && locked.has(key)) {
-      const closed = CLOSED_KEYS.includes(key);
+    const closed = CLOSED_KEYS.includes(key);
+    const player = closed && list.findLast((a) => isValue(a) && isCurrent(a) && a.key === key)?.basis === 'player';
+    if (old !== undefined && (locked.has(key) || player)) {
+      // "red dragon" says the player's "dragon".
+      if (player && key === 'species' && speciesIn(v) !== undefined && speciesIn(v) === speciesIn(old)) continue;
       const said = (a: Assertion) =>
         isCurrent(a) &&
         (closed
           ? a.kind === 'conflict' && a.key === key && norm(a.claimed) === norm(v)
           : (a.kind === 'look' || a.kind === 'state') && a.seen === false && a.key === key && norm(a.value) === norm(v));
-      if (!list.some(said)) list.push(closed ? make(v, { kind: 'conflict', key, claimed: v, canon: old }) : { ...make(v, valueOf(key, v)), seen: false });
+      if (!list.some(said))
+        list.push(
+          closed
+            ? { ...make(v, { kind: 'conflict', key, claimed: v, canon: old }), ...(!locked.has(key) && { seen: false }) }
+            : { ...make(v, valueOf(key, v)), seen: false },
+        );
       continue;
     }
     const rival = rivalKey(e.kind, key);

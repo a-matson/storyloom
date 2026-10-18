@@ -62,6 +62,15 @@ describe('mergeAssertions', () => {
     expect(fold(once, { state: { eyes: 'Blue', hair: 'black braid' } }, 9, e)).toHaveLength(once.length);
     expect(fold(once, { state: { eyes: 'grey' } }, 9, e)).toHaveLength(once.length);
   });
+
+  it('a player species acts as locked: a read `human` is one seen:false conflict, `red dragon` none', () => {
+    const own = [byPlayer(tamsin.id, 0, { kind: 'look', key: 'species', value: 'dragon' })];
+    const once = fold(own, { state: { species: 'human' } }, 5);
+    expect(currentStates(once)['species']).toBe('dragon');
+    expect(once.filter((a) => a.kind === 'conflict')).toEqual([expect.objectContaining({ claimed: 'human', canon: 'dragon', seen: false })]);
+    expect(fold(once, { state: { species: 'human' } }, 6)).toHaveLength(once.length);
+    expect(fold(own, { state: { species: 'red dragon' } }, 5)).toEqual(own);
+  });
 });
 
 describe('player values', () => {

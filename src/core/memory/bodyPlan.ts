@@ -45,7 +45,7 @@ export const visibleFrom = (identity: string): string[] => [
   ),
 ];
 
-const PLAYER = new Set(['start', 'do', 'say', 'story']);
+export const PLAYER = new Set(['start', 'do', 'say', 'story']);
 
 /** A character the player's lines of `range` give a body plan, with none yet, gets it as the player's look. Returns how many. */
 export function bodiesFromPlayer(adventure: Adventure, range: MemoryRange): number {

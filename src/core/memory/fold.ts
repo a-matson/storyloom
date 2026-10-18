@@ -4,6 +4,7 @@ import { identityText, indexAssertions } from './assertionIndex';
 import { mergeAssertions, type Rest } from './assertionWrites';
 import { bodiesFromPlayer } from './bodyPlan';
 import { COMMON_WORDS } from './commonWords';
+import { speciesFromPlayer } from './declared';
 import { knownAs, matchEntity, mergeEntity, namedInPassage } from './entities';
 import { sourceIn, type Source } from './invalidate';
 import { articleOnly, cuedKinds, kindOf } from './kindCues';
@@ -229,7 +230,7 @@ export function foldEntities(
   adventure.assertions = assertions;
   let touched = entities.filter((x, i) => x !== adventure.entities[i]).length + asked + proposeOnYou(adventure, incoming, range, opts);
   adventure.entities = entities;
-  touched += bodiesFromPlayer(adventure, range);
+  touched += bodiesFromPlayer(adventure, range) + speciesFromPlayer(adventure, range);
   const pending = [...(adventure.scriptState.__pending ?? []), ...held];
   const due = pending.filter((p) => knownAs(entities, p.entity.name, indexAssertions(assertions)));
   if (!held.length && !due.length && !asked) return touched;
