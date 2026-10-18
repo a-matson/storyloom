@@ -25,8 +25,11 @@ test('a turn whose stream never starts fails as stalled, and Continue recovers',
   await page.getByRole('button', { name: 'Fantasy' }).click();
 
   await page.getByRole('textbox', { name: 'Take a turn' }).fill('wait at the gate');
+  // The watchdog is armed as the completion is sent, which comes after "Stop generating" shows.
+  const sent = page.waitForRequest((r) => r.url().endsWith('/completion') && (r.postData() ?? '').includes('wait at the gate'));
   await page.getByRole('button', { name: 'Send' }).click();
   await expect(page.getByRole('button', { name: 'Stop generating' })).toBeVisible();
+  await sent;
   await page.clock.fastForward('01:31');
   await expect(page.getByRole('alert')).toContainText('The model sent nothing for 90 s');
 
