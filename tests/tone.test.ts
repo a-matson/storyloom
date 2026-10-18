@@ -44,7 +44,7 @@ describe('withTone', () => {
   it('tone ≤ 20 words, first sentence only', () => {
     const long = `${Array.from({ length: 30 }, (_, i) => `w${i}`).join(' ')}. Second sentence.`;
     const note = withTone([...base, sec('frontMemory', 'x')], long, tk).find((s) => s.kind === 'authorsNote');
-    const tone = note?.text.replace("[Author's note: tone: ", '').replace(']', '') ?? '';
+    const tone = /^\[Author's note: tone: (.*)\]$/.exec(note?.text ?? '')?.[1] ?? '';
     expect(tone.split(' ')).toHaveLength(TONE_WORDS);
     expect(note?.text).not.toContain('Second');
   });
