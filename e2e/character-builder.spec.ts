@@ -47,6 +47,8 @@ test('the character builder asks a round of looks and keeps the answers', async 
   await builder.getByRole('textbox', { name: 'What colour is their skin, fur or hide?' }).fill('red fur');
   await builder.getByRole('button', { name: 'Next round' }).click();
   await builder.getByRole('button', { name: 'Skip eyes' }).click();
+  // A fox is not human: its body plan is asked with the required keys.
+  await builder.getByRole('button', { name: 'Skip body' }).click();
   for (const k of ['species', 'build', 'skin']) await expect(builder.getByRole('button', { name: `Ask about ${k}: answered` })).toBeVisible();
   await expect(builder.getByRole('button', { name: 'Ask about eyes: skipped' })).toBeVisible();
   await expect(builder.getByRole('button', { name: 'Done' })).toBeDisabled();
@@ -60,8 +62,8 @@ test('the character builder asks a round of looks and keeps the answers', async 
   await expect(builder.getByRole('button', { name: 'Ask about eyes: skipped' })).toBeVisible();
 
   await builder.getByRole('textbox', { name: 'Hair colour and style?' }).fill('white mohawk');
-  await builder.getByRole('textbox', { name: 'What stands out about their face?' }).fill('a long muzzle');
   await builder.getByRole('button', { name: 'Next round' }).click();
+  await builder.getByRole('textbox', { name: 'What stands out about their face?' }).fill('a long muzzle');
   await builder.getByRole('textbox', { name: 'What are they wearing?' }).fill('a blue cloak');
   await builder.getByRole('textbox', { name: 'What are they wearing?' }).blur();
   await expect(builder.getByRole('button', { name: 'Done' })).toBeEnabled();
