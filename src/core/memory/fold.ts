@@ -16,8 +16,6 @@ import { NOT_A_NAME, playerName, YOU } from './you';
 
 export { uncut, type Incoming, type Rejected } from './sighting';
 
-export { NOT_A_NAME } from './you';
-
 /** Whether `name` is the player's (`playerName`). */
 const isPlayer = (adventure: Pick<Adventure, 'plot' | 'actions'>, name: string): boolean => {
   const player = playerName(adventure);
