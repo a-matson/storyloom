@@ -1,5 +1,7 @@
 import type { Entity, Scene } from '../model/types';
 import { seedOf } from '../trace';
+import type { SheetFamily } from './sheet';
+import { countTag, lookTags, tags } from './tags';
 
 /**
  * A See input is a brief: what the picture shows. The prompt sent to the image server is composed
@@ -12,19 +14,22 @@ export const CAST_CAP = 2;
 /** CLIP reads 75 tokens; ~4 characters a token. [provisional] */
 export const PROMPT_BUDGET = 300;
 
-/** `description` and `appearance` as `withLooks` resolves them from the assertions. */
-type Character = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'description' | 'look'> & { appearance?: string };
+/** `description`, `appearance` and `looks` as `withLooks` resolves them from the assertions. */
+type Character = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'description' | 'look'> & {
+  appearance?: string;
+  looks?: Readonly<Record<string, string>>;
+};
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const nameRe = (n: string) => new RegExp(`(?<![\\p{L}\\p{N}])${escape(n.trim())}(?![\\p{L}\\p{N}])`, 'giu');
 const namesOf = (e: Character) => [e.name, ...e.aliases].filter((n) => n.trim() !== '');
-/** Any of a character's names, longest first, with a trailing possessive captured. */
+/** Any of a character's names, longest first, with a trailing possessive. */
 const mentionRe = (e: Character) =>
   new RegExp(
     `(?<![\\p{L}\\p{N}])(?:${namesOf(e)
       .toSorted((a, b) => b.length - a.length)
       .map((n) => escape(n.trim()))
-      .join('|')})(?![\\p{L}\\p{N}])(['’]s(?![\\p{L}\\p{N}]))?`,
+      .join('|')})(?![\\p{L}\\p{N}])(?:['’]s(?![\\p{L}\\p{N}]))?`,
     'giu',
   );
 
@@ -52,7 +57,8 @@ export function isImplicit(brief: string, named: readonly unknown[]): boolean {
 
 /** What a character is, without their name: "Tamsin is a ferrywoman who…" → "a ferrywoman". */
 function noun(e: Character): string {
-  const first = e.description.split(/[,.;:\n]/)[0] ?? '';
+  // Not `:`: a "species: dragon" description would yield the noun "species".
+  const first = e.description.split(/[,.;\n]/)[0] ?? '';
   const lead = new RegExp(`^\\s*(?:${namesOf(e).map(escape).join('|')})\\s+(?:is|was)\\s+`, 'i');
   const n = first.replace(lead, '').trim();
   // "A young scribe." opens a sentence; mid-prompt it is a tag.
@@ -71,13 +77,16 @@ export const seedFor = (cast: readonly Character[]): number | undefined => {
   return cast.length === 1 && only?.look !== undefined ? seedOf(only.id) : undefined;
 };
 
-/** Comma-separated tags, trimmed and deduped (case-insensitive), empties dropped. */
-function tags(parts: readonly (string | undefined)[]): string {
-  const unique = new Map<string, string>();
-  for (const p of parts)
-    for (const t of (p ?? '').split(',').map((x) => x.replace(/\s+/g, ' ').trim()))
-      if (t !== '' && !unique.has(t.toLowerCase())) unique.set(t.toLowerCase(), t);
-  return [...unique.values()].join(', ');
+// "golden dragon" beside `dragon, gold scales` says it twice. [provisional]
+const BODY_COLOUR = ['skin', 'scales'];
+const saysItAll = (l: Readonly<Record<string, string>>) => Boolean(l['species']?.trim()) && BODY_COLOUR.some((k) => l[k]?.trim());
+
+/** One character in the subject block: the frozen look verbatim, else the noun and the looks as tags; with `full` off, the noun. */
+function subject(e: Character, full: boolean, family: SheetFamily): string {
+  if (!full) return noun(e);
+  if (e.look !== undefined) return e.look;
+  if (!e.looks || Object.keys(e.looks).length === 0) return looks(e, true);
+  return tags([saysItAll(e.looks) ? '' : noun(e), lookTags(e.looks, family)]);
 }
 
 export interface ComposeInput {
@@ -86,41 +95,40 @@ export interface ComposeInput {
   scene?: Scene | undefined;
   entities: readonly Character[];
   style: string;
+  family: SheetFamily;
+  /** Who the picture shows when the brief cannot say: a helper's line names nobody. */
+  cast?: readonly Character[] | undefined;
 }
 
+export type Blocks = Record<'subject' | 'state' | 'story' | 'scene' | 'style', string>;
+
+const joined = (b: Blocks) => tags([b.subject, b.state, b.story, b.scene, b.style]);
+
 /**
- * `brief (names → looks), looks of present-but-unnamed cast, location, weather, style`. Over budget it
+ * `count, subject (each shown character's looks), state, brief (names → nouns), location, weather, style`.
+ * Looks never enter the brief: spliced in, their last tag fused with the verb after it. Over budget it
  * drops, in order: the second character's looks, the weather, the first character's looks, then cuts at a comma.
  */
-export function composeSeePrompt({ brief, scene, entities, style }: ComposeInput): { prompt: string; entityIds: string[]; seed?: number } {
-  const cast = castIn(brief, scene, entities);
-  const build = (full: readonly boolean[], weather: boolean) => {
-    let text = brief;
-    const unnamed: string[] = [];
-    cast.forEach((e, i) => {
-      const before = text;
-      const look = full[i] ? lookFor(e) : looks(e, false);
-      const n = noun(e);
-      let first = true;
-      text = text.replace(mentionRe(e), (_m: string, poss: string | undefined) => {
-        // The look once, at the first mention; repeating it reads to SD as more people.
-        const head = first ? look : n;
-        first = false;
-        // SD tags need no possessive; with one, a noun ending "chest" read "chest's chest" (F23).
-        return poss && head !== n ? `${head}, ${n}` : head;
-      });
-      if (text === before && i < CAST_CAP) unnamed.push(look);
-    });
-    return tags([text, ...unnamed, scene?.location, weather ? scene?.weather : '', style]);
-  };
-  const tries = [build([true, true], true), build([true, false], true), build([true, false], false), build([false, false], false)];
-  const fit = tries.find((t) => t.length <= PROMPT_BUDGET);
-  const shown = cast.slice(0, CAST_CAP);
+export function composeSeePrompt(input: ComposeInput): { prompt: string; entityIds: string[]; seed?: number; blocks: Blocks } {
+  const { brief, scene, entities, style, family } = input;
+  const shown = (input.cast ?? castIn(brief, scene, entities)).slice(0, CAST_CAP);
+  // Every character's name goes, shown or not; a possessive goes with it ("Bram's hat" → "a toll keeper hat").
+  const story = namedCast(brief, entities).reduce((t, e) => t.replace(mentionRe(e), () => noun(e)), brief);
+  const build = (full: readonly boolean[], weather: boolean): Blocks => ({
+    subject: tags([countTag(shown.length, family), ...shown.map((e, i) => subject(e, full[i] ?? false, family))]),
+    state: '',
+    story: tags([story]),
+    scene: tags([scene?.location, weather ? scene?.weather : '']),
+    style: tags([style]),
+  });
+  const last = build([false, false], false);
+  const blocks = [build([true, true], true), build([true, false], true), build([true, false], false)].find((b) => joined(b).length <= PROMPT_BUDGET) ?? last;
   const seed = seedFor(shown);
-  return { prompt: fit ?? cut(tries.at(-1) ?? ''), entityIds: shown.map((e) => e.id), ...(seed !== undefined && { seed }) };
+  return { prompt: cut(joined(blocks)), entityIds: shown.map((e) => e.id), ...(seed !== undefined && { seed }), blocks };
 }
 
 function cut(text: string): string {
+  if (text.length <= PROMPT_BUDGET) return text;
   const head = text.slice(0, PROMPT_BUDGET);
   const comma = head.lastIndexOf(',');
   return (comma > 0 ? head.slice(0, comma) : head).trim();

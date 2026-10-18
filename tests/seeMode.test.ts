@@ -135,11 +135,11 @@ describe('See mode', () => {
     session.see('Tamsin at the ferry');
     const action = await seeAction(session);
     expect(action.image).toMatchObject({ brief: 'Tamsin at the ferry', entityIds: ['ent_t'] });
-    expect(action.image?.prompt).toBe(`a ferrywoman, grey braid at the ferry, the jetty, ${STYLE}`);
+    expect(action.image?.prompt).toBe(`a ferrywoman, grey braid, a ferrywoman at the ferry, the jetty, ${STYLE}`);
     session.regenerateSee(action.id, 'an empty boat');
     await vi.waitFor(() => expect(prompts).toHaveLength(2));
     expect(session.getSnapshot().actions.at(-1)?.image).toMatchObject({ brief: 'an empty boat', entityIds: ['ent_b'] });
-    expect(prompts[1]).toBe(`an empty boat, a toll keeper, the jetty, ${STYLE}`);
+    expect(prompts[1]).toBe(`a toll keeper, an empty boat, the jetty, ${STYLE}`);
   });
 
   it('sends /raw and a raw prompt edit as written, without a brief', async () => {

@@ -45,6 +45,8 @@ describe('sheetPrompt', () => {
   it('tells SDXL from SD 1.5 by the checkpoint name, else the See size', () => {
     expect(familyOf('indigoVoidFurryFusedXL_noobaiV24', 512, 512)).toBe('sdxl');
     expect(familyOf(undefined, 1024, 1024)).toBe('sdxl');
+    expect(familyOf(undefined, 768, 768)).toBe('sdxl');
+    expect(familyOf(undefined, 512, 512)).toBe('sd15');
     expect(familyOf('DreamShaper_8', 512, 768)).toBe('sd15');
   });
 });

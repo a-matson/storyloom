@@ -4,7 +4,8 @@ import { collect, type Provider } from '../ports/provider';
 import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
 import { trackJob } from '../trace';
-import { CAST_CAP, castIn, composeSeePrompt, isImplicit, lookFor, namedCast, seedFor } from './compose';
+import { CAST_CAP, castIn, composeSeePrompt, isImplicit, lookFor, namedCast } from './compose';
+import type { SheetFamily } from './sheet';
 
 export { looksOf } from './compose';
 
@@ -87,22 +88,20 @@ export interface SeeRequest {
   actions: Action[];
   plotEssentials?: string | undefined;
   scene?: Scene | undefined;
-  entities: readonly Entity[];
+  entities: readonly (Entity & { looks?: Readonly<Record<string, string>> })[];
   style: string;
+  family: SheetFamily;
 }
+
+const pick = ({ prompt, entityIds, seed }: ReturnType<typeof composeSeePrompt>) => ({ prompt, entityIds, ...(seed !== undefined && { seed }) });
 
 /** The prompt to send for a brief and the characters it shows; the helper is asked only for a blank or implicit brief. */
 export async function seePrompt(req: SeeRequest, helper: () => Promise<ImagePromptDeps>): Promise<{ prompt: string; entityIds: string[]; seed?: number }> {
-  if (req.brief !== '' && !isImplicit(req.brief, namedCast(req.brief, req.entities))) return composeSeePrompt(req);
+  if (req.brief !== '' && !isImplicit(req.brief, namedCast(req.brief, req.entities))) return pick(composeSeePrompt(req));
   const cast = castIn(req.brief, req.scene, req.entities).slice(0, CAST_CAP);
   const line = await autoImagePrompt({ ...req, cast: cast.map((e) => ({ name: e.name, looks: lookFor(e) })) }, await helper());
-  // No scene: the helper already placed it. Composing still swaps any name it let slip and adds the style.
-  const seed = seedFor(cast);
-  return {
-    prompt: composeSeePrompt({ brief: line, entities: req.entities, style: req.style }).prompt,
-    entityIds: cast.map((e) => e.id),
-    ...(seed !== undefined && { seed }),
-  };
+  // No scene: the helper already placed it. The line is the story block; the subject block still comes from the cast.
+  return pick(composeSeePrompt({ brief: line, entities: req.entities, style: req.style, family: req.family, cast }));
 }
 
 /** First non-empty line, no quotes or label, cut at a comma so a long reply never ends mid-tag. */
