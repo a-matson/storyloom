@@ -5,7 +5,7 @@ import { newId, type Adventure, type Entity } from '@core/model';
 import { cropSquare, downscale } from '../image';
 import { withoutReference } from './seeRender';
 import { lineEdits, patch } from './lines';
-import { clearPortrait, dropPortrait, PORTRAIT_PX, renderPortrait, setPortrait } from './portraits';
+import { clearPortrait, PORTRAIT_PX, renderPortrait, setPortrait } from './portraits';
 import { repointGates } from './rules';
 import type { GameSession } from './session';
 
@@ -26,7 +26,6 @@ function repointScene(adv: Adventure, from: string, to: string): void {
  * stay), what pointed at it points at you, the card goes, and its name becomes the player's if none is set.
  */
 function mergeIntoYou(host: GameSession, id: string): void {
-  const old = host.adv.entities.find((e) => e.id === id);
   host.mutate((_, adv) => {
     const e = adv.entities.find((x) => x.id === id);
     if (!e) return;
@@ -45,7 +44,6 @@ function mergeIntoYou(host: GameSession, id: string): void {
     if (!adv.plot.thirdPerson?.name.trim()) adv.plot = { ...adv.plot, thirdPerson: { enabled: adv.plot.thirdPerson?.enabled ?? false, name: e.name } };
     adv.entities = adv.entities.filter((x) => x !== e);
   });
-  for (const blob of [old?.portraitId, old?.sheetImageId]) if (blob !== undefined) dropPortrait(host, blob);
 }
 
 /**
@@ -57,7 +55,6 @@ export function entityEdits(host: GameSession) {
   return {
     update: (id: string, p: Partial<Entity>) => mutate((adv) => patch(adv, id, p)),
     delete: (id: string) => {
-      const old = host.adv.entities.find((e) => e.id === id);
       mutate((adv) => {
         const gone = adv.entities.find((e) => e.id === id);
         if (gone) repointScene(adv, id, gone.name);
@@ -65,7 +62,6 @@ export function entityEdits(host: GameSession) {
         adv.assertions = adv.assertions.filter((a) => a.subject !== id);
         repointGates(adv, id);
       });
-      for (const blob of [old?.portraitId, old?.sheetImageId]) if (blob !== undefined) dropPortrait(host, blob);
     },
     /** Player-asked, so unlike the idle queue a failure is shown. */
     regeneratePortrait: (id: string) => renderPortrait(host, id).catch((err: unknown) => host.onError(`Could not draw the portrait: ${message(err)}`)),
@@ -120,8 +116,6 @@ export function entityEdits(host: GameSession) {
         repointGates(adv, fromId, intoId);
         repointScene(adv, fromId, intoId);
         repointSecrets(adv, fromId, intoId);
-        for (const b of [from.portraitId, from.sheetImageId])
-          if (b !== undefined && b !== merged.portraitId && b !== merged.sheetImageId) dropPortrait(host, b);
       });
     },
     mergeIntoYou: (id: string) => mergeIntoYou(host, id),

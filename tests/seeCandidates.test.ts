@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { blobIdsOf, chosen, rendersOf, withCandidate } from '@core/image';
+import { blobIdsOf, chosen, ownedBlobIds, rendersOf, withCandidate } from '@core/image';
 import { fakeImages } from './fixtures/images';
 import { setup } from './fixtures/session';
 
@@ -35,6 +35,18 @@ describe('See candidates in a session', () => {
   it('erase drops every candidate’s blob', async () => {
     const { session, images } = setup({ images: fakeImages(() => Promise.resolve(new Blob(['png']))) });
     const { id } = await twoRenders(session);
+    session.eraseTo(id);
+    await vi.waitFor(() => expect(images.size).toBe(0));
+  });
+
+  it('an erase that drops an unborn entity deletes its portrait and sheet blobs', async () => {
+    const { session, images } = setup({ images: fakeImages(() => Promise.resolve(new Blob(['png']))) });
+    const { id } = await twoRenders(session);
+    const adv = session.getSnapshot().adventure;
+    const at = adv.actions.length - 1;
+    const base = { kind: 'character' as const, description: '', aliases: [], relations: [], firstSeen: at, lastSeen: at };
+    adv.entities.push({ ...base, id: 'ent_u', name: 'U', portraitId: 'img_p', sheetImageId: 'img_s' });
+    for (const b of ['img_p', 'img_s']) images.set(`${adv.id}|${b}`, new Blob(['png']));
     session.eraseTo(id);
     await vi.waitFor(() => expect(images.size).toBe(0));
   });
@@ -84,5 +96,16 @@ describe('See candidates', () => {
     expect(blobIdsOf(image)).toEqual(['img_a', 'img_b']);
     expect(blobIdsOf(shown)).toEqual(['img_a']);
     expect(blobIdsOf({ prompt: 'p' })).toEqual([]);
+  });
+
+  it('ownedBlobIds lists see renders and candidates, portraits, sheets and the cover, not references', () => {
+    const { image } = withCandidate({ prompt: 'b', candidates: rendersOf(shown) }, { prompt: 'b' }, 'img_b');
+    const base = { kind: 'character' as const, description: '', aliases: [], relations: [], firstSeen: 0, lastSeen: 0 };
+    const owned = ownedBlobIds({
+      actions: [{ id: 'act_1', type: 'see', versions: [''], active: 0, createdAt: 0, image }],
+      entities: [{ ...base, id: 'ent_a', name: 'A', portraitId: 'img_p', sheetImageId: 'img_s', referenceImageId: 'img_r' }],
+      coverId: 'img_c',
+    });
+    expect([...owned].toSorted()).toEqual(['img_a', 'img_b', 'img_c', 'img_p', 'img_s']);
   });
 });

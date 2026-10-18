@@ -1,4 +1,4 @@
-import type { Action } from '../model/types';
+import type { Action, Adventure } from '../model/types';
 
 type Image = NonNullable<Action['image']>;
 type Candidate = NonNullable<Image['candidates']>[number];
@@ -23,6 +23,17 @@ export function rendersOf(image: Image): Candidate[] {
 
 /** Every stored blob the image points at. */
 export const blobIdsOf = (image: Image): string[] => rendersOf(image).map((c) => c.imageId);
+
+/**
+ * Every stored blob the adventure owns: See renders, portraits, builder sheets and the cover.
+ * A `referenceImageId` owns nothing: it points at a See render and goes with it.
+ */
+export function ownedBlobIds(adv: Pick<Adventure, 'actions' | 'entities' | 'coverId'>): Set<string> {
+  const ids = adv.actions.flatMap((a) => (a.image ? blobIdsOf(a.image) : []));
+  for (const e of adv.entities) ids.push(...[e.portraitId, e.sheetImageId].filter((b) => b !== undefined));
+  if (adv.coverId !== undefined) ids.push(adv.coverId);
+  return new Set(ids);
+}
 
 /**
  * A render of `rendered` landed as `imageId` on an action now holding `current`: it becomes the shown one.
