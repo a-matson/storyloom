@@ -2,6 +2,7 @@ import type { Action, Adventure, Assertion } from '../model/types';
 import { actionText } from '../model/types';
 import { identityText, indexAssertions } from './assertionIndex';
 import { mergeAssertions, type Rest } from './assertionWrites';
+import { bodiesFromPlayer } from './bodyPlan';
 import { COMMON_WORDS } from './commonWords';
 import { knownAs, matchEntity, mergeEntity, namedInPassage } from './entities';
 import { sourceIn, type Source } from './invalidate';
@@ -168,7 +169,6 @@ export function foldEntities(
 ): number {
   let entities = adventure.entities;
   let assertions = adventure.assertions;
-  const actions = adventure.actions.slice(range.fromAction, range.toAction);
   const fallback = sourceIn(adventure.actions, range);
   const restOf = restIn(adventure.actions);
   const held: Held[] = [];
@@ -202,7 +202,7 @@ export function foldEntities(
     const seen = sightingOf(
       { ...item, kind, facts, aliases },
       {
-        actions,
+        actions: adventure.actions.slice(range.fromAction, range.toAction),
         who,
         kind,
         own,
@@ -227,8 +227,9 @@ export function foldEntities(
   // A proposal counts: the scheduler saves only on a change.
   const asked = proposals.length - (adventure.scriptState.__aliasProposals?.length ?? 0);
   adventure.assertions = assertions;
-  const touched = entities.filter((x, i) => x !== adventure.entities[i]).length + asked + proposeOnYou(adventure, incoming, range, opts);
+  let touched = entities.filter((x, i) => x !== adventure.entities[i]).length + asked + proposeOnYou(adventure, incoming, range, opts);
   adventure.entities = entities;
+  touched += bodiesFromPlayer(adventure, range);
   const pending = [...(adventure.scriptState.__pending ?? []), ...held];
   const due = pending.filter((p) => knownAs(entities, p.entity.name, indexAssertions(assertions)));
   if (!held.length && !due.length && !asked) return touched;

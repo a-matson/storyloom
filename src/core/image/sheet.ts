@@ -18,8 +18,8 @@ export const SHEET_NEGATIVE = 'text, watermark, scenery, multiple characters';
 export const SHEET_WEIGHT: Record<SheetFamily, number> = { sd15: 1.2, sdxl: 1 };
 
 // Clothing first: its colour leaked most. Over budget, keys go from the end; KEEP never does.
-const ORDER = ['wearing', 'species', 'hair', 'eyes', 'skin', 'build', 'face', 'horns', 'scales', 'marks', 'accessories', 'palette'];
-const KEEP = new Set(['wearing', 'species', 'hair', 'eyes']);
+const ORDER = ['wearing', 'species', 'body', 'hair', 'eyes', 'skin', 'build', 'face', 'horns', 'scales', 'marks', 'accessories', 'palette'];
+const KEEP = new Set(['wearing', 'species', 'body', 'hair', 'eyes']);
 // Weighting colour alone turned a fox human, so the species is weighted with it.
 const WEIGHTED = new Set(['wearing', 'species', 'hair']);
 

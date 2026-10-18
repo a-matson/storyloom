@@ -22,6 +22,7 @@ interface Props {
 // Here, not in core: start-up code imports the memory barrel.
 const QUESTIONS: Record<SheetKey, string> = {
   species: 'What are they? (human, fox, elf…)',
+  body: 'Body plan? (feral, quadruped, anthro, taur…)',
   build: 'How tall and how built are they?',
   skin: 'What colour is their skin, fur or hide?',
   eyes: 'What are their eyes like?',

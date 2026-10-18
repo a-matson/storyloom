@@ -35,7 +35,7 @@ const SKELETON_EVENTS = ',\n "events": [{"what": "<what happened>", "who": ["<Na
  */
 export const ONE_LINE = ' Write the JSON on one line, with no line breaks or indentation.';
 
-export const LOOKS_ASK = `looks is only for characters: a few words for each of ${LOOK_KEYS.join(', ')} that the passage shows; leave out the rest, and leave it out for places, items and factions.`;
+export const LOOKS_ASK = `looks is only for characters: a few words for each of ${LOOK_KEYS.join(', ')} that the passage shows (body is the body plan: feral, quadruped, anthro, taur, humanoid, when the species is not human); leave out the rest, and leave it out for places, items and factions.`;
 /** Only from quotes: `sighting.ts` drops a voice for anyone the passage does not quote. [provisional] */
 const VOICE_ASK =
   'voice is only for characters: how they always talk, from their own quoted lines only (register, a tic, how they address you), not their mood now, in a few words; leave it out if they say nothing.';

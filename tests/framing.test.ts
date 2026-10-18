@@ -40,7 +40,7 @@ describe('composeSeePrompt framing', () => {
 
   it('a feet frame sends species and skin colours, not eyes or wearing', () => {
     const { blocks } = see("Imperium's feet up close, only feet");
-    expect(blocks.subject).toBe('feet only, solo, dragon, violet skin');
+    expect(blocks.subject).toBe('feet only, solo, dragon, violet skin, black claws');
     expect(blocks.state).toBe('');
   });
 
@@ -52,7 +52,7 @@ describe('composeSeePrompt framing', () => {
 
   it('close-up keeps every key', () => {
     const { blocks } = see('Imperium up close');
-    expect(blocks.subject).toBe('close-up, solo, dragon, violet skin, amber eyes, curved horns, wearing silk robe');
+    expect(blocks.subject).toBe('close-up, solo, dragon, violet skin, amber eyes, curved horns, wearing silk robe, black claws');
     expect(blocks.state).toBe('sitting, smug expression');
   });
 });

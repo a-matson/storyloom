@@ -1,4 +1,5 @@
 import type { Entity, Scene } from '../model/types';
+import { visibleFrom } from '../memory/bodyPlan';
 import { YOU } from '../memory/you';
 import { seedOf } from '../trace';
 import type { SheetFamily } from './sheet';
@@ -104,9 +105,13 @@ export const seedFor = (cast: readonly Character[]): number | undefined => {
 const BODY_COLOUR = ['skin', 'scales'];
 const saysItAll = (l: Readonly<Record<string, string>>) => Boolean(l['species']?.trim()) && BODY_COLOUR.some((k) => l[k]?.trim());
 
-/** One character in the subject block: the frozen look verbatim, else the noun and the looks as tags; with `full` off, the noun. */
-function subject(e: Character, full: boolean, family: SheetFamily, keys: Frame['keys']): string {
-  const shows = inFrame(e.looks ?? {}, keys);
+/**
+ * One character in the subject block: the frozen look verbatim, else the noun and the looks as tags; with `full` off, the noun.
+ * With `parts`, the body parts their identity names join the looks (a look of the same key wins).
+ */
+function subject(e: Character, full: boolean, family: SheetFamily, keys: Frame['keys'], parts: boolean): string {
+  const named = parts ? Object.fromEntries(visibleFrom(e.description).map((w) => [w, w])) : {};
+  const shows = inFrame({ ...named, ...e.looks }, keys);
   if (e.id === YOU) return tags(['pov', full ? lookTags(shows, family) : '']);
   if (!full || e.kind !== 'character') return noun(e);
   // ponytail: a frozen string look is not cut to the frame; M29-9 makes it per key.
@@ -140,7 +145,7 @@ function placeIn(location: string | undefined, entities: readonly Character[]): 
 /**
  * `framing, count, subject (each shown character's looks in frame), state, view, brief (names → nouns), location, weather, style`.
  * Looks never enter the brief: spliced in, their last tag fused with the verb after it. Over budget it
- * drops, in order: the second character's looks, the state, the weather, the first character's looks, then cuts at a comma.
+ * drops, in order: the body parts named only in identities, the second character's looks, the state, the weather, the first character's looks, then cuts at a comma.
  */
 export function composeSeePrompt(input: ComposeInput): { prompt: string; entityIds: string[]; seed?: number; blocks: Blocks } {
   const { brief, scene, entities, style, family } = input;
@@ -158,8 +163,8 @@ export function composeSeePrompt(input: ComposeInput): { prompt: string; entityI
   // Out of frame, a posture or a held sword only pulls the camera back.
   const states = frame?.states ?? 'all';
   const state = tags(people.map((e) => stateTags(inFrame(e.states ?? {}, states), states === 'all' ? held(e) : [], family, brief)));
-  const build = (full: readonly boolean[], withState: boolean, weather: boolean): Blocks => ({
-    subject: tags([frame?.tag, countTag(people.length, family), ...shown.map((e, i) => subject(e, full[i] ?? false, family, keys))]),
+  const build = (full: readonly boolean[], withState: boolean, weather: boolean, parts = false): Blocks => ({
+    subject: tags([frame?.tag, countTag(people.length, family), ...shown.map((e, i) => subject(e, full[i] ?? false, family, keys, parts))]),
     state: withState ? state : '',
     story: tags([...view.tags, story]),
     scene: tags([placeIn(scene?.location, entities), weather ? scene?.weather : '']),
@@ -167,9 +172,13 @@ export function composeSeePrompt(input: ComposeInput): { prompt: string; entityI
   });
   const last = build([false, false], false, false);
   const blocks =
-    [build([true, true], true, true), build([true, false], true, true), build([true, false], false, true), build([true, false], false, false)].find(
-      (b) => joined(b).length <= PROMPT_BUDGET,
-    ) ?? last;
+    [
+      build([true, true], true, true, true),
+      build([true, true], true, true),
+      build([true, false], true, true),
+      build([true, false], false, true),
+      build([true, false], false, false),
+    ].find((b) => joined(b).length <= PROMPT_BUDGET) ?? last;
   const seed = seedFor(people);
   return { prompt: cut(joined(blocks)), entityIds: shown.map((e) => e.id), ...(seed !== undefined && { seed }), blocks };
 }
