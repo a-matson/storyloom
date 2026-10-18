@@ -69,3 +69,45 @@ test('the character builder asks a round of looks and keeps the answers', async 
   await expect(builder).toBeHidden();
   await expect(drawer.getByText('wearing: a blue cloak')).toBeVisible();
 });
+
+test('Done draws the final sheet with hires and a portrait, and both survive a reload', async ({ page }) => {
+  const images = 'http://localhost:7999';
+  const calls: { path: string; prompt: string }[] = [];
+  await page.route(`${images}/**`, async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (!path.endsWith('2img')) return route.fulfill({ json: [] });
+    calls.push({ path, prompt: (route.request().postDataJSON() as { prompt: string }).prompt });
+    return route.fulfill({ json: { images: [PNG] } });
+  });
+  await openSeededAdventure(page, 3, `${images}/`);
+  await page.getByRole('button', { name: /^Characters/ }).click();
+  await page.getByRole('button', { name: 'Open Merav' }).click();
+  const drawer = page.getByRole('dialog', { name: 'Merav' });
+  await drawer.getByRole('button', { name: 'Build character' }).click();
+  const builder = page.getByRole('dialog', { name: 'Build Merav' });
+  for (const k of ['hair', 'face', 'wearing', 'eyes']) await builder.getByRole('button', { name: `Ask about ${k}: missing` }).click();
+  await builder.getByRole('button', { name: 'Skip eyes' }).click();
+  const answers: [string, string][] = [
+    ['What are they? (human, fox, elf…)', 'fox'],
+    ['How tall and how built are they?', 'tall and wiry'],
+    ['What colour is their skin, fur or hide?', 'red fur'],
+    ['Hair colour and style?', 'white mohawk'],
+    ['What stands out about their face?', 'a long muzzle'],
+    ['What are they wearing?', 'a blue cloak'],
+  ];
+  for (const [q, a] of answers) await builder.getByRole('textbox', { name: q }).fill(a);
+  await builder.getByRole('textbox', { name: 'What are they wearing?' }).blur();
+  await builder.getByRole('button', { name: 'Done' }).click();
+  await expect(builder).toBeHidden();
+  // The hires pass is the img2img call after the sheet's txt2img.
+  const sheet = (path: string) => calls.some((c) => c.path === path && c.prompt.startsWith('character reference sheet'));
+  expect(sheet('/sdapi/v1/txt2img') && sheet('/sdapi/v1/img2img')).toBe(true);
+  expect(calls.some((c) => c.prompt.startsWith('portrait'))).toBe(true);
+
+  await page.reload();
+  await page.getByRole('button', { name: /^Characters/ }).click();
+  await page.getByRole('button', { name: 'Open Merav' }).click();
+  await expect(drawer.getByRole('img', { name: 'Character sheet' })).toHaveAttribute('src', /^blob:/);
+  await expect(drawer.getByRole('button', { name: 'Redraw' })).toBeVisible();
+  await expect(drawer.getByRole('button', { name: 'Rebuild' })).toBeVisible();
+});

@@ -9,6 +9,7 @@ import { Drawer, DrawerBody, DrawerHeader } from '@ui/components/ui/drawer';
 import { Input } from '@ui/components/ui/field';
 import { SectionLabel } from '@ui/components/ui/section-label';
 import { cn } from '@ui/lib/utils';
+import { FinalSheet, useFinish } from './FinalSheet';
 import { RoundSheet, useRoundSheet } from './RoundSheet';
 
 interface Props {
@@ -43,6 +44,7 @@ export function CharacterBuilder({ entity: e, adventure, api, onClose }: Props) 
     setDraft(d);
   };
   const sheet = useRoundSheet(api, e.id);
+  const done = useFinish(api, e.id, onClose);
   const next = () => {
     const d = nextRound(api, e.id, draft);
     update(d);
@@ -94,11 +96,14 @@ export function CharacterBuilder({ entity: e, adventure, api, onClose }: Props) 
           </div>
         ))}
         <div className="flex flex-wrap gap-2 border-t border-border pt-3.5">
-          <Button onClick={next}>Next round</Button>
-          <Button variant="primary" disabled={!isComplete(own, draft.skipped)} onClick={onClose}>
+          <Button onClick={next} disabled={done.status === 'drawing'}>
+            Next round
+          </Button>
+          <Button variant="primary" disabled={!isComplete(own, draft.skipped) || done.status === 'drawing'} onClick={() => done.run(draft.skipped)}>
             Done
           </Button>
         </div>
+        <FinalSheet adventure={adventure} id={e.id} skipped={draft.skipped} status={done.status} />
       </DrawerBody>
     </Drawer>
   );
