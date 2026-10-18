@@ -20,6 +20,21 @@ const mapOwn = (adv: Adventure, id: string, fn: (e: Entity, own: Assertion[]) =>
     ];
 };
 const without = (keys: readonly string[] | undefined, key: string) => (keys ?? []).filter((k) => k !== key);
+/** Ends `id`'s current line of `kind` at `at` and adds the player's, as a read's would. */
+const replaceLine = (adv: Adventure, id: string, at: number, kind: 'goal' | 'voice', text: string) => {
+  const ended = adv.assertions.map((a) => (a.subject === id && a.kind === kind && a.until === undefined ? { ...a, until: at } : a));
+  adv.assertions = [...ended, byPlayer(id, at, { kind, text })];
+};
+const blank = (kind: Entity['kind'], name: string, at: number): Entity => ({
+  id: newId('ent_'),
+  kind,
+  name,
+  aliases: [],
+  description: '',
+  relations: [],
+  firstSeen: at,
+  lastSeen: at,
+});
 
 function reworded(a: Assertion, text: string): Assertion {
   if (a.kind === 'identity' || a.kind === 'trait' || a.kind === 'secret' || a.kind === 'event' || a.kind === 'voice' || a.kind === 'goal')
@@ -52,11 +67,9 @@ export function lineEdits(host: GameSession) {
     /** A read's proposal about the player becomes their own line, which is sent. */
     keep: (lineId: string) => mutate((adv) => mapLine(adv, lineId, ({ seen: _s, ...a }) => ({ ...a, producer: 'player' }))),
     /** The player's goal for `id`: it ends the current one, as a read's would. */
-    setGoal: (id: string, text: string) =>
-      mutate((adv, at) => {
-        const ended = adv.assertions.map((a) => (a.subject === id && a.kind === 'goal' && a.until === undefined ? { ...a, until: at } : a));
-        adv.assertions = [...ended, byPlayer(id, at, { kind: 'goal', text })];
-      }),
+    setGoal: (id: string, text: string) => mutate((adv, at) => replaceLine(adv, id, at, 'goal', text)),
+    /** The player's voice for `id`, ending the current one as `setGoal` does. */
+    setVoice: (id: string, text: string) => mutate((adv, at) => replaceLine(adv, id, at, 'voice', text)),
     /** Send `id`'s confirmed goal on the next turn however recently they acted (`nudgedIn`). */
     nudge: (id: string) =>
       mutate((adv, at) => {
@@ -108,18 +121,11 @@ export function lineEdits(host: GameSession) {
     /** A new item card held by `holder` (a name). */
     addItem: (holder: string, name: string) =>
       mutate((adv, at) => {
-        const item: Entity = {
-          id: newId('ent_'),
-          kind: 'item',
-          name,
-          aliases: [],
-          description: '',
-          relations: [],
-          firstSeen: at,
-          lastSeen: at,
-        };
+        const item = blank('item', name, at);
         adv.entities = [...adv.entities, item];
         adv.assertions = [...adv.assertions, byPlayer(item.id, at, { kind: 'state', key: 'holder', value: holder })];
       }),
+    /** A character the player names before the story does: no card, no lines yet. */
+    addCharacter: (name: string) => mutate((adv, at) => (adv.entities = [...adv.entities, blank('character', name, at)])),
   };
 }

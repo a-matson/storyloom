@@ -10,6 +10,7 @@ import { useImageBlob } from '@ui/hooks/useImageBlob';
 import { useReadAloud } from '@ui/hooks/useSpeech';
 import { Toast } from '@ui/components/ui/toast';
 import { Sidebar } from './sidebar/Sidebar';
+import { CanonHint } from './canon/CanonButton';
 import { ContextViewer } from './context/ContextViewer';
 import { TraceViewer } from './context/TraceViewer';
 import { CommandRow } from './CommandRow';
@@ -114,6 +115,7 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
             onOpenEntity={setFaceId}
           />
           {!state.busy && <SelectionBar api={api} entities={adv.entities} />}
+          {!state.busy && adv.actions.length <= 1 && <CanonHint adventure={adv} api={api} />}
           <CommandRow
             busy={state.busy}
             canRetry={last?.type === 'continue'}
