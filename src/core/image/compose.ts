@@ -165,11 +165,21 @@ export interface ComposeInput {
   named?: readonly Character[] | undefined;
   /** Pose, action, expression and view the helper read from the last passage; after the brief's own tags. */
   storyTags?: readonly string[] | undefined;
+  /** Blocks the player switched off: left out entirely. */
+  omit?: ReadonlySet<Block> | undefined;
 }
 
-export type Blocks = Record<'subject' | 'state' | 'story' | 'scene' | 'style', string>;
+export const BLOCKS = ['subject', 'state', 'story', 'scene', 'style'] as const;
+export type Block = (typeof BLOCKS)[number];
+export type Blocks = Record<Block, string>;
 
-const joined = (b: Blocks) => tags([b.subject, b.state, b.story, b.scene, b.style]);
+const joined = (b: Blocks) => tags(BLOCKS.map((k) => b[k]));
+const split = (s: string) => s.split(', ').filter(Boolean);
+/** Tags of `a` that `b` no longer holds. */
+const lost = (a: string, b: string) => {
+  const kept = new Set(split(b));
+  return split(a).filter((t) => !kept.has(t));
+};
 
 /** The scene's place as a tag: a place entity by how it looks, an unknown location only when it holds no proper noun. */
 function placeIn(location: string | undefined, entities: readonly Character[]): string {
@@ -182,9 +192,9 @@ function placeIn(location: string | undefined, entities: readonly Character[]): 
  * `framing, count, subject (each shown character's looks in frame), state, view, brief (names → nouns), location, weather, style`.
  * Looks never enter the brief: spliced in, their last tag fused with the verb after it. Over budget it
  * drops, in order: the pose tags read from the story, the body parts named only in identities, the second character's looks, the state, the weather, the first character's looks one key
- * at a time (`KEY_PRIORITY` from the end), then cuts at a comma.
+ * at a time (`KEY_PRIORITY` from the end), then cuts at a comma. `dropped` lists the cut tags in that order.
  */
-export function composeSeePrompt(input: ComposeInput): { prompt: string; entityIds: string[]; seed?: number; blocks: Blocks } {
+export function composeSeePrompt(input: ComposeInput): { prompt: string; entityIds: string[]; seed?: number; blocks: Blocks; dropped: string[] } {
   const { brief, scene, entities, style, family } = input;
   const frame = frameOf(brief);
   const keys = frame?.keys ?? 'all';
@@ -200,30 +210,35 @@ export function composeSeePrompt(input: ComposeInput): { prompt: string; entityI
   // Out of frame, a posture or a held sword only pulls the camera back.
   const states = frame?.states ?? 'all';
   const state = tags(people.map((e) => stateTags(inFrame(e.states ?? {}, states), states === 'all' ? held(e) : [], family, brief)));
+  const on = (k: Block, v: string) => (input.omit?.has(k) ? '' : v);
   const build = (keep: readonly number[], withState: boolean, weather: boolean, parts = false, pose = false): Blocks => ({
-    subject: tags([frame?.tag, countTag(people.length, family), ...shown.map((e, i) => subject(e, keep[i] ?? 0, family, keys, parts))]),
-    state: withState ? state : '',
-    story: tags([...view.tags, story, ...(pose ? (input.storyTags ?? []) : [])]),
-    scene: tags([placeIn(scene?.location, entities), weather ? scene?.weather : '']),
-    style: tags([style]),
+    subject: on('subject', tags([frame?.tag, countTag(people.length, family), ...shown.map((e, i) => subject(e, keep[i] ?? 0, family, keys, parts))])),
+    state: on('state', withState ? state : ''),
+    story: on('story', tags([...view.tags, story, ...(pose ? (input.storyTags ?? []) : [])])),
+    scene: on('scene', tags([placeIn(scene?.location, entities), weather ? scene?.weather : ''])),
+    style: on('style', tags([style])),
   });
   const all = Infinity;
   const budget = budgetFor(family);
   const first = shown[0];
   const n = Object.keys((first?.look !== undefined ? lookKeys(first.look) : first?.looks) ?? {}).length;
   const fewer = Array.from({ length: n }, (_, i) => build([n - 1 - i, 0], false, false));
-  const blocks =
-    [
-      build([all, all], true, true, true, true),
-      build([all, all], true, true, true),
-      build([all, all], true, true),
-      build([all, 0], true, true),
-      build([all, 0], false, true),
-      build([all, 0], false, false),
-      ...fewer,
-    ].find((b) => joined(b).length <= budget) ?? build([0, 0], false, false);
+  const tries = [
+    build([all, all], true, true, true, true),
+    build([all, all], true, true, true),
+    build([all, all], true, true),
+    build([all, 0], true, true),
+    build([all, 0], false, true),
+    build([all, 0], false, false),
+    ...fewer,
+  ];
+  const fit = tries.findIndex((b) => joined(b).length <= budget);
+  const steps = (fit < 0 ? [...tries, build([0, 0], false, false)] : tries.slice(0, fit + 1)).map(joined);
+  const blocks = fit < 0 ? build([0, 0], false, false) : (tries[fit] ?? build([0, 0], false, false));
+  const prompt = cut(joined(blocks), budget);
+  const dropped = [...new Set([...steps.flatMap((p, i) => lost(steps[i - 1] ?? p, p)), ...lost(joined(blocks), prompt)])];
   const seed = seedFor(people, input.named ?? namedCast(view.brief, entities));
-  return { prompt: cut(joined(blocks), budget), entityIds: shown.map((e) => e.id), ...(seed !== undefined && { seed }), blocks };
+  return { prompt, entityIds: shown.map((e) => e.id), ...(seed !== undefined && { seed }), blocks, dropped };
 }
 
 function cut(text: string, budget: number): string {

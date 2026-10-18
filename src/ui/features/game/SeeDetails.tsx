@@ -7,6 +7,7 @@ import { cn } from '@ui/lib/utils';
 import { CHIP } from './sidebar/Section';
 import { Avatar } from './entities/Avatar';
 import { EntityDrawer } from './entities/EntityDrawer';
+import { SeeBlocks } from './SeeBlocks';
 
 interface Props {
   id: string;
@@ -19,6 +20,7 @@ interface Props {
 export function SeeDetails({ id, image, busy, api }: Props) {
   const adventure = useSyncExternalStore(api.subscribe, () => api.getSnapshot().adventure);
   const [open, setOpen] = useState<string | null>(null);
+  const [shown, setShown] = useState(false);
   // A deleted character's id stays on the image; it just has no chip.
   const cast = (image.entityIds ?? []).flatMap((e) => adventure.entities.find((x) => x.id === e) ?? []);
   const opened = cast.find((e) => e.id === open);
@@ -32,8 +34,10 @@ export function SeeDetails({ id, image, busy, api }: Props) {
         </button>
       ))}
       {image.brief !== undefined && (
-        <details className="w-full">
+        <details className="w-full" onToggle={(ev) => setShown(ev.currentTarget.open)}>
           <summary className="cursor-pointer">Prompt</summary>
+          {/* Keyed by the prompt: a new render composes again. */}
+          {shown && <SeeBlocks key={image.prompt} id={id} brief={image.brief} busy={busy} api={api} />}
           <form
             className="mt-1.5 flex flex-col items-start gap-1.5"
             onSubmit={(ev) => {
