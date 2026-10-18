@@ -3,6 +3,7 @@ import { tokenizer } from '@app/services';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Pill } from '@ui/components/ui/pill';
 import { Textarea } from '@ui/components/ui/textarea';
+import { CanonButton } from '../canon/CanonButton';
 import { MemoryStatus } from './MemoryStatus';
 import { Section } from './Section';
 
@@ -25,6 +26,7 @@ export function PlotTab({ adventure, api, utilityModel }: { adventure: Adventure
   const p = adventure.plot;
   return (
     <>
+      <CanonButton className="self-start" adventure={adventure} api={api} />
       {FIELDS.map((f) => (
         <Section
           key={f.key}
