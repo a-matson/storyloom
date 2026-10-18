@@ -22,6 +22,50 @@ describe('identityOf', () => {
   });
 });
 
+describe('identity from looks (M30-2)', () => {
+  const look = (key: string, value: string): Assertion => ({ ...base, id: `l_${key}`, at: 0, since: 0, kind: 'look', key, value });
+  const card: Assertion = { ...base, id: 'i', at: 0, since: 0, kind: 'identity', text: 'Minos is a ferryman of the dark river.' };
+  const dragon = [
+    card,
+    look('species', 'dragon'),
+    look('body', '7 meters tall, quadruped with wings'),
+    look('skin', 'base burgundy red, ochre underbelly'),
+    look('horns', '2 black horns'),
+    look('eyes', 'deep green'),
+  ];
+
+  it('a dragon with looks sends size, colour, species and two features', () => {
+    expect(identityOf(minos, dragon)).toBe('7 meters tall burgundy dragon, 2 black horns, deep green eyes');
+    expect(presentLine(minos, dragon, [minos], false).text).toBe('Minos (7 meters tall burgundy dragon, 2 black horns, deep green eyes).');
+  });
+
+  it('a human with looks, or no looks: the identity unchanged', () => {
+    for (const as of [[card, look('species', 'human'), look('eyes', 'blue')], [card, look('species', 'woman')], [card]])
+      expect(identityOf(minos, as)).toBe('a ferryman of the dark river');
+  });
+
+  it('a non-human species with no other looks sends just the species', () => {
+    expect(identityOf(minos, [card, look('species', 'kobold')])).toBe('kobold');
+  });
+
+  it('body parts fill the features the horns and eyes leave', () => {
+    expect(identityOf(minos, [look('species', 'wyvern'), look('body', 'huge, with wings and a tail'), look('horns', 'curled horns')])).toBe(
+      'huge wyvern, curled horns, wings',
+    );
+  });
+
+  it('never more than 12 words after the species', () => {
+    const long = [look('species', 'great old dragon of fire'), look('horns', 'six long curved black horns'), look('eyes', 'deep green and gold glowing')];
+    const id = identityOf(minos, long);
+    expect(id).toBe('great old dragon, curved black horns, deep green eyes');
+    expect(id.split('dragon')[1]?.split(/\s+/).filter(Boolean).length).toBeLessThanOrEqual(12);
+  });
+
+  it('a carded dragon still sends no identity', () => {
+    expect(presentLine(minos, dragon, [minos], true).text).toBe('Minos.');
+  });
+});
+
 describe('identityLine', () => {
   const trait = (id: string, text: string): Assertion => ({ ...base, id, at: 1, since: 1, kind: 'trait', text });
   const facts = [trait('t1', 'He fears water.'), { ...base, id: 'r1', at: 1, since: 1, kind: 'relationship', to: 'Lena', stance: 'owes her money' } as const];
