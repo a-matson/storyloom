@@ -4,11 +4,11 @@ import { collect, type Provider } from '../ports/provider';
 import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
 import { trackJob } from '../trace';
-import { CAST_CAP, composeSeePrompt, isImplicit, lookFor, namedCast, namedIn, subjectsIn } from './compose';
+import { type Block, CAST_CAP, composeSeePrompt, isImplicit, lookFor, namedCast, namedIn, subjectsIn } from './compose';
 import { poseTags } from './poseAsk';
 import type { SheetFamily } from './sheet';
 
-export { looksOf } from './compose';
+export { composeSeePrompt, looksOf } from './compose';
 
 /**
  * See prompts: a brief is composed into the sent prompt, and a blank or implicit one ("she turns
@@ -94,6 +94,7 @@ export interface SeeRequest {
   family: SheetFamily;
   /** A brief that names someone also reads the last passage for pose and view (`poseTags`); off, today's path. */
   readsStory?: boolean | undefined;
+  omit?: ReadonlySet<Block> | undefined;
 }
 
 const pick = ({ prompt, entityIds, seed }: ReturnType<typeof composeSeePrompt>) => ({ prompt, entityIds, ...(seed !== undefined && { seed }) });
@@ -110,7 +111,7 @@ export async function seePrompt(req: SeeRequest, helper: () => Promise<ImageProm
   const line = await autoImagePrompt({ ...req, cast: cast.map((e) => ({ name: e.name, looks: lookFor(e) })) }, await helper());
   // No scene: the helper already placed it. The line is the story block; the subject block still comes from the cast.
   const named = namedCast(req.brief, req.entities);
-  return pick(composeSeePrompt({ brief: line, entities: req.entities, style: req.style, family: req.family, cast, named }));
+  return pick(composeSeePrompt({ brief: line, entities: req.entities, style: req.style, family: req.family, cast, named, omit: req.omit }));
 }
 
 /** First non-empty line, no quotes or label, cut at a comma so a long reply never ends mid-tag. */

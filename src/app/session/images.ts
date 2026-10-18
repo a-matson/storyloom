@@ -1,4 +1,4 @@
-import { chosen, familyOf, loadImagePrompt, ownedBlobIds, rendersOf } from '@core/image';
+import { chosen, familyOf, loadImagePrompt, ownedBlobIds, rendersOf, type Block } from '@core/image';
 import { heldBy, indexAssertions, sceneNames, withLooks } from '@core/memory';
 import type { Entity } from '@core/model';
 import { storyModel } from './helperModel';
@@ -24,25 +24,40 @@ export function seeImage(input: string, host: SeeHost): void {
 
 type Composed = Pick<Image, 'brief' | 'prompt' | 'entityIds' | 'seed'>;
 
-async function composed(host: SeeHost, input: string): Promise<Composed | undefined> {
+function request(host: SeeHost, brief: string) {
+  const { adv } = host;
+  const ix = indexAssertions(adv.assertions);
+  // The last state read covered the last story action and the player line before it.
+  const from = host.log.actions.findLastIndex((a) => a.type !== 'see') - 1;
+  const holds = (e: Entity) => (e.kind === 'character' ? heldBy(adv.entities, ix, e.name).map((i) => i.id) : []);
+  return {
+    brief,
+    actions: host.log.actions,
+    plotEssentials: adv.plot.plotEssentials,
+    scene: adv.plot.scene && sceneNames(adv.plot.scene, adv.entities),
+    entities: adv.entities.map((e) => ({ ...withLooks(e, ix.of(e.id), from), holds: holds(e) })),
+    style: styleOf(adv.settings.image, adv.tags),
+    family: familyOf(adv.settings.image.model, adv.settings.image.width, adv.settings.image.height),
+  };
+}
+
+/**
+ * A See's brief by block, composed again from the current store: nothing is stored on the action, and the helper
+ * is not asked, so a blank or implicit brief shows what the brief alone composes and no story tags.
+ */
+export async function seeBlocks(host: SeeHost, actionId: string): Promise<{ blocks: Record<Block, string>; dropped: string[] } | undefined> {
+  const brief = host.log.actions.find((a) => a.id === actionId)?.image?.brief;
+  if (brief === undefined) return undefined;
+  const { composeSeePrompt } = await loadImagePrompt();
+  const { blocks, dropped } = composeSeePrompt(request(host, brief));
+  return { blocks, dropped };
+}
+
+async function composed(host: SeeHost, input: string, omit?: ReadonlySet<Block>): Promise<Composed | undefined> {
   const brief = input.replace(PLAIN, '');
   try {
     const { seePrompt } = await loadImagePrompt();
-    const { adv } = host;
-    const ix = indexAssertions(adv.assertions);
-    // The last state read covered the last story action and the player line before it.
-    const from = host.log.actions.findLastIndex((a) => a.type !== 'see') - 1;
-    const holds = (e: Entity) => (e.kind === 'character' ? heldBy(adv.entities, ix, e.name).map((i) => i.id) : []);
-    const req = {
-      brief,
-      actions: host.log.actions,
-      plotEssentials: adv.plot.plotEssentials,
-      scene: adv.plot.scene && sceneNames(adv.plot.scene, adv.entities),
-      entities: adv.entities.map((e) => ({ ...withLooks(e, ix.of(e.id), from), holds: holds(e) })),
-      style: styleOf(adv.settings.image, adv.tags),
-      family: familyOf(adv.settings.image.model, adv.settings.image.width, adv.settings.image.height),
-      readsStory: !PLAIN.test(input),
-    };
+    const req = { ...request(host, brief), readsStory: !PLAIN.test(input), omit };
     const { prompt, entityIds, seed } = await seePrompt(req, async () => storyModel(host));
     return { ...(brief !== '' && { brief }), prompt, ...(entityIds.length > 0 && { entityIds }), ...(seed !== undefined && { seed }) };
   } catch (e) {
@@ -57,12 +72,12 @@ async function composed(host: SeeHost, input: string): Promise<Composed | undefi
  * No seed is sent, so the same prompt still yields a new picture. No new version either — the caption
  * is the action's text and the image is a patch.
  */
-export function regenerateImage(host: SeeHost, actionId: string, brief?: string): void {
+export function regenerateImage(host: SeeHost, actionId: string, brief?: string, omit?: ReadonlySet<Block>): void {
   if (brief === undefined) return redo(host, actionId, ({ seed: _s, ...i }) => i);
   const text = brief.trim();
   if (RAW.test(text)) return editSeePrompt(host, actionId, text.replace(RAW, ''));
   if (text === '') return;
-  void composed(host, text).then((c) => c && redo(host, actionId, ({ brief: _b, entityIds: _e, seed: _s, ...i }) => ({ ...i, ...c })));
+  void composed(host, text, omit).then((c) => c && redo(host, actionId, ({ brief: _b, entityIds: _e, seed: _s, ...i }) => ({ ...i, ...c })));
 }
 
 /** The prompt itself, edited raw: sent as written, and the caption shows it, since no brief describes it any more. */

@@ -1,3 +1,4 @@
+import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { openSeededAdventure } from './seed';
 
@@ -113,6 +114,16 @@ test('a brief naming a character sends their looks, tags the image and shows it 
   await drawer.getByRole('button', { name: /^Show image \d+: Tamsin at the ferry$/ }).click();
   await expect(drawer).toBeHidden();
   await expect(figure).toBeInViewport();
+
+  // The prompt by block: one switched off is left out of the next render.
+  for (const block of ['subject', 'state', 'story', 'scene', 'style']) await expect(figure.getByRole('switch', { name: block })).toBeChecked();
+  expect((await new AxeBuilder({ page }).include('figure').analyze()).violations).toEqual([]);
+  await expect(figure.getByRole('switch', { name: 'style' }).locator('xpath=../span')).toHaveText('painted illustration, soft light');
+  await figure.getByRole('switch', { name: 'style' }).click();
+  await figure.getByRole('button', { name: 'Generate without' }).click();
+  await expect.poll(() => prompts.length).toBe(2);
+  expect(prompts[1]).toContain('a ferrywoman at the ferry');
+  expect(prompts[1]).not.toContain('painted illustration');
 });
 
 test('a reference freezes a character look and seed for the next Sees', async ({ page }) => {

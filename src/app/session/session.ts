@@ -1,4 +1,4 @@
-import { ownedBlobIds } from '@core/image';
+import { ownedBlobIds, type Block } from '@core/image';
 import { ActionLog } from '@core/log';
 import { followLog, withPresence } from '@core/memory';
 import type { Adventure, AdventureSettings, AppSettings, PlotComponents, ReadKind, TurnTrace } from '@core/model';
@@ -256,7 +256,9 @@ export class GameSession {
   /** See mode: one image from the player's prompt (blank = written by the helper model), generated in the background. */
   readonly see = (brief: string): void => this.seeMode((m) => m.seeImage(brief, this));
   /** Retry (no `brief`) or rewrite the brief of a `see` action (`/raw …` sends a prompt as written); the old render stays a candidate until `chooseSee` keeps one and deletes the rest. */
-  readonly regenerateSee = (id: string, brief?: string): void => this.seeMode((m) => m.regenerateImage(this, id, brief));
+  readonly regenerateSee = (id: string, brief?: string, omit?: ReadonlySet<Block>): void => this.seeMode((m) => m.regenerateImage(this, id, brief, omit));
+  /** A See's prompt by block, for its details; re-composed, not stored. */
+  readonly seeBlocks = async (id: string) => (await import('./images')).seeBlocks(this, id);
   readonly chooseSee = (id: string, imageId: string): void => this.seeMode((m) => m.chooseSeeCandidate(this, id, imageId));
 
   readonly cancel = (): void => this.abort?.abort();
