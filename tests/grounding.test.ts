@@ -9,6 +9,20 @@ describe('grounded', () => {
     expect(grounded('bleeding', 'Her arm bleeds.')).toBe(true);
     expect(grounded('angry', 'Mira smiles.')).toBe(false);
   });
+
+  it('grounds lying on "make him lie down" and on "collapses onto his side"', () => {
+    expect(grounded('lying', 'You make him lie down.')).toBe(true);
+    expect(grounded('lying', 'He collapses onto his side.')).toBe(true);
+  });
+
+  it('grounds sitting on "sits"', () => {
+    expect(grounded('sitting', 'Mira sits by the hearth.')).toBe(true);
+  });
+
+  it('does not ground lying on "stands by the door"', () => {
+    expect(grounded('lying', 'He stands by the door.')).toBe(false);
+    expect(grounded('sitting', 'She is satisfied.')).toBe(false);
+  });
 });
 
 describe('endsCurrent', () => {

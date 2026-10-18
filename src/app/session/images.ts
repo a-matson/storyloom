@@ -1,6 +1,6 @@
 import { blobIdsOf, chosen, familyOf, loadImagePrompt, rendersOf } from '@core/image';
-import { indexAssertions, sceneNames, withLooks } from '@core/memory';
-import type { Action } from '@core/model';
+import { heldBy, indexAssertions, sceneNames, withLooks } from '@core/memory';
+import type { Action, Entity } from '@core/model';
 import { storyModel } from './helperModel';
 import { portraitStyle } from './portraitPrompt';
 import { drop, generate, message, type Image, type SeeHost } from './seeRender';
@@ -27,12 +27,15 @@ async function composed(host: SeeHost, brief: string): Promise<Composed | undefi
     const { seePrompt } = await loadImagePrompt();
     const { adv } = host;
     const ix = indexAssertions(adv.assertions);
+    // The last state read covered the last story action and the player line before it.
+    const from = host.log.actions.findLastIndex((a) => a.type !== 'see') - 1;
+    const holds = (e: Entity) => (e.kind === 'character' ? heldBy(adv.entities, ix, e.name).map((i) => i.id) : []);
     const req = {
       brief,
       actions: host.log.actions,
       plotEssentials: adv.plot.plotEssentials,
       scene: adv.plot.scene && sceneNames(adv.plot.scene, adv.entities),
-      entities: adv.entities.map((e) => withLooks(e, ix.of(e.id))),
+      entities: adv.entities.map((e) => ({ ...withLooks(e, ix.of(e.id), from), holds: holds(e) })),
       style: adv.settings.image.portraitStyle ?? portraitStyle(adv.tags),
       family: familyOf(adv.settings.image.model, adv.settings.image.width, adv.settings.image.height),
     };

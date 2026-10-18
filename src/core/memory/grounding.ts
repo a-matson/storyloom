@@ -13,24 +13,29 @@ const ENDS: Record<string, readonly { value: RegExp; ends: RegExp }[]> = {
 export const endsCurrent = (key: string, value: string, current: string | undefined): boolean =>
   current !== undefined && (ENDS[key] ?? []).some((e) => e.value.test(value) && e.ends.test(current));
 
-/** Story wordings of a condition that share no word with it. [provisional] */
-const CONDITION_SYNONYMS: Record<string, readonly string[]> = {
+/** Story wordings of a condition or posture that share no stem with it, as whole-word patterns. [provisional] */
+const SYNONYMS: Record<string, readonly string[]> = {
   unconscious: ['out cold', 'knocked out', 'passed out', 'senseless'],
   asleep: ['sleeps', 'dozing', 'snoring'],
-  hurt: ['wound', 'bleeding', 'bruised', 'injured'],
+  hurt: ['wound(?:s|ed)?', 'bleeding', 'bruised', 'injured'],
   drunk: ['slurring', 'reeling', 'tipsy'],
+  // "He lies to her" grounds lying too: the cost of a word list.
+  lying: ['lie', 'lies', 'lay', 'collapses', 'on(?:to)? (?:his|her|their) (?:side|back)', 'sprawled', 'prone'],
+  sitting: ['sits', 'sat', 'seated'],
+  kneeling: ['kneels', 'knelt'],
+  standing: ['stands', 'stood', 'rises'],
+  crouching: ['crouches'],
 };
 
 // The shared stemmer leaves "sitting" as "sitt" beside "sits" → "sit".
 const words = (s: string) => contentWords(s).map((w) => w.replace(/([^aeiou])\1$/, '$1'));
 
-/** A value stands on `text` when one of its content words, or a synonym of a condition it names, is there. */
+/** A value stands on `text` when one of its content words, or a synonym of a condition or posture it names, is there. */
 export function grounded(value: string, text: string): boolean {
   const have = new Set(words(text));
   if (words(value).some((w) => have.has(w))) return true;
   const v = value.toLowerCase();
-  const t = text.toLowerCase();
-  return Object.entries(CONDITION_SYNONYMS).some(([k, alt]) => v.includes(k) && alt.some((a) => t.includes(a)));
+  return Object.entries(SYNONYMS).some(([k, alt]) => v.includes(k) && alt.some((a) => new RegExp(`\\b${a}\\b`, 'i').test(text)));
 }
 
 /** The first candidate named in a sentence that also says the condition; a name in another sentence is no cause (F11). */

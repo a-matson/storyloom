@@ -11,6 +11,8 @@ export const LOOK_KEYS = ['species', 'build', 'eyes', 'hair', 'horns', 'scales',
  */
 export const SHEET_KEYS = ['species', 'build', 'skin', 'eyes', 'hair', 'face', 'horns', 'scales', 'marks', 'wearing', 'accessories', 'palette'] as const;
 const STATES = new Set(['wearing']);
+/** State keys a See shows of the moment. [provisional] */
+const SEE_STATES = ['posture', 'condition', 'mood'] as const;
 
 /** An item is held (`holder`) or at a place (`location`), never both: a value for one ends the other. */
 export const rivalKey = (kind: Entity['kind'], key: string): string | undefined =>
@@ -40,15 +42,23 @@ export function appearanceOf(as: readonly Assertion[]): string {
 /**
  * The entity as the image prompts read it: who it is as `description`, its current looks as
  * `appearance`, and the same looks by key as `looks` (a See spells them per checkpoint). While the
- * identity's species contradicts the looks, the identity's word is left out.
+ * identity's species contradicts the looks, the identity's word is left out. `states` are what a See
+ * shows of the moment; with no current posture, a posture proposal read at or after `from` stands in.
  */
-export const withLooks = <E extends Entity>(e: E, as: readonly Assertion[]): E & { appearance: string; looks: Record<string, string> } => {
+export const withLooks = <E extends Entity>(
+  e: E,
+  as: readonly Assertion[],
+  from?: number,
+): E & { appearance: string; looks: Record<string, string>; states: Record<string, string> } => {
   const now = currentStates(as);
+  const proposed = as.findLast((a) => a.kind === 'state' && a.key === 'posture' && a.seen === false && isCurrent(a) && from !== undefined && a.at >= from);
+  const moment: Record<string, string | undefined> = { ...now, posture: now['posture'] ?? (proposed?.kind === 'state' ? proposed.value : undefined) };
   return {
     ...e,
     description: as.filter(isSpeciesClash).reduce((t, c) => swapWord(t, c.claimed, ''), identityText(e, as)),
     appearance: appearanceOf(as),
     looks: Object.fromEntries(SHEET_KEYS.flatMap((k) => (now[k]?.trim() ? [[k, now[k].trim()]] : []))),
+    states: Object.fromEntries(SEE_STATES.flatMap((k) => (moment[k]?.trim() ? [[k, moment[k].trim()]] : []))),
   };
 };
 
