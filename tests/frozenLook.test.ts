@@ -3,6 +3,7 @@ import { budgetFor, composeSeePrompt, lookFor, looksOf } from '@core/image/compo
 import type { SheetFamily } from '@core/image/sheet';
 import type { Entity } from '@core/model';
 import * as S from '@core/schema';
+import { seedOf } from '@core/trace';
 
 type Char = Entity & { looks?: Record<string, string> };
 const base: Char = {
@@ -72,5 +73,24 @@ describe('a frozen look by key', () => {
     expect(compose('Consequences', old).blocks.subject).toContain('a kobold, red scales, his pride');
     expect(lookFor(old)).toBe('a kobold, red scales, his pride');
     expect(lookFor(frozen)).toContain('eyes: deep green');
+  });
+});
+
+describe('the portrait seed', () => {
+  const drawn: Char = { ...base, portraitId: 'img_c' };
+  const vex: Char = { ...base, id: 'v', name: 'Vex', description: 'A fox thief.', portraitId: 'img_v' };
+  const see = (brief: string, entities: Char[], more = {}) => composeSeePrompt({ brief, entities, style: '', family: 'sdxl', ...more }).seed;
+
+  it('seeds one named character with a portrait and no frozen look', () => {
+    expect(see('Consequences sleeps', [drawn, vex])).toBe(seedOf('c'));
+  });
+
+  it('does not seed a present character the brief does not name', () => {
+    expect(see('the river rises', [drawn], { scene: { location: 'a cave', present: ['Consequences'] } })).toBeUndefined();
+    expect(see('the river rises', [drawn], { cast: [drawn], named: [] })).toBeUndefined();
+  });
+
+  it('does not seed two characters', () => {
+    expect(see('Consequences and Vex', [drawn, vex])).toBeUndefined();
   });
 });
