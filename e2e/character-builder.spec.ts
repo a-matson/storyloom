@@ -111,3 +111,27 @@ test('Done draws the final sheet with hires and a portrait, and both survive a r
   await expect(drawer.getByRole('button', { name: 'Redraw' })).toBeVisible();
   await expect(drawer.getByRole('button', { name: 'Rebuild' })).toBeVisible();
 });
+
+test('the builder says sheets need SDXL until the image size is an SDXL one', async ({ page }) => {
+  await openSeededAdventure(page, 3, 'http://localhost:7999/');
+  const note = page.getByText('Sheets need an SDXL model');
+  const openBuilder = async () => {
+    await page.getByRole('button', { name: /^Characters/ }).click();
+    await page.getByRole('button', { name: 'Open Merav' }).click();
+    await page.getByRole('dialog', { name: 'Merav' }).getByRole('button', { name: 'Build character' }).click();
+  };
+  await openBuilder();
+  await expect(note).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await page.getByRole('tab', { name: 'Gameplay' }).click();
+  await page.getByText('Images', { exact: true }).click();
+  for (const name of ['Width', 'Height']) {
+    await page.getByRole('spinbutton', { name }).fill('1024');
+    await page.getByRole('spinbutton', { name }).blur();
+  }
+  await page.getByRole('tab', { name: 'Adventure' }).click();
+  await openBuilder();
+  await expect(page.getByRole('dialog', { name: 'Build Merav' })).toBeVisible();
+  await expect(note).toHaveCount(0);
+});

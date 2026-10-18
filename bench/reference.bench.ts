@@ -12,10 +12,11 @@ import { writeMeasurement } from './env';
 /**
  * M16-4's bar: after Done, two Sees of each of five characters on the frozen look and the portrait seed
  * (text only), then the same Sees as img2img from the sheet's front view (its left quarter, ImageMagick)
- * at MEASURE_DENOISE. Sees are 512x768 at MEASURE_STEPS; the sheet is the quick
- * round one (12 steps, no hires): only the crop uses it, and img2img redraws it anyway.
+ * at MEASURE_DENOISE. Sees are MEASURE_SIZE (512x768; 832x1216 for SDXL, which also picks the SDXL sheet)
+ * at MEASURE_STEPS; the sheet is the quick round one (12 steps, no hires): only the crop uses it, and img2img redraws it anyway.
  */
-const { MEASURE_IMAGES, MEASURE_LABEL, MEASURE_DENOISE, MEASURE_STEPS } = process.env;
+const { MEASURE_IMAGES, MEASURE_LABEL, MEASURE_DENOISE, MEASURE_STEPS, MEASURE_SIZE } = process.env;
+const [width = 512, height = 768] = (MEASURE_SIZE ?? '512x768').split('x').map(Number);
 const url = MEASURE_IMAGES ?? 'http://127.0.0.1:7860';
 const label = MEASURE_LABEL ?? 'run';
 const out = `/tmp/reference-bar/${label}`;
@@ -38,6 +39,7 @@ it('reference use', async () => {
   const rows = [];
   for (const [name, n] of SUBJECTS) {
     const { adv, e, own } = benchAdventure(name, n);
+    adv.settings.image = { ...adv.settings.image, width, height };
     const sheet = `${name}-${n}-sheet.png`;
     const sheetReq = sheetRequest(adv, e.id, []);
     await save(sheet, await images.txt2img(sheetReq, signal()));
@@ -47,7 +49,7 @@ it('reference use', async () => {
     const frozen = withLooks({ ...e, look: looksOf(withLooks(e, own)) }, own);
     for (const [i, brief] of BRIEFS.entries()) {
       const see = composeSeePrompt({ brief: brief.replace('{n}', name), entities: [frozen], style: '' });
-      const req = { ...imageRequest(adv.settings.image, see.prompt), width: 512, height: 768, steps, ...(see.seed !== undefined && { seed: see.seed }) };
+      const req = { ...imageRequest(adv.settings.image, see.prompt), width, height, steps, ...(see.seed !== undefined && { seed: see.seed }) };
       let t = Date.now();
       await save(`${name}-${n}-see${i + 1}-text.png`, await images.txt2img(req, signal()));
       const textMs = Date.now() - t;

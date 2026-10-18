@@ -50,6 +50,9 @@ export const IMAGE_HELP: Record<ImageNumberKey, Help<Image>> = {
   portraitSteps: { help: 'Denoising steps for portraits. Default 14, so drawing between turns stays quick.' },
 };
 
+/** Unweighted SD 1.5 lost every stated colour on a sheet. [measured: docs/measurements/2026-10-18-sheet-bar.json] */
+export const SD15_SHEET_NOTE = 'Sheets need an SDXL model: SD 1.5 loses stated colours.';
+
 export const MODEL_HELP: Record<ModelNumberKey, Help<ModelSettings>> = {
   responseLength: {
     help: 'Most tokens one turn may write. Default 200 (about a paragraph); longer turns cost prompt room.',

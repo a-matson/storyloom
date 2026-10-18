@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { finish, sheetRequest } from '@app/session/builder';
+import { familyOf } from '@core/image';
 import type { Adventure } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { progressText, useImageProgress } from '@ui/hooks/useImageProgress';
-import { IMAGE_HELP } from '../../sidebar/settingHelp';
+import { IMAGE_HELP, SD15_SHEET_NOTE } from '../../sidebar/settingHelp';
 
 type Status = 'drawing' | { error: string } | undefined;
 
@@ -35,6 +36,7 @@ export function FinalSheet({ adventure, id, skipped, status }: Props) {
   const s = adventure.settings.image;
   const r = sheetRequest(adventure, id, skipped);
   const warnings = [
+    familyOf(s.model, s.width, s.height) === 'sd15' ? SD15_SHEET_NOTE : undefined,
     IMAGE_HELP.clipSkip.warn?.(s.clipSkip, s),
     IMAGE_HELP.height.warn?.(r.height * s.hiresScale, { ...s, width: r.width * s.hiresScale }),
     IMAGE_HELP.hiresDenoise.warn?.(s.hiresDenoise, s),
