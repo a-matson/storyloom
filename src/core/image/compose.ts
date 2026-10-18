@@ -1,6 +1,7 @@
 import type { Entity, Scene } from '../model/types';
 import { seedOf } from '../trace';
 import type { SheetFamily } from './sheet';
+import { stateTags } from './stateTags';
 import { countTag, lookTags, tags } from './tags';
 
 /**
@@ -14,10 +15,12 @@ export const CAST_CAP = 2;
 /** CLIP reads 75 tokens; ~4 characters a token. [provisional] */
 export const PROMPT_BUDGET = 300;
 
-/** `description`, `appearance` and `looks` as `withLooks` resolves them from the assertions. */
+/** `description`, `appearance`, `looks` and `states` as `withLooks` resolves them from the assertions; `holds` are item ids. */
 type Character = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'description' | 'look'> & {
   appearance?: string;
   looks?: Readonly<Record<string, string>>;
+  states?: Readonly<Record<string, string>>;
+  holds?: readonly string[];
 };
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -59,10 +62,12 @@ export function isImplicit(brief: string, named: readonly unknown[]): boolean {
 function noun(e: Character): string {
   // Not `:`: a "species: dragon" description would yield the noun "species".
   const first = e.description.split(/[,.;\n]/)[0] ?? '';
-  const lead = new RegExp(`^\\s*(?:${namesOf(e).map(escape).join('|')})\\s+(?:is|was)\\s+`, 'i');
+  const lead = new RegExp(`^\\s*(?:the\\s+)?(?:${namesOf(e).map(escape).join('|')})\\s+(?:is|was)\\s+`, 'i');
   const n = first.replace(lead, '').trim();
+  // An item's name in its noun ("a brass horn" for Horn) is no person's name to hide.
+  const ok = n !== '' && (e.kind !== 'character' || !namesOf(e).some((x) => nameRe(x).test(n)));
   // "A young scribe." opens a sentence; mid-prompt it is a tag.
-  return n && !namesOf(e).some((x) => nameRe(x).test(n)) ? n.replace(/^A(n)? /, (a) => a.toLowerCase()) : 'a person';
+  return ok ? n.replace(/^A(n)? /, (a) => a.toLowerCase()) : e.kind === 'character' ? 'a person' : e.name.toLowerCase();
 }
 
 const looks = (e: Character, full: boolean) => [noun(e), full ? (e.appearance ?? '') : ''].filter(Boolean).join(', ');
@@ -107,22 +112,27 @@ const joined = (b: Blocks) => tags([b.subject, b.state, b.story, b.scene, b.styl
 /**
  * `count, subject (each shown character's looks), state, brief (names → nouns), location, weather, style`.
  * Looks never enter the brief: spliced in, their last tag fused with the verb after it. Over budget it
- * drops, in order: the second character's looks, the weather, the first character's looks, then cuts at a comma.
+ * drops, in order: the second character's looks, the state, the weather, the first character's looks, then cuts at a comma.
  */
 export function composeSeePrompt(input: ComposeInput): { prompt: string; entityIds: string[]; seed?: number; blocks: Blocks } {
   const { brief, scene, entities, style, family } = input;
   const shown = (input.cast ?? castIn(brief, scene, entities)).slice(0, CAST_CAP);
   // Every character's name goes, shown or not; a possessive goes with it ("Bram's hat" → "a toll keeper hat").
   const story = namedCast(brief, entities).reduce((t, e) => t.replace(mentionRe(e), () => noun(e)), brief);
-  const build = (full: readonly boolean[], weather: boolean): Blocks => ({
+  const held = (e: Character) => (e.holds ?? []).flatMap((id) => entities.filter((x) => x.id === id).map(noun));
+  const state = tags(shown.map((e) => stateTags(e.states ?? {}, held(e), family, brief)));
+  const build = (full: readonly boolean[], withState: boolean, weather: boolean): Blocks => ({
     subject: tags([countTag(shown.length, family), ...shown.map((e, i) => subject(e, full[i] ?? false, family))]),
-    state: '',
+    state: withState ? state : '',
     story: tags([story]),
     scene: tags([scene?.location, weather ? scene?.weather : '']),
     style: tags([style]),
   });
-  const last = build([false, false], false);
-  const blocks = [build([true, true], true), build([true, false], true), build([true, false], false)].find((b) => joined(b).length <= PROMPT_BUDGET) ?? last;
+  const last = build([false, false], false, false);
+  const blocks =
+    [build([true, true], true, true), build([true, false], true, true), build([true, false], false, true), build([true, false], false, false)].find(
+      (b) => joined(b).length <= PROMPT_BUDGET,
+    ) ?? last;
   const seed = seedFor(shown);
   return { prompt: cut(joined(blocks)), entityIds: shown.map((e) => e.id), ...(seed !== undefined && { seed }), blocks };
 }

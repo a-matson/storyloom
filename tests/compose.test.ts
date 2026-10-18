@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { castIn, composeSeePrompt, isImplicit, namedCast, PROMPT_BUDGET } from '@core/image/compose';
-import type { Entity } from '@core/model';
+import { withLooks } from '@core/memory';
+import type { Assertion, Entity } from '@core/model';
 import { seedOf } from '@core/trace';
 
 type Char = Entity & { appearance?: string; looks?: Record<string, string> };
@@ -165,6 +166,53 @@ describe('composeSeePrompt', () => {
     expect(composeSeePrompt({ brief: 'Tamsin sings', entities: [frozen], style, family: sd15 }).seed).toBe(one.seed);
     expect(composeSeePrompt({ brief: 'Tamsin and Bram', entities: [frozen, bram], style, family: sd15 }).seed).toBeUndefined();
     expect(composeSeePrompt({ brief: 'Tamsin at the ferry', entities: [tamsin], style, family: sd15 }).seed).toBeUndefined();
+  });
+});
+
+describe('the state block', () => {
+  const state = (key: string, value: string, at: number, seen?: false): Assertion => ({
+    id: `as_${key}${at}`,
+    subject: 'g',
+    producer: 'turn',
+    at,
+    basis: seen === false ? 'inferred' : 'stated',
+    since: at,
+    kind: 'state',
+    key,
+    value,
+    ...(seen === false && { seen }),
+  });
+  const brief = 'Goldarok rests in the cave';
+  const see = (as: Assertion[], from: number) =>
+    composeSeePrompt({ brief, entities: [{ ...goldarok, states: withLooks(goldarok, as, from).states }], style: '', family: 'sdxl' });
+
+  it('puts the state block after the subject and before the brief', () => {
+    const { prompt, blocks } = see([state('mood', 'submissive', 4), state('posture', 'lying', 6, false)], 5);
+    expect(blocks.state).toBe('lying, on side, submissive expression');
+    expect(prompt).toBe('solo, dragon, massive, gold scales, yellow eyes, lying, on side, submissive expression, a golden dragon rests in the cave');
+  });
+
+  it('uses a posture proposal from the last read when there is no current posture', () => {
+    expect(see([state('posture', 'lying', 6, false)], 5).blocks.state).toBe('lying, on side');
+    expect(see([state('posture', 'sitting', 2), state('posture', 'lying', 6, false)], 5).blocks.state).toBe('sitting');
+  });
+
+  it('ignores an older proposal', () => {
+    expect(see([state('posture', 'lying', 2, false)], 5).blocks.state).toBe('');
+  });
+
+  it('holds an item by its noun', () => {
+    const horn = { ...char('h', 'Horn', 'The Horn is a brass horn.'), kind: 'item' as const };
+    const g = { ...goldarok, holds: ['h'] };
+    expect(composeSeePrompt({ brief: 'Goldarok', entities: [g, horn], style: '', family: 'sdxl' }).blocks.state).toBe('holding a brass horn');
+  });
+
+  it('drops the state block before the weather when over budget', () => {
+    const a = { ...char('a', 'Ash', 'A smith.', Array.from({ length: 12 }, (_, i) => `ash detail ${i}`).join(', ')), states: { mood: 'grim' } };
+    const fit = 'Ash, ' + 'x'.repeat(PROMPT_BUDGET - composeSeePrompt({ brief: 'Ash', scene, entities: [a], style, family: sd15 }).prompt.length + 2);
+    const { prompt } = composeSeePrompt({ brief: fit, scene, entities: [a], style, family: sd15 });
+    expect(prompt).not.toContain('grim');
+    expect(prompt).toContain('low mist');
   });
 });
 
