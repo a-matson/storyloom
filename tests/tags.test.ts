@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { booruTag, countTag, lookTags } from '@core/image/tags';
+import { booruTag, countTag, lookTags, placeTag } from '@core/image/tags';
 
 describe('booruTag', () => {
   it.each([
@@ -29,4 +29,16 @@ describe('booruTag', () => {
     expect([0, 1, 2, 3].map((n) => countTag(n, 'sdxl'))).toEqual(['', 'solo', 'duo', '']);
     expect(countTag(1, 'sd15')).toBe('');
   });
+});
+
+describe('placeTag', () => {
+  it.each([
+    ['Halven is a stone keep on a cliff, rain', 'stone keep on a cliff'],
+    ['The Iron Gate was a ruined tower.', 'ruined tower'],
+    ['A quiet town. Old mills line the river', 'quiet town'],
+    ['Halven is where the Duke of Vael rules, a dark city', 'dark city'],
+    ['Halven is a vast and ancient city carved into the mountain', ''],
+    ['Halven is famous', ''],
+    ['', ''],
+  ])('reads "%s" as "%s"', (description, out) => expect(placeTag(description)).toBe(out));
 });

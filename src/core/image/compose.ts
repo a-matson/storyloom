@@ -2,7 +2,7 @@ import type { Entity, Scene } from '../model/types';
 import { seedOf } from '../trace';
 import type { SheetFamily } from './sheet';
 import { stateTags } from './stateTags';
-import { countTag, lookTags, tags } from './tags';
+import { countTag, lookTags, placeTag, tags } from './tags';
 
 /**
  * A See input is a brief: what the picture shows. The prompt sent to the image server is composed
@@ -36,10 +36,13 @@ const mentionRe = (e: Character) =>
     'giu',
   );
 
-/** Characters `text` names as whole words, in order of first mention; a longer name wins an overlap ("Lena Morrow" over "Lena"). */
-export function namedCast<E extends Character>(text: string, entities: readonly E[]): E[] {
+type Kind = Entity['kind'];
+const ANY: readonly Kind[] = ['character', 'item', 'faction', 'place'];
+
+/** Entities of `kinds` that `text` names as whole words, in order of first mention; a longer name wins an overlap ("Lena Morrow" over "Lena"). */
+export function namedCast<E extends Character>(text: string, entities: readonly E[], kinds: readonly Kind[] = ['character']): E[] {
   const hits = entities
-    .filter((e) => e.kind === 'character')
+    .filter((e) => kinds.includes(e.kind))
     .flatMap((e) => namesOf(e).flatMap((n) => [...text.matchAll(nameRe(n))].map((m) => ({ e, at: m.index, end: m.index + m[0].length }))))
     .toSorted((a, b) => b.end - b.at - (a.end - a.at));
   const kept: typeof hits = [];
@@ -47,10 +50,17 @@ export function namedCast<E extends Character>(text: string, entities: readonly 
   return [...new Set(kept.toSorted((a, b) => a.at - b.at).map((h) => h.e))];
 }
 
-/** Who the picture shows: every character the brief names, else the scene's present ones. Only the first `CAST_CAP` get their looks. */
-export function castIn<E extends Character>(brief: string, scene: Scene | undefined, entities: readonly E[]): E[] {
-  const named = namedCast(brief, entities);
-  return named.length ? named : [...new Set((scene?.present ?? []).flatMap((p) => namedCast(p, entities).slice(0, 1)))];
+/** Every entity `brief` names, of any kind. */
+export const namedIn = <E extends Character>(brief: string, entities: readonly E[]): E[] => namedCast(brief, entities, ANY);
+
+/**
+ * What the picture shows: the characters the brief names, then its items and factions. The scene's present
+ * characters only when the brief names no entity at all, so "Goldarok marches" borrows nobody's look or seed.
+ */
+export function subjectsIn<E extends Character>(brief: string, scene: Scene | undefined, entities: readonly E[]): E[] {
+  const named = namedIn(brief, entities);
+  if (named.length === 0) return [...new Set((scene?.present ?? []).flatMap((p) => namedCast(p, entities).slice(0, 1)))];
+  return [...named.filter((e) => e.kind === 'character'), ...named.filter((e) => e.kind === 'item' || e.kind === 'faction')];
 }
 
 /** A brief that points at someone without naming them: the helper model resolves "she" from the story. [provisional] */
@@ -58,16 +68,21 @@ export function isImplicit(brief: string, named: readonly unknown[]): boolean {
   return named.length === 0 && (brief.match(/,/g)?.length ?? 0) < 4 && /\b(she|he|they|her|him|it)\b/i.test(brief);
 }
 
-/** What a character is, without their name: "Tamsin is a ferrywoman who…" → "a ferrywoman". */
+/** What a place looks like, without its name; empty when neither its description nor its name shows anything. */
+const placeOf = (e: Character) => placeTag(e.description) || placeTag(e.name);
+
+/** What an entity is, without its name: "Tamsin is a ferrywoman who…" → "a ferrywoman". */
 function noun(e: Character): string {
+  if (e.kind === 'place') return placeOf(e) || 'a place';
   // Not `:`: a "species: dragon" description would yield the noun "species".
   const first = e.description.split(/[,.;\n]/)[0] ?? '';
   const lead = new RegExp(`^\\s*(?:the\\s+)?(?:${namesOf(e).map(escape).join('|')})\\s+(?:is|was)\\s+`, 'i');
   const n = first.replace(lead, '').trim();
-  // An item's name in its noun ("a brass horn" for Horn) is no person's name to hide.
-  const ok = n !== '' && (e.kind !== 'character' || !namesOf(e).some((x) => nameRe(x).test(n)));
+  // An item's name in its noun ("a brass horn" for Horn) is no proper noun to hide.
+  const ok = n !== '' && (e.kind === 'item' || !namesOf(e).some((x) => nameRe(x).test(n)));
   // "A young scribe." opens a sentence; mid-prompt it is a tag.
-  return ok ? n.replace(/^A(n)? /, (a) => a.toLowerCase()) : e.kind === 'character' ? 'a person' : e.name.toLowerCase();
+  if (ok) return n.replace(/^A(n)? /, (a) => a.toLowerCase());
+  return e.kind === 'item' ? e.name.toLowerCase() : e.kind === 'faction' ? 'a group' : 'a person';
 }
 
 const looks = (e: Character, full: boolean) => [noun(e), full ? (e.appearance ?? '') : ''].filter(Boolean).join(', ');
@@ -88,7 +103,7 @@ const saysItAll = (l: Readonly<Record<string, string>>) => Boolean(l['species']?
 
 /** One character in the subject block: the frozen look verbatim, else the noun and the looks as tags; with `full` off, the noun. */
 function subject(e: Character, full: boolean, family: SheetFamily): string {
-  if (!full) return noun(e);
+  if (!full || e.kind !== 'character') return noun(e);
   if (e.look !== undefined) return e.look;
   if (!e.looks || Object.keys(e.looks).length === 0) return looks(e, true);
   return tags([saysItAll(e.looks) ? '' : noun(e), lookTags(e.looks, family)]);
@@ -109,6 +124,13 @@ export type Blocks = Record<'subject' | 'state' | 'story' | 'scene' | 'style', s
 
 const joined = (b: Blocks) => tags([b.subject, b.state, b.story, b.scene, b.style]);
 
+/** The scene's place as a tag: a place entity by how it looks, an unknown location only when it holds no proper noun. */
+function placeIn(location: string | undefined, entities: readonly Character[]): string {
+  if (!location) return '';
+  const place = entities.find((e) => e.kind === 'place' && namesOf(e).includes(location));
+  return place ? placeOf(place) : /\p{Lu}/u.test(location) ? '' : location;
+}
+
 /**
  * `count, subject (each shown character's looks), state, brief (names → nouns), location, weather, style`.
  * Looks never enter the brief: spliced in, their last tag fused with the verb after it. Over budget it
@@ -116,16 +138,17 @@ const joined = (b: Blocks) => tags([b.subject, b.state, b.story, b.scene, b.styl
  */
 export function composeSeePrompt(input: ComposeInput): { prompt: string; entityIds: string[]; seed?: number; blocks: Blocks } {
   const { brief, scene, entities, style, family } = input;
-  const shown = (input.cast ?? castIn(brief, scene, entities)).slice(0, CAST_CAP);
-  // Every character's name goes, shown or not; a possessive goes with it ("Bram's hat" → "a toll keeper hat").
-  const story = namedCast(brief, entities).reduce((t, e) => t.replace(mentionRe(e), () => noun(e)), brief);
+  const shown = (input.cast ?? subjectsIn(brief, scene, entities)).slice(0, CAST_CAP);
+  const people = shown.filter((e) => e.kind === 'character');
+  // Every entity's name goes, shown or not; a possessive goes with it ("Bram's hat" → "a toll keeper hat").
+  const story = namedIn(brief, entities).reduce((t, e) => t.replace(mentionRe(e), () => noun(e)), brief);
   const held = (e: Character) => (e.holds ?? []).flatMap((id) => entities.filter((x) => x.id === id).map(noun));
-  const state = tags(shown.map((e) => stateTags(e.states ?? {}, held(e), family, brief)));
+  const state = tags(people.map((e) => stateTags(e.states ?? {}, held(e), family, brief)));
   const build = (full: readonly boolean[], withState: boolean, weather: boolean): Blocks => ({
-    subject: tags([countTag(shown.length, family), ...shown.map((e, i) => subject(e, full[i] ?? false, family))]),
+    subject: tags([countTag(people.length, family), ...shown.map((e, i) => subject(e, full[i] ?? false, family))]),
     state: withState ? state : '',
     story: tags([story]),
-    scene: tags([scene?.location, weather ? scene?.weather : '']),
+    scene: tags([placeIn(scene?.location, entities), weather ? scene?.weather : '']),
     style: tags([style]),
   });
   const last = build([false, false], false, false);
@@ -133,7 +156,7 @@ export function composeSeePrompt(input: ComposeInput): { prompt: string; entityI
     [build([true, true], true, true), build([true, false], true, true), build([true, false], false, true), build([true, false], false, false)].find(
       (b) => joined(b).length <= PROMPT_BUDGET,
     ) ?? last;
-  const seed = seedFor(shown);
+  const seed = seedFor(people);
   return { prompt: cut(joined(blocks)), entityIds: shown.map((e) => e.id), ...(seed !== undefined && { seed }), blocks };
 }
 

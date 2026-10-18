@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { castIn, composeSeePrompt, isImplicit, namedCast, PROMPT_BUDGET } from '@core/image/compose';
+import { composeSeePrompt, isImplicit, namedCast, PROMPT_BUDGET, subjectsIn } from '@core/image/compose';
 import { withLooks } from '@core/memory';
 import type { Assertion, Entity } from '@core/model';
 import { seedOf } from '@core/trace';
@@ -30,10 +30,16 @@ const goldarok: Char = {
   looks: { species: 'dragon', build: 'massive', eyes: 'yellow', scales: 'gold' },
 };
 
-describe('castIn', () => {
+describe('subjectsIn', () => {
   it('takes the characters the brief names, in order, else the present ones', () => {
-    expect(castIn('Bram glares at Tamsin', scene, all).map((e) => e.id)).toEqual(['b', 't']);
-    expect(castIn('the empty jetty', scene, all).map((e) => e.id)).toEqual(['b']);
+    expect(subjectsIn('Bram glares at Tamsin', scene, all).map((e) => e.id)).toEqual(['b', 't']);
+    expect(subjectsIn('the empty jetty', scene, all).map((e) => e.id)).toEqual(['b']);
+  });
+
+  it('puts named characters before items and factions, and borrows nobody when the brief names any entity', () => {
+    const horn = { ...char('h', 'Horn', 'A brass horn.'), kind: 'item' as const };
+    expect(subjectsIn('the Horn sounds for Bram', scene, [...all, horn]).map((e) => e.id)).toEqual(['b', 'h']);
+    expect(subjectsIn('rain over Tamsin Ford', scene, all)).toEqual([]);
   });
 
   it('matches whole words and aliases, longest first', () => {
@@ -213,6 +219,51 @@ describe('the state block', () => {
     const { prompt } = composeSeePrompt({ brief: fit, scene, entities: [a], style, family: sd15 });
     expect(prompt).not.toContain('grim');
     expect(prompt).toContain('low mist');
+  });
+});
+
+describe('places and non-characters', () => {
+  const company = { ...char('c', 'Goldarok', 'Goldarok is a mercenary company in gilded armour.'), kind: 'faction' as const };
+  const vex: Char = { ...char('v', 'Vex', 'Vex is a fox thief.'), look: 'a fox thief, green eyes' };
+  const halven = { ...char('k', 'Halven', 'Halven is a stone keep on a cliff, rain'), kind: 'place' as const };
+  const mire = { ...char('m', 'Ashmire', 'Ashmire is where the Duke of Vael rules.'), kind: 'place' as const };
+  const atHalven = { location: 'Halven', present: ['Vex'], weather: 'dusk' };
+
+  it('a brief naming a faction takes no present character looks or seed', () => {
+    const input = { brief: 'Goldarok marches on the gate', scene: atHalven, entities: [company, vex, halven], style, family: 'sdxl' as const };
+    const { prompt, seed, entityIds } = composeSeePrompt(input);
+    expect(seed).toBeUndefined();
+    expect(prompt).not.toMatch(/fox|green eyes|solo/);
+    expect(entityIds).toEqual(['c']);
+  });
+
+  it('a faction or item in the brief composes as its identity noun, not its name', () => {
+    const horn = { ...char('h', 'Horn of Ur', 'The Horn of Ur is a brass horn.'), kind: 'item' as const };
+    const { blocks } = composeSeePrompt({ brief: 'Goldarok raises Horn of Ur', entities: [company, horn], style: '', family: sd15 });
+    expect(blocks.subject).toBe('a mercenary company in gilded armour, a brass horn');
+    expect(blocks.story).toBe('a mercenary company in gilded armour raises a brass horn');
+  });
+
+  it('a place composes as its first visual clause', () => {
+    expect(composeSeePrompt({ brief: 'Vex waits', scene: atHalven, entities: [vex, halven], style: '', family: sd15 }).blocks.scene).toBe(
+      'stone keep on a cliff, dusk',
+    );
+  });
+
+  it('a place with no visual clause sends no location tag', () => {
+    const at = { location: 'Ashmire', present: [], weather: 'dusk' };
+    expect(composeSeePrompt({ brief: 'a lantern', scene: at, entities: [mire], style: '', family: sd15 }).blocks.scene).toBe('dusk');
+    expect(composeSeePrompt({ brief: 'a lantern', scene: { location: 'Harrows', present: [] }, entities: [], style: '', family: sd15 }).blocks.scene).toBe('');
+  });
+
+  it('no proper noun reaches the prompt', () => {
+    const entities = [...all, company, vex, halven, mire];
+    const briefs = ['Goldarok storms Halven', 'Vex flees Ashmire', "Bram's lantern at Tamsin Ford", 'Tamsin and Goldarok in Halven'];
+    for (const s of [scene, atHalven, { location: 'Ashmire', present: ['Vex'] }])
+      for (const brief of briefs) {
+        const { prompt } = composeSeePrompt({ brief, scene: s, entities, style, family: 'sdxl' });
+        for (const e of entities) expect(prompt).not.toContain(e.name);
+      }
   });
 });
 
