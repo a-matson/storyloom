@@ -1,10 +1,12 @@
 import type { Action, Assertion, Entity, ExtractedEntity } from '../model/types';
 import { FACT_CHARS, GOAL_CHARS, INTRODUCED_CHARS, LOOK_CHARS, VOICE_CHARS } from '../schema/extraction';
-import { textOf } from './assertionIndex';
+import { isCurrent, textOf } from './assertionIndex';
 import { within, type Sighting } from './entities';
 import type { Source } from './invalidate';
+import { isValue } from './looks';
 import type { MemoryRange } from './memoryBank';
 import { norm } from './names';
+import { speciesIn } from './species';
 import { supportNaming, supportOf } from './support';
 
 // The guards on what one reply entity says; `fold.ts` decides which entity it is.
@@ -111,19 +113,24 @@ export function sightingOf(
   g: Guard,
 ): Sighting & { relationships: { to: string; stance: string }[]; voice?: string | undefined; goal?: string | undefined } {
   const { looks, relationships = [], facts, voice, goal, ...e } = item;
-  const keep = (value: string, o: { cap?: number; about?: string; look?: boolean } = {}): string[] => {
+  const declared = g.own.filter(isValue).findLast((a) => isCurrent(a) && a.key === 'species');
+  const againstPlayer = (v: string) => declared?.basis === 'player' && speciesIn(v) !== undefined && speciesIn(v) !== speciesIn(declared.value);
+  const keep = (value: string, o: { cap?: number; about?: string; look?: boolean; claim?: (v: string) => boolean } = {}): string[] => {
     const v = uncut(value, o.cap);
     if (!v || EMPTY_VALUE.test(v)) return [];
     const s = supportOf(g.actions, g.who, `${o.about ?? ''} ${v}`);
     if (typeof s === 'string' || (o.look && s.basis !== 'stated')) {
       g.reject(v, typeof s === 'string' ? s : 'look-inferred');
-      return [];
+      // Unbacked, but it contradicts the player: the merge makes it a conflict for them, never a value.
+      return o.claim?.(v) ? [v] : [];
     }
     g.backed.set(v, s);
     return [v];
   };
   const kept = Object.fromEntries(
-    Object.entries(g.kind === 'character' ? (looks ?? {}) : {}).flatMap(([k, v = '']) => keep(v, { cap: LOOK_CHARS, look: true }).map((t) => [k, t])),
+    Object.entries(g.kind === 'character' ? (looks ?? {}) : {}).flatMap(([k, v = '']) =>
+      keep(v, { cap: LOOK_CHARS, look: true, ...(k === 'species' && { claim: againstPlayer }) }).map((t) => [k, t]),
+    ),
   );
   const states = [...g.own.flatMap((a) => (a.kind === 'state' || a.kind === 'look' ? [textOf(a)] : [])), ...Object.entries(kept).map(([k, v]) => `${k}: ${v}`)];
   const raw = uncut(e.description);

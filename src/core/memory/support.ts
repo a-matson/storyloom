@@ -10,7 +10,7 @@ import { STOP } from './admit';
  * [measured: 2026-10-11-recall-m12-1-pr5-stem-d30.json]
  * ponytail: a crude stemmer ("string" → "str" misses "strings"); a real lemmatiser if it costs facts.
  */
-const stem = (w: string): string => {
+export const stem = (w: string): string => {
   const s = w.replace(/(?:ing|ed|(?<!s)s)$/, '');
   const t = s.length >= 3 ? s : w;
   return (t.length > 3 ? t.replace(/e$/, '') : t).slice(0, 5);
