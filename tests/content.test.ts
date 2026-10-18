@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { styleOf } from '@app/session/portraitPrompt';
 import { DEFAULT_GENERATOR_SETTINGS, generateStoryCard } from '@core/cards/cardGenerator';
 import { writeOpening } from '@core/cards/opening';
 import { autoImagePrompt } from '@core/image/autoPrompt';
@@ -130,5 +131,15 @@ describe('prompt suffix', () => {
   it('is appended to the image request, and ignored when blank', () => {
     expect(imageRequest({ ...settings.image, promptSuffix: ' gore, nsfw ' }, 'a ferry').prompt).toBe('a ferry, gore, nsfw');
     expect(imageRequest({ ...settings.image, promptSuffix: ' ' }, 'a ferry').prompt).toBe('a ferry');
+  });
+
+  it('prefix first, suffix last', () => {
+    expect(imageRequest({ ...settings.image, promptPrefix: 'score_9 ', promptSuffix: 'nsfw' }, 'a ferry').prompt).toBe('score_9, a ferry, nsfw');
+  });
+
+  it('a recipe prefix is the style unless the player set one', () => {
+    expect(styleOf({ promptPrefix: 'score_9' }, ['Fantasy'])).toBe('');
+    expect(styleOf({ promptPrefix: 'score_9', portraitStyle: 'ink' }, [])).toBe('ink');
+    expect(styleOf({}, ['Fantasy'])).toBe('oil painting, muted colours');
   });
 });

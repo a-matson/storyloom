@@ -90,9 +90,11 @@ export const ImageSettings = z.object({
   hiresSteps: z.optional(z.int().check(z.gt(0))),
   /** Appended to every See, portrait and cover prompt: style, nudity or gore words the checkpoint needs. */
   promptSuffix: z.optional(z.string()),
+  /** Put before every See, portrait and cover prompt: the quality tags the checkpoint's recipe asks for. */
+  promptPrefix: z.optional(z.string()),
 });
 
-/** The model-card part of `ImageSettings`: what an image preset sets. Size, checkpoint and portraits are left alone. */
+/** The model-card part of `ImageSettings`: what an image preset sets. Checkpoint and portraits are left alone, size unless it is set. */
 export const ImagePresetSettings = z.object({
   sampler: z.optional(z.string()),
   clipSkip: z.optional(z.int().check(z.gt(0))),
@@ -102,6 +104,11 @@ export const ImagePresetSettings = z.object({
   hiresScale: z.optional(z.number().check(z.gt(0))),
   hiresDenoise: z.optional(z.number().check(z.gt(0))),
   hiresSteps: z.optional(z.int().check(z.gt(0))),
+  promptPrefix: z.optional(z.string()),
+  promptSuffix: z.optional(z.string()),
+  negativePrompt: z.optional(z.string()),
+  width: z.optional(z.int().check(z.gt(0))),
+  height: z.optional(z.int().check(z.gt(0))),
 });
 
 /** A preset the player saved; app-wide, so every adventure can apply it. */

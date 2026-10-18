@@ -74,7 +74,7 @@ export function ImagePresetRow({ image, onImage, app, onAppChange }: Props) {
       <Setting
         label="Apply preset"
         htmlFor="img-preset"
-        help="Sets sampler, steps, CFG, clip skip and hires pass as checkpoint pages usually give them. Size, portraits and style stay as they are."
+        help="Sets the checkpoint page's recipe: prompt prefix, suffix and negative, sampler, steps, CFG, clip skip, hires pass and, if it gives one, size. Portraits and style stay as they are."
       >
         <Select
           id="img-preset"
@@ -122,7 +122,10 @@ export function ImagePresetRow({ image, onImage, app, onAppChange }: Props) {
               Delete preset
             </Button>
           )}
-          <Button onClick={() => setMode('naming')} title="Save sampler, steps, CFG, clip skip and the hires pass under a name, for every adventure">
+          <Button
+            onClick={() => setMode('naming')}
+            title="Save the prompt prefix, suffix and negative, size, sampler, steps, CFG, clip skip and the hires pass under a name, for every adventure"
+          >
             Save as preset
           </Button>
         </div>

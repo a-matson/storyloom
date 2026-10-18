@@ -19,6 +19,8 @@ import { saysYou, viewOf } from './view';
 export const CAST_CAP = 2;
 /** CLIP reads 75 tokens; ~4 characters a token. [provisional] */
 export const PROMPT_BUDGET = 300;
+/** A1111 reads a longer prompt in 75-token chunks; SDXL is trusted to bind across two, SD 1.5 is not. [provisional until the chunk check] */
+export const budgetFor = (family: SheetFamily): number => (family === 'sdxl' ? 2 * PROMPT_BUDGET : PROMPT_BUDGET);
 
 /** `description`, `appearance`, `looks` and `states` as `withLooks` resolves them from the assertions; `holds` are item ids. */
 type Character = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'description' | 'look'> & {
@@ -193,6 +195,7 @@ export function composeSeePrompt(input: ComposeInput): { prompt: string; entityI
     style: tags([style]),
   });
   const all = Infinity;
+  const budget = budgetFor(family);
   const first = shown[0];
   const n = Object.keys((first?.look !== undefined ? lookKeys(first.look) : first?.looks) ?? {}).length;
   const fewer = Array.from({ length: n }, (_, i) => build([n - 1 - i, 0], false, false));
@@ -204,14 +207,14 @@ export function composeSeePrompt(input: ComposeInput): { prompt: string; entityI
       build([all, 0], false, true),
       build([all, 0], false, false),
       ...fewer,
-    ].find((b) => joined(b).length <= PROMPT_BUDGET) ?? build([0, 0], false, false);
+    ].find((b) => joined(b).length <= budget) ?? build([0, 0], false, false);
   const seed = seedFor(people);
-  return { prompt: cut(joined(blocks)), entityIds: shown.map((e) => e.id), ...(seed !== undefined && { seed }), blocks };
+  return { prompt: cut(joined(blocks), budget), entityIds: shown.map((e) => e.id), ...(seed !== undefined && { seed }), blocks };
 }
 
-function cut(text: string): string {
-  if (text.length <= PROMPT_BUDGET) return text;
-  const head = text.slice(0, PROMPT_BUDGET);
+function cut(text: string, budget: number): string {
+  if (text.length <= budget) return text;
+  const head = text.slice(0, budget);
   const comma = head.lastIndexOf(',');
   return (comma > 0 ? head.slice(0, comma) : head).trim();
 }

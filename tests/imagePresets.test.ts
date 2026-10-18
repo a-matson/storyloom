@@ -6,10 +6,10 @@ import { AppSettings } from '@core/schema';
 const mine = { ...DEFAULT_ADVENTURE_SETTINGS.image, width: 768, height: 640, portraits: false, portraitStyle: 'ink', hiresScale: 2, hiresSteps: 9 };
 
 describe('image presets', () => {
-  it.each(IMAGE_PRESETS)('$name applies all its fields and keeps size, portraits and style', (p) => {
+  it.each(IMAGE_PRESETS)('$name applies all its fields and keeps portraits, style and an unset size', (p) => {
     const out = applyImagePreset(mine, p);
     expect(out).toMatchObject(p.settings);
-    expect(out).toMatchObject({ width: 768, height: 640, portraits: false, portraitStyle: 'ink' });
+    expect(out).toMatchObject({ width: p.settings.width ?? 768, height: p.settings.height ?? 640, portraits: false, portraitStyle: 'ink' });
     // A hires preset is the whole recipe; a plain one leaves the dormant hires scale alone.
     expect(out.hiresScale).toBe(p.settings.hires ? 1.5 : 2);
   });
@@ -27,6 +27,30 @@ describe('image presets', () => {
     const applied = applyImagePreset({ ...DEFAULT_ADVENTURE_SETTINGS.image, sampler: 'Euler a' }, saved);
     expect(applied).toMatchObject({ clipSkip: 2, steps: 30, cfgScale: 4.5, hires: true, hiresScale: 2, hiresDenoise: 0.4, hiresSteps: 9 });
     expect(applied.sampler).toBeUndefined();
+  });
+
+  it('built-in ids stay, so a saved reference stays valid', () => {
+    expect(IMAGE_PRESETS.map((p) => p.id)).toEqual(['noobai', 'pony', 'sd15', 'realistic', 'fast']);
+  });
+
+  it('applies prefix, suffix, negative and size from a recipe', () => {
+    const noob = IMAGE_PRESETS.find((p) => p.id === 'noobai');
+    const out = noob && applyImagePreset({ ...mine, promptSuffix: 'nsfw' }, noob);
+    expect(out).toMatchObject({ promptPrefix: 'masterpiece, best quality, newest, absurdres', width: 1024, height: 1024 });
+    expect(out?.negativePrompt).toContain('bad hands');
+    expect(out?.promptSuffix).toBeUndefined();
+  });
+
+  it('a recipe without a prefix clears it, and keeps the size', () => {
+    const fast = IMAGE_PRESETS.find((p) => p.id === 'fast');
+    const out = fast && applyImagePreset({ ...mine, promptPrefix: 'score_9', negativePrompt: 'text' }, fast);
+    expect(out).toMatchObject({ width: 768, height: 640 });
+    expect([out?.promptPrefix, out?.negativePrompt]).toEqual([undefined, undefined]);
+  });
+
+  it('presetFrom copies the recipe fields', () => {
+    const recipe = { promptPrefix: 'score_9', promptSuffix: 'nsfw', negativePrompt: 'text', width: 768, height: 640 };
+    expect(applyImagePreset(DEFAULT_ADVENTURE_SETTINGS.image, presetFrom({ ...mine, ...recipe }, 'Mine'))).toMatchObject(recipe);
   });
 
   it('saving under an existing name replaces that preset and keeps its id', () => {

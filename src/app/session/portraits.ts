@@ -5,7 +5,7 @@ import { downscale } from '../image';
 import { imageQueue } from './imageQueue';
 import { withProgress } from './imageProgress';
 import { imageFailure } from './seeRender';
-import { PORTRAIT_NEGATIVE, portraitBasis, portraitPrompt, portraitStyle } from './portraitPrompt';
+import { PORTRAIT_NEGATIVE, portraitBasis, portraitPrompt, styleOf } from './portraitPrompt';
 import type { GameSnapshot, PortraitState, SessionServices } from './types';
 
 export interface PortraitHost {
@@ -64,7 +64,9 @@ export async function renderPortrait(host: PortraitHost, id: string): Promise<vo
   const own = indexAssertions(host.adv.assertions).of(e.id);
   const basis = hashPrompt(portraitBasis(e, own));
   const req = {
-    prompt: portraitPrompt(e, own, [s.portraitStyle ?? portraitStyle(host.adv.tags), s.promptSuffix?.trim()].filter(Boolean).join(', ')),
+    prompt: [s.promptPrefix?.trim(), portraitPrompt(e, own, [styleOf(s, host.adv.tags), s.promptSuffix?.trim()].filter(Boolean).join(', '))]
+      .filter(Boolean)
+      .join(', '),
     negativePrompt: [PORTRAIT_NEGATIVE, s.negativePrompt].filter(Boolean).join(', '),
     width: s.portraitSize,
     height: s.portraitSize,

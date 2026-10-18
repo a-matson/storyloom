@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { composeSeePrompt, lookFor, looksOf, PROMPT_BUDGET } from '@core/image/compose';
+import { budgetFor, composeSeePrompt, lookFor, looksOf } from '@core/image/compose';
+import type { SheetFamily } from '@core/image/sheet';
 import type { Entity } from '@core/model';
 import * as S from '@core/schema';
 
@@ -24,7 +25,8 @@ const looks = {
   marks: 'pregnancy tattoo',
 };
 const frozen: Char = { ...base, look: looks };
-const compose = (brief: string, e: Char) => composeSeePrompt({ brief, entities: [e], style: 'oil painting', family: 'sdxl' });
+const compose = (brief: string, e: Char, family: SheetFamily = 'sdxl', more: Char[] = []) =>
+  composeSeePrompt({ brief, entities: [e, ...more], style: 'oil painting', family });
 
 describe('a frozen look by key', () => {
   it('parses as a string and as a record', () => {
@@ -43,11 +45,20 @@ describe('a frozen look by key', () => {
   });
 
   it('over budget keeps species, colours, horns and eyes and drops marks first', () => {
-    const long = `Consequences walks ${'slowly through the long and crowded market square of the old harbour town at dusk, '.repeat(2)}`.slice(0, 172);
-    const { prompt } = compose(long, frozen);
-    expect(prompt.length).toBeLessThanOrEqual(PROMPT_BUDGET);
+    const short = compose('Consequences walks', frozen).prompt;
+    const { prompt } = compose(`Consequences walks ${'x'.repeat(budgetFor('sdxl') - short.length + 5)}`, frozen);
+    expect(prompt.length).toBeLessThanOrEqual(budgetFor('sdxl'));
     for (const w of ['kobold', 'burgundy red', 'ochre underbelly', '2 black horns', 'deep green eyes']) expect(prompt).toContain(w);
     expect(prompt).not.toContain('tattoo');
+  });
+
+  it('sdxl budget keeps the second character looks that sd15 drops', () => {
+    const bram: Char = { ...base, id: 'b', name: 'Bram', description: 'Bram is a toll keeper.', look: { hair: 'grey braid', wearing: 'blue coat' } };
+    const brief = `Consequences and Bram walk ${'through the long and crowded market square of the old harbour town, '.repeat(2)}`;
+    expect(compose(brief, frozen, 'sd15', [bram]).prompt).not.toContain('blue coat');
+    const sdxl = compose(brief, frozen, 'sdxl', [bram]).prompt;
+    expect(sdxl).toContain('blue coat');
+    expect(sdxl.length).toBeLessThanOrEqual(budgetFor('sdxl'));
   });
 
   it('cuts a frozen look to the frame', () => {

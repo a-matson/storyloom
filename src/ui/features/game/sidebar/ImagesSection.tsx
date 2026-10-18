@@ -30,6 +30,36 @@ const PORTRAIT_NUMBERS: ImageNumber[] = [
   { label: 'Sheet steps', key: 'sheetSteps', step: 1, min: 1 },
 ];
 
+type ImageText = { label: string; key: 'negativePrompt' | 'portraitStyle' | 'promptPrefix' | 'promptSuffix'; id: string; help: string };
+const PROMPT_TEXTS: ImageText[] = [
+  {
+    label: 'Negative prompt',
+    key: 'negativePrompt',
+    id: 'img-neg',
+    help: 'What the image should avoid, e.g. blurry, extra fingers, text. Blank sends nothing.',
+  },
+];
+const STYLE_TEXTS: ImageText[] = [
+  {
+    label: 'Portrait style',
+    key: 'portraitStyle',
+    id: 'img-style',
+    help: "Added to every See and portrait prompt; blank picks one from the adventure's tags, or none when a prompt prefix is set",
+  },
+  {
+    label: 'Prompt prefix',
+    key: 'promptPrefix',
+    id: 'img-prefix',
+    help: "Put before every See, portrait and cover prompt: the quality tags your checkpoint's page asks for",
+  },
+  {
+    label: 'Prompt suffix',
+    key: 'promptSuffix',
+    id: 'img-suffix',
+    help: 'Added to every See, portrait and cover prompt: style, nudity or gore words your checkpoint needs',
+  },
+];
+
 /** Blank means "whatever the image server already has". */
 const text = (value: string) => (value.trim() === '' ? undefined : value);
 
@@ -86,6 +116,12 @@ export function ImagesSection({ s, app, onAppChange, update }: Props) {
         </Setting>
       );
     });
+  const texts = (list: ImageText[]) =>
+    list.map((t) => (
+      <Setting key={t.key} label={t.label} htmlFor={t.id} help={t.help}>
+        <Input id={t.id} className={IMAGE_TEXT_INPUT} value={s.image[t.key] ?? ''} onChange={(e) => image({ [t.key]: text(e.target.value) })} />
+      </Setting>
+    ));
   return (
     <Section title="Images">
       <ModelCard s={s} app={app} onAppChange={onAppChange} update={update} />
@@ -98,14 +134,7 @@ export function ImagesSection({ s, app, onAppChange, update }: Props) {
         onChange={(on) => image({ hires: on })}
       />
       {s.image.hires && numbers(HIRES_NUMBERS)}
-      <Setting label="Negative prompt" htmlFor="img-neg" help="What the image should avoid, e.g. blurry, extra fingers, text. Blank sends nothing.">
-        <Input
-          id="img-neg"
-          className={IMAGE_TEXT_INPUT}
-          value={s.image.negativePrompt ?? ''}
-          onChange={(e) => image({ negativePrompt: text(e.target.value) })}
-        />
-      </Setting>
+      {texts(PROMPT_TEXTS)}
       <SettingSwitch
         id="img-portraits"
         label="Character portraits"
@@ -114,26 +143,7 @@ export function ImagesSection({ s, app, onAppChange, update }: Props) {
         onChange={(on) => image({ portraits: on })}
       />
       {numbers(PORTRAIT_NUMBERS)}
-      <Setting label="Portrait style" htmlFor="img-style" help="Added to every portrait prompt; blank picks one from the adventure's tags">
-        <Input
-          id="img-style"
-          className={IMAGE_TEXT_INPUT}
-          value={s.image.portraitStyle ?? ''}
-          onChange={(e) => image({ portraitStyle: text(e.target.value) })}
-        />
-      </Setting>
-      <Setting
-        label="Prompt suffix"
-        htmlFor="img-suffix"
-        help="Added to every See, portrait and cover prompt: style, nudity or gore words your checkpoint needs"
-      >
-        <Input
-          id="img-suffix"
-          className={IMAGE_TEXT_INPUT}
-          value={s.image.promptSuffix ?? ''}
-          onChange={(e) => image({ promptSuffix: text(e.target.value) })}
-        />
-      </Setting>
+      {texts(STYLE_TEXTS)}
     </Section>
   );
 }
