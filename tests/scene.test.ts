@@ -11,7 +11,6 @@ const mill: Scene = { location: 'the mill', present: ['Lena'] };
 const timed: Scene = { ...mill, time: { day: 3, part: 'night' } };
 const source = { sourceId: 'a9', sourceHash: 'h' };
 const read = (r: Partial<SceneRead>): SceneRead => ({ location: 'the mill', present: [], stay: {}, weather: 'unchanged', ...r });
-const went = (room: string) => ({ room });
 const place = (n: string, partOf?: Entity) => ({
   ...mergeEntity(undefined, { name: n, kind: 'place', description: '' }, 0),
   ...(partOf && { partOf: partOf.id }),
@@ -90,8 +89,8 @@ describe('nextScene', () => {
   it('logs no move for a room inside the current place', () => {
     const cottage = place('Cottage');
     const bedroom = place('Bedroom', cottage);
-    const r = next({ location: 'Cottage', present: ['Lena'], since: 1 }, { location: 'the bedroom', present: [] }, [cottage, bedroom]);
-    expect(r).toEqual({ scene: { location: 'Bedroom', present: ['Lena'], since: 1 }, moved: false });
+    const r = next({ location: 'Cottage', present: ['Lena'], since: 1 }, { location: 'the bedroom', present: [], stay: { Lena: 'here' } }, [cottage, bedroom]);
+    expect(r).toEqual({ scene: { location: 'Cottage', present: ['Lena'], zone: 'Bedroom', since: 1 }, moved: false });
   });
 
   it('keeps the weather on `unchanged`, clears it on `none`, else takes the word', () => {
@@ -112,57 +111,6 @@ describe('nextScene', () => {
     expect(next(timed, { weather: 'rain' }).scene).toEqual({ ...timed, weather: 'rain' });
     expect(next(timed, { location: 'the road' }).scene).toEqual({ location: 'the road', present: [], time: timed.time, since: 7 });
     expect(next(timed, { present: ['Lena'] }).scene).toBe(timed);
-  });
-});
-
-describe('zones (M21-1)', () => {
-  // The mill, as `read` defaults to it.
-  const inn = place('the mill');
-  const cellar = place('Cellar', inn);
-  const road = place('The Road');
-  const atInn: Scene = { location: 'the mill', present: ['Vorthak', 'Weever'] };
-  const below: Scene = { ...atInn, zones: { Vorthak: 'the basement', Weever: 'the basement' } };
-  const places = [inn, cellar, road];
-
-  it('left for a room of this place keeps them present in it', () => {
-    const r = next(atInn, { stay: { Vorthak: went('the basement'), Weever: went('the basement') } }, places);
-    expect(r).toEqual({ scene: below, moved: false });
-    expect(next(atInn, { stay: { Vorthak: went('Cellar') } }, places).scene?.zones).toEqual({ Vorthak: 'Cellar' });
-  });
-
-  it('left, an empty room, or a room of another place is gone as before', () => {
-    expect(next(atInn, { stay: { Vorthak: 'left' } }, places).scene).toEqual({ ...atInn, present: ['Weever'] });
-    expect(next(atInn, { stay: { Vorthak: went(' ') } }, places).scene).toEqual({ ...atInn, present: ['Weever'] });
-    expect(next(atInn, { stay: { Vorthak: went('the road') } }, places).scene).toEqual({ ...atInn, present: ['Weever'] });
-  });
-
-  it('here clears the room; a later read that keeps them there, or does not name them, keeps it', () => {
-    expect(next(below, { stay: { Vorthak: 'here', Weever: went('the basement') } }, places).scene?.zones).toEqual({ Weever: 'the basement' });
-    expect(next(below, { stay: { Vorthak: 'asleep', Weever: 'asleep' } }, places).scene).toBe(below);
-    expect(next(below, { stay: { Vorthak: 'here' } }, places, 7, (n) => n === 'Weever').scene).toBe(below);
-  });
-
-  it('a room that is yours is no room; a move drops the rooms', () => {
-    const cellarScene: Scene = { ...atInn, location: 'Cellar' };
-    expect(next(cellarScene, { location: 'Cellar', stay: { Vorthak: went('the cellar') } }, places).scene).toBe(cellarScene);
-    const moved = next(below, { location: 'the road', stay: { Vorthak: 'here', Weever: went('the basement') } }, places);
-    expect(moved.scene).toEqual({ location: 'The Road', present: ['Vorthak'], since: 7 });
-  });
-
-  it('presence logs who is with you, so a zoned character gets an away gap', () => {
-    const plot = withScene({ scene: atInn }, read({ stay: { Vorthak: went('the basement') } }), name, 4, source, places, 'Vorthak goes down.');
-    expect(plot.scene?.present).toEqual(['Vorthak', 'Weever']);
-    expect(plot.presence).toEqual([{ at: 4, present: ['Weever'] }]);
-  });
-
-  it('stores the room keys as ids, and reads them back as names', () => {
-    const vorthak = mergeEntity(undefined, { name: 'Vorthak', kind: 'character', description: '' }, 0);
-    const stored: Scene = { location: 'the mill', present: [vorthak.id], zones: { [vorthak.id]: 'the basement' } };
-    expect(sceneIds(sceneNames(stored, [vorthak]), [vorthak])).toEqual(stored);
-    expect(sceneNames(stored, [vorthak])).toEqual({ location: 'the mill', present: ['Vorthak'], zones: { Vorthak: 'the basement' } });
-    const plot = withScene({ scene: { ...stored, zones: {} } }, read({ stay: { Vorthak: went('the cellar') } }), name, 4, source, [vorthak], 'Vorthak.');
-    expect(plot.scene?.zones).toEqual({ [vorthak.id]: 'the cellar' });
-    expect(withScene(plot, read({}), name, 5, source, [vorthak], '')).toBe(plot);
   });
 });
 

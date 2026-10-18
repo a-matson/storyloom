@@ -11,6 +11,8 @@ export interface PrevScene {
   location?: string | undefined;
   present: readonly string[];
   zones?: Readonly<Record<string, string>> | undefined;
+  /** Your room in `location`: told as the location, so the read keeps its wording while you stay (M22-3). */
+  zone?: string | undefined;
   /** Factions `present` may list as a group; not in the previous scene's `present`, so no `stay` for them. */
   factions?: readonly string[];
 }
@@ -58,7 +60,7 @@ export function introducePrompt(
       : '\n') +
     (cards ? `New here: ${newNames.join(', ')}.\n` : '') +
     // No placeholder place: one the model could copy back as the location.
-    `Previous scene: ${prev.location ? `location "${prev.location}", present: ${prev.present.join(', ') || 'nobody'}${roomsOf(prev.zones)}` : 'not known yet'}. Known characters: ${cast.join(', ') || 'none yet'}.` +
+    `Previous scene: ${prev.location ? `location "${prev.zone ?? prev.location}", present: ${prev.present.join(', ') || 'nobody'}${roomsOf(prev.zones)}` : 'not known yet'}. Known characters: ${cast.join(', ') || 'none yet'}.` +
     (factions.length ? ` Known factions: ${factions.join(', ')}.` : '') +
     (state ? `\n\n${stateRecords(state.records)}` : '') +
     `\n\n---\n${passage}\n---\n\n` +

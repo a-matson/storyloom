@@ -74,7 +74,9 @@ function SendTo({ entity: e, scene, entities, api }: { entity: Entity; scene: Sc
   const places = entities.filter((x) => x.kind === 'place');
   const at = scene.zones?.[e.id] ?? '';
   const here = places.find((p) => p.id === scene.location);
-  const rooms = [...new Set([...roomsOf(places, here), ...(at ? [at] : [])])];
+  // In a room yourself (`zone`), the place itself is another room and yours is "with you".
+  const top = here && scene.zone ? [here.name] : [];
+  const rooms = [...new Set([...roomsOf(places, here), ...top, ...(at ? [at] : [])])].filter((r) => r !== scene.zone);
   const send = (to: string) => {
     const { zones: _, ...rest } = scene;
     const others = Object.fromEntries(Object.entries(scene.zones ?? {}).filter(([k]) => k !== e.id));

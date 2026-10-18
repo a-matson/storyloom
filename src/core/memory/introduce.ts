@@ -86,7 +86,7 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps, edited?
   const uncarded = (now?.present ?? []).filter((p) => !knownAs(adventure.entities, p) && passage.includes(p));
   // ponytail: names past the grammar's cap wait for the batch call; raise MAX_INTRODUCED if openings name more.
   const names = introductions ? [...new Set([...newNamesIn(adventure, range), ...uncarded])].slice(0, MAX_INTRODUCED) : [];
-  const prev = { location: now?.location, present: now?.present ?? [], zones: now?.zones, factions: factionsOf(adventure) };
+  const prev = { location: now?.location, present: now?.present ?? [], zones: now?.zones, zone: now?.zone, factions: factionsOf(adventure) };
   const asked = names.length > 0 || sceneEachTurn;
   // Read B merged (M17-1): its subjects are the scene before this reply, since the reply carries both.
   const subjects = asked && opts?.state ? stateCast(adventure) : [];

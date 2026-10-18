@@ -18,6 +18,8 @@ export const Scene = z.object({
   present: z.array(z.string()),
   /** A present character's id → the room of this place they are in, as written; absent: in yours. */
   zones: z.optional(z.record(z.string(), z.string())),
+  /** The player's room in this place, as written; absent: the place itself. Set by a read naming a room of it, or `/travel`. */
+  zone: z.optional(z.string()),
   /** Factions with members here: a faction's entity id, else its name as written; `count` when the passage gives one. Never in `present`. */
   groups: z.optional(z.array(z.object({ id: z.string(), count: z.optional(z.int()) }))),
   /** Set only by the player (`/wait`, `/time`, the Scene fields); no read writes it. */

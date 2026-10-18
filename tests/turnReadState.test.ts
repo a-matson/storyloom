@@ -97,6 +97,13 @@ describe('the merged turn read (M17-1)', () => {
     expect(reqs[0]?.prompt).toContain('Previous scene: location "the well", present: Mira, Tobin; in the cellar: Mira, Tobin. Known');
   });
 
+  it('tells the read your room as the location, so it keeps that wording', async () => {
+    const { adv, reqs, deps } = setup([]);
+    adv.plot.scene = { location: 'the well', present: [mira.id, tobin.id], zones: { [mira.id]: 'the well' }, zone: 'the cellar' };
+    await introduce(adv, deps);
+    expect(reqs[0]?.prompt).toContain('Previous scene: location "the cellar", present: Mira, Tobin; in the well: Mira. Known');
+  });
+
   it('asks no changes without the option', async () => {
     const { adv, reqs, deps } = setup([{ who: 'Mira', key: 'posture', now: 'sitting', at: 4 }]);
     const r = await introduce(adv, deps);

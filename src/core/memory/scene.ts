@@ -2,7 +2,7 @@ import type { Entity, PlotComponents, Scene } from '../model/types';
 import { NOBODY, type SceneRead, type Verdict } from '../schema/extraction';
 import { entityNamedIn } from './entities';
 import { groupCount } from './groups';
-import { knownAs, matchEntity, norm, outermost, sceneIds, sceneNames, withPresence } from './names';
+import { knownAs, matchEntity, norm, outermost, sameRoom, sceneIds, sceneNames, withPresence } from './names';
 
 type Group = NonNullable<Scene['groups']>[number];
 
@@ -49,7 +49,12 @@ export function nextScene(
   const to = outermost(places, here);
   const from = outermost(places, was === undefined ? undefined : knownAs(places, was));
   const moved = said !== '' && (to && from ? to !== from : norm(here?.name ?? said) !== norm(was ?? ''));
-  const location = !said ? was : (here?.name ?? (moved ? said : was));
+  // A room of this place is your zone and the location stays the place; the place itself clears it, a move drops it (M22-3).
+  const inside = to !== undefined && to === from;
+  const location = !said ? was : inside ? to.name : (here?.name ?? (moved ? said : was));
+  const zone = moved ? undefined : inside ? (here === to ? undefined : here?.name) : scene?.zone;
+  // Who did not follow you stays in the room you left.
+  const behind = zone === scene?.zone ? undefined : (scene?.zone ?? was);
 
   const names = (xs: readonly string[]) => xs.flatMap((x) => (x === NOBODY ? [] : (name(x) ?? [])));
   const before = scene?.present ?? [];
@@ -72,14 +77,12 @@ export function nextScene(
   // On a move, who the read keeps "here" or "asleep" came along: a dragged, unconscious Minos was left out of `present`.
   const kept = moved ? before.filter((p) => read.stay[p] === 'here' || read.stay[p] === 'asleep') : before;
   const present = [...new Set([...kept, ...listed])].filter((p) => !left.has(p));
-  const yours = location === undefined ? undefined : knownAs(places, location);
-  const mine = (room: string) => norm(room) === norm(location ?? '') || (yours !== undefined && knownAs(places, room) === yours);
   const back = new Set(names(Object.keys(read.stay).filter((n) => read.stay[n] === 'here')).filter(named));
   const zones = moved
     ? []
     : present.flatMap((p) => {
-        const room = rooms.get(p) ?? (back.has(p) ? undefined : scene?.zones?.[p]);
-        return room !== undefined && !mine(room) ? [[p, room] as const] : [];
+        const room = rooms.get(p) ?? (back.has(p) ? undefined : (scene?.zones?.[p] ?? (before.includes(p) ? behind : undefined)));
+        return room !== undefined && !sameRoom(places, room, zone ?? location) ? [[p, room] as const] : [];
       });
   const weather = read.weather === 'unchanged' ? scene?.weather : read.weather === 'none' ? undefined : read.weather;
 
@@ -87,6 +90,7 @@ export function nextScene(
     ...(location !== undefined && { location }),
     present,
     ...(zones.length > 0 && { zones: Object.fromEntries(zones) }),
+    ...(zone !== undefined && { zone }),
     ...(groups.length > 0 && { groups }),
     ...(scene?.time && { time: scene.time }),
     // Schema order, so an unchanged scene compares equal below. The read names no items: a move drops the old place's.

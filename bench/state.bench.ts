@@ -11,12 +11,12 @@ import type { HelperCallLog } from '@core/memory';
 import { indexAssertions } from '@core/memory/assertionIndex';
 import { deriveAssertions } from '@core/memory/assertions';
 import { currentStates } from '@core/memory/looks';
-import { sceneIds } from '@core/memory/names';
+import { sceneIds, withPresence } from '@core/memory/names';
 import { readState, stateAsk, stateCast } from '@core/memory/stateRead';
-import type { Adventure, Entity, Scene } from '@core/model/types';
+import type { Adventure, Scene } from '@core/model/types';
 import { collect } from '@core/ports/provider';
 import * as S from '@core/schema';
-import { turnRead } from '@core/schema/extraction';
+import { type SceneRead, turnRead } from '@core/schema/extraction';
 import { contentClause, withContent } from '@core/text/content';
 import { EXTRACT_SYSTEM } from '@core/text/prompts';
 import { createApproxTokenizer } from '@core/text/tokenizer';
@@ -27,6 +27,7 @@ import { renderTemplate } from '@core/text/templates';
 import { writeMeasurement } from './env';
 import { type GroupRow, groupsAt, scoreGroups } from './groups';
 import { mergedB, parses, type Reply } from './stateReply';
+import { playerRoomOk, withRoomCard } from './zones';
 import { leftRow, leftWanted, onlySpan, pickSet, sceneAt, scoreLeft, scoreRows, type LeftRow, type StateRow } from './stateScore';
 
 // Reads A (scene) and B (state of who is there) replayed over every AI turn of a backup, scored against hand labels.
@@ -85,12 +86,12 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
   const tokenizer = createApproxTokenizer();
   let before = ONLY ? ONLY.from - 1 : 0;
   let scene: Scene = ONLY ? sceneAt(set, before) : { location: set.start, present: [] };
-  const places: Entity[] = ONLY && scene.location ? [mergeEntity(undefined, { name: scene.location, kind: 'place', description: '' }, 0)] : [];
-  let moves = 0;
+  const places = withRoomCard(ONLY && scene.location ? [mergeEntity(undefined, { name: scene.location, kind: 'place', description: '' }, 0)] : []);
+  let [moves, playerRoom] = [0, 0];
   const newPlaces: string[] = [];
   const record: Record<string, Record<string, string>> = {};
   let assertions: Adventure['assertions'] = [];
-  const presence: NonNullable<Adventure['plot']['presence']> = [];
+  let presence: NonNullable<Adventure['plot']['presence']> = [];
   for (let i = 2; i < adv.actions.length; i++) {
     if (adv.actions[i]?.type !== 'continue' || (ONLY && (i < ONLY.from || i > ONLY.to))) continue;
     const n = i + 1;
@@ -112,6 +113,8 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     for (let k = 1; k < REPEAT; k++) samples.push(await readA());
     const left = leftRow(leftWanted(set, before, i), samples);
     before = i;
+    const step = (r: SceneRead) => nextScene(scene, r, (s) => matchEntity(characters, s)?.name, i, places, namedIn(characters, passage), g.group);
+    playerRoom += playerRoomOk(samples, scene, (r) => step(r).scene);
     const read = a.parsed?.scene;
     if (read) {
       // As `introduce` does: an unknown location becomes a place card.
@@ -119,7 +122,7 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
         places.push(mergeEntity(undefined, { name: read.location.trim(), kind: 'place', description: '' }, i));
         newPlaces.push(read.location.trim());
       }
-      const r = nextScene(scene, read, (s) => matchEntity(characters, s)?.name, i, places, namedIn(characters, passage), g.group);
+      const r = step(read);
       if (r.moved) moves++;
       scene = r.scene ?? scene;
     }
@@ -127,7 +130,7 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     // Read B from core, on the adventure as it stood after this turn, with B's own record so far.
     const here = sceneIds(scene, known);
     // As `withScene` keeps it, so the cast prints its witnessed-by clauses.
-    if (presence.at(-1)?.present.toSorted().join() !== here.present.toSorted().join()) presence.push({ at: i, present: here.present });
+    presence = withPresence({ presence }, here, i) ?? presence;
     const work: Adventure = {
       ...adv,
       actions: adv.actions.slice(0, n),
@@ -156,15 +159,13 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
         }
       : q && mergedB(work, subjectsAB, q, a);
     assertions = work.assertions;
-    const ix = indexAssertions(assertions);
-    for (const s of MERGED ? subjectsAB : subjects) record[s.name] = currentStates(ix.of(s.id));
+    for (const s of MERGED ? subjectsAB : subjects) record[s.name] = currentStates(indexAssertions(assertions).of(s.id));
     // The cast block this turn would send: the backup's identities and pins as of now, B's states.
     const out: RenderedSections = new Map();
-    const said = identities.filter((x) => x.at <= i);
     const used = selectStructured(
       {
         ...work,
-        assertions: [...said, ...assertions],
+        assertions: [...identities.filter((x) => x.at <= i), ...assertions],
         // Memories made by now, for the witnessed-by text; the bank itself is off.
         rankedMemories: adv.memories.filter((m) => m.toAction <= n && !m.forgotten).map((memory) => ({ memory, score: 0 })),
         settings: { ...CAST_SETTINGS, contextLength: adv.settings.model.contextLength },
@@ -191,7 +192,7 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     });
     console.log('cast', i, `${structured.tokens} tokens`, `\n${structured.text}`);
     const bLine = b ? `B ${b.ms} ms ${b.stop} ${b.raw} rejected ${JSON.stringify(b.rejected)}` : '';
-    console.log('state', i, `A ${a.ms} ms ${a.stop}`, bLine, '=>', scene.location, '|', scene.present.join(','));
+    console.log('state', i, `A ${a.ms} ms ${a.stop}`, bLine, '=>', scene.location, scene.zone ?? '', '|', scene.present.join(','));
   }
   const mean = (xs: number[]) => (xs.length ? Math.round(xs.reduce((s, x) => s + x, 0) / xs.length) : 0);
   const bs = rows.flatMap((r) => (r.b ? [r.b] : []));
@@ -229,9 +230,10 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     maxStructured: Math.max(0, ...rows.map((r) => r.structured.tokens)),
     maxStructuredThreePresent: Math.max(0, ...rows.filter((r) => r.present.length >= 3).map((r) => r.structured.tokens)),
     ...scoreGroups(rows),
+    playerRoom,
   };
   console.log('state score', JSON.stringify(score));
-  console.log('wrote', writeMeasurement(`state-${LABEL}`, { url, backup, set: SET, sampling: HELPER_JSON_SAMPLING, score, rows }));
+  console.log('wrote', writeMeasurement(`state-${LABEL}`, { url, backup, set: SET, sampling: HELPER_JSON_SAMPLING, score, presence, rows }));
 });
 
 // Read C: the batch call from core at memory cadence (`catchUpEntities`, so a cut reply re-reads), from no cards, so every identity is a new name's (read D).

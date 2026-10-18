@@ -30,11 +30,11 @@ export interface StructuredResult {
 const ids = (es: Entity[]) => new Set(es.map((e) => e.id));
 
 /**
- * Who and what the scene holds: present entities (the location counts as present, so its place gets
- * a line too), then items here or held that are not present. `shown` is the scene in names.
+ * Who and what the scene holds: present entities (the location and your room count as present, so their
+ * places get a line too), then items here or held that are not present. `shown` is the scene in names.
  */
 function sceneCast(scene: Scene | undefined, entities: Entity[], all: readonly Entity[], ix: AssertionIndex) {
-  const refs = [...(scene?.present ?? []), scene?.location ?? ''].filter((n) => n.trim());
+  const refs = [...(scene?.present ?? []), scene?.location ?? '', scene?.zone ?? ''].filter((n) => n.trim());
   const byId = new Map(entities.map((e) => [e.id, e]));
   const here = [...ids(refs.flatMap((n) => byId.get(n) ?? entities.find((e) => named(e, n)) ?? []))].flatMap((i) => byId.get(i) ?? []);
   // Named through every entity: an unconfirmed one present still reads as its name, not its id.
