@@ -3,6 +3,7 @@ import { test } from 'vitest';
 import type { z } from 'zod/mini';
 import { LlamaServerProvider } from '@adapters/providers/llamaServer';
 import { knownAs, matchEntity, mergeEntity } from '@core/memory/entities';
+import { notAName } from '@core/memory/fold';
 import { catchUpEntities } from '@core/memory/batch';
 import { HELPER_JSON_SAMPLING, passageOf, turnReadTokens } from '@core/memory/extract';
 import { grammarOf } from '@core/memory/extractJsonSchema';
@@ -32,10 +33,7 @@ import { leftRow, leftWanted, onlySpan, pickSet, sceneAt, scoreLeft, scoreRows, 
 
 // Reads A (scene) and B (state of who is there) replayed over every AI turn of a backup, scored against hand labels.
 // `pnpm measure state <url> <backup.storyloom.json> [label] [labels-set]`; skipped without both.
-const url = process.env['MEASURE_URL'];
-const backup = process.env['MEASURE_BACKUP'];
-const LABEL = process.env['MEASURE_LABEL'] ?? 'baseline';
-const SET = process.env['MEASURE_LABELS'] ?? 'm12-dogfood';
+const { MEASURE_URL: url, MEASURE_BACKUP: backup, MEASURE_LABEL: LABEL = 'baseline', MEASURE_LABELS: SET = 'm12-dogfood' } = process.env;
 
 const CAST_SETTINGS = { memoryBankEnabled: false, cacheStableLayout: false, evictionChunk: 8 };
 /** `MEASURE_READS=A` skips read B; `C` replays the batch call alone. */
@@ -113,7 +111,9 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     for (let k = 1; k < REPEAT; k++) samples.push(await readA());
     const left = leftRow(leftWanted(set, before, i), samples);
     before = i;
-    const step = (r: SceneRead) => nextScene(scene, r, (s) => matchEntity(characters, s)?.name, i, places, namedIn(characters, passage), g.group);
+    // As `introduce` stores it: the player is never present (M23-2).
+    const who = (s: string) => (notAName(adv, s) ? undefined : matchEntity(characters, s)?.name);
+    const step = (r: SceneRead) => nextScene(scene, r, who, i, places, namedIn(characters, passage), g.group);
     playerRoom += playerRoomOk(samples, scene, (r) => step(r).scene);
     const read = a.parsed?.scene;
     if (read) {
@@ -250,7 +250,8 @@ test.skipIf(!url || !backup || !READS.includes('C'))('batch call over a backup',
     if (!calls.length) break;
     // How far the marker advanced: past the first memory only after a cut.
     const range = { fromAction, toAction: work.scriptState.__entitiesAt ?? 0 };
-    const name = (id: string) => work.entities.find((e) => e.id === id)?.name;
+    // `you` (M23-2: the player's reads are proposals there) stays `you`.
+    const name = (id: string) => work.entities.find((e) => e.id === id)?.name ?? (id === 'you' ? id : undefined);
     const added = work.assertions.filter((a) => !before.has(a.id));
     const identities = added.flatMap((a) => (a.kind === 'identity' ? [{ name: name(a.subject), text: a.text, span: a.span }] : []));
     // M19-5: by name, to label subject swaps by hand.
@@ -274,6 +275,8 @@ test.skipIf(!url || !backup || !READS.includes('C'))('batch call over a backup',
     noDialogue: replies.reduce((s, r) => s + (r.rejected?.filter((x) => x.reason === 'no-dialogue').length ?? 0), 0),
     maxTokens: Math.max(0, ...replies.map((r) => r.tokens ?? 0)),
     cards: work.entities.map((e) => e.name),
+    // M23-2: the player's name read as an entity, proposed on `you` instead of a card.
+    routedToYou: work.assertions.filter((a) => a.subject === 'you' && a.seen === false).length,
     roles: Object.fromEntries(work.entities.map((e) => [e.name, e.roles ?? []])),
     proposals,
     // M18-4: an identity whose species the looks contradict.

@@ -201,6 +201,9 @@ function Actions({ entity: e, adventure, edits }: { entity: Entity; adventure: A
         <Button danger onClick={() => confirm(`Delete ${e.name}? This cannot be undone.`) && edits.delete(e.id)}>
           Delete
         </Button>
+        {e.kind === 'character' && (
+          <Button onClick={() => confirm(`Fold ${e.name} into You. Its lines become proposals on your record.`) && edits.mergeIntoYou(e.id)}>This is me</Button>
+        )}
       </div>
       {others.length > 0 && (
         <div className="flex items-center gap-2">

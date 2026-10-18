@@ -26,7 +26,10 @@ export function uncut(text: string, at = CUT_AT): string {
   return comma > 0 ? t.slice(0, comma) : '';
 }
 
-/** A value of a reply a guard dropped, so every run shows what the guards cost. `entity-dropped`: a fact of an entity the name rules dropped. */
+/**
+ * A value of a reply a guard dropped, so every run shows what the guards cost. `entity-dropped`: a fact of an entity the name
+ * rules dropped; `player`: a fact about the player, proposed on `you` instead.
+ */
 export interface Rejected {
   entity: string;
   value: string;
@@ -35,6 +38,7 @@ export interface Rejected {
     | 'no-shared-word'
     | 'wrong-subject'
     | 'entity-dropped'
+    | 'player'
     | 'look-inferred'
     | 'identity-unnamed'
     | 'unknown-to'

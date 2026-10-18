@@ -3,6 +3,7 @@ import { actionText, newId } from '../model/types';
 import { guessSpeakers } from '../text/speakers';
 import { norm, words } from './names';
 import { MAX_ROLES } from './roles';
+import { playerName } from './you';
 
 export { entityNamedIn, knownAs, matchEntity } from './names';
 
@@ -13,11 +14,12 @@ const isOutput = (a: Action) => a.type === 'continue' || a.type === 'start';
  * reads the turn. Every guessed action gets a label list (`[]` when nobody matched) so it is read
  * once; a retry or version switch clears it. Nothing before the first character exists.
  */
-export function guessUnlabelled({ actions, entities }: Pick<Adventure, 'actions' | 'entities'>): Map<string, Speaker[]> {
-  const cast = entities.filter((e) => e.kind === 'character');
+export function guessUnlabelled(adventure: Pick<Adventure, 'actions' | 'entities' | 'plot'>): Map<string, Speaker[]> {
+  const cast = adventure.entities.filter((e) => e.kind === 'character');
   const out = new Map<string, Speaker[]>();
   if (!cast.length) return out;
-  for (const a of actions) if (a.speakers === undefined && isOutput(a)) out.set(a.id, guessSpeakers(actionText(a), cast));
+  const you = playerName(adventure);
+  for (const a of adventure.actions) if (a.speakers === undefined && isOutput(a)) out.set(a.id, guessSpeakers(actionText(a), cast, {}, you));
   return out;
 }
 

@@ -5,7 +5,7 @@ export { current, eventsOf, identityText, indexAssertions, isCurrent, isLegacy, 
 export { heldBy } from './items';
 export { isComplete, nextQuestions, REQUIRED, statusOf, type SheetKey } from './sheet';
 export { isSpeciesClash, swapWord } from './species';
-export { isYouLine, YOU } from './you';
+export { isYouLine, playerName, YOU } from './you';
 export { defaultKnownBy, newSecret, repointSecrets, secretsOf } from './secrets';
 export { roomsOf, sceneIds, sceneNames, withPresence } from './names';
 export type { MaintenanceDeps } from './memoryJobs';

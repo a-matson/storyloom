@@ -4,6 +4,7 @@ import { newId, type Entity } from '@core/model';
 import type { GameSession } from './session';
 
 const ABOUT_YOU = /^(?:you|your|yours|yourself|i|i'm|my|me)\b/i;
+const MY_NAME = /^(?:I am|I'm|[Yy]ou are) (\p{Lu}\p{Ll}+(?: \p{Lu}\p{Ll}+)?)\.?$/u;
 
 /**
  * `/correct …`: a pinned player fact on the entity the text names (pinned facts lead the facts
@@ -17,11 +18,14 @@ export async function correct(host: GameSession, text: string): Promise<void> {
   if (!jobs || host.getSnapshot().busy) return;
   // A correction that opens on the player ("You are…", "I am…") is about the player, whoever else it names.
   const e = ABOUT_YOU.test(t) ? { id: YOU, name: 'you' } : jobs.entityNamedIn(host.adv.entities, t);
+  // "I am Rowan": just a name is the player's name, when they have none yet.
+  const name = host.adv.plot.thirdPerson?.name.trim() ? undefined : MY_NAME.exec(t)?.[1];
   host.mutate((log, adv) => {
     if (e) adv.assertions = [...adv.assertions, { ...byPlayer(e.id, log.actions.length, { kind: 'trait', text: t }), pinned: true }];
     else adv.plot = { ...adv.plot, plotEssentials: [adv.plot.plotEssentials, t].filter(Boolean).join('\n') };
+    if (name) adv.plot = { ...adv.plot, thirdPerson: { enabled: adv.plot.thirdPerson?.enabled ?? false, name } };
   });
-  host.emit({ notice: e ? `Pinned to ${e.name}` : 'Added to Plot Essentials' });
+  host.emit({ notice: `${e ? `Pinned to ${e.name}` : 'Added to Plot Essentials'}${name ? `; your name is ${name}` : ''}` });
 }
 
 /** Story text the player selected, pinned as a fact about `entityId`; the selection is its evidence in that action. */

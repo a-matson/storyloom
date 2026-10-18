@@ -13,6 +13,7 @@ import { causeIn, endsCurrent, grounded } from './grounding';
 import { heldBy, holderOf, YOU } from './items';
 import { currentStates, valueOf } from './looks';
 import { castLabels, norm } from './names';
+import { playerName } from './you';
 
 /** Actions the state read reads: the last AI output and the player line before it. [measured: 2026-10-13-state-probe-m12-dogfood P8b] */
 const STATE_SPAN = 2;
@@ -21,7 +22,12 @@ const TOKENS_EACH = 40;
 const TOKENS_CAP = 160;
 
 type Subject = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'roles' | 'canon' | 'cardId' | 'canonKeys'>;
-const PLAYER: Subject = { id: YOU, kind: 'character', name: YOU, aliases: ['your', 'yourself'] };
+/** The player, also by their name: "Rowan kneels" is theirs, not `wrong-subject`. */
+const playerOf = (adventure: Adventure): Subject => {
+  const name = playerName(adventure);
+  return { id: YOU, kind: 'character', name: YOU, aliases: ['your', 'yourself', ...(name ? [name] : [])] };
+};
+const isYou = (s: Subject) => s.id === YOU;
 
 export type StateReject = 'at-range' | 'wrong-subject' | 'cut' | 'unchanged' | 'unknown-item' | 'ungrounded';
 export interface StateUpdate {
@@ -47,7 +53,7 @@ export function stateCast(adventure: Adventure): Subject[] {
   // Characters of one name go by their labels; two items of one name share an enum value, and the first wins.
   const label = labelOf(adventure);
   const cast = [...new Map(here.map((e) => [label(e), e])).values()];
-  return cast.length ? [...cast, PLAYER] : [];
+  return cast.length ? [...cast, playerOf(adventure)] : [];
 }
 
 /** A subject's enum value: its name, or its label when another character shares it (`castLabels`). */
@@ -125,7 +131,7 @@ export function applyChanges(adventure: Adventure, cast: readonly Subject[], cha
     const at: Rest = { at: c.at, basis: isPlayerLine(action) ? 'player' : 'stated' };
     const now = c.now.trim();
     const held = knownAs(items(adventure), now);
-    if (c.key === 'holds') write(adventure, held ?? s, { holder: s === PLAYER ? YOU : s.name }, at, out);
+    if (c.key === 'holds') write(adventure, held ?? s, { holder: isYou(s) ? YOU : s.name }, at, out);
     else if (!grounded(now, read) && !endsCurrent(c.key, now, currentStates(indexAssertions(adventure.assertions).of(s.id))[c.key])) {
       propose(adventure, s, c.key, now, c.at);
       out.rejected.push({ value: `${c.who} ${c.key}: ${c.now}`, reason: 'ungrounded' });
@@ -148,7 +154,7 @@ const items = (adventure: Adventure) => adventure.entities.filter((e) => e.kind 
 
 /** Why an entry in range is dropped: its action names another of the cast and not it, the grammar cut it, or it says what the record already holds. */
 function rejectOf(adventure: Adventure, cast: readonly Subject[], s: Subject, c: StateChange, text: string): StateReject | undefined {
-  if (!named(s, text) && cast.some((o) => o !== s && o !== PLAYER && named(o, text))) return 'wrong-subject';
+  if (!named(s, text) && cast.some((o) => o !== s && !isYou(o) && named(o, text))) return 'wrong-subject';
   if (isCut(c.now)) return 'cut';
   const now = c.now.trim();
   const ix = indexAssertions(adventure.assertions);
@@ -156,7 +162,7 @@ function rejectOf(adventure: Adventure, cast: readonly Subject[], s: Subject, c:
     const held = knownAs(items(adventure), now);
     if (s.kind === 'item') return 'wrong-subject';
     if (!held) return 'unknown-item';
-    return norm(holderOf(ix, held) ?? '') === norm(s === PLAYER ? YOU : s.name) ? 'unchanged' : undefined;
+    return norm(holderOf(ix, held) ?? '') === norm(isYou(s) ? YOU : s.name) ? 'unchanged' : undefined;
   }
   const was = currentStates(ix.of(s.id))[c.key];
   return !now || (was !== undefined && within(now, was)) ? 'unchanged' : undefined;

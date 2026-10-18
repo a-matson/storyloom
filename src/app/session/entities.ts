@@ -1,6 +1,6 @@
 // Only start-up members of the barrel: importing a lazy one splits it out of the start-up chunk.
 import { loadImagePrompt } from '@core/image';
-import { indexAssertions, loadMemoryJobs, repointSecrets, withLooks } from '@core/memory';
+import { indexAssertions, loadMemoryJobs, repointSecrets, withLooks, YOU } from '@core/memory';
 import { newId, type Adventure, type Entity } from '@core/model';
 import { cropSquare, downscale } from '../image';
 import { withoutReference } from './seeRender';
@@ -19,6 +19,33 @@ function repointScene(adv: Adventure, from: string, to: string): void {
   if (!s || (s.location !== from && !s.present.includes(from))) return;
   const swap = (r: string) => (r === from ? to : r);
   adv.plot = { ...adv.plot, scene: { ...s, ...(s.location !== undefined && { location: swap(s.location) }), present: [...new Set(s.present.map(swap))] } };
+}
+
+/**
+ * "This is me": the card was the player all along. Its lines move to `you` (the story's as proposals, states
+ * stay), what pointed at it points at you, the card goes, and its name becomes the player's if none is set.
+ */
+function mergeIntoYou(host: GameSession, id: string): void {
+  const old = host.adv.entities.find((e) => e.id === id);
+  host.mutate((_, adv) => {
+    const e = adv.entities.find((x) => x.id === id);
+    if (!e) return;
+    const names = new Set([e.id, e.name, ...e.aliases].map((n) => n.toLowerCase()));
+    adv.assertions = adv.assertions.map((a) => {
+      if (a.subject === id) return { ...a, subject: YOU, ...(a.producer !== 'player' && a.kind !== 'state' && { seen: false }) };
+      if (a.kind === 'state' && a.key === 'holder' && names.has(a.value.toLowerCase())) return { ...a, value: YOU };
+      if (a.kind === 'relationship' && names.has(a.to.toLowerCase())) return { ...a, to: YOU };
+      return a;
+    });
+    repointSecrets(adv, id, YOU);
+    repointGates(adv, id);
+    // The player is never in `present`.
+    const s = adv.plot.scene;
+    if (s) adv.plot = { ...adv.plot, scene: { ...s, present: s.present.filter((p) => !names.has(p.toLowerCase())) } };
+    if (!adv.plot.thirdPerson?.name.trim()) adv.plot = { ...adv.plot, thirdPerson: { enabled: adv.plot.thirdPerson?.enabled ?? false, name: e.name } };
+    adv.entities = adv.entities.filter((x) => x !== e);
+  });
+  for (const blob of [old?.portraitId, old?.sheetImageId]) if (blob !== undefined) dropPortrait(host, blob);
 }
 
 /**
@@ -97,6 +124,7 @@ export function entityEdits(host: GameSession) {
           if (b !== undefined && b !== merged.portraitId && b !== merged.sheetImageId) dropPortrait(host, b);
       });
     },
+    mergeIntoYou: (id: string) => mergeIntoYou(host, id),
     /** A real story card from the projection; `cardId` stops the projection so the text is not in the prompt twice. */
     promote: async (id: string) => {
       const { projectEntity } = await loadMemoryJobs();

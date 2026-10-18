@@ -107,7 +107,8 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps, edited?
     // ponytail: a namesake's label resolves to its name, and the scene stores names, so two namesakes share a presence; store ids if that bites.
     const e = matchEntity(adventure.entities, s) ?? (s.includes('(') ? knownAs(adventure.entities, s, indexAssertions(adventure.assertions)) : undefined);
     const stored = e ? (e.kind === 'character' ? e.name : undefined) : s;
-    return stored === undefined || notAName(adventure.plot, stored) ? undefined : stored;
+    // The player is never present: their own name read as a card was then read as left.
+    return stored === undefined || notAName(adventure, stored) ? undefined : stored;
   };
   const scene = sceneEachTurn ? reply.scene : undefined;
   if (scene && notePlace(adventure, scene.location, n - 1)) touched++;
