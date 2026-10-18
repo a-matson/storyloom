@@ -7,6 +7,7 @@ const muted = 'text-muted-foreground';
 const mono = 'font-mono text-caption';
 
 function SectionRow({ s, result }: { s: ContextSection; result: ContextBuildResult }) {
+  const cut = result.redactions.filter((r) => r.section === s.kind).length;
   return (
     <div className="flex items-center gap-2 rounded-md border border-border bg-bar px-3 py-2">
       <span className={`size-2 rounded-[2px] ${SECTION_BG[s.kind]}`} />
@@ -21,6 +22,7 @@ function SectionRow({ s, result }: { s: ContextSection; result: ContextBuildResu
         {s.kind === 'storyCards' && <span className={muted}> · {result.triggeredCards.length} triggered</span>}
         {s.kind === 'memories' && <span className={muted}> · {result.usedMemories.length} retrieved</span>}
         {s.kind === 'cast' && <span className={muted}> · {result.usedFacts.length} facts</span>}
+        {cut > 0 && <span className={muted}> · {cut} cut</span>}
       </span>
       {s.cacheable && <Pill tone="auto">cached prefix</Pill>}
       {s.trimmed && <Pill>trimmed</Pill>}
@@ -95,6 +97,16 @@ export function BudgetView({ result }: { result: ContextBuildResult }) {
                 actions {m.fromAction + 1}–{m.toAction}
               </span>{' '}
               {m.text}
+            </div>
+          ))}
+        </div>
+      )}
+      {result.redactions.length > 0 && (
+        <div className="flex flex-col gap-1" data-testid="redactions">
+          <SectionLabel>Redacted</SectionLabel>
+          {result.redactions.map((r) => (
+            <div key={`${r.secretId}-${r.section}-${r.text}`} className="text-caption text-prose">
+              <span className={`${mono} ${muted}`}>{SECTION_LABEL[r.section]}</span> {r.text}
             </div>
           ))}
         </div>

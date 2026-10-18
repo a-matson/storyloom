@@ -1,6 +1,6 @@
 import { lineEdits } from '@app/session/lines';
 import { secretEdits } from '@app/session/secret';
-import { secretsOf, YOU } from '@core/memory';
+import { andList, secretsOf, YOU } from '@core/memory';
 import type { Adventure, Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Section } from '../sidebar/Section';
@@ -39,6 +39,13 @@ export function KnownBy({
 
 export const charactersOf = (adventure: Adventure) => adventure.entities.filter((e) => e.kind === 'character');
 
+/** What the prompt does with a secret, and for whom: every character not ticked. */
+export function HiddenFrom({ cast, knownBy }: { cast: readonly Entity[]; knownBy: readonly string[] }) {
+  const outsiders = cast.filter((e) => !knownBy.includes(e.id)).map((e) => e.name);
+  const who = outsiders.length ? `${andList(outsiders)} ${outsiders.length > 1 ? 'are' : 'is'}` : 'anyone else is';
+  return <p className="m-0 text-caption text-muted-foreground">While {who} there, the story is not told this action's words or any line that repeats them.</p>;
+}
+
 /** The player's secrets: the gist, who knows it, and delete. Marked from a Do/Say's "Secret". */
 export function SecretsList({ adventure, api }: { adventure: Adventure; api: GameApi }) {
   const secrets = secretsOf(adventure.assertions);
@@ -61,6 +68,7 @@ export function SecretsList({ adventure, api }: { adventure: Adventure; api: Gam
             />
           </ul>
           <KnownBy cast={cast} knownBy={s.knownBy.filter((k) => k !== YOU)} label={`Who knows: ${s.text}`} onChange={(ids) => edits.setKnownBy(s.id, ids)} />
+          <HiddenFrom cast={cast} knownBy={s.knownBy} />
         </div>
       ))}
     </Section>
