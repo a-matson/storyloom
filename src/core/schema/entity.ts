@@ -54,8 +54,8 @@ export const Entity = z.object({
   portraitBasis: z.optional(z.string()),
   /** A See action's `imageId` the player chose as this character's reference; dropped with that blob. */
   referenceImageId: z.optional(z.string()),
-  /** The appearance tags frozen when the reference was set: later See prompts repeat them verbatim. */
-  look: z.optional(z.string()),
+  /** The looks by key frozen when the reference was set: later See prompts repeat them. A string is one frozen before M29-9. */
+  look: z.optional(z.union([z.string(), z.record(z.string(), z.string())])),
   /** The builder's final sheet: owned like `portraitId`, replaced on a rebuild, dropped with the entity. */
   sheetImageId: z.optional(z.string()),
   cardId: z.optional(z.string()),

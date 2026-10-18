@@ -82,7 +82,7 @@ describe('roundSheet', () => {
     expect(calls[0]).toMatchObject({ steps: s.steps, seed: seedOf(fox.id), hires: { scale: s.hiresScale, denoise: s.hiresDenoise } });
     const e = () => session.adv.entities[0]!;
     const first = e().sheetImageId;
-    expect(e().look).toContain('white mohawk');
+    expect(e().look).toMatchObject({ hair: 'white mohawk' });
     expect(e().portraitBasis).toBeDefined();
     expect(images.has(`${session.adv.id}|${first}`)).toBe(true);
     await finish(session, fox.id, []);

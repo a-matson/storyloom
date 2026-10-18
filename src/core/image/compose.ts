@@ -4,6 +4,7 @@ import { YOU } from '../memory/you';
 import { seedOf } from '../trace';
 import type { SheetFamily } from './sheet';
 import { stateTags } from './stateTags';
+import { tag } from '../memory/looks';
 import { countTag, lookTags, placeTag, tags } from './tags';
 import { type Frame, frameOf, inFrame } from './framing';
 import { saysYou, viewOf } from './view';
@@ -90,10 +91,28 @@ function noun(e: Character): string {
 }
 
 const looks = (e: Character, full: boolean) => [noun(e), full ? (e.appearance ?? '') : ''].filter(Boolean).join(', ');
-/** A character's current look without their name, from what the story says: what a new reference freezes. */
-export const looksOf = (e: Character): string => looks(e, true);
-/** What a See repeats for them: the frozen look when the player set a reference, else `looksOf`. */
-export const lookFor = (e: Character): string => e.look ?? looks(e, true);
+/** A character's current looks by key, without their name: what a new reference freezes. With no keyed look, the old free text as `legacy`. */
+export const looksOf = (e: Character): Record<string, string> => (e.looks && Object.keys(e.looks).length > 0 ? { ...e.looks } : { legacy: looks(e, true) });
+/** A frozen look by key; a string one (frozen before M29-9) is one `legacy` run. */
+export const lookKeys = (look: NonNullable<Entity['look']>): Record<string, string> => (typeof look === 'string' ? { legacy: look } : look);
+/** What the helper model reads for them: the frozen look when the player set a reference, else the noun and the story's looks. */
+export function lookFor(e: Character): string {
+  if (e.look === undefined) return looks(e, true);
+  const l = lookKeys(e.look);
+  if (l['legacy'] !== undefined && Object.keys(l).length === 1) return l['legacy'];
+  return tags([noun(e), ...Object.entries(l).map(([k, v]) => (k === 'legacy' ? v : tag(k, v)))]);
+}
+
+/** Which looks stay as the budget tightens: what the body is and its colours first, marks last; other keys after these. [provisional] */
+const KEY_PRIORITY = ['species', 'body', 'skin', 'scales', 'palette', 'hair', 'horns', 'eyes', 'build', 'face', 'wearing', 'marks', 'accessories'];
+const rank = (k: string) => (k === 'legacy' ? Infinity : KEY_PRIORITY.includes(k) ? KEY_PRIORITY.indexOf(k) : KEY_PRIORITY.length);
+/** The `keep` most telling looks; `legacy` is one run, kept last. */
+const topKeys = (l: Readonly<Record<string, string>>, keep: number): Record<string, string> =>
+  Object.fromEntries(
+    Object.entries(l)
+      .toSorted(([a], [b]) => rank(a) - rank(b))
+      .slice(0, keep),
+  );
 
 /** One character with a frozen look keeps their face across Sees; a fixed seed for any other cast would only repeat the layout. [provisional] */
 export const seedFor = (cast: readonly Character[]): number | undefined => {
@@ -106,18 +125,20 @@ const BODY_COLOUR = ['skin', 'scales'];
 const saysItAll = (l: Readonly<Record<string, string>>) => Boolean(l['species']?.trim()) && BODY_COLOUR.some((k) => l[k]?.trim());
 
 /**
- * One character in the subject block: the frozen look verbatim, else the noun and the looks as tags; with `full` off, the noun.
+ * One character in the subject block: the noun and the `keep` most telling looks in frame as tags (the frozen ones
+ * when the player set a reference); with `keep` 0, the noun. A legacy free-text look is one run, sent whole in any frame.
  * With `parts`, the body parts their identity names join the looks (a look of the same key wins).
  */
-function subject(e: Character, full: boolean, family: SheetFamily, keys: Frame['keys'], parts: boolean): string {
+function subject(e: Character, keep: number, family: SheetFamily, keys: Frame['keys'], parts: boolean): string {
+  const own = e.look !== undefined ? lookKeys(e.look) : e.looks;
   const named = parts ? Object.fromEntries(visibleFrom(e.description).map((w) => [w, w])) : {};
-  const shows = inFrame({ ...named, ...e.looks }, keys);
-  if (e.id === YOU) return tags(['pov', full ? lookTags(shows, family) : '']);
-  if (!full || e.kind !== 'character') return noun(e);
-  // ponytail: a frozen string look is not cut to the frame; M29-9 makes it per key.
-  if (e.look !== undefined) return e.look;
-  if (!e.looks || Object.keys(e.looks).length === 0) return looks(e, true);
-  return tags([saysItAll(e.looks) ? '' : noun(e), lookTags(shows, family)]);
+  const framed = { ...inFrame({ ...named, ...own }, keys), ...(own?.['legacy'] !== undefined && { legacy: own['legacy'] }) };
+  const { legacy, ...shows } = topKeys(framed, keep);
+  if (e.id === YOU) return tags(['pov', lookTags(shows, family)]);
+  if (keep === 0 || e.kind !== 'character') return noun(e);
+  if (!own || Object.keys(own).length === 0) return looks(e, true);
+  if (legacy !== undefined && Object.keys(shows).length === 0) return legacy;
+  return tags([saysItAll(own) ? '' : noun(e), lookTags(shows, family), legacy]);
 }
 
 export interface ComposeInput {
@@ -145,7 +166,8 @@ function placeIn(location: string | undefined, entities: readonly Character[]): 
 /**
  * `framing, count, subject (each shown character's looks in frame), state, view, brief (names → nouns), location, weather, style`.
  * Looks never enter the brief: spliced in, their last tag fused with the verb after it. Over budget it
- * drops, in order: the body parts named only in identities, the second character's looks, the state, the weather, the first character's looks, then cuts at a comma.
+ * drops, in order: the body parts named only in identities, the second character's looks, the state, the weather, the first character's looks one key
+ * at a time (`KEY_PRIORITY` from the end), then cuts at a comma.
  */
 export function composeSeePrompt(input: ComposeInput): { prompt: string; entityIds: string[]; seed?: number; blocks: Blocks } {
   const { brief, scene, entities, style, family } = input;
@@ -163,22 +185,26 @@ export function composeSeePrompt(input: ComposeInput): { prompt: string; entityI
   // Out of frame, a posture or a held sword only pulls the camera back.
   const states = frame?.states ?? 'all';
   const state = tags(people.map((e) => stateTags(inFrame(e.states ?? {}, states), states === 'all' ? held(e) : [], family, brief)));
-  const build = (full: readonly boolean[], withState: boolean, weather: boolean, parts = false): Blocks => ({
-    subject: tags([frame?.tag, countTag(people.length, family), ...shown.map((e, i) => subject(e, full[i] ?? false, family, keys, parts))]),
+  const build = (keep: readonly number[], withState: boolean, weather: boolean, parts = false): Blocks => ({
+    subject: tags([frame?.tag, countTag(people.length, family), ...shown.map((e, i) => subject(e, keep[i] ?? 0, family, keys, parts))]),
     state: withState ? state : '',
     story: tags([...view.tags, story]),
     scene: tags([placeIn(scene?.location, entities), weather ? scene?.weather : '']),
     style: tags([style]),
   });
-  const last = build([false, false], false, false);
+  const all = Infinity;
+  const first = shown[0];
+  const n = Object.keys((first?.look !== undefined ? lookKeys(first.look) : first?.looks) ?? {}).length;
+  const fewer = Array.from({ length: n }, (_, i) => build([n - 1 - i, 0], false, false));
   const blocks =
     [
-      build([true, true], true, true, true),
-      build([true, true], true, true),
-      build([true, false], true, true),
-      build([true, false], false, true),
-      build([true, false], false, false),
-    ].find((b) => joined(b).length <= PROMPT_BUDGET) ?? last;
+      build([all, all], true, true, true),
+      build([all, all], true, true),
+      build([all, 0], true, true),
+      build([all, 0], false, true),
+      build([all, 0], false, false),
+      ...fewer,
+    ].find((b) => joined(b).length <= PROMPT_BUDGET) ?? build([0, 0], false, false);
   const seed = seedFor(people);
   return { prompt: cut(joined(blocks)), entityIds: shown.map((e) => e.id), ...(seed !== undefined && { seed }), blocks };
 }
