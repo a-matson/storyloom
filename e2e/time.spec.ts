@@ -30,3 +30,26 @@ test('/time and /travel set the scene without an action; the next prompt carries
   await context.getByRole('button', { name: 'Raw prompt' }).click();
   await expect(context).toContainText('[Scene: The Docks · Day 2, evening · Present: Merav');
 });
+
+test('/travel to a room of this place sets your room; alone, the company stays behind', async ({ page }) => {
+  await openSeededAdventure(page, 3, undefined, {
+    scene: { location: 'Old Well', present: ['Merav'] },
+    entities: [{ id: 'ent_cellar', kind: 'place', name: 'the cellar', partOf: 'ent_well' }],
+  });
+  const input = page.getByRole('textbox', { name: 'Take a turn' });
+  await input.fill('/travel the cellar alone');
+  await input.press('Enter');
+  await expect(page.getByText('Travelled to the cellar, alone')).toBeVisible();
+
+  await page.getByRole('button', { name: /^World/ }).click();
+  await expect(page.getByRole('textbox', { name: 'Scene location' })).toHaveValue('Old Well');
+  await expect(page.getByText('You: the cellar', { exact: true })).toBeVisible();
+  await expect(page.getByText('Old Well · You: the cellar · In Old Well: Merav')).toBeVisible();
+
+  await input.fill('look around');
+  await page.getByRole('button', { name: 'Send' }).click();
+  await page.getByRole('button', { name: 'View context' }).last().click();
+  const context = page.getByRole('dialog', { name: 'Context sent to the model' });
+  await context.getByRole('button', { name: 'Raw prompt' }).click();
+  await expect(context).toContainText('[Scene: Old Well · You: the cellar · In Old Well: Merav]');
+});

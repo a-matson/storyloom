@@ -73,4 +73,18 @@ describe('travel', () => {
     expect(p.scene).toEqual({ location: 'the old road', present: [], time: evening, since: 5 });
     expect(p.presence?.at(-1)).toEqual({ at: 5, present: [] });
   });
+
+  it('to a room of this place sets zone, not a move; alone leaves the company in your old room', () => {
+    const mill = mergeEntity(undefined, { name: 'the mill', kind: 'place', description: '' }, 0);
+    const loft = { ...mergeEntity(undefined, { name: 'the loft', kind: 'place', description: '' }, 0), partOf: mill.id };
+    const at = { ...plot, scene: { location: mill.id, present: ['ent_lena'], time: evening, since: 2 } };
+    const p = travel(at, [mill, loft, docks], 'loft', 5, false);
+    expect(p.scene).toEqual({ ...at.scene, zone: 'the loft' });
+    expect(p.sceneLog).toBeUndefined();
+    expect(p.presence).toBe(plot.presence);
+    const alone = travel(at, [mill, loft], 'the loft', 5, true);
+    expect(alone.scene).toEqual({ ...at.scene, zones: { ent_lena: 'the mill' }, zone: 'the loft' });
+    expect(alone.presence?.at(-1)).toEqual({ at: 5, present: [] });
+    expect(travel(alone, [mill, loft, docks], 'the docks', 6, false).scene).toEqual({ location: docks.id, present: ['ent_lena'], time: evening, since: 6 });
+  });
 });

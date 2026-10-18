@@ -74,8 +74,15 @@ export function SceneFields({
         className="text-control"
         placeholder="Where the story is"
         defaultValue={scene.location ?? ''}
-        onBlur={(e) => set({ location: e.target.value })}
+        onBlur={(e) => {
+          if (e.target.value === (scene.location ?? '')) return;
+          // A new location leaves your room behind.
+          const { zone: _, ...rest } = scene;
+          api.updatePlot({ scene: sceneIds({ ...rest, location: e.target.value }, entities) });
+        }}
       />
+      {/* Set by a read or `/travel <room>`; no field of its own. */}
+      {scene.zone && <p className="text-muted-foreground text-xs">You: {scene.zone}</p>}
       <Input
         key={scene.present.join(',')}
         aria-label="Present"

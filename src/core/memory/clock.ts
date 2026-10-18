@@ -1,6 +1,6 @@
 import type { Entity, PlotComponents, Scene } from '../model/types';
 import { DayPart } from '../schema/adventure';
-import { knownAs, sceneIds, withPresence } from './names';
+import { knownAs, outermost, sameRoom, sceneIds, sceneNames, withPresence } from './names';
 import { SCENE_LOG_CAP } from './scene';
 
 // The player's clock (M21-2): commands set `scene.time`, no read writes it, the model is only told.
@@ -62,13 +62,28 @@ export function parseTravel(text: string): { place: string; alone: boolean } | u
   return place && place.toLowerCase() !== 'alone' ? { place, alone: /\salone$/i.test(text.trim()) } : undefined;
 }
 
-/** `plot` moved to `place` from action `at`: a known place by id (as `sceneIds`), else as written; logged like a read's move. */
+/**
+ * `plot` moved to `place` from action `at`: a known place by id (as `sceneIds`), else as written; logged like a read's move.
+ * A room of the current place (or the place itself) only sets your `zone`: no move, and alone the company stays in the room you left.
+ */
 export function travel(plot: PlotComponents, entities: readonly Entity[], place: string, at: number, alone: boolean): PlotComponents {
-  const name = knownAs(
-    entities.filter((e) => e.kind === 'place'),
-    place,
-  )?.name;
+  const places = entities.filter((e) => e.kind === 'place');
+  const to = knownAs(places, place);
+  const name = to?.name;
   const was = plot.scene;
+  const top = outermost(places, to);
+  if (was?.location !== undefined && top && top === outermost(places, places.find((p) => p.id === was.location) ?? knownAs(places, was.location))) {
+    const named = sceneNames(was, entities);
+    const zone = to === top ? undefined : to?.name;
+    const zones = was.present.flatMap((p) => {
+      const room = was.zones?.[p] ?? (alone && zone !== named.zone ? (named.zone ?? named.location) : undefined);
+      return room !== undefined && !sameRoom(places, room, zone ?? named.location) ? [[p, room] as const] : [];
+    });
+    const { zones: _zones, zone: _zone, ...rest } = was;
+    const scene = { ...rest, location: top.id, ...(zones.length > 0 && { zones: Object.fromEntries(zones) }), ...(zone !== undefined && { zone }) };
+    const presence = withPresence(plot, scene, at);
+    return { ...plot, scene, ...(presence && { presence }) };
+  }
   const scene = sceneIds(
     {
       location: name ?? place,

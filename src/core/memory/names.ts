@@ -121,6 +121,12 @@ export function outermost(places: readonly Entity[], e: Entity | undefined): Ent
   return p;
 }
 
+/** Whether `room` is `yours` (your room, else the location): the same words or the same place card. */
+export function sameRoom(places: readonly Entity[], room: string, yours: string | undefined): boolean {
+  const p = yours === undefined ? undefined : knownAs(places, yours);
+  return norm(room) === norm(yours ?? '') || (p !== undefined && knownAs(places, room) === p);
+}
+
 /** The other places inside `here`'s outermost place, by name: the rooms someone can go to without leaving. */
 export function roomsOf(places: readonly Entity[], here: Entity | undefined): string[] {
   const top = outermost(places, here);
