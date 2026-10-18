@@ -10,7 +10,7 @@ export const LOOK_KEYS = ['species', 'build', 'eyes', 'hair', 'horns', 'scales',
  * only `LOOK_KEYS` values writes the same appearance (and portrait hash) as before. [provisional]
  */
 export const SHEET_KEYS = ['species', 'build', 'skin', 'eyes', 'hair', 'face', 'horns', 'scales', 'marks', 'wearing', 'accessories', 'palette'] as const;
-const STATES = new Set(['wearing', 'accessories']);
+const STATES = new Set(['wearing']);
 
 /** An item is held (`holder`) or at a place (`location`), never both: a value for one ends the other. */
 export const rivalKey = (kind: Entity['kind'], key: string): string | undefined =>
@@ -47,7 +47,10 @@ export const withLooks = <E extends Entity>(e: E, as: readonly Assertion[]): E &
   appearance: appearanceOf(as),
 });
 
-/** `wearing` and `accessories` change scene to scene, so they are states, not looks; `legacy` is the old free-text look. */
+/**
+ * `wearing` changes scene to scene, so it is a state, not a look; `accessories` are who the character is, so a look
+ * (an old `state` row keyed `accessories` reads as one by key). `legacy` is the old free-text look.
+ */
 export const isLook = (key: string): boolean => key === 'legacy' || (!STATES.has(key) && (SHEET_KEYS as readonly string[]).includes(key));
 
 type Origin = 'id' | 'subject' | 'producer' | 'at' | 'paragraph' | 'span' | 'basis' | 'since' | 'until' | 'pinned' | 'seen';
