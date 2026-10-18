@@ -28,18 +28,18 @@ export const familyOf = (model: string | undefined, width: number, height: numbe
   /xl|pony|noob|illustrious/i.test(model ?? '') || width * height >= 768 * 768 ? 'sdxl' : 'sd15';
 
 /** Frame and the stated keys, nothing else: no name, identity, facts or style. A skipped key adds nothing. */
-export function sheetPrompt(own: readonly Assertion[], skipped: readonly string[], weight = 1): string {
+export function sheetPrompt(own: readonly Assertion[], skipped: readonly string[], weight = 1, budget = PROMPT_BUDGET): string {
   const now = currentStates(own);
   // Brackets in a player's value would read as SD weights.
   const value = (k: string) => (now[k] ?? '').replace(/[()[\]]/g, '').trim();
   const part = (k: string) => (WEIGHTED.has(k) && weight !== 1 ? `(${tag(k, value(k))}:${weight})` : tag(k, value(k)));
   const text = (keys: string[]) => [SHEET_FRAME, ...keys.map(part)].join(', ');
   let keys = ORDER.filter((k) => !skipped.includes(k) && value(k) !== '');
-  while (text(keys).length > PROMPT_BUDGET) {
+  while (text(keys).length > budget) {
     const i = keys.findLastIndex((k) => !KEEP.has(k));
     if (i < 0) break;
     keys = keys.toSpliced(i, 1);
   }
   // ponytail: the kept keys alone can still be too long; the cut may end mid-weight, which SD reads as a plain weight.
-  return text(keys).slice(0, PROMPT_BUDGET);
+  return text(keys).slice(0, budget);
 }

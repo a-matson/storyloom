@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { composeSeePrompt, PROMPT_BUDGET } from '@core/image/compose';
+import { budgetFor, composeSeePrompt } from '@core/image/compose';
 import { bodyFromLine, visibleFrom } from '@core/memory/bodyPlan';
 import { foldEntities } from '@core/memory/fold';
 import { currentStates } from '@core/memory/looks';
@@ -72,7 +72,7 @@ describe('composeSeePrompt body plan', () => {
 
   it('drops visible words first over budget', () => {
     const base = see('Goldarok roars').prompt;
-    const { blocks } = see(`Goldarok roars ${'x'.repeat(PROMPT_BUDGET - base.length + 5)}`);
+    const { blocks } = see(`Goldarok roars ${'x'.repeat(budgetFor('sdxl') - base.length + 5)}`);
     expect(blocks.subject).toBe('solo, feral, quadruped, dragon, gold scales');
   });
 });

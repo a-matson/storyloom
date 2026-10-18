@@ -2,7 +2,7 @@ import { blobIdsOf, chosen, familyOf, loadImagePrompt, rendersOf } from '@core/i
 import { heldBy, indexAssertions, sceneNames, withLooks } from '@core/memory';
 import type { Action, Entity } from '@core/model';
 import { storyModel } from './helperModel';
-import { portraitStyle } from './portraitPrompt';
+import { styleOf } from './portraitPrompt';
 import { drop, generate, message, type Image, type SeeHost } from './seeRender';
 
 /** `/raw <prompt>` sends the text as it is, skipping composition. */
@@ -36,7 +36,7 @@ async function composed(host: SeeHost, brief: string): Promise<Composed | undefi
       plotEssentials: adv.plot.plotEssentials,
       scene: adv.plot.scene && sceneNames(adv.plot.scene, adv.entities),
       entities: adv.entities.map((e) => ({ ...withLooks(e, ix.of(e.id), from), holds: holds(e) })),
-      style: adv.settings.image.portraitStyle ?? portraitStyle(adv.tags),
+      style: styleOf(adv.settings.image, adv.tags),
       family: familyOf(adv.settings.image.model, adv.settings.image.width, adv.settings.image.height),
     };
     const { prompt, entityIds, seed } = await seePrompt(req, async () => storyModel(host));

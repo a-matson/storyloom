@@ -25,6 +25,10 @@ export function portraitStyle(tags: readonly string[]): string {
   return GENRE_STYLE.find(([re]) => tags.some((t) => re.test(t)))?.[1] ?? NEUTRAL_STYLE;
 }
 
+/** The player's style, else none under a recipe prefix (the prefix is the style), else the tags' genre style. */
+export const styleOf = (s: { portraitStyle?: string | undefined; promptPrefix?: string | undefined }, tags: readonly string[]): string =>
+  s.portraitStyle ?? (s.promptPrefix?.trim() ? '' : portraitStyle(tags));
+
 /** Who the portrait shows, without the style: a style change alone does not make a portrait stale. */
 export function portraitBasis(e: Pick<Entity, 'canon' | 'cardId' | 'description'>, as: readonly Assertion[]): string {
   // Looks and states are in `appearanceOf` or not looks at all; `looked:` is the old, replaced looks.
