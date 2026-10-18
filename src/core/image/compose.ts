@@ -92,6 +92,10 @@ function noun(e: Character): string {
   return e.kind === 'item' ? e.name.toLowerCase() : e.kind === 'faction' ? 'a group' : 'a person';
 }
 
+/** `text` with every entity's name as its noun; a possessive goes with it ("Bram's hat" → "a toll keeper hat"). */
+export const unnamed = (text: string, entities: readonly Character[]): string =>
+  namedIn(text, entities).reduce((t, e) => t.replace(mentionRe(e), () => noun(e)), text);
+
 const looks = (e: Character, full: boolean) => [noun(e), full ? (e.appearance ?? '') : ''].filter(Boolean).join(', ');
 /** A character's current looks by key, without their name: what a new reference freezes. With no keyed look, the old free text as `legacy`. */
 export const looksOf = (e: Character): Record<string, string> => (e.looks && Object.keys(e.looks).length > 0 ? { ...e.looks } : { legacy: looks(e, true) });
@@ -159,6 +163,8 @@ export interface ComposeInput {
   cast?: readonly Character[] | undefined;
   /** Who the player's brief names, when `brief` is a helper's line: only they may borrow a portrait's seed. */
   named?: readonly Character[] | undefined;
+  /** Pose, action, expression and view the helper read from the last passage; after the brief's own tags. */
+  storyTags?: readonly string[] | undefined;
 }
 
 export type Blocks = Record<'subject' | 'state' | 'story' | 'scene' | 'style', string>;
@@ -175,7 +181,7 @@ function placeIn(location: string | undefined, entities: readonly Character[]): 
 /**
  * `framing, count, subject (each shown character's looks in frame), state, view, brief (names → nouns), location, weather, style`.
  * Looks never enter the brief: spliced in, their last tag fused with the verb after it. Over budget it
- * drops, in order: the body parts named only in identities, the second character's looks, the state, the weather, the first character's looks one key
+ * drops, in order: the pose tags read from the story, the body parts named only in identities, the second character's looks, the state, the weather, the first character's looks one key
  * at a time (`KEY_PRIORITY` from the end), then cuts at a comma.
  */
 export function composeSeePrompt(input: ComposeInput): { prompt: string; entityIds: string[]; seed?: number; blocks: Blocks } {
@@ -188,16 +194,16 @@ export function composeSeePrompt(input: ComposeInput): { prompt: string; entityI
   const others = (input.cast ?? subjectsIn(view.brief, scene, entities)).filter((e) => e.id !== YOU);
   const shown = [...others.slice(0, you ? CAST_CAP - 1 : CAST_CAP), ...(you ? [you] : [])];
   const people = shown.filter((e) => e.kind === 'character');
-  // Every entity's name goes, shown or not; a possessive goes with it ("Bram's hat" → "a toll keeper hat").
-  const story = namedIn(view.brief, entities).reduce((t, e) => t.replace(mentionRe(e), () => noun(e)), view.brief);
+  // Every entity's name goes, shown or not.
+  const story = unnamed(view.brief, entities);
   const held = (e: Character) => (e.holds ?? []).flatMap((id) => entities.filter((x) => x.id === id).map(noun));
   // Out of frame, a posture or a held sword only pulls the camera back.
   const states = frame?.states ?? 'all';
   const state = tags(people.map((e) => stateTags(inFrame(e.states ?? {}, states), states === 'all' ? held(e) : [], family, brief)));
-  const build = (keep: readonly number[], withState: boolean, weather: boolean, parts = false): Blocks => ({
+  const build = (keep: readonly number[], withState: boolean, weather: boolean, parts = false, pose = false): Blocks => ({
     subject: tags([frame?.tag, countTag(people.length, family), ...shown.map((e, i) => subject(e, keep[i] ?? 0, family, keys, parts))]),
     state: withState ? state : '',
-    story: tags([...view.tags, story]),
+    story: tags([...view.tags, story, ...(pose ? (input.storyTags ?? []) : [])]),
     scene: tags([placeIn(scene?.location, entities), weather ? scene?.weather : '']),
     style: tags([style]),
   });
@@ -208,6 +214,7 @@ export function composeSeePrompt(input: ComposeInput): { prompt: string; entityI
   const fewer = Array.from({ length: n }, (_, i) => build([n - 1 - i, 0], false, false));
   const blocks =
     [
+      build([all, all], true, true, true, true),
       build([all, all], true, true, true),
       build([all, all], true, true),
       build([all, 0], true, true),

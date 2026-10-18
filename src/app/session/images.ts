@@ -7,6 +7,8 @@ import { drop, generate, message, type Image, type SeeHost } from './seeRender';
 
 /** `/raw <prompt>` sends the text as it is, skipping composition. */
 const RAW = /^\/raw\s+/i;
+/** `/plain <brief>` composes the brief without reading the last passage. */
+const PLAIN = /^\/plain\s+/i;
 
 /**
  * See mode. The input is a brief; `seePrompt` composes the prompt from it, the scene and the cast's
@@ -22,7 +24,8 @@ export function seeImage(input: string, host: SeeHost): void {
 
 type Composed = Pick<Image, 'brief' | 'prompt' | 'entityIds' | 'seed'>;
 
-async function composed(host: SeeHost, brief: string): Promise<Composed | undefined> {
+async function composed(host: SeeHost, input: string): Promise<Composed | undefined> {
+  const brief = input.replace(PLAIN, '');
   try {
     const { seePrompt } = await loadImagePrompt();
     const { adv } = host;
@@ -38,6 +41,7 @@ async function composed(host: SeeHost, brief: string): Promise<Composed | undefi
       entities: adv.entities.map((e) => ({ ...withLooks(e, ix.of(e.id), from), holds: holds(e) })),
       style: styleOf(adv.settings.image, adv.tags),
       family: familyOf(adv.settings.image.model, adv.settings.image.width, adv.settings.image.height),
+      readsStory: !PLAIN.test(input),
     };
     const { prompt, entityIds, seed } = await seePrompt(req, async () => storyModel(host));
     return { ...(brief !== '' && { brief }), prompt, ...(entityIds.length > 0 && { entityIds }), ...(seed !== undefined && { seed }) };
