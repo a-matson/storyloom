@@ -15,12 +15,20 @@ const answered = (values: Record<string, string>): Assertion[] => Object.entries
 describe('nextQuestions', () => {
   it('asks missing required keys first, in SHEET_KEYS order', () => {
     expect(nextQuestions([], [])).toEqual(['species', 'build', 'skin']);
-    expect(nextQuestions(answered({ species: 'fox', build: 'tall and wiry' }), ['skin'])).toEqual(['eyes', 'hair', 'face']);
+    expect(nextQuestions(answered({ species: 'fox', build: 'tall and wiry' }), ['skin', 'body'])).toEqual(['eyes', 'hair', 'face']);
+  });
+
+  it('asks body in round one for a non-human species', () => {
+    expect(nextQuestions(answered({ species: 'dragon' }), [])).toEqual(['body', 'build', 'skin']);
+  });
+
+  it('does not ask it for a human', () => {
+    expect(nextQuestions(answered({ species: 'human' }), [])).toEqual(['build', 'skin', 'eyes']);
   });
 
   it('asks a vague key after every missing one, and never a skipped one', () => {
     const own = answered({ species: 'fox', build: 'lean', skin: 'red fur', eyes: 'amber', hair: 'brown', face: 'a scar', wearing: 'a cloak' });
-    expect(nextQuestions(own, ['horns', 'scales'], 6)).toEqual(['marks', 'accessories', 'palette', 'hair', 'wearing']);
+    expect(nextQuestions(own, ['horns', 'scales', 'body'], 6)).toEqual(['marks', 'accessories', 'palette', 'hair', 'wearing']);
   });
 
   it('is complete when every required key is answered (vague counts) or skipped', () => {
@@ -39,6 +47,11 @@ describe('appearanceOf with builder keys', () => {
   it('gives an old save with only LOOK_KEYS the same string as before', () => {
     const own = answered({ wearing: 'a red cloak', marks: 'a scar', hair: 'white mohawk', eyes: 'green', build: 'tall', species: 'elf' });
     expect(appearanceOf(own)).toBe('species: elf, build: tall, eyes: green, hair: white mohawk, marks: a scar, wearing: a red cloak');
+  });
+
+  it('writes body after species, and nothing for it when unset (portrait hashes hold)', () => {
+    expect(appearanceOf(answered({ build: 'massive', species: 'dragon', body: 'quadruped' }))).toBe('species: dragon, body: quadruped, build: massive');
+    expect(appearanceOf(answered({ build: 'massive', species: 'dragon' }))).toBe('species: dragon, build: massive');
   });
 
   it('keeps wearing as a state, accessories and skin as looks', () => {
@@ -91,6 +104,6 @@ describe('builder', () => {
     lineEdits(session).setValue(fox.id, 'species', 'fox');
     saveDraft(fox.id, { ...first, skipped: ['build'] });
     expect(draftOf(session, fox.id).skipped).toEqual(['build']);
-    expect(nextRound(session, fox.id, draftOf(session, fox.id))).toMatchObject({ round: 2, asked: ['skin', 'eyes', 'hair'] });
+    expect(nextRound(session, fox.id, draftOf(session, fox.id))).toMatchObject({ round: 2, asked: ['body', 'skin', 'eyes'] });
   });
 });

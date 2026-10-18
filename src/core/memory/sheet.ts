@@ -22,7 +22,9 @@ export const statusOf = (now: Record<string, string>, k: SheetKey): KeyStatus =>
 export function nextQuestions(own: readonly Assertion[], skipped: readonly string[], n = ROUND): SheetKey[] {
   const now = currentStates(own);
   const open = SHEET_KEYS.filter((k) => !skipped.includes(k));
-  const rank = (k: SheetKey) => (statusOf(now, k) === 'missing' ? 0 : 2) + (REQUIRED.has(k) ? 0 : 1);
+  // A non-human's body plan is asked with the required keys.
+  const nonHuman = !!now['species']?.trim() && !/^(?:an? )?(?:human|man|woman|person)$/i.test(now['species'].trim());
+  const rank = (k: SheetKey) => (statusOf(now, k) === 'missing' ? 0 : 2) + (REQUIRED.has(k) || (k === 'body' && nonHuman) ? 0 : 1);
   return open
     .filter((k) => statusOf(now, k) !== 'filled')
     .toSorted((a, b) => rank(a) - rank(b))

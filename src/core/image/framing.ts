@@ -11,10 +11,10 @@ const CLOSE = /\b(?:up close|close-up|close)\b/i;
 const ONLY = /\bonly\b/i;
 const near = (part: RegExp) => (b: string) => part.test(b) && CLOSE.test(b);
 
-/** Looks a crop can show. [provisional] */
-const FEET = ['species', 'skin', 'scales', 'palette', 'claws'];
-const FACE = ['species', 'eyes', 'horns', 'hair', 'face', 'marks'];
-const LOWER = ['species', 'skin', 'scales', 'palette', 'build'];
+/** Looks a crop can show; the body plan shapes every crop. [provisional] */
+const FEET = ['body', 'species', 'skin', 'scales', 'palette', 'claws', 'hooves'];
+const FACE = ['body', 'species', 'eyes', 'horns', 'hair', 'face', 'marks', 'fangs', 'tusks', 'antlers', 'mane'];
+const LOWER = ['body', 'species', 'skin', 'scales', 'palette', 'build', 'tail'];
 
 /** Framing words in a brief and the frame they ask for; the first row that matches wins. [provisional] */
 const FRAMES: readonly (readonly [(brief: string) => boolean, Frame])[] = [

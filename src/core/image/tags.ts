@@ -1,13 +1,16 @@
+import { VISIBLE_WORDS } from '../memory/bodyPlan';
 import { tag } from '../memory/looks';
 import type { SheetFamily } from './sheet';
 
 /** Booru checkpoints read "<colour> eyes", not "eyes: <colour>". [provisional] */
-const NOUN_AFTER = new Set(['eyes', 'scales', 'hair', 'skin', 'horns']);
-/** Subject tags in booru order: what the body is, then its covering, then features and clothes. [provisional] */
-const ORDER = ['species', 'build', 'skin', 'scales', 'hair', 'eyes', 'horns', 'face', 'marks', 'wearing', 'accessories', 'palette'];
+const NOUN_AFTER = new Set<string>(['eyes', 'scales', 'hair', 'skin', ...VISIBLE_WORDS]);
+/** Subject tags in booru order: the body plan, what the body is, its covering, features and clothes, then parts the identity names. [provisional] */
+const ORDER = ['body', 'species', 'build', 'skin', 'scales', 'hair', 'eyes', 'horns', 'face', 'marks', 'wearing', 'accessories', 'palette', ...VISIBLE_WORDS];
 
-/** One look as the family spells it: SDXL booru tags, SD 1.5 the `key: value` it always had. */
+/** One look as the family spells it: SDXL booru tags, SD 1.5 the `key: value` it always had; a body plan is bare on both. */
 export function booruTag(key: string, value: string, family: SheetFamily): string {
+  // Booru tags a four-legged animal `feral` as well. [provisional]
+  if (key === 'body') return family === 'sdxl' && /^quadruped$/i.test(value) ? 'feral, quadruped' : value;
   if (family === 'sd15') return tag(key, value);
   if (NOUN_AFTER.has(key)) return value.toLowerCase().includes(key) ? value : `${value} ${key}`;
   if (key === 'wearing') return /^wearing\b/i.test(value) ? value : `wearing ${value}`;

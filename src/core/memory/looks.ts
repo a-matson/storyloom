@@ -4,12 +4,26 @@ import { identityText, isCurrent, type AssertionOf } from './assertionIndex';
 import { isSpeciesClash, swapWord } from './species';
 
 /** State keys that say how a character looks, in the order their tags are written. [provisional] */
-export const LOOK_KEYS = ['species', 'build', 'eyes', 'hair', 'horns', 'scales', 'marks', 'wearing'] as const;
+export const LOOK_KEYS = ['species', 'body', 'build', 'eyes', 'hair', 'horns', 'scales', 'marks', 'wearing'] as const;
 /**
  * The builder's keys: `LOOK_KEYS` in their order with the player-only ones between, so a save with
  * only `LOOK_KEYS` values writes the same appearance (and portrait hash) as before. [provisional]
  */
-export const SHEET_KEYS = ['species', 'build', 'skin', 'eyes', 'hair', 'face', 'horns', 'scales', 'marks', 'wearing', 'accessories', 'palette'] as const;
+export const SHEET_KEYS = [
+  'species',
+  'body',
+  'build',
+  'skin',
+  'eyes',
+  'hair',
+  'face',
+  'horns',
+  'scales',
+  'marks',
+  'wearing',
+  'accessories',
+  'palette',
+] as const;
 const STATES = new Set(['wearing']);
 /** State keys a See shows of the moment. [provisional] */
 const SEE_STATES = ['posture', 'condition', 'mood'] as const;
