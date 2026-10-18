@@ -1,4 +1,5 @@
 import type { AssertionIndex } from '../memory/assertionIndex';
+import { isLook } from '../memory/looks';
 import type { Action, Entity } from '../model/types';
 
 /**
@@ -16,7 +17,7 @@ export const named = (e: Entity, n: string) => [e.name, ...e.aliases].some((k) =
 /** The latest action a stored speaker label names `e` in, or an accepted state change on `e` became true at; never: -1. */
 export function lastActive(e: Entity, actions: readonly Action[], ix: AssertionIndex): number {
   const spoke = actions.findLastIndex((a) => a.speakers?.some((s) => named(e, s.name)));
-  const changed = ix.of(e.id).filter((a) => a.kind === 'state' && a.seen !== false);
+  const changed = ix.of(e.id).filter((a) => a.kind === 'state' && !isLook(a.key) && a.seen !== false);
   return Math.max(spoke, ...changed.map((a) => a.since));
 }
 

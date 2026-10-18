@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { draftOf, nextRound, saveDraft } from '@app/session/builder';
 import { lineEdits } from '@app/session/lines';
 import { mergeEntity } from '@core/memory/entities';
-import { appearanceOf, currentStates, setValue } from '@core/memory/looks';
+import { lastActive } from '@core/context/spotlight';
+import { indexAssertions } from '@core/memory/assertionIndex';
+import { appearanceOf, currentStates, isLook, setValue } from '@core/memory/looks';
 import { isComplete, nextQuestions } from '@core/memory/sheet';
 import { createBlankAdventure, type Assertion } from '@core/model';
 import { setup } from './fixtures/session';
@@ -39,11 +41,28 @@ describe('appearanceOf with builder keys', () => {
     expect(appearanceOf(own)).toBe('species: elf, build: tall, eyes: green, hair: white mohawk, marks: a scar, wearing: a red cloak');
   });
 
-  it('keeps wearing and accessories as states, skin as a look', () => {
+  it('keeps wearing as a state, accessories and skin as looks', () => {
     const kinds = Object.fromEntries(
       answered({ wearing: 'a cloak', accessories: 'a staff', skin: 'red fur' }).map((a) => [a.kind === 'look' || a.kind === 'state' ? a.key : '', a.kind]),
     );
-    expect(kinds).toEqual({ wearing: 'state', accessories: 'state', skin: 'look' });
+    expect(kinds).toEqual({ wearing: 'state', accessories: 'look', skin: 'look' });
+  });
+
+  it('reads an old state row keyed accessories as a look', () => {
+    const old: Assertion = {
+      id: 'as_old',
+      subject: fox.id,
+      producer: 'player',
+      at: 1,
+      basis: 'player',
+      since: 1,
+      kind: 'state',
+      key: 'accessories',
+      value: 'a staff',
+    };
+    expect(isLook('accessories')).toBe(true);
+    expect(appearanceOf([old])).toBe('accessories: a staff');
+    expect(lastActive(fox, [], indexAssertions([old]))).toBe(-1);
   });
 });
 
