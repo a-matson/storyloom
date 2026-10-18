@@ -3,6 +3,7 @@ import { actionText } from '../model/types';
 import { identityText, indexAssertions } from './assertionIndex';
 import { mergeAssertions, type Rest } from './assertionWrites';
 import { bodiesFromPlayer } from './bodyPlan';
+import { cardKind, linkCards } from './canon';
 import { COMMON_WORDS } from './commonWords';
 import { speciesFromPlayer } from './declared';
 import { knownAs, matchEntity, mergeEntity, namedInPassage } from './entities';
@@ -194,8 +195,8 @@ export function foldEntities(
       held.push({ entity: { ...item, facts }, range });
       continue;
     }
-    // An existing card's kind is the player's.
-    const kind = old?.kind ?? kindOf(e.name, e.kind, seenIn);
+    // An existing card's kind is the player's; so is a story card's of that name.
+    const kind = old?.kind ?? cardKind(adventure.storyCards, e.name) ?? kindOf(e.name, e.kind, seenIn);
     const aliases = [...(e.aliases ?? []), ...(old && !matchEntity([old], e.name) ? [e.name] : [])];
     const who = { name: old?.name ?? e.name, aliases: [...(old?.aliases ?? []), ...aliases] };
     const own = old ? assertions.filter((a) => a.subject === old.id) : [];
@@ -222,7 +223,7 @@ export function foldEntities(
       at,
       producer,
     );
-    entities = old ? entities.map((x) => (x === old ? merged : x)) : [...entities, merged];
+    entities = linkCards(old ? entities.map((x) => (x === old ? merged : x)) : [...entities, merged], adventure.storyCards);
     assertions = [...assertions.filter((a) => a.subject !== merged.id), ...mine];
   }
   // A proposal counts: the scheduler saves only on a change.

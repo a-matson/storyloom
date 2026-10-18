@@ -1,6 +1,6 @@
 import { ownedBlobIds, type Block } from '@core/image';
 import { ActionLog } from '@core/log';
-import { followLog, withPresence } from '@core/memory';
+import { followLog, linkCards, withPresence } from '@core/memory';
 import type { Adventure, AdventureSettings, AppSettings, PlotComponents, ReadKind, TurnTrace } from '@core/model';
 import type { Embedder } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
@@ -298,7 +298,8 @@ export class GameSession {
     });
   readonly updateSettings = (patch: Partial<AdventureSettings>) => this.mutate((_, adv) => (adv.settings = { ...adv.settings, ...patch }));
   readonly updateMeta = (patch: Partial<Pick<Adventure, 'title' | 'description' | 'tags' | 'coverId'>>) => this.mutate((_, adv) => Object.assign(adv, patch));
-  readonly setStoryCards = (cards: Adventure['storyCards']) => this.mutate((_, adv) => (adv.storyCards = cards));
+  /** A card written for a known entity links it now (`linkCards`), not at the next fold. */
+  readonly setStoryCards = (c: Adventure['storyCards']) => this.mutate((_, adv) => ((adv.storyCards = c), (adv.entities = linkCards(adv.entities, c))));
   readonly setScripts = (scripts: Adventure['scripts']) => this.mutate((_, adv) => ((adv.scripts = scripts), this.scripts.reload(adv)));
   readonly setCardGenerator = (s: NonNullable<Adventure['cardGenerator']>) => this.mutate((_, adv) => (adv.cardGenerator = s));
   readonly clearError = () => this.emit({ error: null });

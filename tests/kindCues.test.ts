@@ -18,6 +18,18 @@ describe('kindOf', () => {
     expect(kindOf('Lantern', 'item', ['You walk into Lantern.'])).toBe('item');
   });
 
+  it('makes a named creature a character whatever the reply says', () => {
+    expect(kindOf('Goldarok', 'faction', ['You face the powerful ancient dragon Goldarok in his lair.'])).toBe('character');
+    expect(kindOf('Goldarok', 'place', ['Goldarok, the old red dragon, stirs.'])).toBe('character');
+    expect(kindOf('Mab', 'item', ['Queen Mab smiles.'])).toBe('character');
+  });
+
+  it('keeps faction and place cues without a creature word by the name', () => {
+    expect(kindOf('Ashen Order', 'faction', ["the Ashen Order's men wait. The Ashen Order are many."])).toBe('faction');
+    expect(kindOf('Halven', 'faction', ['the man of Halven walks on.', 'You live in Halven.'])).toBe('place');
+    expect(kindOf('Halven', 'faction', ["Halven, the dragon's town, burns."])).toBe('faction');
+  });
+
   it('gives an item to a place reply the passage picks up', () => {
     expect(kindOf('Amulet', 'place', ['She picks up the Amulet and turns it over.'])).toBe('item');
   });
