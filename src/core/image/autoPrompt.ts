@@ -5,6 +5,7 @@ import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
 import { trackJob } from '../trace';
 import { CAST_CAP, composeSeePrompt, isImplicit, lookFor, namedCast, namedIn, subjectsIn } from './compose';
+import { poseTags } from './poseAsk';
 import type { SheetFamily } from './sheet';
 
 export { looksOf } from './compose';
@@ -91,13 +92,20 @@ export interface SeeRequest {
   entities: readonly (Entity & { looks?: Readonly<Record<string, string>> })[];
   style: string;
   family: SheetFamily;
+  /** A brief that names someone also reads the last passage for pose and view (`poseTags`); off, today's path. */
+  readsStory?: boolean | undefined;
 }
 
 const pick = ({ prompt, entityIds, seed }: ReturnType<typeof composeSeePrompt>) => ({ prompt, entityIds, ...(seed !== undefined && { seed }) });
 
 /** The prompt to send for a brief and the characters it shows; the helper is asked only for a blank or implicit brief. */
 export async function seePrompt(req: SeeRequest, helper: () => Promise<ImagePromptDeps>): Promise<{ prompt: string; entityIds: string[]; seed?: number }> {
-  if (req.brief !== '' && !isImplicit(req.brief, namedIn(req.brief, req.entities))) return pick(composeSeePrompt(req));
+  if (req.brief !== '' && !isImplicit(req.brief, namedIn(req.brief, req.entities))) {
+    const cast = namedCast(req.brief, req.entities);
+    if (!req.readsStory || cast.length === 0) return pick(composeSeePrompt(req));
+    const storyTags = await poseTags({ brief: req.brief, actions: req.actions, cast, entities: req.entities }, await helper());
+    return pick(composeSeePrompt({ ...req, storyTags }));
+  }
   const cast = subjectsIn(req.brief, req.scene, req.entities).slice(0, CAST_CAP);
   const line = await autoImagePrompt({ ...req, cast: cast.map((e) => ({ name: e.name, looks: lookFor(e) })) }, await helper());
   // No scene: the helper already placed it. The line is the story block; the subject block still comes from the cast.
