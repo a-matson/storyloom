@@ -56,6 +56,8 @@ export const Entity = z.object({
   referenceImageId: z.optional(z.string()),
   /** The appearance tags frozen when the reference was set: later See prompts repeat them verbatim. */
   look: z.optional(z.string()),
+  /** The builder's final sheet: owned like `portraitId`, replaced on a rebuild, dropped with the entity. */
+  sheetImageId: z.optional(z.string()),
   cardId: z.optional(z.string()),
   /** Seeded from a scenario card: model output never replaces its name, kind or description. */
   canon: z.optional(z.boolean()),

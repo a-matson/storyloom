@@ -1,10 +1,12 @@
-import { familyOf, SHEET_NEGATIVE, SHEET_SIZE, SHEET_STEPS, SHEET_WEIGHT, sheetPrompt } from '@core/image';
-import { indexAssertions, nextQuestions, type SheetKey } from '@core/memory';
+import { familyOf, loadImagePrompt, SHEET_NEGATIVE, SHEET_SIZE, SHEET_STEPS, SHEET_WEIGHT, sheetPrompt } from '@core/image';
+import { indexAssertions, nextQuestions, withLooks, type SheetKey } from '@core/memory';
 import { newId, type Adventure } from '@core/model';
-import type { ImageRequest } from '@core/ports';
+import type { ImageProvider, ImageRequest } from '@core/ports';
 import { seedOf, trackJob } from '@core/trace';
 import { imageQueue } from './imageQueue';
 import { withProgress } from './imageProgress';
+import { patch } from './lines';
+import { dropPortrait, renderPortrait } from './portraits';
 import { imageFailure } from './seeRender';
 import type { GameSession } from './session';
 
@@ -68,13 +70,7 @@ export async function roundSheet(host: GameSession, id: string, skipped: readonl
   if (!pending) return undefined;
   const req = sheetRequest(host.adv, id, skipped);
   const gen = opened.get(id) ?? 0;
-  const provider = await pending;
-  const ms = host.svc.imageTimeoutMs;
-  const blob = await imageQueue
-    .enqueue('sheet', () => withProgress('sheet', provider, () => trackJob('image', () => provider.txt2img(req, AbortSignal.timeout(ms)))))
-    .catch((err: unknown) => {
-      throw new Error(imageFailure(err, ms), { cause: err });
-    });
+  const blob = await render(await pending, req, host.svc.imageTimeoutMs);
   if ((opened.get(id) ?? 0) !== gen) return undefined;
   const sheet = { imageId: newId('img_'), prompt: req.prompt };
   await host.svc.storage.putImage(host.adv.id, sheet.imageId, blob);
@@ -95,6 +91,40 @@ export function closeSheets(host: GameSession, id: string): void {
   sheets.delete(id);
   if (old) drop(host, old.imageId);
 }
+
+/**
+ * Done: one sheet at the adventure's steps with the hires pass, kept as `sheetImageId` (the old one
+ * dropped); the look is frozen from it, so later Sees and the portrait repeat its words on its seed.
+ * A drawn or missing portrait is drawn again; an uploaded one is kept. Throws as the player reads it;
+ * a no-op without an image server.
+ */
+export async function finish(host: GameSession, id: string, skipped: readonly string[]): Promise<void> {
+  const pending = host.svc.imageProviderFor(host.app);
+  // The answers are saved already; without a server there is nothing to draw.
+  if (!pending) return;
+  const s = host.adv.settings.image;
+  const req = { ...sheetRequest(host.adv, id, skipped), steps: s.steps, hires: { scale: s.hiresScale, denoise: s.hiresDenoise, steps: s.hiresSteps } };
+  // The hires pass is a second render inside the same call, as in See.
+  const blob = await render(await pending, req, host.svc.imageTimeoutMs * 2);
+  const { looksOf } = await loadImagePrompt();
+  const before = host.adv.entities.find((e) => e.id === id);
+  if (!before) return;
+  const sheetImageId = newId('img_');
+  await host.svc.storage.putImage(host.adv.id, sheetImageId, blob);
+  host.mutate((_, adv) => {
+    const e = adv.entities.find((x) => x.id === id);
+    if (e) patch(adv, id, { sheetImageId, look: looksOf(withLooks(e, indexAssertions(adv.assertions).of(id))) });
+  });
+  if (before.sheetImageId !== undefined) dropPortrait(host, before.sheetImageId);
+  if (before.portraitId === undefined || before.portraitBasis !== undefined) await renderPortrait(host, id);
+}
+
+const render = (provider: ImageProvider, req: ImageRequest, ms: number): Promise<Blob> =>
+  imageQueue
+    .enqueue('sheet', () => withProgress('sheet', provider, () => trackJob('image', () => provider.txt2img(req, AbortSignal.timeout(ms)))))
+    .catch((err: unknown) => {
+      throw new Error(imageFailure(err, ms), { cause: err });
+    });
 
 const drop = (host: GameSession, imageId: string): void =>
   void host.svc.storage.deleteImage(host.adv.id, imageId).catch((e: unknown) => console.warn('could not delete a round sheet', e));

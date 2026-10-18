@@ -5,6 +5,7 @@ import { isPortraitStale } from '@app/session/portraitPrompt';
 import { identityText, indexAssertions, isCurrent } from '@core/memory';
 import type { Adventure, Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
+import { useImageBlob } from '@ui/hooks/useImageBlob';
 import { progressText, useImageProgress } from '@ui/hooks/useImageProgress';
 import { Button } from '@ui/components/ui/button';
 import { Drawer, DrawerBody, DrawerHeader } from '@ui/components/ui/drawer';
@@ -115,10 +116,16 @@ type Edits = ReturnType<typeof entityEdits>;
 
 function Build({ entity: e, adventure, api }: { entity: Entity; adventure: Adventure; api: GameApi }) {
   const [building, setBuilding] = useState(false);
+  const sheet = useImageBlob(adventure.id, e.sheetImageId);
   return (
     <>
+      {sheet !== undefined && (
+        <a href={sheet} target="_blank" rel="noreferrer" aria-label="Open the character sheet full size">
+          <img src={sheet} alt="Character sheet" className="max-h-32 max-w-full rounded-lg bg-white" />
+        </a>
+      )}
       <Button className="self-start" onClick={() => setBuilding(true)}>
-        Build character
+        {e.sheetImageId ? 'Rebuild' : 'Build character'}
       </Button>
       {building && (
         <Suspense fallback={null}>

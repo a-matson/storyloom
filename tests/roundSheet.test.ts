@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { closeSheets, roundSheet } from '@app/session/builder';
+import { describe, expect, it, vi } from 'vitest';
+import { closeSheets, finish, roundSheet } from '@app/session/builder';
+import { entityEdits } from '@app/session/entities';
 import { lineEdits } from '@app/session/lines';
 import { familyOf, sheetPrompt } from '@core/image/sheet';
 import { mergeEntity } from '@core/memory/entities';
@@ -9,6 +10,9 @@ import type { ImageRequest } from '@core/ports';
 import { seedOf } from '@core/trace';
 import { fakeImages } from './fixtures/images';
 import { setup } from './fixtures/session';
+
+// No canvas under vitest; the re-encode is the browser's job.
+vi.mock('@app/image', () => ({ downscale: (b: Blob) => Promise.resolve(b), cropSquare: (b: Blob) => Promise.resolve(b) }));
 
 const fox = mergeEntity(undefined, { name: 'Vex', kind: 'character', description: 'A fox smuggler named Vex.' }, 0);
 const answered = (values: Record<string, string>): Assertion[] => Object.entries(values).reduce<Assertion[]>((own, [k, v]) => setValue(fox, own, k, v, 1), []);
@@ -66,6 +70,45 @@ describe('roundSheet', () => {
     const second = await roundSheet(session, fox.id, []);
     expect(second?.imageId).not.toBe(first?.imageId);
     expect([...images.keys()]).toEqual([`${session.adv.id}|${second?.imageId}`]);
+  });
+
+  it('finishes with the adventure steps and hires on the seed, keeps the sheet and a frozen look, and redraws a drawn portrait', async () => {
+    const { session, images, calls } = withImages();
+    lineEdits(session).setValue(fox.id, 'hair', 'white mohawk');
+    await finish(session, fox.id, []);
+    const s = session.adv.settings.image;
+    expect(calls[0]).toMatchObject({ steps: s.steps, seed: seedOf(fox.id), hires: { scale: s.hiresScale, denoise: s.hiresDenoise } });
+    const e = () => session.adv.entities[0]!;
+    const first = e().sheetImageId;
+    expect(e().look).toContain('white mohawk');
+    expect(e().portraitBasis).toBeDefined();
+    expect(images.has(`${session.adv.id}|${first}`)).toBe(true);
+    await finish(session, fox.id, []);
+    expect(e().sheetImageId).not.toBe(first);
+    await Promise.resolve();
+    expect(images.has(`${session.adv.id}|${first}`)).toBe(false);
+    expect(calls).toHaveLength(4);
+  });
+
+  it('keeps an uploaded portrait; delete and merge drop the sheet', async () => {
+    const { session, images, calls } = withImages();
+    session.adv.entities = [{ ...fox, portraitId: 'img_up' }];
+    await finish(session, fox.id, []);
+    expect(calls).toHaveLength(1);
+    expect(session.adv.entities[0]?.portraitId).toBe('img_up');
+    const sheet = `${session.adv.id}|${session.adv.entities[0]?.sheetImageId}`;
+    expect(images.has(sheet)).toBe(true);
+    entityEdits(session).delete(fox.id);
+    await Promise.resolve();
+    expect(images.has(sheet)).toBe(false);
+
+    const twin = { ...mergeEntity(undefined, { name: 'Vexa', kind: 'character', description: '' }, 0), portraitId: 'img_up2' };
+    session.adv.entities = [fox, twin];
+    await finish(session, twin.id, []);
+    const twinSheet = `${session.adv.id}|${session.adv.entities[1]?.sheetImageId}`;
+    await entityEdits(session).merge(fox.id, twin.id);
+    await Promise.resolve();
+    expect(images.has(twinSheet)).toBe(false);
   });
 
   it('leaves no blob after close, even from a render that lands after it', async () => {

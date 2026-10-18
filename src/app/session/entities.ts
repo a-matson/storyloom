@@ -30,7 +30,7 @@ export function entityEdits(host: GameSession) {
   return {
     update: (id: string, p: Partial<Entity>) => mutate((adv) => patch(adv, id, p)),
     delete: (id: string) => {
-      const old = host.adv.entities.find((e) => e.id === id)?.portraitId;
+      const old = host.adv.entities.find((e) => e.id === id);
       mutate((adv) => {
         const gone = adv.entities.find((e) => e.id === id);
         if (gone) repointScene(adv, id, gone.name);
@@ -38,7 +38,7 @@ export function entityEdits(host: GameSession) {
         adv.assertions = adv.assertions.filter((a) => a.subject !== id);
         repointGates(adv, id);
       });
-      if (old !== undefined) dropPortrait(host, old);
+      for (const blob of [old?.portraitId, old?.sheetImageId]) if (blob !== undefined) dropPortrait(host, blob);
     },
     /** Player-asked, so unlike the idle queue a failure is shown. */
     regeneratePortrait: (id: string) => renderPortrait(host, id).catch((err: unknown) => host.onError(`Could not draw the portrait: ${message(err)}`)),
@@ -93,7 +93,8 @@ export function entityEdits(host: GameSession) {
         repointGates(adv, fromId, intoId);
         repointScene(adv, fromId, intoId);
         repointSecrets(adv, fromId, intoId);
-        if (from.portraitId !== undefined && from.portraitId !== merged.portraitId) dropPortrait(host, from.portraitId);
+        for (const b of [from.portraitId, from.sheetImageId])
+          if (b !== undefined && b !== merged.portraitId && b !== merged.sheetImageId) dropPortrait(host, b);
       });
     },
     /** A real story card from the projection; `cardId` stops the projection so the text is not in the prompt twice. */
