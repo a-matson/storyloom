@@ -27,7 +27,7 @@ export function currentStates(as: readonly Assertion[]): Record<string, string> 
 }
 
 /** "green" for `eyes` reads as a tag only with its key; "green eyes" already is one. */
-const tag = (key: string, value: string) => (value.toLowerCase().includes(key) ? value : `${key}: ${value}`);
+export const tag = (key: string, value: string) => (value.toLowerCase().includes(key) ? value : `${key}: ${value}`);
 
 /** Current looks in `SHEET_KEYS` order, else the legacy free-text look. */
 export function appearanceOf(as: readonly Assertion[]): string {

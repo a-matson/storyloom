@@ -22,6 +22,7 @@
  *   live <url> [label]  plays 20 scripted turns in the real app; per-turn stats, memories, summary
  *   repetition <url> [label]  the live turns alone: repeated phrases per turn, distinct 4-grams (MEASURE_SAMPLERS=64,0 for the "before")
  *   images <image-url> <url>  See mode and a cover against a real A1111 server
+ *   sheet <image-url> [label]  builder round sheets of two characters x 5 seeds on the loaded checkpoint (MEASURE_WEIGHT, MEASURE_SIZE=w,h, MEASURE_CLIP)
  *   recall-record <url>   plays the 24-fact scenario to turn 90 once and saves the history (bench/recall-history.json)
  *   recall <url> [label]  replays the recorded history and generates only the probes at turns 30/60/90 (~75 min); the memory recall baseline
  *     both: MEASURE_HISTORY=<file> another recording (bench/recall-history-300.json); MEASURE_DEPTHS=30,90,180,270 the depths
@@ -102,6 +103,7 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
     env: { MEASURE_URL: a, MEASURE_LABEL: b },
   },
   images: { cmd: ['pnpm', 'exec', 'playwright', 'test', '--project=live', 'e2e/live/images.spec.ts'], env: { MEASURE_IMAGES: a, MEASURE_URL: b } },
+  sheet: { cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/sheet'], env: { MEASURE_IMAGES: a, MEASURE_LABEL: b } },
   'recall-record': {
     cmd: ['pnpm', 'exec', 'playwright', 'test', '--project=live', 'e2e/live/recall.spec.ts'],
     env: { MEASURE_URL: a, MEASURE_MODE: 'record' },

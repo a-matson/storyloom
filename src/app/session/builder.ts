@@ -1,4 +1,11 @@
+import { familyOf, SHEET_NEGATIVE, SHEET_SIZE, SHEET_STEPS, SHEET_WEIGHT, sheetPrompt } from '@core/image';
 import { indexAssertions, nextQuestions, type SheetKey } from '@core/memory';
+import { newId, type Adventure } from '@core/model';
+import type { ImageRequest } from '@core/ports';
+import { seedOf, trackJob } from '@core/trace';
+import { imageQueue } from './imageQueue';
+import { withProgress } from './imageProgress';
+import { imageFailure } from './seeRender';
 import type { GameSession } from './session';
 
 /** A builder session for one character: answers are assertions already, so only the round and skips live here. */
@@ -24,3 +31,70 @@ export const nextRound = (host: GameSession, id: string, d: Draft): Draft => ({
   round: d.round + 1,
   asked: nextQuestions(indexAssertions(host.adv.assertions).of(id), d.skipped),
 });
+
+/** The latest round sheet: a blob only the open builder shows, and the prompt it was drawn from. */
+export interface Sheet {
+  imageId: string;
+  prompt: string;
+}
+const sheets = new Map<string, Sheet>();
+// Bumped on close, so a render that lands after it drops its blob instead of keeping it.
+const opened = new Map<string, number>();
+
+/** The round sheet's request: the stated keys only, at the layout's size for the checkpoint family, on the portrait seed. */
+export function sheetRequest(adv: Adventure, id: string, skipped: readonly string[]): ImageRequest {
+  const s = adv.settings.image;
+  const family = familyOf(s.model, s.width, s.height);
+  return {
+    prompt: sheetPrompt(indexAssertions(adv.assertions).of(id), skipped, SHEET_WEIGHT[family]),
+    negativePrompt: [SHEET_NEGATIVE, s.negativePrompt].filter(Boolean).join(', '),
+    ...SHEET_SIZE[family],
+    steps: SHEET_STEPS,
+    cfgScale: s.cfgScale,
+    seed: seedOf(id),
+    model: s.model,
+    sampler: s.sampler,
+    clipSkip: s.clipSkip,
+    // No hires pass: a round sheet is a quick look, the final one (M16-4) takes the time.
+  };
+}
+
+/**
+ * Draw a round sheet for `id`; it replaces the last round's. `undefined` without an image server or
+ * when the builder closed meanwhile. Throws the failure as the player reads it.
+ */
+export async function roundSheet(host: GameSession, id: string, skipped: readonly string[]): Promise<Sheet | undefined> {
+  const pending = host.svc.imageProviderFor(host.app);
+  if (!pending) return undefined;
+  const req = sheetRequest(host.adv, id, skipped);
+  const gen = opened.get(id) ?? 0;
+  const provider = await pending;
+  const ms = host.svc.imageTimeoutMs;
+  const blob = await imageQueue
+    .enqueue('sheet', () => withProgress('sheet', provider, () => trackJob('image', () => provider.txt2img(req, AbortSignal.timeout(ms)))))
+    .catch((err: unknown) => {
+      throw new Error(imageFailure(err, ms), { cause: err });
+    });
+  if ((opened.get(id) ?? 0) !== gen) return undefined;
+  const sheet = { imageId: newId('img_'), prompt: req.prompt };
+  await host.svc.storage.putImage(host.adv.id, sheet.imageId, blob);
+  if ((opened.get(id) ?? 0) !== gen) {
+    drop(host, sheet.imageId);
+    return undefined;
+  }
+  const old = sheets.get(id);
+  sheets.set(id, sheet);
+  if (old) drop(host, old.imageId);
+  return sheet;
+}
+
+/** The builder closed: its sheets go (answers are kept as assertions), and a render still running is dropped when it lands. */
+export function closeSheets(host: GameSession, id: string): void {
+  opened.set(id, (opened.get(id) ?? 0) + 1);
+  const old = sheets.get(id);
+  sheets.delete(id);
+  if (old) drop(host, old.imageId);
+}
+
+const drop = (host: GameSession, imageId: string): void =>
+  void host.svc.storage.deleteImage(host.adv.id, imageId).catch((e: unknown) => console.warn('could not delete a round sheet', e));

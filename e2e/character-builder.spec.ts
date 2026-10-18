@@ -1,6 +1,40 @@
 import { expect, test } from '@playwright/test';
 import { openSeededAdventure } from './seed';
 
+// 1x1 PNG that `createImageBitmap` decodes.
+const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGM4IWcDAALUASNyYth2AAAAAElFTkSuQmCC';
+
+test('each round draws a sheet of the stated looks, without the name', async ({ page }) => {
+  const images = 'http://localhost:7999';
+  const sheets: string[] = [];
+  await page.route(`${images}/**`, async (route) => {
+    if (new URL(route.request().url()).pathname !== '/sdapi/v1/txt2img') return route.fulfill({ json: [] });
+    const { prompt } = route.request().postDataJSON() as { prompt: string };
+    if (prompt.startsWith('character reference sheet')) sheets.push(prompt);
+    return route.fulfill({ json: { images: [PNG] } });
+  });
+  await openSeededAdventure(page, 3, `${images}/`);
+  await page.getByRole('button', { name: /^Characters/ }).click();
+  await page.getByRole('button', { name: 'Open Merav' }).click();
+  await page.getByRole('dialog', { name: 'Merav' }).getByRole('button', { name: 'Build character' }).click();
+  const builder = page.getByRole('dialog', { name: 'Build Merav' });
+
+  await builder.getByRole('button', { name: 'Ask about hair: missing' }).click();
+  await builder.getByRole('textbox', { name: 'Hair colour and style?' }).fill('white mohawk');
+  await builder.getByRole('button', { name: 'Next round' }).click();
+  await expect(builder.getByRole('img', { name: 'Character sheet' })).toHaveAttribute('src', /^blob:/);
+  expect(sheets).toHaveLength(1);
+  expect(sheets[0]).toContain('white mohawk');
+  expect(sheets[0]).not.toContain('Merav');
+
+  await expect(builder.getByRole('button', { name: 'Draw again' })).toBeHidden();
+  await builder.getByRole('textbox', { name: 'What are they? (human, fox, elf…)' }).fill('fox');
+  await builder.getByRole('textbox', { name: 'What are they? (human, fox, elf…)' }).blur();
+  await builder.getByRole('button', { name: 'Draw again' }).click();
+  await expect.poll(() => sheets.length).toBe(2);
+  await expect(builder.getByRole('button', { name: 'Draw again' })).toBeHidden();
+});
+
 test('the character builder asks a round of looks and keeps the answers', async ({ page }) => {
   await openSeededAdventure(page, 3);
   await page.getByRole('button', { name: /^Characters/ }).click();

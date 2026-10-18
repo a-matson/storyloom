@@ -9,6 +9,7 @@ import { Drawer, DrawerBody, DrawerHeader } from '@ui/components/ui/drawer';
 import { Input } from '@ui/components/ui/field';
 import { SectionLabel } from '@ui/components/ui/section-label';
 import { cn } from '@ui/lib/utils';
+import { RoundSheet, useRoundSheet } from './RoundSheet';
 
 interface Props {
   entity: Entity;
@@ -41,6 +42,12 @@ export function CharacterBuilder({ entity: e, adventure, api, onClose }: Props) 
     saveDraft(e.id, d);
     setDraft(d);
   };
+  const sheet = useRoundSheet(api, e.id);
+  const next = () => {
+    const d = nextRound(api, e.id, draft);
+    update(d);
+    sheet.draw(d.skipped);
+  };
   const own = indexAssertions(adventure.assertions).of(e.id);
   const now = currentStates(own);
   const answer = (k: SheetKey, v: string) => v !== (now[k] ?? '') && lineEdits(api).setValue(e.id, k, v);
@@ -70,6 +77,7 @@ export function CharacterBuilder({ entity: e, adventure, api, onClose }: Props) 
             </li>
           ))}
         </ul>
+        <RoundSheet adventure={adventure} id={e.id} skipped={draft.skipped} {...sheet} />
         <SectionLabel>Round {draft.round}</SectionLabel>
         {draft.asked.length === 0 && <p className="text-caption text-muted-foreground">Nothing left to ask. Pick a key above to refine it.</p>}
         {draft.asked.map((k) => (
@@ -86,7 +94,7 @@ export function CharacterBuilder({ entity: e, adventure, api, onClose }: Props) 
           </div>
         ))}
         <div className="flex flex-wrap gap-2 border-t border-border pt-3.5">
-          <Button onClick={() => update(nextRound(api, e.id, draft))}>Next round</Button>
+          <Button onClick={next}>Next round</Button>
           <Button variant="primary" disabled={!isComplete(own, draft.skipped)} onClick={onClose}>
             Done
           </Button>
