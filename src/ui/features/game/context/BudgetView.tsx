@@ -104,8 +104,8 @@ export function BudgetView({ result }: { result: ContextBuildResult }) {
       {result.redactions.length > 0 && (
         <div className="flex flex-col gap-1" data-testid="redactions">
           <SectionLabel>Redacted</SectionLabel>
-          {result.redactions.map((r, i) => (
-            <div key={`${r.section}-${i}`} className="text-caption text-prose">
+          {result.redactions.map((r) => (
+            <div key={`${r.secretId}-${r.section}-${r.text}`} className="text-caption text-prose">
               <span className={`${mono} ${muted}`}>{SECTION_LABEL[r.section]}</span> {r.text}
             </div>
           ))}
