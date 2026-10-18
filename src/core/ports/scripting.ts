@@ -48,9 +48,27 @@ export interface ScriptEntity {
   state: Record<string, string>;
 }
 
+/** `state.scene`: the scene with names, not ids. */
+export interface ScriptScene {
+  location?: string | undefined;
+  zone?: string | undefined;
+  present: string[];
+  groups: { name: string; count?: number | undefined }[];
+  time?: { day: number; part: string } | undefined;
+}
+
+/** `state.events`: the latest event assertions, `who` as names (`you` stays `you`). */
+export interface ScriptEvent {
+  at: number;
+  text: string;
+  who: string[];
+}
+
 export interface ScriptInfo {
   characterNames: string[];
   actionCount: number;
+  /** onInput only; `continue` on a Continue, whose text is empty and whose returned text is ignored. */
+  actionType?: Action['type'] | 'continue' | undefined;
   /** onModelContext only */
   maxChars?: number;
   memoryLength?: number;
@@ -82,6 +100,9 @@ export interface HookInput {
   sections?: ContextSection[] | undefined;
   /** `state.entities` in onModelContext and onOutput; never written back. */
   entities?: ScriptEntity[] | undefined;
+  /** `state.scene` and `state.events`, the same way (a Storyloom extension). */
+  scene?: ScriptScene | undefined;
+  events?: ScriptEvent[] | undefined;
 }
 
 export interface HookResult {

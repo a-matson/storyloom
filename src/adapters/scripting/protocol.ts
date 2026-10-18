@@ -21,6 +21,16 @@ const ScriptEntity = z.object({
   state: z.record(z.string(), z.string()),
 });
 
+const ScriptScene = z.object({
+  location: z.optional(z.string()),
+  zone: z.optional(z.string()),
+  present: z.array(z.string()),
+  groups: z.array(z.object({ name: z.string(), count: z.optional(z.number()) })),
+  time: z.optional(z.object({ day: z.number(), part: z.string() })),
+});
+
+const ScriptEvent = z.object({ at: z.number(), text: z.string(), who: z.array(z.string()) });
+
 export const SandboxInput = z.object({
   hook: HookName,
   text: z.string(),
@@ -32,11 +42,16 @@ export const SandboxInput = z.object({
     actionCount: z.number(),
     maxChars: z.optional(z.number()),
     memoryLength: z.optional(z.number()),
+    /** onInput only. */
+    actionType: z.optional(z.enum([...ActionType.options, 'continue'])),
   }),
   /** onModelContext only. */
   sections: z.optional(z.array(ScriptSection)),
   /** onModelContext and onOutput only; the prelude exposes them as a frozen, non-enumerable `state.entities`. */
   entities: z.optional(z.array(ScriptEntity)),
+  /** Same as `entities`: frozen, non-enumerable `state.scene` and `state.events`. */
+  scene: z.optional(ScriptScene),
+  events: z.optional(z.array(ScriptEvent)),
 });
 export type SandboxInput = z.infer<typeof SandboxInput>;
 

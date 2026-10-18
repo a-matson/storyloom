@@ -1,9 +1,38 @@
 import type { Action, Adventure, StoryCard } from '../model/types';
 import { identityText, indexAssertions, isCurrent, textOf } from '../memory/assertionIndex';
 import { currentStates } from '../memory/looks';
+import { sceneNames } from '../memory/names';
+import { YOU } from '../memory/you';
 import { actionText } from '../model/types';
-import { NoopScriptRunner, toScriptCards, type HookInput, type HookName, type HookResult, type ScriptEntity, type ScriptStoryCard } from '../ports/scripting';
+import {
+  NoopScriptRunner,
+  toScriptCards,
+  type HookInput,
+  type HookName,
+  type HookResult,
+  type ScriptEntity,
+  type ScriptEvent,
+  type ScriptScene,
+  type ScriptStoryCard,
+} from '../ports/scripting';
 import type { TurnDeps } from './types';
+
+/** How many of the latest events `state.events` holds. [provisional] */
+export const SCRIPT_EVENTS = 20;
+
+function toScriptScene({ plot, entities }: Pick<Adventure, 'plot' | 'entities'>): ScriptScene | undefined {
+  if (!plot.scene) return undefined;
+  const { location, zone, present, groups, time } = sceneNames(plot.scene, entities);
+  return { location, zone, present, groups: (groups ?? []).map((g) => ({ name: g.id, count: g.count })), time };
+}
+
+function toScriptEvents({ assertions, entities }: Pick<Adventure, 'assertions' | 'entities'>): ScriptEvent[] {
+  const name = new Map(entities.flatMap((e) => (e.id === YOU ? [] : [[e.id, e.name] as const])));
+  return assertions
+    .flatMap((a) => (a.kind === 'event' ? [{ at: a.at, text: a.text, who: a.who.map((w) => name.get(w) ?? w) }] : []))
+    .toSorted((a, b) => a.at - b.at)
+    .slice(-SCRIPT_EVENTS);
+}
 
 /** What scripts see of the entities. `facts`: the current traits, effects, relationships and conflicts; `state`: the current values. */
 function toScriptEntities({ entities, assertions }: Pick<Adventure, 'entities' | 'assertions'>): ScriptEntity[] {
@@ -60,7 +89,7 @@ export async function runHook(
     storyCards: toScriptCards(adventure.storyCards),
     state: adventure.scriptState,
     // onInput has no context to read them against.
-    ...(hook !== 'onInput' && { entities: toScriptEntities(adventure) }),
+    ...(hook !== 'onInput' && { entities: toScriptEntities(adventure), scene: toScriptScene(adventure), events: toScriptEvents(adventure) }),
     ...extra,
   };
   // A runner that rejects (a crashed or restarted worker) must not fail the turn either; the trace keeps the reason.
