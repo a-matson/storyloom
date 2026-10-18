@@ -27,6 +27,8 @@ interface Props {
   present?: readonly string[] | undefined;
   /** A gutter face was clicked. */
   onOpenEntity: (id: string) => void;
+  /** The last output, when it answers a Do the dice rolled for: its roll shows under the Do. */
+  diceOutput?: Action | undefined;
 }
 
 /** The story column: player actions carry a mode pill, AI outputs are plain prose, the last output gets the tools. */
@@ -47,6 +49,7 @@ export function StoryView({
   cast,
   present,
   onOpenEntity,
+  diceOutput,
 }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
   // Follow the newest text: the compiler re-renders this view only when the story, stream or turn state changes.
@@ -78,6 +81,7 @@ export function StoryView({
             cast={cast}
             present={actions[i - 1]?.type === 'say' ? present : undefined}
             onOpenEntity={onOpenEntity}
+            diceOutput={i === lastIdx - 1 ? diceOutput : undefined}
           />
         ))}
         {/* In the action grid, so the stream starts at the same left edge as the finished prose. */}

@@ -46,7 +46,7 @@ export function runTurn(
         'onInput',
         continued ? '' : input.text,
         log.actions,
-        { info: { characterNames: [], actionCount: log.length, actionType: input.type } },
+        { info: { characterNames: [], actionCount: log.length, actionType: input.type, consequences: adventure.settings.consequences } },
         run.scriptLogs,
       );
       // A script that stops the turn or empties the input gets the same message (spec).
@@ -100,9 +100,16 @@ export function runTurn(
 /**
  * Retry: regenerate the last AI output as a new retry alternative, using the
  * log as it was before that output. Vary the seed so alternatives differ.
- * `note` (the fact the output broke) rides in this one prompt only.
+ * `note` (the fact the output broke) rides in this one prompt only. `reroll` hands scripts
+ * `info.retry` = the output's version count, so the dice roll again.
  */
-export function retryLast(adventure: Adventure, log: ActionLog, deps: TurnDeps, signal?: AbortSignal, note?: string): AsyncGenerator<TurnEvent> {
+export function retryLast(
+  adventure: Adventure,
+  log: ActionLog,
+  deps: TurnDeps,
+  signal?: AbortSignal,
+  { note, reroll = false }: { note?: string | undefined; reroll?: boolean } = {},
+): AsyncGenerator<TurnEvent> {
   const run = startRun('retry');
   const { turnId } = run;
   return traced(
@@ -116,7 +123,7 @@ export function retryLast(adventure: Adventure, log: ActionLog, deps: TurnDeps, 
         return;
       }
       run.actionId = last.id;
-      const prepared = await prepareContext(adventure, log.actions.slice(0, -1), deps, run.scriptLogs, note);
+      const prepared = await prepareContext(adventure, log.actions.slice(0, -1), deps, run.scriptLogs, note, reroll ? last.versions.length : 0);
       if ('stopped' in prepared) {
         yield { type: 'stopped', turnId, reason: prepared.stopped };
         return;

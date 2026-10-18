@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { isCurrentDice } from '@core/dice';
 import { sceneNames } from '@core/memory';
 import { actionText, type Action, type Adventure, type AppSettings } from '@core/model';
 import { outputFlag, type OutputFlag } from '@core/trace';
@@ -72,6 +73,7 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
 
   const ctx = state.context?.result;
   const last = state.actions.at(-1);
+  const rerollable = isCurrentDice(adv.scripts) && last?.type === 'continue' && state.actions.at(-2)?.type === 'do';
   useReadAloud(app.speech, state.busy, last?.type === 'continue' ? actionText(last) : undefined);
   const openContext = () => {
     if (!state.context) void api.previewContext();
@@ -113,12 +115,14 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
             cast={app.speakerAvatars ? adv.entities : undefined}
             present={adv.plot.scene && sceneNames(adv.plot.scene, adv.entities).present}
             onOpenEntity={setFaceId}
+            diceOutput={rerollable ? last : undefined}
           />
           {!state.busy && <SelectionBar api={api} entities={adv.entities} />}
           {!state.busy && adv.actions.length <= 1 && <CanonHint adventure={adv} api={api} />}
           <CommandRow
             busy={state.busy}
             canRetry={last?.type === 'continue'}
+            canReroll={rerollable}
             canErase={state.actions.length > 1}
             status={turnStatus(state, backendLabel)}
             api={api}

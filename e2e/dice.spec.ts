@@ -56,6 +56,21 @@ test('the dice quick start tells the model the outcome of a Do', async ({ page }
   for (const p of prompts.slice(3)) expect(p).not.toContain('[Outcome:');
 });
 
+test('the roll shows under the Do, and Re-roll rolls it again', async ({ page }) => {
+  const prompts = await connect(page);
+  await page.getByRole('button', { name: 'Consequences (dice)' }).click();
+  await page.getByRole('textbox', { name: 'Take a turn' }).fill('climb the wall');
+  await page.getByRole('button', { name: 'Send' }).click();
+  const chip = page.getByText(/^d20 \d+ vs 14 · [a-z ]+$/);
+  await expect(chip).toBeVisible();
+  const first = await chip.textContent();
+  await page.getByRole('button', { name: 'Re-roll' }).click();
+  await expect.poll(() => prompts.length).toBe(2);
+  await expect(chip).not.toHaveText(first ?? '');
+  const outcome = (await chip.textContent())?.split(' · ')[1];
+  expect(prompts[1]).toContain(`[Outcome: ${outcome}]`);
+});
+
 test('the Gameplay switch puts the dice on a plain story', async ({ page }) => {
   const prompts = await connect(page);
   await page.getByRole('button', { name: 'Fantasy' }).click();

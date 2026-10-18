@@ -219,14 +219,14 @@ export class GameSession {
     void this.drive(runTurn(this.adv, this.log, { type, text }, this.deps(), this.abort.signal));
   };
 
-  /** `note`: retry with the fact the flagged output broke; the prefetched alternative never saw it. */
-  readonly retry = (note?: string): void => {
+  /** `note`: retry with the fact the flagged output broke; `reroll`: roll the dice of the last Do again. The prefetched alternative has neither. */
+  readonly retry = (note?: string, reroll = false): void => {
     if (this.snapshot.busy) return;
     this.beginAction();
     const last = this.log.last;
     const pre = this.prefetched;
     this.dropPrefetch();
-    if (pre && last && pre.actionId === last.id && note === undefined) {
+    if (pre && last && pre.actionId === last.id && note === undefined && !reroll) {
       // Instant retry: the alternative was generated in the background.
       const before = this.log.actions;
       this.log.addVersion(last.id, pre.text);
@@ -239,7 +239,7 @@ export class GameSession {
       return;
     }
     this.abort = new AbortController();
-    void this.drive(retryLast(this.adv, this.log, this.deps(), this.abort.signal, note), true);
+    void this.drive(retryLast(this.adv, this.log, this.deps(), this.abort.signal, { note, reroll }), true);
   };
 
   readonly onError = (error: string): void => this.emit({ error });
