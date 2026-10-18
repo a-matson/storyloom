@@ -32,6 +32,8 @@ export const leaversOf = (read: SceneRead): string[] => Object.keys(read.stay).f
  * that a change of place keeps only the listed and who the read has here or asleep (C3: 27/30). The read changes someone's presence only
  * when `named` (the passage names them): a hand removal then holds (F17), and a character the passage
  * just does not mention is not "left" (M14-S2 replay); so does a room (`zones`), which `here` clears. `time` is the player's (`clock.ts`): a read or a move keeps it.
+ * Verdicts merge per stored name (M30-5): `here`, `asleep` or listed under any alias beats `left` under another; and a `stale`
+ * character (unnamed for several outputs) leaves unless asleep, so a read cannot keep someone present by habit.
  * Unchanged input returns `scene` itself.
  */
 export function nextScene(
@@ -42,6 +44,7 @@ export function nextScene(
   places: readonly Entity[],
   named: (n: string) => boolean,
   group: (s: string) => Group | undefined = () => undefined,
+  stale: (n: string) => boolean = () => false,
 ): { scene: Scene | undefined; moved: boolean } {
   const said = read.location.trim();
   const was = scene?.location;
@@ -70,14 +73,18 @@ export function nextScene(
     const id = room === undefined ? undefined : name(n);
     if (room !== undefined && id && named(id)) rooms.set(id, room);
   }
-  const left = new Set(names(leaversOf(read)).filter((p) => named(p) && !rooms.has(p)));
   // A faction listed is its members here (F21), never a character; listed each read or gone. [provisional]
   const groups = read.present.flatMap((x) => group(x) ?? []);
   const listed = names(read.present.filter((x) => !group(x))).filter((p) => before.includes(p) || named(p));
+  const saying = (w: Verdict) => new Set(names(Object.keys(read.stay).filter((n) => read.stay[n] === w)));
+  const asleep = saying('asleep');
+  const held = new Set([...saying('here'), ...asleep]);
+  // Imperium `left` and its alias Baron Henrik Drake `here` in one read wrote a gap (M30-5): any staying verdict wins.
+  const left = new Set(names(leaversOf(read)).filter((p) => named(p) && !rooms.has(p) && !held.has(p) && !listed.includes(p)));
   // On a move, who the read keeps "here" or "asleep" came along: a dragged, unconscious Minos was left out of `present`.
-  const kept = moved ? before.filter((p) => read.stay[p] === 'here' || read.stay[p] === 'asleep') : before;
-  const present = [...new Set([...kept, ...listed])].filter((p) => !left.has(p));
-  const back = new Set(names(Object.keys(read.stay).filter((n) => read.stay[n] === 'here')).filter(named));
+  const kept = moved ? before.filter((p) => held.has(p)) : before;
+  const present = [...new Set([...kept, ...listed])].filter((p) => !left.has(p) && (asleep.has(p) || !stale(p)));
+  const back = new Set([...saying('here')].filter(named));
   const zones = moved
     ? []
     : present.flatMap((p) => {
@@ -106,7 +113,7 @@ export function nextScene(
 /**
  * `plot` with the scene a turn read gives, read from `source`, stored as ids (`sceneIds`, so a name
  * that got a card since resolves too); a change of place is logged by name, a change of who is present
- * in `presence`. `passage` is the text the read was given. Unchanged: `plot` itself.
+ * in `presence`. `passage` is the text the read was given; `stale` as in `nextScene`. Unchanged: `plot` itself.
  */
 export function withScene(
   plot: PlotComponents,
@@ -116,6 +123,7 @@ export function withScene(
   source: { sourceId: string; sourceHash: string },
   entities: readonly Entity[],
   passage: string,
+  stale?: (n: string) => boolean,
 ): PlotComponents {
   const old = plot.scene;
   const was = old && sceneNames(old, entities);
@@ -126,7 +134,7 @@ export function withScene(
     const count = f && groupCount(passage, f);
     return f && { id: f.name, ...(count !== undefined && { count }) };
   };
-  const r = nextScene(was, read, name, at, places, namedIn(entities, passage), group);
+  const r = nextScene(was, read, name, at, places, namedIn(entities, passage), group, stale);
   const scene = r.scene && sceneIds(r.scene, entities);
   if (!scene || (r.scene === was && JSON.stringify(scene) === JSON.stringify(old))) return plot;
   const where = r.scene?.location;

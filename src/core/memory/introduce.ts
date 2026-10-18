@@ -10,7 +10,7 @@ import { MEMORY_SPAN } from './memoryBank';
 import { indexAssertions } from './assertionIndex';
 import { isConfirmed } from './facts';
 import { castLabels, namesOf, sceneNames } from './names';
-import { withScene } from './scene';
+import { namedIn, withScene } from './scene';
 import { applyChanges, stateAsk, stateCast, type StateUpdate } from './stateRead';
 
 /** Actions an introduction reads at least: the last AI output and the player line before it. [provisional] */
@@ -37,11 +37,22 @@ const none = (): TurnUpdate => ({ touched: 0, sceneUpdated: false });
 
 // Aliases and roles too, so a character the text calls "the dragon" resolves (the two P7c misses); new names, so one met this turn can be there;
 // and who is present without a card yet, or the enum has no word for them. A namesake goes by its label.
+// Told one entry per character: each alias its own name read as two people, one `left` and one `here` (M30-5).
 const castOf = (adventure: Adventure, names: readonly string[], present: readonly string[]) => {
   const labels = castLabels(adventure.entities, indexAssertions(adventure.assertions));
-  const characters = adventure.entities.flatMap((e) => (e.kind === 'character' ? [labels.get(e.id) ?? e.name, ...namesOf(e).slice(1)] : []));
-  return [...new Set([...characters, ...names, ...present])];
+  const characters = adventure.entities.filter((e) => e.kind === 'character');
+  const aliases = characters.flatMap((e) => [labels.get(e.id) ?? e.name, ...namesOf(e).slice(1)]);
+  const uncarded = [...names, ...present].filter((n) => !aliases.includes(n));
+  const told = characters.map((e) => {
+    const also = namesOf(e).slice(1, 1 + ALSO_TOLD);
+    return `${labels.get(e.id) ?? e.name}${also.length ? ` (also ${also.join(', ')})` : ''}`;
+  });
+  return { cast: [...new Set([...aliases, ...uncarded])], told: [...new Set([...told, ...uncarded])] };
 };
+/** Aliases told after a character's name in the turn read's cast. [provisional] */
+const ALSO_TOLD = 2;
+/** AI outputs a present character may go unnamed in before a read stops keeping them; one quiet passage must not drop them (M14-S2). [provisional] */
+const STALE_READS = 3;
 /** Confirmed factions, which the read may list present as a group (M21-4); an unconfirmed one is too often a misread. */
 const factionsOf = (adventure: Adventure) => {
   const ix = indexAssertions(adventure.assertions);
@@ -55,7 +66,8 @@ async function readEdit(adventure: Adventure, deps: ExtractDeps, i: number): Pro
   if (!names.length) return none();
   const passage = passageOf(adventure, range);
   const present = (adventure.plot.scene && sceneNames(adventure.plot.scene, adventure.entities).present) ?? [];
-  const reply = await readTurn(passage, names, { location: undefined, present }, castOf(adventure, names, present), deps);
+  const { cast, told } = castOf(adventure, names, present);
+  const reply = await readTurn(passage, names, { location: undefined, present, told }, cast, deps);
   const touched = reply ? foldEntities(adventure, reply.entities, passage, range) : 0;
   const call = deps.cuts?.calls?.at(-1);
   if (call) call.accepted = touched;
@@ -86,12 +98,13 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps, edited?
   const uncarded = (now?.present ?? []).filter((p) => !knownAs(adventure.entities, p) && passage.includes(p));
   // ponytail: names past the grammar's cap wait for the batch call; raise MAX_INTRODUCED if openings name more.
   const names = introductions ? [...new Set([...newNamesIn(adventure, range), ...uncarded])].slice(0, MAX_INTRODUCED) : [];
-  const prev = { location: now?.location, present: now?.present ?? [], zones: now?.zones, zone: now?.zone, factions: factionsOf(adventure) };
+  const { cast, told } = castOf(adventure, names, now?.present ?? []);
+  const prev = { location: now?.location, present: now?.present ?? [], zones: now?.zones, zone: now?.zone, factions: factionsOf(adventure), told };
   const asked = names.length > 0 || sceneEachTurn;
   // Read B merged (M17-1): its subjects are the scene before this reply, since the reply carries both.
   const subjects = asked && opts?.state ? stateCast(adventure) : [];
   const state = subjects.length ? stateAsk(adventure, subjects) : undefined;
-  const reply = asked ? await readTurn(passage, names, prev, castOf(adventure, names, prev.present), deps, state) : null;
+  const reply = asked ? await readTurn(passage, names, prev, cast, deps, state) : null;
   adventure.scriptState = {
     ...adventure.scriptState,
     __introducedAt: n,
@@ -112,7 +125,14 @@ export async function introduce(adventure: Adventure, deps: ExtractDeps, edited?
   };
   const scene = sceneEachTurn ? reply.scene : undefined;
   if (scene && notePlace(adventure, scene.location, n - 1)) touched++;
-  const plot = scene ? withScene(adventure.plot, scene, name, n - 1, { sourceId: last.id, sourceHash: hash }, adventure.entities, passage) : adventure.plot;
+  const recent = `${adventure.actions
+    .filter((a) => a.type === 'continue' || a.type === 'start')
+    .slice(-STALE_READS)
+    .map(actionText)
+    .join('\n')}\n${passage}`;
+  const stale = (p: string) => !namedIn(adventure.entities, recent)(p);
+  const source = { sourceId: last.id, sourceHash: hash };
+  const plot = scene ? withScene(adventure.plot, scene, name, n - 1, source, adventure.entities, passage, stale) : adventure.plot;
   const sceneUpdated = plot !== adventure.plot;
   adventure.plot = plot;
   // Present by this read is a second sighting: `isConfirmed` kept a character the turn read carded out of the prompt until a batch range.
