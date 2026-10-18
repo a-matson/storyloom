@@ -20,6 +20,7 @@ const STATUS_CLASS: Record<MemoryStatus, string> = {
   used: 'bg-mode-say-bg text-verdigris',
   stored: '',
   stale: 'text-warning',
+  skipped: 'text-muted-foreground',
   forgotten: 'text-muted-foreground',
 };
 
@@ -42,13 +43,21 @@ function Row({ row, edits }: { row: MemoryRow; edits: Edits }) {
         {score !== undefined && <span className={`${mono} ${muted}`}>score {score.toFixed(2)}</span>}
         <span className={`${mono} ${muted}`}>used {m.useCount}×</span>
       </div>
-      {draft === null ? (
+      {m.skipped ? (
+        <div className={`text-caption ${muted}`}>The model copied this passage instead of summarising it.</div>
+      ) : draft === null ? (
         <div className="text-caption text-prose">{m.text}</div>
       ) : (
         <Textarea aria-label={`Edit memory, ${range}`} value={draft} onChange={(e) => setDraft(e.target.value)} />
       )}
       <div className="flex gap-1.5">
-        {draft === null ? (
+        {m.skipped ? (
+          status === 'skipped' && (
+            <Button variant="ghost" className="h-7" aria-label={`Retry memory, ${range}`} onClick={() => edits.retry(m.id)}>
+              Retry
+            </Button>
+          )
+        ) : draft === null ? (
           <>
             <Button
               variant="ghost"
@@ -107,7 +116,7 @@ export function MemoriesView({ result, memories, api }: { result: ContextBuildRe
     <>
       <div className="flex items-center gap-3">
         <span className="grow text-caption text-muted-foreground" data-testid="memory-counts">
-          used {counts.used} · stored {counts.stored} · stale {counts.stale} · forgotten {counts.forgotten}
+          used {counts.used} · stored {counts.stored} · stale {counts.stale} · skipped {counts.skipped} · forgotten {counts.forgotten}
         </span>
         <Segmented value={order} options={[...ORDERS]} onChange={setOrder} />
       </div>

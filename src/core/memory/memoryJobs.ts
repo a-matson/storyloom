@@ -1,5 +1,5 @@
 import type { Action, Adventure, Memory } from '../model/types';
-import { createMemory, currentRange, dueMemoryRanges, evictToSize, isPlayerAction, type MemoryRange } from './memoryBank';
+import { createMemory, currentRange, dueMemoryRanges, evictToSize, isActive, isPlayerAction, skippedMemory, type MemoryRange } from './memoryBank';
 import { MEMORY_SYSTEM, memoryPrompt } from '../text/memoryPrompts';
 import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
@@ -59,8 +59,10 @@ export interface MaintenanceReport extends CutCounts {
   memoriesRegenerated: number;
   /** Stale memories whose actions were erased. */
   memoriesDropped: number;
-  /** Ranges skipped because the model continued the story twice. */
+  /** Ranges whose reply was rejected twice (the model copied or continued the story). */
   memoriesRejected: number;
+  /** Ranges stored as `skipped` placeholders after a rejection, new or rewritten. */
+  memoriesSkipped: number;
   /** Entities created or changed by the extraction that follows each written memory. */
   entitiesTouched: number;
   summaryUpdated: boolean;
@@ -84,7 +86,7 @@ const REEMBED_BATCH = 32;
 async function reembed(adventure: Adventure, deps: MaintenanceDeps): Promise<void> {
   const dims = deps.embedder.dimensions;
   if (!dims || deps.signal?.aborted) return; // unknown until the embedder's first result
-  const batch = adventure.memories.filter((m) => !m.stale && !m.forgotten && m.embedding?.length !== dims).slice(0, REEMBED_BATCH);
+  const batch = adventure.memories.filter((m) => isActive(m) && m.embedding?.length !== dims).slice(0, REEMBED_BATCH);
   if (!batch.length) return;
   const vectors = await deps.embedder.embed(batch.map((m) => m.text));
   const byId = new Map(batch.map((m, i) => [m.id, vectors[i]]));
@@ -123,15 +125,15 @@ async function summarise(passage: string, deps: TextDeps, given: readonly string
 }
 
 /**
- * A memory's text for one slice; '' when the passage or the model's answer is empty, or the answer
- * is still a story continuation after one retry on the passage cut back to its last AI output.
+ * A memory's text for one slice; '' when the passage or the model's answer is empty or the run was stopped,
+ * null when the answer still copies or continues the story after one retry on the passage cut back to its last AI output.
  */
 export async function memoryText(
   slice: Action[],
   deps: TextDeps,
   report: Pick<MaintenanceReport, 'memoriesRejected'>,
   given: readonly string[] = [],
-): Promise<string> {
+): Promise<string | null> {
   const passage = joinStory(slice);
   if (!passage.trim()) return '';
   const text = await summarise(passage, deps, given);
@@ -143,16 +145,18 @@ export async function memoryText(
   if (!retry || isMemoryLike(retry, cut)) return retry;
   console.warn('memory rejected twice:', retry);
   report.memoriesRejected += 1;
-  return '';
+  return null;
 }
 
 /**
- * Summarise and embed one range; null when there is no memory text for it. A secret in the range is not
+ * Summarise and embed one range; null when there is no memory text for it, a `skipped` placeholder when
+ * the model would only copy it (else the same range was due, and copied, on every idle run). A secret in the range is not
  * given to the helper: as a given line it emptied 3–5 of 10 memories and turned others into `Minos: …` lists
  * [measured: 2026-10-15-memory-replay-47-53-s3-secret2]; the memory carries its mark when sent (`markOf`).
  */
 async function writeMemory(adventure: Adventure, range: MemoryRange, deps: MaintenanceDeps, report: MaintenanceReport): Promise<Memory | null> {
   const text = await memoryText(adventure.actions.slice(range.fromAction, range.toAction), deps, report, youLines(adventure.assertions));
+  if (text === null) return skippedMemory(adventure.actions, range);
   if (!text) return null;
   const [embedding] = await deps.embedder.embed([text]);
   return createMemory(text, adventure.actions, range, embedding);
@@ -170,12 +174,12 @@ async function regenerateStale(adventure: Adventure, deps: MaintenanceDeps, repo
     if (deps.signal?.aborted || !range) break;
     const fresh = await writeMemory(adventure, range, deps, report);
     if (!fresh) continue;
-    // Same id, use count and age: it is the same memory with corrected text.
+    // Same id, use count and age: it is the same memory with corrected text (or skipped, not retried every run).
     const { id, useCount, createdAt, lastUsedAt } = old;
     adventure.memories = adventure.memories.map((m) =>
       m.id === id ? { ...fresh, id, useCount, createdAt, ...(lastUsedAt !== undefined && { lastUsedAt }) } : m,
     );
-    report.memoriesRegenerated += 1;
+    report[fresh.skipped ? 'memoriesSkipped' : 'memoriesRegenerated'] += 1;
   }
 }
 
@@ -186,6 +190,7 @@ export async function runMemoryMaintenance(adventure: Adventure, deps: Maintenan
     memoriesRegenerated: 0,
     memoriesDropped: 0,
     memoriesRejected: 0,
+    memoriesSkipped: 0,
     entitiesTouched: 0,
     summaryUpdated: false,
     summaryFirst: false,
@@ -226,7 +231,7 @@ async function maintain(adventure: Adventure, all: MaintenanceDeps, report: Main
       const memory = await writeMemory(adventure, range, deps, report);
       if (!memory) continue;
       adventure.memories = [...adventure.memories, memory];
-      report.memoriesWritten += 1;
+      report[memory.skipped ? 'memoriesSkipped' : 'memoriesWritten'] += 1;
     }
     // The one combined helper call per two memories; a bad reply only costs the entities.
     const e = await catchUpEntities(adventure, on('batch'));

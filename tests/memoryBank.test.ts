@@ -5,6 +5,7 @@ import {
   dueMemoryRanges,
   entitiesOverdue,
   evictToSize,
+  isActive,
   markStale,
   MEMORY_SPAN,
   memoryOverdue,
@@ -130,6 +131,16 @@ describe('retrieval and eviction', () => {
     const a = mem('a', 6, 0, 1, [0, 1]);
     expect(rankMemories([f, a], [1, 0]).map((r) => r.memory.id)).toEqual(['a']);
     expect(evictToSize([f, a], 1).forgotten).toBe(0);
+  });
+
+  it('keeps a skipped placeholder out of the bank, but moves the window past it', () => {
+    const s = { ...mem('s', 6, 0, 9, [1, 0]), text: '', skipped: true };
+    const a = mem('a', 0, 0, 1, [0, 1]);
+    expect(isActive(s)).toBe(false);
+    expect(rankMemories([s, a], [1, 0]).map((r) => r.memory.id)).toEqual(['a']);
+    expect(evictToSize([s, a], 1).forgotten).toBe(0);
+    expect(dueMemoryRanges(prose(18), [a, s])).toEqual([]);
+    expect(dueMemoryRanges(prose(24), [a, s])).toEqual([{ fromAction: 12, toAction: 18 }]);
   });
 
   it('keeps at most bankSize forgotten memories, dropping the oldest', () => {

@@ -18,4 +18,6 @@ export const Memory = z.object({
   forgotten: z.optional(z.boolean()),
   /** The player's: never evicted, ranked first. */
   pinned: z.optional(z.boolean()),
+  /** The model copied or continued the passage twice: text is empty, the range is not due again until the player retries it. */
+  skipped: z.optional(z.boolean()),
 });

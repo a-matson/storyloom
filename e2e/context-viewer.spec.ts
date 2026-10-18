@@ -9,9 +9,9 @@ async function connectDemo(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Continue' }).click();
 }
 
-/** Import has no memories, so two are written straight into the store, covering actions 1-6 and 7-12. */
-async function seedMemories(page: Page): Promise<void> {
-  await page.evaluate(async () => {
+/** Import has no memories, so two are written straight into the store, covering actions 1-6 and 7-12 (that one `skipped` when asked). */
+async function seedMemories(page: Page, skipped: boolean): Promise<void> {
+  await page.evaluate(async (asSkipped) => {
     const req = indexedDB.open('storyloom');
     const db = await new Promise<IDBDatabase>((ok, fail) => {
       req.addEventListener('success', () => ok(req.result));
@@ -37,15 +37,16 @@ async function seedMemories(page: Page): Promise<void> {
         actionIds: ids.slice(from, from + 6),
         useCount: 0,
         createdAt: i,
+        ...(asSkipped && i === 1 && { text: '', skipped: true }),
       });
     }
     await new Promise((ok) => tx.addEventListener('complete', ok));
     db.close();
-  });
+  }, skipped);
 }
 
 /** A 14-action import with the two seeded memories, opened in the game. */
-async function openSaltRoad(page: Page): Promise<void> {
+async function openSaltRoad(page: Page, skipped = false): Promise<void> {
   await connectDemo(page);
   const actions = Array.from({ length: 14 }, (_, i) => (i % 2 ? { text: `> You walk on ${i}.`, type: 'do' } : { text: `The road bends ${i}.` }));
   const chooser = page.waitForEvent('filechooser');
@@ -53,7 +54,7 @@ async function openSaltRoad(page: Page): Promise<void> {
   const aid = { title: 'Salt Road', actions };
   await (await chooser).setFiles({ name: 'salt.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(aid)) });
   await expect(page.getByRole('button', { name: 'Continue Salt Road 14 actions' })).toBeVisible();
-  await seedMemories(page);
+  await seedMemories(page, skipped);
   await page.getByRole('button', { name: 'Continue Salt Road 14 actions' }).click();
 }
 
@@ -67,7 +68,7 @@ async function openMemories(page: Page) {
 test('the Memories tab shows the bank and marks edited ranges stale', async ({ page }) => {
   await openSaltRoad(page);
   let dialog = await openMemories(page);
-  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 2 · stale 0 · forgotten 0', { timeout: 15_000 });
+  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 2 · stale 0 · skipped 0 · forgotten 0', { timeout: 15_000 });
   await expect(dialog.getByText('actions 7–12')).toBeVisible();
   await page.keyboard.press('Escape');
 
@@ -80,7 +81,7 @@ test('the Memories tab shows the bank and marks edited ranges stale', async ({ p
   await expect(page.getByText('The road bends 2. A gull cries.')).toBeVisible();
 
   dialog = await openMemories(page);
-  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 1 · stale 1 · forgotten 0');
+  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 1 · stale 1 · skipped 0 · forgotten 0');
   await expect(dialog.getByText('stale', { exact: true })).toBeVisible();
 });
 
@@ -88,7 +89,7 @@ test('a memory can be pinned, edited, forgotten and restored', async ({ page }) 
   await openSaltRoad(page);
   let dialog = await openMemories(page);
   // The bank loads after the dialog opens; wait for it rather than for the button.
-  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 2 · stale 0 · forgotten 0', { timeout: 15_000 });
+  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 2 · stale 0 · skipped 0 · forgotten 0', { timeout: 15_000 });
   await dialog.getByRole('button', { name: 'Pin memory, actions 1–6' }).click();
   await expect(dialog.getByRole('button', { name: 'Pin memory, actions 1–6' })).toHaveAttribute('aria-pressed', 'true');
   await expect(dialog.getByText('pinned', { exact: true })).toBeVisible();
@@ -99,14 +100,25 @@ test('a memory can be pinned, edited, forgotten and restored', async ({ page }) 
   await expect(dialog.getByText('The gulls followed the cart.')).toBeVisible();
 
   await dialog.getByRole('button', { name: 'Forget memory, actions 7–12' }).click();
-  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 1 · stale 0 · forgotten 1');
+  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 1 · stale 0 · skipped 0 · forgotten 1');
   await dialog.getByRole('button', { name: 'Restore memory, actions 7–12' }).click();
-  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 2 · stale 0 · forgotten 0');
+  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 2 · stale 0 · skipped 0 · forgotten 0');
 
   await page.reload();
   dialog = await openMemories(page);
   await expect(dialog.getByText('pinned', { exact: true })).toBeVisible();
   await expect(dialog.getByText('The gulls followed the cart.')).toBeVisible();
+});
+
+test('a skipped memory says why, and Retry marks it for rewriting', async ({ page }) => {
+  await openSaltRoad(page, true);
+  const dialog = await openMemories(page);
+  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 1 · stale 0 · skipped 1 · forgotten 0', { timeout: 15_000 });
+  await expect(dialog.getByText('The model copied this passage instead of summarising it.')).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Edit memory, actions 7–12' })).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Retry memory, actions 7–12' }).click();
+  await expect(dialog.getByTestId('memory-counts')).toHaveText('used 0 · stored 1 · stale 1 · skipped 0 · forgotten 0');
+  await expect(dialog.getByRole('button', { name: 'Retry memory, actions 7–12' })).toHaveCount(0);
 });
 
 async function takeTurnAndViewContext(page: Page) {

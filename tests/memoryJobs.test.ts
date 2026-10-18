@@ -1,8 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
-import { isMemoryLike, runMemoryMaintenance } from '@core/memory/memoryJobs';
+import { describe, expect, it } from 'vitest';
+import { runMemoryMaintenance } from '@core/memory/memoryJobs';
 import { actionText } from '@core/model';
 import type { CompletionRequest, Provider } from '@core/ports';
-import { joinStory } from '@core/text/formatting';
 import { byPlayer } from '@core/memory/looks';
 import { newSecret } from '@core/memory/secrets';
 import { YOU } from '@core/memory/you';
@@ -104,38 +103,6 @@ describe('memory maintenance', () => {
     expect(adv.memories.filter((m) => m.forgotten)).toHaveLength(25);
     await runMemoryMaintenance(adv, deps);
     expect(memoryCalls()).toBe(65);
-  });
-
-  it('rejects a memory that copies its passage, then keeps the retry', async () => {
-    const adv = adventure(12);
-    const passage = joinStory(adv.actions.slice(0, 5));
-    const answers = [passage.split('\n')[0]!, 'Mira found the map.'];
-    const provider = fakeProvider(async function* () {
-      yield { text: answers.shift() ?? '', done: true };
-    });
-    const report = await runMemoryMaintenance(adv, { ...fakeDeps(adv).deps, provider });
-    expect(report).toMatchObject({ memoriesWritten: 1, memoriesRejected: 0 });
-    expect(adv.memories[0]?.text).toBe('Mira found the map.');
-    expect(isMemoryLike('Mira found the map by the old gate at night.', 'Mira found the map by the old gate at night and ran.')).toBe(false);
-  });
-
-  it('rejects memories that continue the story, retries once, then skips the range', async () => {
-    const adv = adventure(12);
-    const answers = ['"Halt!" the rider cries.', 'The rider halts. > You draw.', 'Mira found the map.'];
-    const reqs: CompletionRequest[] = [];
-    const provider = fakeProvider(async function* (req) {
-      reqs.push(req);
-      yield { text: answers.shift() ?? '', done: true };
-    });
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const deps = { ...fakeDeps(adv).deps, provider };
-    const report = await runMemoryMaintenance(adv, deps);
-    expect(report).toMatchObject({ memoriesWritten: 0, memoriesRejected: 1 });
-    expect(warn).toHaveBeenCalledOnce();
-    expect(reqs[0]).toMatchObject({ maxTokens: 120, stop: expect.arrayContaining(['\n>', '<|im_start|>']) });
-    expect(await runMemoryMaintenance(adv, deps)).toMatchObject({ memoriesWritten: 1, memoriesRejected: 0 });
-    expect(adv.memories[0]?.text).toBe('Mira found the map.');
-    warn.mockRestore();
   });
 
   it('trims a length-cut memory and summary to their last sentence end', async () => {

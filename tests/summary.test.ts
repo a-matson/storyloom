@@ -64,10 +64,11 @@ describe('story summary', () => {
     const adv = adventure(30);
     adv.settings.memory.autoSummary = true;
     adv.scriptState = { ...adv.scriptState, __summaryAt: 6 };
-    adv.memories = memories([0, 6, 12, 18]);
+    // A skipped range adds no line, and does not hold the summary back.
+    adv.memories = memories([0, 6, 12, 18]).map((m) => (m.fromAction === 12 ? { ...m, text: '', skipped: true } : m));
     const { deps, calls } = fakeDeps(adv);
     await runMemoryMaintenance(adv, { ...deps, historyStart: 18 });
-    expect(calls.at(-1)).toContain(`New memories:\n- mem6\n- mem12\n\n${SUMMARY}`);
+    expect(calls.at(-1)).toContain(`New memories:\n- mem6\n\n${SUMMARY}`);
     expect(calls.at(-1)).not.toContain('Events since');
     for (const absent of ['mem0', 'mem18', 'Most recent passage']) expect(calls.at(-1)).not.toContain(absent);
     expect(adv.scriptState.__summaryAt).toBe(18);
