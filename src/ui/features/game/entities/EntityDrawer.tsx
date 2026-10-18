@@ -45,76 +45,81 @@ export function EntityDrawer({ entity: e, adventure, api, onClose, onOpen }: Pro
   const legacy = own.findLast((a) => a.kind === 'look' && a.key === 'legacy' && isCurrent(a));
   const legacyLook = legacy?.kind === 'look' ? legacy.value : '';
   const roles = e.roles ?? [];
-  const [building, setBuilding] = useState(false);
   // The old name stays an alias, so the story's later mentions still find this entry.
   const rename = (name: string) => name && name !== e.name && update({ name, aliases: [...e.aliases.filter((a) => a !== name), e.name] });
 
   return (
-    <>
-      <Drawer label={e.name} onClose={onClose}>
-        <DrawerHeader
-          title={
-            <span className="flex items-center gap-3 max-sm:flex-col max-sm:items-start">
-              <Avatar name={e.name} adventureId={adventure.id} portraitId={e.portraitId} size="lg" />
-              <span className="text-card-title font-semibold">{e.name}</span>
-              {e.canon && <Pill title="Seeded from a scenario card">canon</Pill>}
-            </span>
-          }
-          onClose={onClose}
+    <Drawer label={e.name} onClose={onClose}>
+      <DrawerHeader
+        title={
+          <span className="flex items-center gap-3 max-sm:flex-col max-sm:items-start">
+            <Avatar name={e.name} adventureId={adventure.id} portraitId={e.portraitId} size="lg" />
+            <span className="text-card-title font-semibold">{e.name}</span>
+            {e.canon && <Pill title="Seeded from a scenario card">canon</Pill>}
+          </span>
+        }
+        onClose={onClose}
+      />
+      <DrawerBody>
+        <Portrait entity={e} stale={isPortraitStale(e, adventure.assertions)} api={api} edits={edits} />
+        {e.kind === 'character' && <Build entity={e} adventure={adventure} api={api} />}
+        <label htmlFor={`${id}-name`}>
+          <SectionLabel>Name</SectionLabel>
+        </label>
+        <Input id={`${id}-name`} defaultValue={e.name} onBlur={(ev) => rename(ev.target.value.trim())} />
+        <label htmlFor={`${id}-desc`}>
+          <SectionLabel>Description</SectionLabel>
+        </label>
+        <Textarea
+          // Remounts on an edit made elsewhere (Keep canon on a species conflict).
+          key={identityText(e, own)}
+          id={`${id}-desc`}
+          defaultValue={identityText(e, own)}
+          onBlur={(ev) => ev.target.value.trim() !== identityText(e, own) && edits.setIdentity(e.id, ev.target.value.trim())}
         />
-        <DrawerBody>
-          <Portrait entity={e} stale={isPortraitStale(e, adventure.assertions)} api={api} edits={edits} />
-          {e.kind === 'character' && (
-            <Button className="self-start" onClick={() => setBuilding(true)}>
-              Build character
-            </Button>
-          )}
-          <label htmlFor={`${id}-name`}>
-            <SectionLabel>Name</SectionLabel>
-          </label>
-          <Input id={`${id}-name`} defaultValue={e.name} onBlur={(ev) => rename(ev.target.value.trim())} />
-          <label htmlFor={`${id}-desc`}>
-            <SectionLabel>Description</SectionLabel>
-          </label>
-          <Textarea
-            // Remounts on an edit made elsewhere (Keep canon on a species conflict).
-            key={identityText(e, own)}
-            id={`${id}-desc`}
-            defaultValue={identityText(e, own)}
-            onBlur={(ev) => ev.target.value.trim() !== identityText(e, own) && edits.setIdentity(e.id, ev.target.value.trim())}
-          />
-          <label htmlFor={`${id}-looks`}>
-            <SectionLabel>Looks</SectionLabel>
-          </label>
-          <Input
-            id={`${id}-looks`}
-            defaultValue={legacyLook}
-            onBlur={(ev) => ev.target.value.trim() !== legacyLook && edits.setValue(e.id, 'legacy', ev.target.value.trim())}
-          />
-          <label htmlFor={`${id}-aliases`}>
-            <SectionLabel>Also called (comma-separated)</SectionLabel>
-          </label>
-          <Input id={`${id}-aliases`} defaultValue={e.aliases.join(', ')} onBlur={(ev) => update({ aliases: list(ev.target.value) })} />
-          {roles.length > 0 && (
-            <fieldset className="flex flex-wrap items-center gap-1.5" aria-label="Roles">
-              <SectionLabel>Referred to as</SectionLabel>
-              {roles.map((r) => (
-                <Pill key={r} className="gap-1 normal-case">
-                  {r}
-                  <button type="button" aria-label={`Remove role ${r}`} onClick={() => update({ roles: roles.filter((x) => x !== r) })}>
-                    ✕
-                  </button>
-                </Pill>
-              ))}
-            </fieldset>
-          )}
-          {e.kind === 'item' && <ItemRows entity={e} adventure={adventure} edits={edits} />}
-          <CardSections entity={e} adventure={adventure} api={api} edits={edits} onClose={onClose} onOpen={onOpen} />
-          <Appearances entity={e} adventure={adventure} onClose={onClose} edits={edits} />
-          <Actions entity={e} adventure={adventure} edits={edits} />
-        </DrawerBody>
-      </Drawer>
-      {/* A sibling, not a child: React would bubble its dialog's close up to this drawer. */}
+        <label htmlFor={`${id}-looks`}>
+          <SectionLabel>Looks</SectionLabel>
+        </label>
+        <Input
+          id={`${id}-looks`}
+          defaultValue={legacyLook}
+          onBlur={(ev) => ev.target.value.trim() !== legacyLook && edits.setValue(e.id, 'legacy', ev.target.value.trim())}
+        />
+        <label htmlFor={`${id}-aliases`}>
+          <SectionLabel>Also called (comma-separated)</SectionLabel>
+        </label>
+        <Input id={`${id}-aliases`} defaultValue={e.aliases.join(', ')} onBlur={(ev) => update({ aliases: list(ev.target.value) })} />
+        {roles.length > 0 && (
+          <fieldset className="flex flex-wrap items-center gap-1.5" aria-label="Roles">
+            <SectionLabel>Referred to as</SectionLabel>
+            {roles.map((r) => (
+              <Pill key={r} className="gap-1 normal-case">
+                {r}
+                <button type="button" aria-label={`Remove role ${r}`} onClick={() => update({ roles: roles.filter((x) => x !== r) })}>
+                  ✕
+                </button>
+              </Pill>
+            ))}
+          </fieldset>
+        )}
+        {e.kind === 'item' && <ItemRows entity={e} adventure={adventure} edits={edits} />}
+        <CardSections entity={e} adventure={adventure} api={api} edits={edits} onClose={onClose} onOpen={onOpen} />
+        <Appearances entity={e} adventure={adventure} onClose={onClose} edits={edits} />
+        <Actions entity={e} adventure={adventure} edits={edits} />
+      </DrawerBody>
+    </Drawer>
+  );
+}
+
+type Edits = ReturnType<typeof entityEdits>;
+
+function Build({ entity: e, adventure, api }: { entity: Entity; adventure: Adventure; api: GameApi }) {
+  const [building, setBuilding] = useState(false);
+  return (
+    <>
+      <Button className="self-start" onClick={() => setBuilding(true)}>
+        Build character
+      </Button>
       {building && (
         <Suspense fallback={null}>
           <CharacterBuilder entity={e} adventure={adventure} api={api} onClose={() => setBuilding(false)} />
@@ -123,8 +128,6 @@ export function EntityDrawer({ entity: e, adventure, api, onClose, onOpen }: Pro
     </>
   );
 }
-
-type Edits = ReturnType<typeof entityEdits>;
 
 /** Drawn between turns when an image server is configured; these are the player's overrides. */
 function Portrait({ entity: e, stale, api, edits }: { entity: Entity; stale: boolean; api: GameApi; edits: Edits }) {

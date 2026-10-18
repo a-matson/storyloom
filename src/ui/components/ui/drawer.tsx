@@ -21,7 +21,8 @@ export function Drawer({ label, onClose, className, children }: Props) {
     <dialog
       ref={ref}
       aria-label={label}
-      onClose={onClose}
+      // React bubbles a nested drawer's close up its component tree.
+      onClose={(ev) => ev.target === ev.currentTarget && onClose()}
       {...{ closedby: 'any' }}
       className={cn(
         'fixed inset-y-0 right-0 left-auto m-0 h-full max-h-none w-[min(720px,100vw)] max-w-none flex-col border-0 border-l border-border bg-card p-0 text-foreground',
