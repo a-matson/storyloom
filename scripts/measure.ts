@@ -5,7 +5,8 @@
  *   latency <url> [turns] TTFT, cache hit %, tok/s against a live backend (cold vs cached prefix)
  *   gatev <url>           llama-server checks: template, tokenizer error, warming, layout, evictionChunk, CORS
  *   memory-keep <url> [label]  does the memory for each planted Do/Say keep the fact? (recorded history, ~16 calls)
- *   contradiction <url> [label] [cases]  precision/recall of the contradiction check on hand-labelled outputs (cases: comma-separated files)
+ *   contradiction <url> [label] [cases]  precision/recall of the contradiction check on hand-labelled outputs (cases: comma-separated files;
+ *     MEASURE_SCOPE=locked drops the Scene: lines, as with the setting off)
  *   contradiction-cases <backups> [file]  unlabelled check cases from backups' AI outputs (bench/contradiction-dogfood.json), no model
  *   memory-replay <url> <backup> <from-to> [label] [samples]  the memory for one action range of a backup, written [samples] times (default 5)
  *   state <url> <backup> [label] [labels-set]  scene and state reads over every AI turn of a backup, scored against bench/stateLabels.json

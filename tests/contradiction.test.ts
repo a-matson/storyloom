@@ -50,9 +50,14 @@ describe('checkInputs', () => {
     expect(checkInputs(adv)).toEqual(['Scene: The quay · Present: Mira', 'Mira: hair is grey']);
   });
 
-  it('is empty with the setting off, even with a locked value present', () => {
+  it('takes only the locked values with the setting off', () => {
     const adv = adventure([mira], { location: 'The quay', present: ['ent_Mira'] });
     expect(adv.settings.memory.contradictionCheck).toBe(false);
+    expect(checkInputs(adv)).toEqual(['Mira: hair is grey']);
+  });
+
+  it('is empty with the setting off and nobody locked present, so no call', () => {
+    const adv = adventure([mira], { location: 'The quay', present: [] });
     expect(checkInputs(adv)).toEqual([]);
   });
 
