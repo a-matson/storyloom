@@ -1,4 +1,4 @@
-import type { Action, Adventure } from '../model/types';
+import type { Action, Adventure, Assertion } from '../model/types';
 import { actionText } from '../model/types';
 import { identityText, indexAssertions } from './assertionIndex';
 import { mergeAssertions, type Rest } from './assertionWrites';
@@ -12,15 +12,18 @@ import { flagSpecies } from './species';
 import { norm } from './names';
 import { CAPITALISED, renameCues, withCues } from './renames';
 import { spellingOf } from './spelling';
+import { NOT_A_NAME, playerName, YOU } from './you';
 
 export { uncut, type Incoming, type Rejected } from './sighting';
 
-/** The player and how the story addresses them, and a role the grammar let through by capitalising its article ("The creature"). */
-export const NOT_A_NAME = /^\s*(?:you|master|mistress|sir|madam|my lord|my lady)\s*$|^(the|a|an) \p{Ll}/iu;
+/** Whether `name` is the player's (`playerName`). */
+const isPlayer = (adventure: Pick<Adventure, 'plot' | 'actions'>, name: string): boolean => {
+  const player = playerName(adventure);
+  return player !== undefined && norm(name) === norm(player);
+};
 
-/** Not an entity: `NOT_A_NAME`, or the player's own name in a third-person adventure. */
-export const notAName = (plot: Adventure['plot'], name: string): boolean =>
-  NOT_A_NAME.test(name) || (!!plot.thirdPerson?.enabled && name.trim().toLowerCase() === plot.thirdPerson.name.trim().toLowerCase());
+/** Not an entity: `NOT_A_NAME`, or the player's own name. */
+export const notAName = (adventure: Pick<Adventure, 'plot' | 'actions'>, name: string): boolean => NOT_A_NAME.test(name) || isPlayer(adventure, name);
 
 /** Capitalised mid-sentence often enough to pass `namedInPassage`, never a name. "The" stays: "The Ashen Order" is one name. [provisional] */
 const STOP = new Set('you an it they we he she but and then when day night dawn morning midday afternoon evening his her its their your our my'.split(' '));
@@ -46,13 +49,12 @@ export function candidateNames(text: string, known: readonly string[]): string[]
 const partOf = (a: string, b: string) => a.length < b.length && ` ${b.toLowerCase()} `.includes(` ${a.toLowerCase()} `);
 
 /**
- * The range's candidate names, each action read alone; the player's third-person name is known. A
+ * The range's candidate names, each action read alone; the player's name is known. A
  * name `knownAs` resolves, or part of a longer new one, is that one: both became cards.
  * [measured: 2026-10-11-recall-m12-1-pr2-d30.json]
  */
 export function newNamesIn(adventure: Adventure, range: MemoryRange): string[] {
-  const player = adventure.plot.thirdPerson?.enabled ? [adventure.plot.thirdPerson.name] : [];
-  const known = [...player, ...adventure.entities.flatMap((e) => [e.name, ...e.aliases])];
+  const known = [playerName(adventure) ?? '', ...adventure.entities.flatMap((e) => [e.name, ...e.aliases])];
   const names = [...new Set(adventure.actions.slice(range.fromAction, range.toAction).flatMap((a) => candidateNames(actionText(a), known)))];
   const ix = indexAssertions(adventure.assertions);
   return names.filter((n) => !knownAs(adventure.entities, n, ix) && !names.some((k) => partOf(n, k)) && !notNewName(adventure, n, range));
@@ -101,6 +103,46 @@ function restIn(actions: readonly Action[]): (s: Source | undefined) => Rest | u
 const MAX_HELD = 20;
 
 /**
+ * The player is never a card: what the reply says under their name, through the same guards, is
+ * added to `you` as proposals (`seen: false`), which nothing sends until the player keeps one.
+ * Their own lines stay untouched. Returns how many were added.
+ */
+function proposeOnYou(adventure: Adventure, incoming: readonly Incoming[], range: MemoryRange, opts: { twice?: boolean; log?: FoldLog }): number {
+  const at = range.toAction - 1;
+  const fallback = sourceIn(adventure.actions, range);
+  const restOf = restIn(adventure.actions);
+  let added = 0;
+  for (const item of incoming.filter((x) => isPlayer(adventure, x.name))) {
+    const { facts = [], name } = item;
+    const own = adventure.assertions.filter((a) => a.subject === YOU);
+    const ix = indexAssertions(adventure.assertions);
+    const backed = new Map<string, Source>();
+    const reject = (value: string, reason: Rejected['reason']) => opts.log?.rejected.push({ entity: name, value, reason, passageRange: range });
+    const seen = sightingOf(
+      { ...item, kind: 'character', facts, aliases: [] },
+      {
+        actions: adventure.actions.slice(range.fromAction, range.toAction),
+        who: { name, aliases: [] },
+        kind: 'character',
+        own,
+        identity: '',
+        toward: (to) => (/^you$/i.test(to) ? 'you' : knownAs(adventure.entities, to, ix)?.name),
+        backed,
+        reject,
+      },
+    );
+    const ids = new Set(own.map((a) => a.id));
+    const source = (t: string) => restOf(backed.get(t) ?? fallback(t));
+    const fresh = mergeAssertions({ id: YOU, kind: 'character' }, own, seen, at, { producer: opts.twice ? 'batch' : 'turn', source })
+      .filter((a) => !ids.has(a.id))
+      .map((a): Assertion => Object.assign({}, a, { seen: false }));
+    adventure.assertions = adventure.assertions.concat(fresh);
+    added += fresh.length;
+  }
+  return added;
+}
+
+/**
  * Folds the helper's entities read from `range` into `adventure.entities`. A new one only when the
  * passage names it; a name `knownAs` resolves merges there as an alias. Each fact, look and stance
  * is kept only with support in the range (`supportOf`, which also stamps its source and basis);
@@ -112,7 +154,8 @@ const MAX_HELD = 20;
  * it resolves to exists: its first facts were lost before. A new name a known one's spelling
  * (`spellingOf`) or that the passage gives as its other name (`renameCues`) is held too, and proposed as its
  * alias (`__aliasProposals`) for the player to accept; a cue's name is proposed even if the reply left it out.
- * A fact the description or a state already says is dropped. `log` counts the trait facts proposed
+ * A fact the description or a state already says is dropped. The player's name is never a card: its
+ * reads land on `you` as proposals (`seen: false`), logged as `player`. `log` counts the trait facts proposed
  * and records every value a guard dropped. Returns how many entities changed or were proposed.
  */
 export function foldEntities(
@@ -134,13 +177,13 @@ export function foldEntities(
   const proposals = withCues(adventure.scriptState.__aliasProposals ?? [], cues, at);
   for (const item of incoming) {
     const { facts = [], ...e } = item;
-    const raw = uncut(e.description);
     if (opts.log) opts.log.proposed += facts.length;
     const ix = indexAssertions(assertions);
-    const old = notAName(adventure.plot, e.name) ? undefined : knownAs(entities, e.name, ix);
+    const old = notAName(adventure, e.name) ? undefined : knownAs(entities, e.name, ix);
     const unnamed = () => !namedInPassage(e.name, passage) || !!notNewName(adventure, e.name, range);
-    if (!old && (notAName(adventure.plot, e.name) || (!opts.present?.includes(e.name) && unnamed()) || A_KIND.test(raw))) {
-      for (const f of facts) opts.log?.rejected.push({ entity: e.name, value: f, reason: 'entity-dropped', passageRange: range });
+    if (!old && (notAName(adventure, e.name) || (!opts.present?.includes(e.name) && unnamed()) || A_KIND.test(uncut(e.description)))) {
+      const reason = isPlayer(adventure, e.name) ? 'player' : 'entity-dropped'; // the player's went to `proposeOnYou`
+      for (const f of facts) opts.log?.rejected.push({ entity: e.name, value: f, reason, passageRange: range });
       continue;
     }
     const like = old ? undefined : (spellingOf(entities, e.name, e.kind) ?? entities.find((x) => x.id === cues.get(norm(e.name))?.of));
@@ -183,9 +226,9 @@ export function foldEntities(
   }
   // A proposal counts: the scheduler saves only on a change.
   const asked = proposals.length - (adventure.scriptState.__aliasProposals?.length ?? 0);
-  const touched = entities.filter((x, i) => x !== adventure.entities[i]).length + asked;
-  adventure.entities = entities;
   adventure.assertions = assertions;
+  const touched = entities.filter((x, i) => x !== adventure.entities[i]).length + asked + proposeOnYou(adventure, incoming, range, opts);
+  adventure.entities = entities;
   const pending = [...(adventure.scriptState.__pending ?? []), ...held];
   const due = pending.filter((p) => knownAs(entities, p.entity.name, indexAssertions(assertions)));
   if (!held.length && !due.length && !asked) return touched;

@@ -49,6 +49,8 @@ export function lineEdits(host: GameSession) {
     addLine: (id: string, f: Fields) => mutate((adv, at) => (adv.assertions = [...adv.assertions, byPlayer(id, at, f)])),
     /** A proposal (a read's goal) is the player's to send now. */
     confirm: (lineId: string) => mutate((adv) => mapLine(adv, lineId, ({ seen: _s, ...a }) => a)),
+    /** A read's proposal about the player becomes their own line, which is sent. */
+    keep: (lineId: string) => mutate((adv) => mapLine(adv, lineId, ({ seen: _s, ...a }) => ({ ...a, producer: 'player' }))),
     /** The player's goal for `id`: it ends the current one, as a read's would. */
     setGoal: (id: string, text: string) =>
       mutate((adv, at) => {

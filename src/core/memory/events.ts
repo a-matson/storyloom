@@ -5,7 +5,7 @@ import { actionStoryText } from '../text/formatting';
 import type { AssertionOf } from './assertionIndex';
 import type { MemoryRange } from './memoryBank';
 import { entityNamedIn, namesOf, norm, words } from './names';
-import { YOU } from './you';
+import { playerName, YOU } from './you';
 
 // Reached only through `batch.ts` and `summary.ts`, so it stays off the start-up bundle.
 
@@ -24,7 +24,7 @@ const key = (at: number, who: readonly string[], text: string) => `${at}|${who.t
 
 /**
  * Store the batch reply's events: one stands when its `at` is in `range` and that action names one of
- * who took part (`You` by "you", or a third-person player's name), and rests on the first sentence
+ * who took part (`You` by "you" or the player's name, only the name in third person), and rests on the first sentence
  * that does. `labels` maps the cast labels the reply used to entities; a character the event's own
  * words and that action name joins who took part, first unless the event opens with "you". Runs after
  * the entity fold, so a character this reply introduced is known. A repeat of a stored event
@@ -37,8 +37,9 @@ export function foldEvents(
   labels: ReadonlyMap<string, Entity>,
   reject: (who: string, what: string) => void,
 ): number {
-  const tp = adventure.plot.thirdPerson;
-  const you = tp?.enabled && tp.name.trim() ? [tp.name] : ['you'];
+  const name = playerName(adventure);
+  // A second-person story still says "you" beside the opening's name; a blank stays out of `named`.
+  const you = name && adventure.plot.thirdPerson?.enabled ? [name] : [name ?? '', 'you'];
   const byId = new Map(adventure.entities.map((e) => [e.id, e]));
   const characters = adventure.entities.filter((e) => e.kind === 'character');
   const seen = new Set(adventure.assertions.flatMap((a) => (a.kind === 'event' ? [key(a.at, a.who, a.text)] : [])));

@@ -25,18 +25,20 @@ const CLAUSE = String.raw`(?<=^\s*|\n\s*|[.!?…;:,]\s+|§\s*|\sand\s+)`;
 /**
  * A known name or alias right before a quote (same sentence, or the sentence just before it) or
  * right after one ("…," said X). Quotes are blanked first so a name inside one never counts.
- * A paragraph gets a name only when exactly one entity matches; ties, the player and unknowns get
- * nothing. [measured: 2026-10-16-speakers-m18-3.json]
+ * A paragraph gets a name only when exactly one entity matches; ties, the player (also by
+ * `playerName`) and unknowns get nothing. [measured: 2026-10-16-speakers-m18-3.json]
  */
-export function guessSpeakers(text: string, cast: readonly Named[], { subject = true }: SpeakerRules = {}): Speaker[] {
+export function guessSpeakers(text: string, cast: readonly Named[], { subject = true }: SpeakerRules = {}, playerName = ''): Speaker[] {
   const before = subject ? CLAUSE : String.raw`(?<!\p{L})`;
-  const tests = cast.flatMap((c) => {
+  const you: Named = { name: playerName, aliases: [] };
+  const tests = [...cast, you].flatMap((c) => {
     const n = [c.name, ...c.aliases, ...(c.roles ?? [])]
       .filter((s) => s.trim())
       .map(escape)
       .join('|');
     if (!n) return [];
-    return { name: c.name, re: new RegExp(`${before}(?:${n})(?!\\p{L})[^.!?§]*[.!?]?\\s*§|§\\s*,?\\s*(?:\\p{L}+\\s+)?(?:${n})(?!\\p{L})`, 'iu') };
+    const re = new RegExp(`${before}(?:${n})(?!\\p{L})[^.!?§]*[.!?]?\\s*§|§\\s*,?\\s*(?:\\p{L}+\\s+)?(?:${n})(?!\\p{L})`, 'iu');
+    return { name: c === you ? '' : c.name, re };
   });
   tests.push(PLAYER);
   return paragraphs(text).flatMap((p, paragraph) => {
