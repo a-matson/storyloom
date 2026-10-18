@@ -2,6 +2,6 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["src/**/*.worker.ts", "tests/**/*.test.ts", "e2e/**/*.ts", "bench/**/*.ts", "scripts/*.ts", "playwright*.config.ts"],
   "project": ["src/**/*.{ts,tsx,css}", "tests/**/*.ts", "e2e/**/*.ts", "bench/**/*.ts", "scripts/*.ts"],
-
+  "ignoreBinaries": ["magick"],
   "ignoreExportsUsedInFile": true
 }
