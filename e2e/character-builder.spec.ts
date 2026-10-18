@@ -61,8 +61,11 @@ test('the character builder asks a round of looks and keeps the answers', async 
   await expect(builder.getByRole('button', { name: 'Ask about skin: answered' })).toBeVisible();
   await expect(builder.getByRole('button', { name: 'Ask about eyes: skipped' })).toBeVisible();
 
-  await builder.getByRole('textbox', { name: 'Hair colour and style?' }).fill('white mohawk');
+  await builder.getByRole('textbox', { name: 'Hair colour and style?' }).fill('white mohawk, her pride and joy');
   await builder.getByRole('button', { name: 'Next round' }).click();
+  // The answer is kept as its tags, shown as chips before Done.
+  await expect(builder.getByRole('list', { name: 'Looks' }).getByText('hair: white mohawk')).toBeVisible();
+  await expect(builder.getByText(/her pride/)).toBeHidden();
   await builder.getByRole('textbox', { name: 'What stands out about their face?' }).fill('a long muzzle');
   await builder.getByRole('textbox', { name: 'What are they wearing?' }).fill('a blue cloak');
   await builder.getByRole('textbox', { name: 'What are they wearing?' }).blur();
