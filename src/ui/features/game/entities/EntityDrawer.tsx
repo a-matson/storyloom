@@ -1,4 +1,4 @@
-import { useId, useState, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useId, useState, useSyncExternalStore } from 'react';
 // Not through the barrel: that would pull the session out of the start-up chunk into a shared one.
 import { entityEdits } from '@app/session/entities';
 import { isPortraitStale } from '@app/session/portraitPrompt';
@@ -17,6 +17,8 @@ import { Avatar } from './Avatar';
 import { CardSections } from './cards/CardSections';
 import { Appearances, type Update } from './EntityDetails';
 import { ItemRows } from './ItemRows';
+
+const CharacterBuilder = lazy(async () => ({ default: (await import('./builder/CharacterBuilder')).CharacterBuilder }));
 
 interface Props {
   entity: Entity;
@@ -60,6 +62,7 @@ export function EntityDrawer({ entity: e, adventure, api, onClose, onOpen }: Pro
       />
       <DrawerBody>
         <Portrait entity={e} stale={isPortraitStale(e, adventure.assertions)} api={api} edits={edits} />
+        {e.kind === 'character' && <Build entity={e} adventure={adventure} api={api} />}
         <label htmlFor={`${id}-name`}>
           <SectionLabel>Name</SectionLabel>
         </label>
@@ -109,6 +112,22 @@ export function EntityDrawer({ entity: e, adventure, api, onClose, onOpen }: Pro
 }
 
 type Edits = ReturnType<typeof entityEdits>;
+
+function Build({ entity: e, adventure, api }: { entity: Entity; adventure: Adventure; api: GameApi }) {
+  const [building, setBuilding] = useState(false);
+  return (
+    <>
+      <Button className="self-start" onClick={() => setBuilding(true)}>
+        Build character
+      </Button>
+      {building && (
+        <Suspense fallback={null}>
+          <CharacterBuilder entity={e} adventure={adventure} api={api} onClose={() => setBuilding(false)} />
+        </Suspense>
+      )}
+    </>
+  );
+}
 
 /** Drawn between turns when an image server is configured; these are the player's overrides. */
 function Portrait({ entity: e, stale, api, edits }: { entity: Entity; stale: boolean; api: GameApi; edits: Edits }) {
