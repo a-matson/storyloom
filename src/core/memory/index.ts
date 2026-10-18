@@ -1,8 +1,9 @@
 export * from './memoryBank';
 export { followLog, holds } from './invalidate';
-export { appearanceOf, byPlayer, currentStates, isValue, LOOK_KEYS, rivalKey, setValue, withLooks, type Fields } from './looks';
+export { appearanceOf, byPlayer, currentStates, isValue, LOOK_KEYS, rivalKey, SHEET_KEYS, setValue, withLooks, type Fields } from './looks';
 export { current, eventsOf, identityText, indexAssertions, isCurrent, isLegacy, textOf, type AssertionOf } from './assertionIndex';
 export { heldBy } from './items';
+export { isComplete, nextQuestions, REQUIRED, statusOf, type SheetKey } from './sheet';
 export { isSpeciesClash, swapWord } from './species';
 export { isYouLine, YOU } from './you';
 export { defaultKnownBy, newSecret, repointSecrets, secretsOf } from './secrets';

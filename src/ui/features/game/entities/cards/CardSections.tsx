@@ -1,7 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from 'react';
 import type { entityEdits } from '@app/session/entities';
 import { ruleEdits } from '@app/session/rules';
-import { current, currentStates, eventsOf, indexAssertions, LOOK_KEYS, rivalKey, textOf, YOU } from '@core/memory';
+import { current, currentStates, eventsOf, indexAssertions, rivalKey, SHEET_KEYS, textOf, YOU } from '@core/memory';
 import type { Adventure, Assertion, Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
@@ -22,7 +22,7 @@ interface Props {
   onOpen: (id: string) => void;
 }
 
-const LOOKS = new Set<string>(LOOK_KEYS);
+const LOOKS = new Set<string>(SHEET_KEYS);
 const norm = (s: string) => s.trim().toLowerCase();
 // `looked:` traits are the old, replaced looks.
 const isHistory = (a: Assertion) => a.until !== undefined || (a.kind === 'trait' && a.text.startsWith('looked: '));

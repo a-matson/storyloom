@@ -5,6 +5,12 @@ import { isSpeciesClash, swapWord } from './species';
 
 /** State keys that say how a character looks, in the order their tags are written. [provisional] */
 export const LOOK_KEYS = ['species', 'build', 'eyes', 'hair', 'horns', 'scales', 'marks', 'wearing'] as const;
+/**
+ * The builder's keys: `LOOK_KEYS` in their order with the player-only ones between, so a save with
+ * only `LOOK_KEYS` values writes the same appearance (and portrait hash) as before. [provisional]
+ */
+export const SHEET_KEYS = ['species', 'build', 'skin', 'eyes', 'hair', 'face', 'horns', 'scales', 'marks', 'wearing', 'accessories', 'palette'] as const;
+const STATES = new Set(['wearing', 'accessories']);
 
 /** An item is held (`holder`) or at a place (`location`), never both: a value for one ends the other. */
 export const rivalKey = (kind: Entity['kind'], key: string): string | undefined =>
@@ -23,10 +29,10 @@ export function currentStates(as: readonly Assertion[]): Record<string, string> 
 /** "green" for `eyes` reads as a tag only with its key; "green eyes" already is one. */
 const tag = (key: string, value: string) => (value.toLowerCase().includes(key) ? value : `${key}: ${value}`);
 
-/** Current looks in `LOOK_KEYS` order, else the legacy free-text look. */
+/** Current looks in `SHEET_KEYS` order, else the legacy free-text look. */
 export function appearanceOf(as: readonly Assertion[]): string {
   const now = currentStates(as);
-  const looks = LOOK_KEYS.flatMap((k) => (now[k]?.trim() ? [tag(k, now[k].trim())] : []));
+  const looks = SHEET_KEYS.flatMap((k) => (now[k]?.trim() ? [tag(k, now[k].trim())] : []));
   const legacy = as.findLast((a) => a.kind === 'look' && a.key === 'legacy' && isCurrent(a));
   return looks.length ? looks.join(', ') : legacy?.kind === 'look' ? legacy.value.trim() : '';
 }
@@ -41,8 +47,8 @@ export const withLooks = <E extends Entity>(e: E, as: readonly Assertion[]): E &
   appearance: appearanceOf(as),
 });
 
-/** `wearing` changes scene to scene, so it is a state, not a look; `legacy` is the old free-text look. */
-export const isLook = (key: string): boolean => key === 'legacy' || (key !== 'wearing' && (LOOK_KEYS as readonly string[]).includes(key));
+/** `wearing` and `accessories` change scene to scene, so they are states, not looks; `legacy` is the old free-text look. */
+export const isLook = (key: string): boolean => key === 'legacy' || (!STATES.has(key) && (SHEET_KEYS as readonly string[]).includes(key));
 
 type Origin = 'id' | 'subject' | 'producer' | 'at' | 'paragraph' | 'span' | 'basis' | 'since' | 'until' | 'pinned' | 'seen';
 /** What one kind of assertion says, without where it came from. */
