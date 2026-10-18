@@ -127,7 +127,7 @@ function MemorySystem({ s, update }: { s: Settings; update: Update }) {
       <SettingSwitch
         id="contradiction-check"
         label="Check each turn for contradictions"
-        help="One extra helper call after each turn (a few seconds on slot 1) checks the output against the scene and locked values"
+        help="Locked values of who is present are always checked (one helper call on slot 1); this adds the scene line"
         checked={s.memory.contradictionCheck ?? false}
         onChange={(on) => memory({ contradictionCheck: on })}
       />

@@ -11,6 +11,8 @@ import { writeMeasurement } from './env';
 const url = process.env['MEASURE_URL'];
 const LABEL = process.env['MEASURE_LABEL'] ?? 'run';
 const FILES = (process.env['MEASURE_CASES'] ?? 'bench/contradiction-cases.json').split(',');
+// `locked`: what the check sees with the setting off, Scene: lines dropped and cases left empty skipped.
+const LOCKED = process.env['MEASURE_SCOPE'] === 'locked';
 
 const Cases = z.array(z.object({ probe: z.string(), output: z.string(), lines: z.array(z.string()), contradicts: z.nullable(z.string()) }));
 
@@ -19,7 +21,9 @@ test.skipIf(!url)('contradiction check precision on hand-labelled outputs', { ti
   const files = [];
   for (const file of FILES) {
     const rows = [];
-    for (const c of Cases.parse(JSON.parse(readFileSync(file, 'utf8')))) {
+    for (const all of Cases.parse(JSON.parse(readFileSync(file, 'utf8')))) {
+      const c = LOCKED ? { ...all, lines: all.lines.filter((l) => !l.startsWith('Scene:')) } : all;
+      if (!c.lines.length) continue;
       const started = performance.now();
       const flagged = await checkOutput(c.output, c.lines, { provider, template: 'chatml' });
       rows.push({ probe: c.probe, label: c.contradicts !== null, flagged, right: flagged === c.contradicts, ms: Math.round(performance.now() - started) });

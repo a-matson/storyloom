@@ -21,19 +21,19 @@ const MIN_QUOTE = 12;
 const CHECK_TOKENS = 60;
 
 /**
- * What an output is checked against: the scene line and the locked values of who is present
- * (`Mira: hair is grey`). Empty means no call. Off unless the setting is on, locked values too: on dogfood
- * outputs it flagged 2 lines, both wrong. [measured: 2026-10-17-contradiction-m20-2.json]
+ * What an output is checked against: the locked values of who is present (`Mira: hair is grey`), always,
+ * and the scene line when the setting is on (on dogfood outputs it flagged 2 lines, both wrong
+ * [measured: 2026-10-17-contradiction-m20-2.json]). Empty means no call.
  */
 export function checkInputs(adv: Pick<Adventure, 'entities' | 'assertions' | 'plot' | 'settings'>): string[] {
-  if (!adv.settings.memory.contradictionCheck) return [];
-  const scene = renderScene(adv.plot.scene && sceneNames(adv.plot.scene, adv.entities));
   const ix = indexAssertions(adv.assertions);
   const present = (adv.plot.scene?.present ?? []).flatMap((p) => adv.entities.find((e) => e.id === p) ?? knownAs(adv.entities, p) ?? []);
   const locked = [...new Set(present)].flatMap((e) => {
     const now = currentStates(ix.of(e.id));
     return (e.canonKeys ?? []).flatMap((k) => (now[k] ? [`${e.name}: ${k} is ${now[k]}`] : []));
   });
+  if (!adv.settings.memory.contradictionCheck) return locked;
+  const scene = renderScene(adv.plot.scene && sceneNames(adv.plot.scene, adv.entities));
   return [...(scene ? [`Scene: ${scene}`] : []), ...locked];
 }
 
