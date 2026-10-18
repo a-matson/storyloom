@@ -1,4 +1,4 @@
-export type ImageJobKind = 'see' | 'cover' | 'portrait';
+export type ImageJobKind = 'see' | 'cover' | 'portrait' | 'sheet';
 
 interface Job {
   kind: ImageJobKind;
