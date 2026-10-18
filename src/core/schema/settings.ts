@@ -77,6 +77,8 @@ export const ImageSettings = z.object({
   /** A portrait is shown at 32 CSS px, so it renders smaller and cheaper than a See image. [provisional] */
   portraitSize: z._default(z.int().check(z.gt(0)), 384),
   portraitSteps: z._default(z.int().check(z.gt(0)), 14),
+  /** A character-builder sheet is a quick look, not the final one. [provisional] */
+  sheetSteps: z._default(z.int().check(z.gt(0)), 12),
   /** A1111 sampler name from the checkpoint's model card; unset = server default. */
   sampler: z.optional(z.string()),
   clipSkip: z.optional(z.int().check(z.gt(0))),

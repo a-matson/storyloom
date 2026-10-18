@@ -9,8 +9,6 @@ export type SheetFamily = 'sd15' | 'sdxl';
 export const SHEET_FRAME = 'character reference sheet, multiple views, front view, side view, back view, full body, white background';
 /** About each family's native area, wide for three views. [measured: docs/measurements/2026-10-18-sheet-layout.json] */
 export const SHEET_SIZE: Record<SheetFamily, { width: number; height: number }> = { sd15: { width: 768, height: 384 }, sdxl: { width: 1536, height: 640 } };
-/** A round sheet is a quick look, not the final one. [provisional] */
-export const SHEET_STEPS = 12;
 /** A sheet is one figure on white. [provisional] */
 export const SHEET_NEGATIVE = 'text, watermark, scenery, multiple characters';
 /**
