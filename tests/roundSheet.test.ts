@@ -101,16 +101,14 @@ describe('roundSheet', () => {
     const sheet = `${session.adv.id}|${session.adv.entities[0]?.sheetImageId}`;
     expect(images.has(sheet)).toBe(true);
     entityEdits(session).delete(fox.id);
-    await Promise.resolve();
-    expect(images.has(sheet)).toBe(false);
+    await vi.waitFor(() => expect(images.has(sheet)).toBe(false));
 
     const twin = { ...mergeEntity(undefined, { name: 'Vexa', kind: 'character', description: '' }, 0), portraitId: 'img_up2' };
     session.adv.entities = [fox, twin];
     await finish(session, twin.id, []);
     const twinSheet = `${session.adv.id}|${session.adv.entities[1]?.sheetImageId}`;
     await entityEdits(session).merge(fox.id, twin.id);
-    await Promise.resolve();
-    expect(images.has(twinSheet)).toBe(false);
+    await vi.waitFor(() => expect(images.has(twinSheet)).toBe(false));
   });
 
   it('leaves no blob after close, even from a render that lands after it', async () => {

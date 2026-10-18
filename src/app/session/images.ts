@@ -1,6 +1,6 @@
-import { blobIdsOf, chosen, familyOf, loadImagePrompt, rendersOf } from '@core/image';
+import { chosen, familyOf, loadImagePrompt, ownedBlobIds, rendersOf } from '@core/image';
 import { heldBy, indexAssertions, sceneNames, withLooks } from '@core/memory';
-import type { Action, Entity } from '@core/model';
+import type { Entity } from '@core/model';
 import { storyModel } from './helperModel';
 import { styleOf } from './portraitPrompt';
 import { drop, generate, message, type Image, type SeeHost } from './seeRender';
@@ -93,12 +93,13 @@ export function chooseSeeCandidate(host: SeeHost, actionId: string, imageId: str
 }
 
 /**
- * Blobs of `see` actions the log no longer holds. An erase frees them at once; the prompt stays, so Retry can regenerate.
+ * Blobs the edit left without an owner: an erased See, a deleted, merged or unborn entity's portrait and sheet.
+ * An erase frees them at once; a See's prompt stays, so Retry can regenerate.
  * Runs after the edit was published (this module loads lazily), so a cleared reference publishes again.
  */
-export function dropOrphanImages(host: SeeHost, before: Action[]): void {
-  const kept = new Set(host.log.actions.map((a) => a.id));
-  const orphans = before.flatMap((a) => (a.image && !kept.has(a.id) ? blobIdsOf(a.image) : []));
+export function dropOrphanImages(host: SeeHost, beforeOwned: Set<string>): void {
+  const owned = ownedBlobIds({ ...host.adv, actions: host.log.actions });
+  const orphans = [...beforeOwned].filter((id) => !owned.has(id));
   for (const id of orphans) drop(host, id);
   if (orphans.length > 0) host.changed();
 }

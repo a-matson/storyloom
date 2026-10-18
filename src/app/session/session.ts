@@ -1,3 +1,4 @@
+import { ownedBlobIds } from '@core/image';
 import { ActionLog } from '@core/log';
 import { followLog, withPresence } from '@core/memory';
 import type { Adventure, AdventureSettings, AppSettings, PlotComponents, ReadKind, TurnTrace } from '@core/model';
@@ -113,10 +114,7 @@ export class GameSession {
   // ---- persistence ------------------------------------------------------------
   private readonly save = (): void => this.saves.schedule();
   /** The log or the adventure changed outside a turn: publish and persist. */
-  readonly changed = (): void => {
-    this.emit();
-    this.save();
-  };
+  readonly changed = (): void => (this.emit(), this.save());
   /** Write now; used on close and by the tests. */
   readonly flush = (): Promise<void> => this.saves.flush();
   /** The page is hiding: see `SaveQueue.persistNow`. */
@@ -270,10 +268,11 @@ export class GameSession {
   mutate(fn: (log: ActionLog, adv: Adventure) => void): void {
     if (this.snapshot.busy) return;
     const before = this.log.actions;
+    const owned = ownedBlobIds({ ...this.adv, actions: before });
     fn(this.log, this.adv);
     followLog(this.adv, before, this.log.actions);
     for (const [i, a] of this.log.actions.entries()) if (i < before.length && a !== before[i]) this.memory.edited(i);
-    this.seeMode((m) => m.dropOrphanImages(this, before));
+    this.seeMode((m) => m.dropOrphanImages(this, owned));
     // Editing the log makes a prefetched alternative stale unless it still targets the last action.
     if (this.prefetched && this.prefetched.actionId !== this.log.last?.id) this.dropPrefetch();
     this.idleWork.afterEdit();
