@@ -12,6 +12,8 @@ import { TurnInput } from './TurnInput';
 interface Props {
   busy: boolean;
   canRetry: boolean;
+  /** The last output answers a Do the dice rolled for. */
+  canReroll?: boolean;
   canErase: boolean;
   status: string;
   api: GameApi;
@@ -31,12 +33,33 @@ const COMMANDS: Record<Command, (api: GameApi, text: string) => Promise<void>> =
 const chip =
   'h-[34px] rounded-full border border-border bg-secondary px-3.5 text-control font-medium text-foreground aria-pressed:font-semibold aria-pressed:text-lantern-ink';
 
+function RetryButtons({ busy, canRetry, canReroll, retryReady, api }: Pick<Props, 'busy' | 'canRetry' | 'api'> & { canReroll: boolean; retryReady: boolean }) {
+  return (
+    <>
+      <Button
+        size="lg"
+        onClick={() => api.retry()}
+        disabled={busy || !canRetry}
+        title={retryReady ? 'An alternative is ready — retry is instant' : undefined}
+        className={retryReady ? 'border-verdigris hover:border-verdigris' : undefined}
+      >
+        Retry{retryReady ? ' ·' : ''}
+      </Button>
+      {canReroll && (
+        <Button size="lg" onClick={() => api.retry(undefined, true)} disabled={busy} title="Roll the dice again and retry">
+          Re-roll
+        </Button>
+      )}
+    </>
+  );
+}
+
 /**
  * Take-a-turn row. Enter sends, Ctrl/⌘+Enter continues, Ctrl/⌘+R retries,
  * Ctrl/⌘+Z undoes (input empty); `/do /say /story /see` switch mode, `/correct …` pins a fact, `/rule …` adds a rule,
  * `/wait 3 hours | until night` and `/time evening, day 2` set the scene's time, `/travel <place> [alone]` its location.
  */
-export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retryReady = false }: Props) {
+export function CommandRow({ busy, canRetry, canReroll = false, canErase, status, api, onSee, retryReady = false }: Props) {
   const [mode, setMode] = useState<Mode>('do');
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
@@ -100,15 +123,7 @@ export function CommandRow({ busy, canRetry, canErase, status, api, onSee, retry
           <Button size="lg" onClick={() => api.submit('continue', '')} disabled={busy}>
             Continue
           </Button>
-          <Button
-            size="lg"
-            onClick={() => api.retry()}
-            disabled={busy || !canRetry}
-            title={retryReady ? 'An alternative is ready — retry is instant' : undefined}
-            className={retryReady ? 'border-verdigris hover:border-verdigris' : undefined}
-          >
-            Retry{retryReady ? ' ·' : ''}
-          </Button>
+          <RetryButtons busy={busy} canRetry={canRetry} canReroll={canReroll} retryReady={retryReady} api={api} />
           <Button size="lg" danger onClick={api.erase} disabled={busy || !canErase}>
             Erase
           </Button>

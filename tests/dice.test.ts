@@ -37,7 +37,7 @@ describe('the dice script', () => {
     expect(out.error).toBeUndefined();
     expect(out.text).toBe('climb the wall');
     expect(front(out)).toMatch(OUTCOME);
-    expect(out.logs[0]).toMatch(/^d20 \d+ vs 14$/);
+    expect(out.logs[0]).toMatch(/^d20 \d+ vs 14 · [a-z ]+$/);
     expect(front(input('do'))).toBe(front(out));
   });
 
@@ -53,8 +53,8 @@ describe('the dice script', () => {
   });
 
   it('sets the difficulty by keyword', () => {
-    expect(input('do', 'sneak past').logs[0]).toMatch(/vs 14$/);
-    expect(input('do', 'open the door').logs[0]).toMatch(/vs 10$/);
+    expect(input('do', 'sneak past').logs[0]).toMatch(/vs 14 · /);
+    expect(input('do', 'open the door').logs[0]).toMatch(/vs 10 · /);
   });
 
   it('rolls on Input for action n what the legacy Context script rolled for n + 1', () => {

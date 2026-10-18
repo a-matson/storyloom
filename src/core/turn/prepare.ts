@@ -144,6 +144,7 @@ export async function prepareContext(
   deps: TurnDeps,
   scriptLogs?: string[],
   retryNote?: string,
+  retry = 0,
 ): Promise<PreparedContext | { stopped: string }> {
   const last = actions.at(-1);
   const rankedMemories = await rankForQuery(adventure, last ? actionText(last) : '', deps.embedder);
@@ -167,6 +168,8 @@ export async function prepareContext(
         actionCount: actions.length,
         maxChars: Math.floor(result.budget.total * 3.9),
         memoryLength: (adventure.plot.plotEssentials ?? '').length,
+        retry,
+        consequences: adventure.settings.consequences,
       },
       sections: result.sections,
     },

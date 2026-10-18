@@ -69,6 +69,10 @@ export interface ScriptInfo {
   actionCount: number;
   /** onInput only; `continue` on a Continue, whose text is empty and whose returned text is ignored. */
   actionType?: Action['type'] | 'continue' | undefined;
+  /** onModelContext: 0 on a turn and a plain retry; on a Re-roll, how many versions the output already has. */
+  retry?: number | undefined;
+  /** The adventure's consequences setting, for the dice script. */
+  consequences?: 'harsh' | 'fair' | 'none' | undefined;
   /** onModelContext only */
   maxChars?: number;
   memoryLength?: number;

@@ -8,6 +8,7 @@ import { Pill } from '@ui/components/ui/pill';
 import { cn } from '@ui/lib/utils';
 import { Avatar } from './entities/Avatar';
 import { faceFor } from './entities/faceFor';
+import { DiceChip } from './DiceChip';
 import { MarkSecret } from './MarkSecret';
 import { OutputTools, actionGrid, caretAtEnd, textColumn } from './OutputTools';
 import { SeeBlock } from './SeeBlock';
@@ -35,6 +36,8 @@ interface Props {
   /** The scene's present characters, set only when this action replies to a `say`. */
   present?: readonly string[] | undefined;
   onOpenEntity: (id: string) => void;
+  /** For the last Do of a dice story: the reply, whose trace holds the roll. */
+  diceOutput?: Action | undefined;
 }
 
 const quoted = (a: Action) => a.type === 'do' || a.type === 'say';
@@ -181,6 +184,7 @@ function TextBlock(props: Props) {
       <Label action={action} busy={busy} marking={marking} onToggle={() => setMarking(!marking)} />
       <div className={textColumn}>
         {paragraph}
+        {props.diceOutput && !busy && <DiceChip adventureId={props.adventureId} output={props.diceOutput} />}
         {marking && <MarkSecret action={action} display={display} api={api} busy={busy} onClose={() => setMarking(false)} />}
         {isLast && !busy && (
           <OutputTools

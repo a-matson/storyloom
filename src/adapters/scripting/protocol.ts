@@ -44,6 +44,8 @@ export const SandboxInput = z.object({
     memoryLength: z.optional(z.number()),
     /** onInput only. */
     actionType: z.optional(z.enum([...ActionType.options, 'continue'])),
+    retry: z.optional(z.number()),
+    consequences: z.optional(z.enum(['harsh', 'fair', 'none'])),
   }),
   /** onModelContext only. */
   sections: z.optional(z.array(ScriptSection)),
