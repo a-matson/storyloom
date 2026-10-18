@@ -12,6 +12,8 @@ export function memoryEdits(host: GameSession) {
   return {
     pin: (id: string, pinned: boolean) => patch(id, (m) => ({ ...m, pinned })),
     forget: (id: string, forgotten: boolean) => patch(id, (m) => ({ ...m, forgotten })),
+    /** A skipped memory marked stale is rewritten by the next idle run. */
+    retry: (id: string) => patch(id, (m) => ({ ...m, stale: true })),
     /** The idle `reembed` picks up a memory without an embedding. */
     edit: (id: string, text: string) => patch(id, ({ embedding: _e, stale: _s, ...m }) => ({ ...m, text })),
   };

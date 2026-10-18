@@ -23,7 +23,8 @@ test.skipIf(!url || !backup || !Number.isInteger(from) || !Number.isInteger(to))
   const slice = adv.actions.slice(from, to);
   const samples: string[] = [];
   for (let i = 0; i < SAMPLES; i++) {
-    samples.push(await memoryText(slice, deps, { memoriesRejected: 0 }, youLines(adv.assertions)));
+    // A twice-rejected reply is a skipped range in the app.
+    samples.push((await memoryText(slice, deps, { memoriesRejected: 0 }, youLines(adv.assertions))) ?? '<skipped>');
     console.log(`--- sample ${i + 1}\n${samples[i]}`);
   }
   console.log(`wrote ${writeMeasurement(`memory-replay-${from}-${to}-${LABEL}`, { backup, from, to, samples })}`);

@@ -39,7 +39,8 @@ test.skipIf(!url)('memories keep planted facts', { timeout: 900_000 }, async () 
       continue;
     }
     calls = 0;
-    const memory = await memoryText(actions.slice(range.fromAction, range.toAction), { provider, template: settings.template }, { memoriesRejected: 0 });
+    const memory =
+      (await memoryText(actions.slice(range.fromAction, range.toAction), { provider, template: settings.template }, { memoriesRejected: 0 })) ?? '';
     const lower = memory.toLowerCase();
     rows.push({ id: fact.id, memory, kept: fact.expect.some((k) => lower.includes(k)), retried: calls > 1 });
   }

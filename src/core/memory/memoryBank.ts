@@ -52,8 +52,8 @@ export function dueMemoryRanges(actions: Pick<Action, 'type'>[], existing: Pick<
   return due;
 }
 
-/** In the bank: neither forgotten nor waiting to be rewritten. */
-export const isActive = (m: Memory): boolean => !m.forgotten && !m.stale;
+/** In the bank: not forgotten, not waiting to be rewritten, not a skipped range's placeholder. */
+export const isActive = (m: Memory): boolean => !m.forgotten && !m.stale && !m.skipped;
 
 /** Where a stale memory's actions sit now; null when any were erased (the memory is dropped). */
 export function currentRange(actions: Action[], m: Memory): MemoryRange | null {
@@ -117,6 +117,9 @@ export function createMemory(text: string, actions: Action[], range: MemoryRange
     createdAt: Date.now(),
   };
 }
+
+/** A range the model would only copy: stored empty, so the window moves past it. */
+export const skippedMemory = (actions: Action[], range: MemoryRange): Memory => ({ ...createMemory('', actions, range), skipped: true });
 
 export function cosine(a: number[], b: number[]): number {
   const n = Math.min(a.length, b.length);

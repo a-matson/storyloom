@@ -13,7 +13,7 @@ export function MemoryStatus({ adventure, utilityModel }: { adventure: Adventure
       : nextMemoryIn
         ? `next memory in ${nextMemoryIn} actions`
         : 'memory due';
-  const inBank = adventure.memories.filter((x) => !x.forgotten).length;
+  const inBank = adventure.memories.filter((x) => !x.forgotten && !x.skipped).length;
   const fill = Math.min(100, (inBank / Math.max(1, m.bankSize)) * 100);
   return (
     <Card className="flex flex-col gap-2 bg-bar">
