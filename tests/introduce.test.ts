@@ -184,7 +184,7 @@ describe('introduce', () => {
       expect(schema).toContain('"Tamsin":{"anyOf":[{"type":"string","enum":["here","left","asleep"]},{"type":"object","properties":{"room":');
       expect(schema).toContain('"required":["Tamsin"]');
       expect(reqs[0]?.prompt).toMatch(/stay gives each character present in the previous scene.*\{"room": "<the room>"\} if they went to another room/);
-      expect(reqs[0]?.prompt).toContain('Previous scene: location "the ferry", present: Tamsin. Known characters: Tamsin, the ferrywoman.');
+      expect(reqs[0]?.prompt).toContain('Previous scene: location "the ferry", present: Tamsin. Known characters: Tamsin (also the ferrywoman).');
       expect(reqs[0]?.prompt).toContain('asleep or unconscious still counts; gone to another room does not');
 
       const empty = sceneOnly('You wait at the ferry.', at);
@@ -197,12 +197,11 @@ describe('introduce', () => {
 
     // F17: the read re-added a character the player had removed by hand.
     it('drops a character the reply re-adds when the passage does not name them', async () => {
-      const { adv, deps } = sceneOnly('You wait at the ferry.', { ...at, present: ['Tamsin', 'Corwin'] });
+      const { adv, deps } = sceneOnly('You wait at the ferry with Corwin.', { ...at, present: ['Tamsin', 'Corwin'] });
       adv.plot.scene = { location: 'the ferry', present: ['Corwin'] };
       await introduce(adv, deps);
       expect(adv.plot.scene?.present).toEqual(['Corwin']);
     });
-
     it('still takes a `left` list, and a missing verdict keeps the character', async () => {
       const { adv, deps } = sceneOnly('Tamsin and Corwin row away.', { ...at, present: [], left: ['Corwin'] });
       adv.plot.scene = { location: 'the ferry', present: [adv.entities[0]?.id ?? '', 'Corwin'] };
@@ -218,11 +217,11 @@ describe('introduce', () => {
       const scene = JSON.stringify(reqs[0]?.jsonSchema);
       expect(scene).toContain('"enum":["Tamsin","the ferrywoman","Corwin"]');
       expect(scene.match(/"maxItems":3/g)).toHaveLength(1);
-      expect(reqs[0]?.prompt).toContain('Known characters: Tamsin, the ferrywoman, Corwin.');
+      expect(reqs[0]?.prompt).toContain('Known characters: Tamsin (also the ferrywoman), Corwin.');
     });
 
     it('resolves an alias to the character’s id, and keeps a name nothing is known as', async () => {
-      const { adv, deps } = sceneOnly('You wait at the ferry with the ferrywoman.', { ...at, present: ['the ferrywoman'] });
+      const { adv, deps } = sceneOnly('You wait at the ferry with the ferrywoman and Corwin.', { ...at, present: ['the ferrywoman'] });
       adv.plot.scene = { location: 'the ferry', present: ['Corwin'] };
       await introduce(adv, deps);
       expect(adv.plot.scene?.present).toEqual(['Corwin', adv.entities[0]?.id]);

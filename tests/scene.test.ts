@@ -38,7 +38,24 @@ describe('nextScene', () => {
     const scene: Scene = { location: 'the mill', present: ['Lena', 'Minos'] };
     expect(next(scene, { present: ['Lena', 'the dragon', 'You'] }).scene?.present).toEqual(['Lena', 'Minos', 'Weever']);
     expect(next(scene, { present: ['Lena'], stay: { Lena: 'here', Minos: 'left' } }).scene?.present).toEqual(['Lena']);
-    expect(next(scene, { present: ['Lena', 'Minos'], stay: { Minos: 'left' } }).scene?.present).toEqual(['Lena']);
+    // Listed beats `left` (M30-5): Imperium was `left` while the read listed him as Baron Henrik Drake.
+    expect(next(scene, { present: ['Lena', 'Minos'], stay: { Minos: 'left' } }).scene?.present).toEqual(['Lena', 'Minos']);
+  });
+
+  it('merges verdicts per character: an alias `here` beats `left`, with no presence change (M30-5)', () => {
+    const scene: Scene = { location: 'the mill', present: ['Lena', 'Weever'] };
+    expect(next(scene, { present: ['Lena'], stay: { Weever: 'left', 'the dragon': 'here' } })).toEqual({ scene, moved: false });
+    expect(next(scene, { present: ['Lena'], stay: { Weever: 'left', 'the dragon': 'asleep' } }).scene).toBe(scene);
+  });
+
+  it('drops a stale character though the read says here, keeps an asleep one (M30-5)', () => {
+    const scene: Scene = { location: 'the mill', present: ['Lena', 'Minos'] };
+    const stale = (n: string) => n === 'Minos';
+    const at = (stay: SceneRead['stay']) => nextScene(scene, read({ present: ['Lena', 'Minos'], stay }), name, 7, [], everyone, undefined, stale);
+    expect(at({ Lena: 'here', Minos: 'here' }).scene?.present).toEqual(['Lena']);
+    expect(at({ Lena: 'here', Minos: 'asleep' }).scene?.present).toEqual(['Lena', 'Minos']);
+    // Named in the last output: not stale, so one quiet passage keeps them (M14-S2).
+    expect(next(scene, { present: ['Lena'], stay: { Lena: 'here', Minos: 'here' } }).scene).toBe(scene);
   });
 
   it('stay: left removes a character, asleep keeps them', () => {

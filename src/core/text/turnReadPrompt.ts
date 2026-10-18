@@ -15,6 +15,8 @@ export interface PrevScene {
   zone?: string | undefined;
   /** Factions `present` may list as a group; not in the previous scene's `present`, so no `stay` for them. */
   factions?: readonly string[];
+  /** The cast as told, one entry per character (`Imperium (also Baron Henrik Drake)`, M30-5); else the cast itself. */
+  told?: readonly string[];
 }
 
 /** `; in the basement: Vorthak, Weever` per room, so a read keeps who is in one there instead of losing them. */
@@ -60,7 +62,7 @@ export function introducePrompt(
       : '\n') +
     (cards ? `New here: ${newNames.join(', ')}.\n` : '') +
     // No placeholder place: one the model could copy back as the location.
-    `Previous scene: ${prev.location ? `location "${prev.zone ?? prev.location}", present: ${prev.present.join(', ') || 'nobody'}${roomsOf(prev.zones)}` : 'not known yet'}. Known characters: ${cast.join(', ') || 'none yet'}.` +
+    `Previous scene: ${prev.location ? `location "${prev.zone ?? prev.location}", present: ${prev.present.join(', ') || 'nobody'}${roomsOf(prev.zones)}` : 'not known yet'}. Known characters: ${(prev.told ?? cast).join(', ') || 'none yet'}.` +
     (factions.length ? ` Known factions: ${factions.join(', ')}.` : '') +
     (state ? `\n\n${stateRecords(state.records)}` : '') +
     `\n\n---\n${passage}\n---\n\n` +

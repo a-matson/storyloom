@@ -79,7 +79,7 @@ describe('the merged turn read (M17-1)', () => {
     expect(now(adv, mira.id)).toEqual({ posture: 'sitting' });
   });
 
-  it('a room keeps the character present there (M21-1); `left` is gone', async () => {
+  it('a room keeps the character present there (M21-1); `left` while listed present stays (M30-5)', async () => {
     const { adv, deps } = setup([], 'eos', { Mira: { room: 'the cellar' } });
     await introduce(adv, deps);
     expect(adv.plot.scene?.present).toEqual([mira.id, tobin.id]);
@@ -87,7 +87,24 @@ describe('the merged turn read (M17-1)', () => {
     expect(adv.plot.presence?.at(-1)?.present).toEqual([tobin.id]);
     const old = setup([], 'eos', { Mira: 'left' });
     await introduce(old.adv, old.deps);
-    expect(old.adv.plot.scene?.present).toEqual([tobin.id]);
+    expect(old.adv.plot.scene?.present).toEqual([mira.id, tobin.id]);
+  });
+
+  // M30-5: Lord Halven stayed present through the dungeon because every read said `here`.
+  it('drops a present character no recent output names, though the read says here', async () => {
+    const quiet = (adv: Adventure) => {
+      for (const a of adv.actions) a.versions = ['You sit. Tobin walks in.'];
+    };
+    const { adv, deps } = setup([]);
+    quiet(adv);
+    await introduce(adv, deps);
+    expect(adv.plot.scene?.present).toEqual([tobin.id]);
+    const once = setup([]);
+    quiet(once.adv);
+    const earlier = once.adv.actions[0];
+    if (earlier) earlier.versions = ['Mira hums.'];
+    await introduce(once.adv, once.deps);
+    expect(once.adv.plot.scene?.present).toEqual([mira.id, tobin.id]);
   });
 
   it('tells the read who is in another room, so it keeps them there', async () => {
