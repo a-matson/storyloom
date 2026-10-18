@@ -9,7 +9,7 @@ import { mergeAssertions, type Rest } from './assertionWrites';
 import { entityNamedIn, knownAs, within } from './entities';
 import { helperJson, passageOf, type ExtractDeps } from './extract';
 import { grammarOf } from './extractJsonSchema';
-import { causeIn, grounded } from './grounding';
+import { causeIn, endsCurrent, grounded } from './grounding';
 import { heldBy, holderOf, YOU } from './items';
 import { currentStates, valueOf } from './looks';
 import { castLabels, norm } from './names';
@@ -126,7 +126,7 @@ export function applyChanges(adventure: Adventure, cast: readonly Subject[], cha
     const now = c.now.trim();
     const held = knownAs(items(adventure), now);
     if (c.key === 'holds') write(adventure, held ?? s, { holder: s === PLAYER ? YOU : s.name }, at, out);
-    else if (!grounded(now, read)) {
+    else if (!grounded(now, read) && !endsCurrent(c.key, now, currentStates(indexAssertions(adventure.assertions).of(s.id))[c.key])) {
       propose(adventure, s, c.key, now, c.at);
       out.rejected.push({ value: `${c.who} ${c.key}: ${c.now}`, reason: 'ungrounded' });
       continue;

@@ -202,6 +202,23 @@ describe('the state read', () => {
     expect(cuts.calls.at(-1)?.rejected).toEqual(out.rejected);
   });
 
+  it('writes an ungrounded `awake` after `unconscious` as stated, ending it', async () => {
+    const { adv, deps } = setup(['You wait.', 'Mira blinks at you.'], [{ who: 'Mira', key: 'condition', now: 'awake', at: 4 }], [mira]);
+    adv.assertions = [
+      { id: 'as_k', subject: mira.id, producer: 'turn', at: 2, basis: 'stated', since: 2, kind: 'state', key: 'condition', value: 'unconscious' },
+    ];
+    const out = await readState(adv, deps);
+    expect(out.rejected).toEqual([]);
+    expect(now(adv, mira.id)).toEqual({ condition: 'awake' });
+  });
+
+  it('still proposes an ungrounded `awake` with no prior condition', async () => {
+    const { adv, deps } = setup(['You wait.', 'Mira blinks at you.'], [{ who: 'Mira', key: 'condition', now: 'awake', at: 4 }], [mira]);
+    const out = await readState(adv, deps);
+    expect(out.rejected).toEqual([{ value: 'Mira condition: awake', reason: 'ungrounded' }]);
+    expect(now(adv, mira.id)).toEqual({});
+  });
+
   it('reads one output once, and again after a retry', async () => {
     const { adv, reqs, deps } = setup(['You wait.', 'Mira sits.'], []);
     await readState(adv, deps);

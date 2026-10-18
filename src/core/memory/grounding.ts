@@ -1,6 +1,17 @@
+import { UNAWARE } from '../context/witness';
 import type { Entity } from '../model/types';
 import { entityNamedIn } from './entities';
 import { contentWords, SENTENCE } from './support';
+
+/** Values that end the current one of their key; the story need not say them ("she blinks" ends asleep). [provisional] */
+const ENDS: Record<string, readonly { value: RegExp; ends: RegExp }[]> = {
+  condition: [{ value: /^awake$|^conscious$|wakes?/i, ends: UNAWARE }],
+  posture: [{ value: /^stand|^upright/i, ends: /lying|prone|sprawled/i }],
+};
+
+/** An ungrounded value still stands when it ends the current one; with no current value it stays a proposal. */
+export const endsCurrent = (key: string, value: string, current: string | undefined): boolean =>
+  current !== undefined && (ENDS[key] ?? []).some((e) => e.value.test(value) && e.ends.test(current));
 
 /** Story wordings of a condition that share no word with it. [provisional] */
 const CONDITION_SYNONYMS: Record<string, readonly string[]> = {

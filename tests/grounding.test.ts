@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { causeIn, grounded } from '@core/memory/grounding';
+import { causeIn, endsCurrent, grounded } from '@core/memory/grounding';
 
 const named = (name: string) => ({ name, aliases: [] });
 
@@ -8,6 +8,15 @@ describe('grounded', () => {
     expect(grounded('unconscious', 'He lies out cold on the floor.')).toBe(true);
     expect(grounded('bleeding', 'Her arm bleeds.')).toBe(true);
     expect(grounded('angry', 'Mira smiles.')).toBe(false);
+  });
+});
+
+describe('endsCurrent', () => {
+  it('lets a waking or standing value end the state it replaces, and nothing else', () => {
+    expect(endsCurrent('condition', 'awake', 'asleep')).toBe(true);
+    expect(endsCurrent('condition', 'awake', undefined)).toBe(false);
+    expect(endsCurrent('posture', 'standing', 'lying on the floor')).toBe(true);
+    expect(endsCurrent('mood', 'calm', 'angry')).toBe(false);
   });
 });
 
