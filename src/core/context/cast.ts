@@ -1,6 +1,7 @@
 import { current, identityText, isCurrent, textOf, type AssertionOf } from '../memory/assertionIndex';
 import { currentStates, isValue } from '../memory/looks';
 import type { Assertion, Entity } from '../model/types';
+import { lookIdentity } from './lookIdentity';
 import type { Gap } from './witness';
 
 /** Words an identity keeps from the description's first clause. [provisional] */
@@ -30,8 +31,13 @@ const effect = (a: AssertionOf<'effect'>) => clause(a.condition) + (a.cause ? ` 
 /** The player's own facts: pinned, or given by Correct. */
 const pinsOf = (as: readonly Assertion[]) => as.filter((a) => isCurrent(a) && !old(a) && a.kind === 'trait' && (a.pinned || a.basis === 'player'));
 
-/** "Lena keeps the mill. She…" → "keeps the mill": first clause, the name and a leading "is" cut, at most 12 words. Not cut at a comma: "A massive, winged…" (F10). */
+/**
+ * "Lena keeps the mill. She…" → "keeps the mill": first clause, the name and a leading "is" cut, at most 12 words. Not cut at a comma: "A massive, winged…" (F10).
+ * A non-human character's looks replace it (`lookIdentity`): the only way looks reach the story; `wearing` is the now-line's.
+ */
 export function identityOf(e: Entity, as: readonly Assertion[]): string {
+  const looks = e.kind === 'character' ? lookIdentity(currentStates(as)) : undefined;
+  if (looks) return looks;
   const first = identityText(e, as).split(/[.;:(—–]|\s-\s/)[0] ?? '';
   const name = new RegExp(`^(?:${[e.name, ...e.aliases].map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\s+`, 'i');
   return first
