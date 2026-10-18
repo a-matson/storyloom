@@ -3,6 +3,7 @@ export { followLog, holds } from './invalidate';
 export { appearanceOf, byPlayer, currentStates, isValue, rivalKey, SHEET_KEYS, setValue, withLooks, type Fields } from './looks';
 export { current, eventsOf, identityText, indexAssertions, isCurrent, isLegacy, textOf, type AssertionOf } from './assertionIndex';
 export { heldBy } from './items';
+export { linkCards } from './canon';
 export { isComplete, nextQuestions, REQUIRED, statusOf, type SheetKey } from './sheet';
 export { isSpeciesClash, swapWord } from './species';
 export { tagify } from './tagify';

@@ -22,9 +22,13 @@ describe('story card triggers', () => {
     expect(m[0]!.lastHitDistance).toBe(0);
   });
 
-  it('ignores cards with no triggers or empty entries', () => {
-    const cards = [card('empty', []), { ...card('blank', ['x']), entry: '  ' }];
-    expect(findTriggeredCards(cards, ['x'])).toEqual([]);
+  it('ignores cards with empty entries', () => {
+    expect(findTriggeredCards([{ ...card('blank', ['x']), entry: '  ' }], ['x'])).toEqual([]);
+  });
+
+  it('matches a card with no triggers by its name, and one with no name never', () => {
+    const cards = [card('Goldarok', []), card(' ', []), card('', [''])];
+    expect(findTriggeredCards(cards, ['The dragon goldarok wakes.', ' ']).map((m) => m.card.name)).toEqual(['Goldarok']);
   });
 
   it('lookback window grows with the card budget', () => {

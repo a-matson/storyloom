@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { presentLine } from '@core/context/cast';
-import { seedCanonEntities } from '@core/memory/canon';
+import { linkCards, seedCanonEntities } from '@core/memory/canon';
 import { indexAssertions, textOf } from '@core/memory/assertionIndex';
 import { mergeAssertions } from '@core/memory/assertionWrites';
 import { mergeEntity, type Sighting } from '@core/memory/entities';
 import { currentStates, setValue } from '@core/memory/looks';
-import { createAdventureFromScenario, newScenario } from '@core/model/scenario';
+import { foldEntities } from '@core/memory/fold';
+import { createAdventureFromScenario, createBlankAdventure, newScenario } from '@core/model/scenario';
 import type { Assertion, Entity, StoryCard } from '@core/model';
 
 const card = (type: string, name: string, over: Partial<StoryCard> = {}): StoryCard => ({
@@ -36,6 +37,41 @@ describe('canon seeding', () => {
     const adv = createAdventureFromScenario(s, { 'character.name': 'Merav' });
     expect(adv.entities).toEqual([expect.objectContaining({ name: 'Ferryman', description: 'He ferries Merav.', canon: true, cardId: adv.storyCards[0]?.id })]);
     expect(createAdventureFromScenario(newScenario('Empty', 'x'), {}).entities).toEqual([]);
+  });
+});
+
+describe('linkCards', () => {
+  const found = (over: Partial<Entity> = {}): Entity => ({
+    id: 'ent_g',
+    kind: 'faction',
+    name: 'Goldarok',
+    aliases: [],
+    description: '',
+    relations: [],
+    firstSeen: 3,
+    lastSeen: 3,
+    ...over,
+  });
+
+  it('re-kinds and links the entity a character card names, its entry the description', () => {
+    const [e] = linkCards([found()], [card('Character', 'Goldarok', { id: 'c1' })]);
+    expect(e).toMatchObject({ kind: 'character', cardId: 'c1', description: 'Goldarok entry.' });
+  });
+
+  it('folds a new name with a character card as a character, linked to the card', () => {
+    const adv = createBlankAdventure('T', '');
+    adv.actions = [{ id: 'a0', type: 'continue', versions: ['Smoke rises over Goldarok as you climb.'], active: 0, createdAt: 0 }];
+    adv.storyCards = [card('Character', 'Goldarok', { id: 'c1', triggers: [] })];
+    foldEntities(adv, [{ name: 'Goldarok', kind: 'place', description: '', facts: [] }], adv.actions[0]!.versions[0]!, { fromAction: 0, toAction: 1 });
+    expect(adv.entities).toEqual([expect.objectContaining({ kind: 'character', cardId: 'c1', description: 'Goldarok entry.' })]);
+  });
+
+  it('leaves a carded entity, a held card and a class card alone', () => {
+    const carded = found({ cardId: 'c0' });
+    expect(linkCards([carded], [card('Character', 'Goldarok')])[0]).toBe(carded);
+    const loose = found();
+    expect(linkCards([loose, found({ name: 'Other', cardId: 'c1' })], [card('Character', 'Goldarok', { id: 'c1' })])[0]).toBe(loose);
+    expect(linkCards([loose], [card('Class', 'Goldarok')])[0]).toBe(loose);
   });
 });
 
