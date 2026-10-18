@@ -5,7 +5,7 @@ import type { Action } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
 import { Input } from '@ui/components/ui/field';
-import { charactersOf, KnownBy } from './entities/SecretsList';
+import { charactersOf, HiddenFrom, KnownBy } from './entities/SecretsList';
 
 /** The first sentence of what the player wrote, as the gist to edit. */
 const firstSentence = (display: string) => /^.*?[.!?](?=\s|$)/s.exec(display)?.[0] ?? display;
@@ -39,6 +39,7 @@ export function MarkSecret({ action, display, api, busy, onClose }: Props) {
     >
       <Input className="h-8 text-caption" aria-label="Secret" value={draft.text} onChange={(e) => setDraft({ ...draft, text: e.target.value })} />
       <KnownBy cast={draft.cast} knownBy={draft.knownBy} label="Who knows" onChange={(knownBy) => setDraft({ ...draft, knownBy })} />
+      <HiddenFrom cast={draft.cast} knownBy={draft.knownBy} />
       <span className="flex gap-1.5">
         <Button type="submit" className="h-7 px-2.5 text-caption" disabled={busy || !draft.text.trim()}>
           Save secret

@@ -147,6 +147,10 @@ test('Mark secret on a Do adds it to Secrets, known to whoever was there', async
   const form = page.getByRole('form', { name: 'Mark secret' });
   await expect(form.getByRole('textbox', { name: 'Secret' })).toHaveValue('You confess to Merav.');
   await expect(form.getByRole('checkbox', { name: 'Merav' })).toBeChecked();
+  await expect(form.getByText("While anyone else is there, the story is not told this action's words")).toBeVisible();
+  await form.getByRole('checkbox', { name: 'Merav' }).uncheck();
+  await expect(form.getByText("While Merav is there, the story is not told this action's words")).toBeVisible();
+  await form.getByRole('checkbox', { name: 'Merav' }).check();
   await form.getByRole('textbox', { name: 'Secret' }).fill('You stole the lamp.');
   await form.getByRole('button', { name: 'Save secret' }).click();
   await world(page);

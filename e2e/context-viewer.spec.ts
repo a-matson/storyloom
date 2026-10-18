@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import type { Assertion } from '@core/model';
 import { openSeededAdventure } from './seed';
 
 async function connectDemo(page: Page): Promise<void> {
@@ -144,6 +145,27 @@ test('a present entity sends its now-line under the structured cap', async ({ pa
   await dialog.getByRole('button', { name: 'Raw prompt' }).click();
   await expect(dialog.getByText(/\[Scene: Old Well/)).toBeVisible();
   await expect(dialog.getByText(/Merav \(/)).toHaveCount(0);
+});
+
+test('a secret Merav does not know is cut while she is there, and the viewer lists the cut', async ({ page }) => {
+  const secret: Assertion = {
+    id: 'as_s',
+    subject: 'you',
+    producer: 'player',
+    at: 1,
+    basis: 'player',
+    since: 1,
+    kind: 'secret',
+    text: 'The road bends 1.',
+    knownBy: ['you'],
+    pinned: true,
+  };
+  await openSeededAdventure(page, 3, undefined, { scene: { location: 'the Old Well', present: ['Merav'] }, assertions: [secret] });
+  const dialog = await takeTurnAndViewContext(page);
+  await expect(dialog.getByText(/^History.* · 1 cut/)).toBeVisible();
+  await expect(dialog.getByTestId('redactions').getByText('The road bends 1.')).toHaveCount(1);
+  await dialog.getByRole('button', { name: 'Raw prompt' }).click();
+  await expect(dialog.getByText(/The road bends 1\./)).toHaveCount(0);
 });
 
 test("the You card's pronouns and lines ride in the system prompt", async ({ page }) => {
