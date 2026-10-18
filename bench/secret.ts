@@ -1,5 +1,5 @@
 import { newSecret } from '@core/memory/secrets';
-import type { Adventure } from '@core/model';
+import { actionText, type Adventure } from '@core/model';
 
 /**
  * `MEASURE_SECRET="<at>|<gist>|<name>,<name>"`: marks a secret on a backup as the player would, known
@@ -17,5 +17,8 @@ export function withSecret(adv: Adventure): Adventure {
       if (!e) throw new Error(`MEASURE_SECRET: no entity named ${n}`);
       return e.id;
     });
-  return { ...adv, assertions: [...adv.assertions, newSecret(Number(at), text, ids)] };
+  // Replaces a mark already on that action: the M17 dogfood widened its knowers by hand at #173.
+  const action = adv.actions[Number(at)];
+  const kept = adv.assertions.filter((a) => a.kind !== 'secret' || a.at !== Number(at));
+  return { ...adv, assertions: [...kept, newSecret(Number(at), text, ids, action ? actionText(action) : '')] };
 }

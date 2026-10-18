@@ -11,6 +11,7 @@
  *   memory-replay <url> <backup> <from-to> [label] [samples]  the memory for one action range of a backup, written [samples] times (default 5)
  *   state <url> <backup> [label] [labels-set]  scene and state reads over every AI turn of a backup, scored against bench/stateLabels.json
  *   probe <url> <backup> <at> [label] [samples]  the reply to player action <at>, drawn [samples] times (default 3); graded by hand
+ *   redact <backup> [label]  secret cuts in the prompt before every AI output (MEASURE_SECRET as for probe), no model
  *   voice <url> <backup> <batch.json> [label] [samples]  say turns replayed without and with the batch's voices; top speakers' lines, rated by hand
  *   spotlight <url> <backup> [label] [points]  crowded scenes (4–5 present) continued per cast order; who the speaker guess labels
  *   initiative <url> <backup> [label] [points]  3+ present continued without and with confirmed goals (`wants:`); who speaks, gate flags
@@ -37,6 +38,7 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
   core: { cmd: ['pnpm', 'bench'] },
   renders: { cmd: ['pnpm', 'measure:renders'], env: { MEASURE_LABEL: a } },
   latency: { cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/latency'], env: { MEASURE_URL: a, MEASURE_TURNS: b } },
+  redact: { cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/redact'], env: { MEASURE_BACKUP: a, MEASURE_LABEL: b } },
   gatev: { cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/gatev'], env: { MEASURE_URL: a } },
   'memory-keep': {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/memoryKeep'],

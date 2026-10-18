@@ -183,42 +183,21 @@ describe('secrets', () => {
     const i = derived(input(4000));
     return build({ ...i, assertions: [...i.assertions, ...secrets] });
   };
-  const lines = (r: ReturnType<typeof buildContext>) =>
-    cast(r)
-      ?.split('\n')
-      .filter((l) => l.startsWith('Secret')) ?? [];
-
-  it('secret line names who does not know, after the cast', () => {
-    const r = withSecrets(newSecret(3, 'You sold the keys.', []));
-    expect(cast(r)?.split('\n').at(-1)).toBe('Secret, known only to you: You sold the keys. Lena and Orrin do not know it.');
+  it('sends no secret line: an outsider is handled by redaction', () => {
+    expect(cast(withSecrets(newSecret(3, 'You sold the keys.', [])))).not.toContain('Secret');
   });
 
-  it('no line when everyone here knows', () => {
-    expect(lines(withSecrets(newSecret(3, 'You sold the keys.', ['e-Lena', 'e-Orrin'])))).toEqual([]);
-  });
-
-  it('a mentioned outsider counts, and an absent one does not', () => {
-    expect(lines(withSecrets(newSecret(3, 'You sold the keys.', ['e-Lena'])))).toEqual([
-      'Secret, known only to you and Lena: You sold the keys. Orrin does not know it.',
-    ]);
-  });
-
-  it('counts an unconfirmed character the scene names', () => {
+  it('counts an unconfirmed character the scene names as an outsider', () => {
     const i = derived({ ...input(4000), entities: [lena, { ...orrin, lastSeen: 0 }], plot: { scene: { ...scene, present: ['Lena', 'Orrin'] } } });
     const r = build({ ...i, assertions: [...i.assertions, newSecret(3, 'You sold the keys.', ['e-Lena'])] });
     expect(cast(r)).not.toContain('Orrin (');
-    expect(lines(r)).toEqual(['Secret, known only to you and Lena: You sold the keys. Orrin does not know it.']);
+    expect(r.redactions.map((x) => x.section)).toEqual(['history']);
   });
 
-  it('marks a memory over the secret with who knows it', () => {
+  it('marks a memory over the secret with who knows it when no outsider is there', () => {
     const i = derived(input(400));
     const memory = { id: 'm', text: 'You confessed.', fromAction: 2, toAction: 6, actionIds: [], useCount: 0, createdAt: 0 };
-    const r = build({ ...i, assertions: [...i.assertions, newSecret(3, 'You sold the keys.', ['e-Lena'])], rankedMemories: [{ memory, score: 1 }] });
-    expect(r.sections.find((s) => s.kind === 'memories')?.text).toBe('Memories:\n(known only to you and Lena) You confessed.');
-  });
-
-  it('sends the two most recently marked', () => {
-    const r = withSecrets(newSecret(1, 'One.', []), newSecret(5, 'Five.', []), newSecret(3, 'Three.', []));
-    expect(lines(r).map((l) => l.split(': ')[1])).toEqual(['Five. Lena and Orrin do not know it.', 'Three. Lena and Orrin do not know it.']);
+    const r = build({ ...i, assertions: [...i.assertions, newSecret(3, 'You sold the keys.', ['e-Lena', 'e-Orrin'])], rankedMemories: [{ memory, score: 1 }] });
+    expect(r.sections.find((s) => s.kind === 'memories')?.text).toBe('Memories:\n(known only to you, Lena and Orrin) You confessed.');
   });
 });
