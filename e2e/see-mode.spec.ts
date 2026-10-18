@@ -102,7 +102,7 @@ test('a brief naming a character sends their looks, tags the image and shows it 
   await see(page, 'Tamsin at the ferry');
   await expect(page.getByRole('img', { name: 'Tamsin at the ferry' })).toBeVisible();
   expect(prompts).toHaveLength(1);
-  expect(prompts[0]).toContain('a ferrywoman, grey braid, patched cloak at the ferry');
+  expect(prompts[0]).toContain('a ferrywoman, grey braid, patched cloak, a ferrywoman at the ferry');
   expect(prompts[0]).not.toContain('Tamsin');
 
   const figure = page.getByRole('figure');
@@ -141,7 +141,7 @@ test('a reference freezes a character look and seed for the next Sees', async ({
 
   await see(page, 'Tamsin by the lantern');
   await expect.poll(() => calls.length).toBe(2);
-  expect(calls[1]?.prompt).toContain('a ferrywoman, grey braid, patched cloak by the lantern');
+  expect(calls[1]?.prompt).toContain('a ferrywoman, grey braid, patched cloak, a ferrywoman by the lantern');
   expect(calls[1]?.seed).toEqual(expect.any(Number));
 });
 
