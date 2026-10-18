@@ -1,4 +1,13 @@
-import { applyScriptSections, buildContext, renderBody, type ContextBuildInput, type ContextBuildResult, type ScriptCache } from '../context';
+import {
+  applyScriptSections,
+  buildContext,
+  renderBody,
+  withTone,
+  type ContextBuildInput,
+  type ContextBuildResult,
+  type ContextSection,
+  type ScriptCache,
+} from '../context';
 import { nudgedIn } from '../context/spotlight';
 import { textOf } from '../memory/assertionIndex';
 import { bm25, buildIndex, tokenise } from '../memory/lexical';
@@ -101,12 +110,31 @@ function applyHook(result: ContextBuildResult, hook: HookResult, fullText: strin
     console.warn('onModelContext script error:', applied.error);
     return { body: result.body, cache: 'kept' };
   }
-  result.sections = applied.sections;
-  const used = applied.sections.reduce((n, s) => n + s.tokens, 0);
-  result.budget.used = used;
-  result.budget.free = Math.max(0, result.budget.total - used);
+  const used = setSections(result, applied.sections);
   if (used > result.budget.total) result.warnings.push(`a script put the prompt over budget by ${used - result.budget.total} tokens`);
   return { body: renderBody(applied.sections), cache: applied.cache };
+}
+
+function setSections(result: ContextBuildResult, sections: ContextSection[]): number {
+  result.sections = sections;
+  const used = sections.reduce((n, s) => n + s.tokens, 0);
+  result.budget.used = used;
+  result.budget.free = Math.max(0, result.budget.total - used);
+  return used;
+}
+
+/** After the hook, so a script's own section turns the tone on; the tail is uncacheable, so the verdict stands. */
+function addTone(
+  result: ContextBuildResult,
+  essentials: string,
+  tokenizer: Tokenizer,
+  hooked: { body: string; cache: ScriptCache },
+): { body: string; cache: ScriptCache } {
+  if (hooked.cache === 'rewritten') return hooked;
+  const sections = withTone(result.sections, essentials, tokenizer);
+  if (sections === result.sections) return hooked;
+  setSections(result, sections);
+  return { body: renderBody(sections), cache: hooked.cache };
 }
 
 /** Build the context for `actions` (the log as it stands) and render the prompt. */
@@ -148,7 +176,9 @@ export async function prepareContext(
     // Scripts that fail must not break play; surface the error and continue.
     console.warn('onModelContext script error:', hook.error);
   } else if (hook.stop) return { stopped: STUMPED };
-  const { body, cache } = hook.error ? { body: result.body, cache: 'kept' as const } : applyHook(result, hook, fullText, deps.tokenizer);
+  const hooked = hook.error ? { body: result.body, cache: 'kept' as const } : applyHook(result, hook, fullText, deps.tokenizer);
+  const essentials = adventure.scriptState.memory?.context || adventure.plot.plotEssentials || '';
+  const { body, cache } = addTone(result, essentials, deps.tokenizer, hooked);
 
   if (result.usedMemories.length) adventure.memories = touchUsed(adventure.memories, new Set(result.usedMemories.map((m) => m.id)));
   const rendered = renderTemplate(adventure.settings.template, result.system, body);
