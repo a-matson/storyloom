@@ -4,7 +4,6 @@ const VIEWS: readonly (readonly [RegExp, string])[] = [
   [/\b(?:from behind|from the back|behind)\b/i, 'from behind'],
   [/\b(?:from above|looking down at)\b/i, 'from above'],
   [/\b(?:from below|looking up at)\b/i, 'from below'],
-  [/\b(?:up close|close-up|close)\b/i, 'close-up'],
 ];
 
 /** The player is never drawn: a standalone "you" is the camera, not a figure. */
@@ -23,11 +22,13 @@ export function viewOf(brief: string): { tags: string[]; brief: string } {
       rest = rest.replace(re, ' ');
     }
   if (found.length === 0 && !saysYou(brief)) return { tags: [], brief };
-  const clean = rest
-    .replace(YOU_WORDS, ' ')
+  return { tags: found, brief: tidy(rest.replace(YOU_WORDS, ' ')) };
+}
+
+/** A brief with words taken out: single spaces, no empty or dangling commas. */
+export const tidy = (text: string): string =>
+  text
     .replace(/\s+/g, ' ')
     .replace(/\s+([,.;])/g, '$1')
     .replace(/,(\s*,)+/g, ',')
     .replace(/^[\s,]+|[\s,]+$/g, '');
-  return { tags: found, brief: clean };
-}

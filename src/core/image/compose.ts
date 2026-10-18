@@ -4,6 +4,7 @@ import { seedOf } from '../trace';
 import type { SheetFamily } from './sheet';
 import { stateTags } from './stateTags';
 import { countTag, lookTags, placeTag, tags } from './tags';
+import { type Frame, frameOf, inFrame } from './framing';
 import { saysYou, viewOf } from './view';
 
 /**
@@ -104,12 +105,14 @@ const BODY_COLOUR = ['skin', 'scales'];
 const saysItAll = (l: Readonly<Record<string, string>>) => Boolean(l['species']?.trim()) && BODY_COLOUR.some((k) => l[k]?.trim());
 
 /** One character in the subject block: the frozen look verbatim, else the noun and the looks as tags; with `full` off, the noun. */
-function subject(e: Character, full: boolean, family: SheetFamily): string {
-  if (e.id === YOU) return tags(['pov', full ? lookTags(e.looks ?? {}, family) : '']);
+function subject(e: Character, full: boolean, family: SheetFamily, keys: Frame['keys']): string {
+  const shows = inFrame(e.looks ?? {}, keys);
+  if (e.id === YOU) return tags(['pov', full ? lookTags(shows, family) : '']);
   if (!full || e.kind !== 'character') return noun(e);
+  // ponytail: a frozen string look is not cut to the frame; M29-9 makes it per key.
   if (e.look !== undefined) return e.look;
   if (!e.looks || Object.keys(e.looks).length === 0) return looks(e, true);
-  return tags([saysItAll(e.looks) ? '' : noun(e), lookTags(e.looks, family)]);
+  return tags([saysItAll(e.looks) ? '' : noun(e), lookTags(shows, family)]);
 }
 
 export interface ComposeInput {
@@ -135,13 +138,15 @@ function placeIn(location: string | undefined, entities: readonly Character[]): 
 }
 
 /**
- * `count, subject (each shown character's looks), state, view, brief (names → nouns), location, weather, style`.
+ * `framing, count, subject (each shown character's looks in frame), state, view, brief (names → nouns), location, weather, style`.
  * Looks never enter the brief: spliced in, their last tag fused with the verb after it. Over budget it
  * drops, in order: the second character's looks, the state, the weather, the first character's looks, then cuts at a comma.
  */
 export function composeSeePrompt(input: ComposeInput): { prompt: string; entityIds: string[]; seed?: number; blocks: Blocks } {
   const { brief, scene, entities, style, family } = input;
-  const view = viewOf(brief);
+  const frame = frameOf(brief);
+  const keys = frame?.keys ?? 'all';
+  const view = viewOf(frame?.brief ?? brief);
   // The player is drawn only as the camera, and only when the brief says "you" and the You card has looks.
   const you = saysYou(brief) ? entities.find((e) => e.id === YOU && Object.keys(e.looks ?? {}).length > 0) : undefined;
   const others = (input.cast ?? subjectsIn(view.brief, scene, entities)).filter((e) => e.id !== YOU);
@@ -150,9 +155,11 @@ export function composeSeePrompt(input: ComposeInput): { prompt: string; entityI
   // Every entity's name goes, shown or not; a possessive goes with it ("Bram's hat" → "a toll keeper hat").
   const story = namedIn(view.brief, entities).reduce((t, e) => t.replace(mentionRe(e), () => noun(e)), view.brief);
   const held = (e: Character) => (e.holds ?? []).flatMap((id) => entities.filter((x) => x.id === id).map(noun));
-  const state = tags(people.map((e) => stateTags(e.states ?? {}, held(e), family, brief)));
+  // Out of frame, a posture or a held sword only pulls the camera back.
+  const states = frame?.states ?? 'all';
+  const state = tags(people.map((e) => stateTags(inFrame(e.states ?? {}, states), states === 'all' ? held(e) : [], family, brief)));
   const build = (full: readonly boolean[], withState: boolean, weather: boolean): Blocks => ({
-    subject: tags([countTag(people.length, family), ...shown.map((e, i) => subject(e, full[i] ?? false, family))]),
+    subject: tags([frame?.tag, countTag(people.length, family), ...shown.map((e, i) => subject(e, full[i] ?? false, family, keys))]),
     state: withState ? state : '',
     story: tags([...view.tags, story]),
     scene: tags([placeIn(scene?.location, entities), weather ? scene?.weather : '']),
