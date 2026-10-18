@@ -101,12 +101,12 @@ describe('seePrompt', () => {
     firstSeen: 0,
     lastSeen: 0,
   };
-  const req = { actions, entities: [tamsin], scene: { location: 'the jetty', present: ['Tamsin'] }, style: 'oil painting' };
+  const req = { actions, entities: [tamsin], scene: { location: 'the jetty', present: ['Tamsin'] }, style: 'oil painting', family: 'sd15' as const };
 
   it('composes a named brief without the helper', async () => {
     const helper = () => Promise.reject(new Error('not called'));
     expect(await seePrompt({ ...req, brief: 'Tamsin waves' }, helper)).toEqual({
-      prompt: 'a ferrywoman, grey braid waves, the jetty, oil painting',
+      prompt: 'a ferrywoman, grey braid, a ferrywoman waves, the jetty, oil painting',
       entityIds: ['ent_t'],
     });
   });
@@ -115,7 +115,7 @@ describe('seePrompt', () => {
     const d = deps('Tamsin turning on the ferry deck, rain');
     const { prompt, entityIds } = await seePrompt({ ...req, brief: 'she turns to face me' }, () => Promise.resolve(d));
     expect(d.provider.last?.prompt).toContain('Tamsin: a ferrywoman, grey braid');
-    expect(prompt).toBe('a ferrywoman, grey braid turning on the ferry deck, rain, oil painting');
+    expect(prompt).toBe('a ferrywoman, grey braid, a ferrywoman turning on the ferry deck, rain, oil painting');
     expect(prompt).not.toContain('Tamsin');
     expect(entityIds).toEqual(['ent_t']);
   });

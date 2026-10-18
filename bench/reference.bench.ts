@@ -5,6 +5,7 @@ import { A1111Provider } from '@adapters/providers/a1111';
 import { sheetRequest } from '@app/session/builder';
 import { composeSeePrompt, looksOf } from '@core/image/compose';
 import { imageRequest } from '@core/image/request';
+import { familyOf } from '@core/image/sheet';
 import { withLooks } from '@core/memory';
 import { benchAdventure } from './characters';
 import { writeMeasurement } from './env';
@@ -48,7 +49,12 @@ it('reference use', async () => {
     const init = new Blob([readFileSync(`${out}/${name}-${n}-front.png`)], { type: 'image/png' });
     const frozen = withLooks({ ...e, look: looksOf(withLooks(e, own)) }, own);
     for (const [i, brief] of BRIEFS.entries()) {
-      const see = composeSeePrompt({ brief: brief.replace('{n}', name), entities: [frozen], style: '' });
+      const see = composeSeePrompt({
+        brief: brief.replace('{n}', name),
+        entities: [frozen],
+        style: '',
+        family: familyOf(adv.settings.image.model, width, height),
+      });
       const req = { ...imageRequest(adv.settings.image, see.prompt), width, height, steps, ...(see.seed !== undefined && { seed: see.seed }) };
       let t = Date.now();
       await save(`${name}-${n}-see${i + 1}-text.png`, await images.txt2img(req, signal()));

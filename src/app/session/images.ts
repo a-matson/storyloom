@@ -1,4 +1,4 @@
-import { blobIdsOf, chosen, loadImagePrompt, rendersOf } from '@core/image';
+import { blobIdsOf, chosen, familyOf, loadImagePrompt, rendersOf } from '@core/image';
 import { indexAssertions, sceneNames, withLooks } from '@core/memory';
 import type { Action } from '@core/model';
 import { storyModel } from './helperModel';
@@ -34,6 +34,7 @@ async function composed(host: SeeHost, brief: string): Promise<Composed | undefi
       scene: adv.plot.scene && sceneNames(adv.plot.scene, adv.entities),
       entities: adv.entities.map((e) => withLooks(e, ix.of(e.id))),
       style: adv.settings.image.portraitStyle ?? portraitStyle(adv.tags),
+      family: familyOf(adv.settings.image.model, adv.settings.image.width, adv.settings.image.height),
     };
     const { prompt, entityIds, seed } = await seePrompt(req, async () => storyModel(host));
     return { ...(brief !== '' && { brief }), prompt, ...(entityIds.length > 0 && { entityIds }), ...(seed !== undefined && { seed }) };

@@ -39,13 +39,18 @@ export function appearanceOf(as: readonly Assertion[]): string {
 
 /**
  * The entity as the image prompts read it: who it is as `description`, its current looks as
- * `appearance`. While the identity's species contradicts the looks, the identity's word is left out.
+ * `appearance`, and the same looks by key as `looks` (a See spells them per checkpoint). While the
+ * identity's species contradicts the looks, the identity's word is left out.
  */
-export const withLooks = <E extends Entity>(e: E, as: readonly Assertion[]): E & { appearance: string } => ({
-  ...e,
-  description: as.filter(isSpeciesClash).reduce((t, c) => swapWord(t, c.claimed, ''), identityText(e, as)),
-  appearance: appearanceOf(as),
-});
+export const withLooks = <E extends Entity>(e: E, as: readonly Assertion[]): E & { appearance: string; looks: Record<string, string> } => {
+  const now = currentStates(as);
+  return {
+    ...e,
+    description: as.filter(isSpeciesClash).reduce((t, c) => swapWord(t, c.claimed, ''), identityText(e, as)),
+    appearance: appearanceOf(as),
+    looks: Object.fromEntries(SHEET_KEYS.flatMap((k) => (now[k]?.trim() ? [[k, now[k].trim()]] : []))),
+  };
+};
 
 /**
  * `wearing` changes scene to scene, so it is a state, not a look; `accessories` are who the character is, so a look

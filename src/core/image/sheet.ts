@@ -23,9 +23,9 @@ const KEEP = new Set(['wearing', 'species', 'hair', 'eyes']);
 // Weighting colour alone turned a fox human, so the species is weighted with it.
 const WEIGHTED = new Set(['wearing', 'species', 'hair']);
 
-/** The checkpoint family from its name, else from the See size (SDXL's native area is 4x SD 1.5's). [provisional] */
+/** The checkpoint family from its name, else from the See size (SDXL's native area is 4x SD 1.5's; 768² is SDXL's floor). [provisional] */
 export const familyOf = (model: string | undefined, width: number, height: number): SheetFamily =>
-  /xl|pony|noob|illustrious/i.test(model ?? '') || width * height > 768 * 768 ? 'sdxl' : 'sd15';
+  /xl|pony|noob|illustrious/i.test(model ?? '') || width * height >= 768 * 768 ? 'sdxl' : 'sd15';
 
 /** Frame and the stated keys, nothing else: no name, identity, facts or style. A skipped key adds nothing. */
 export function sheetPrompt(own: readonly Assertion[], skipped: readonly string[], weight = 1): string {
