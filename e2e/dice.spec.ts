@@ -44,6 +44,16 @@ test('the dice quick start tells the model the outcome of a Do', async ({ page }
   const prompts = await connect(page);
   await page.getByRole('button', { name: 'Consequences (dice)' }).click();
   await doThenSay(page, prompts);
+  // A Continue after a Do clears the outcome: front memory lives in script state now.
+  await page.getByRole('button', { name: 'Do', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Take a turn' }).fill('climb the wall');
+  await page.getByRole('button', { name: 'Send' }).click();
+  await expect.poll(() => prompts.length).toBe(3);
+  expect(prompts[2]).toMatch(OUTCOME);
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  // The gate may re-roll the reply; neither prompt carries the outcome.
+  await expect.poll(() => prompts.length).toBeGreaterThanOrEqual(4);
+  for (const p of prompts.slice(3)) expect(p).not.toContain('[Outcome:');
 });
 
 test('the Gameplay switch puts the dice on a plain story', async ({ page }) => {

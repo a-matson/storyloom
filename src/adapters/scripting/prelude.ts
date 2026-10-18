@@ -20,7 +20,9 @@ function __freeze(v) {
   return v;
 }
 // Non-enumerable so __out never writes it into the saved state; frozen so a script's writes are dropped.
-if (__in.entities) Object.defineProperty(state, 'entities', { value: __freeze(__in.entities), enumerable: false, configurable: true });
+['entities', 'scene', 'events'].forEach(function (k) {
+  if (__in[k]) Object.defineProperty(state, k, { value: __freeze(__in[k]), enumerable: false, configurable: true });
+});
 
 function __str(v) {
   if (typeof v === 'string') return v;

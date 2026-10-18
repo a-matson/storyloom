@@ -38,21 +38,23 @@ export function runTurn(
     deps,
     run,
     async function* () {
-      if (input.type !== 'continue') {
-        const hook = await runHook(
-          adventure,
-          deps,
-          'onInput',
-          input.text,
-          log.actions,
-          { info: { characterNames: [], actionCount: log.length } },
-          run.scriptLogs,
-        );
-        // A script that stops the turn or empties the input gets the same message (spec).
-        if (!hook.error && (hook.stop || (hook.text === '' && input.text !== ''))) {
-          yield { type: 'stopped', turnId, reason: 'Unable to run scenario scripts' };
-          return;
-        }
+      // A Continue runs onInput too (empty text, its returned text ignored), so an Input script can clear what it set.
+      const continued = input.type === 'continue';
+      const hook = await runHook(
+        adventure,
+        deps,
+        'onInput',
+        continued ? '' : input.text,
+        log.actions,
+        { info: { characterNames: [], actionCount: log.length, actionType: input.type } },
+        run.scriptLogs,
+      );
+      // A script that stops the turn or empties the input gets the same message (spec).
+      if (!hook.error && (hook.stop || (hook.text === '' && input.text !== '' && !continued))) {
+        yield { type: 'stopped', turnId, reason: 'Unable to run scenario scripts' };
+        return;
+      }
+      if (!continued) {
         const text = hook.error ? input.text : (hook.text ?? input.text);
         const action = log.append(input.type, formatPlayerInput(input.type, text, adventure.plot), { turnId });
         adventure.actions = log.actions;

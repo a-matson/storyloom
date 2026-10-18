@@ -49,6 +49,7 @@ export function ScriptTest({ tab, scripts, cards, plotEssentials, onLogs }: Prop
       info: {
         characterNames: [],
         actionCount: 0,
+        ...(hook === 'onInput' && { actionType: 'do' as const }),
         ...(hook === 'onModelContext' ? { maxChars: SAMPLE_MAX_CHARS, memoryLength: plotEssentials.length } : {}),
       },
     });
