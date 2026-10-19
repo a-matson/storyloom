@@ -11,7 +11,7 @@ export { standing } from './standing';
 export { isYouLine, playerName, YOU } from './you';
 export { andList, defaultKnownBy, newSecret, repointSecrets, secretsOf } from './secrets';
 export { chapterStarts, withChapter, type Chapter } from './chapters';
-export { matchEntity, patchPlot, roomsOf, sceneIds, sceneNames, withPresence } from './names';
+export { matchEntity, MAX_HELD, patchPlot, roomsOf, sceneIds, sceneNames, withPresence } from './names';
 export type { MaintenanceDeps } from './memoryJobs';
 export type { CodexEntry, CodexLine } from './codex';
 export type { CutCounts, HelperCallLog } from './helperCall';

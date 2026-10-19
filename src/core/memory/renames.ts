@@ -1,6 +1,6 @@
 import type { Entity } from '../model/types';
 import { matchEntity, norm } from './names';
-import { editDistance } from './spelling';
+import { editDistance, spellingOf } from './spelling';
 
 /** Capitalised runs, a possessive inside one kept ("Deadman's Gulch"). */
 export const CAPITALISED = /\p{Lu}\p{Ll}+(?:['’]s)?(?: \p{Lu}\p{Ll}+(?:['’]s)?)*/gu;
@@ -32,9 +32,19 @@ export function renameCues(passage: string, entities: readonly Entity[]): Map<st
 }
 
 type Proposal = { name: string; of: string; at: number };
+type Pair = { name: string; of: string };
 
-/** The alias proposals `asked` and each cue not yet among them, from action `at`. */
-export const withCues = (asked: readonly Proposal[], cues: ReturnType<typeof renameCues>, at: number): Proposal[] => [
-  ...asked,
-  ...[...cues].flatMap(([n, c]) => (asked.some((p) => norm(p.name) === n) ? [] : [{ ...c, at }])),
-];
+type Cues = ReturnType<typeof renameCues>;
+
+/** Whether the player said No to `name` for entity `of`. */
+const declined = (no: readonly Pair[] = [], name: string, of: string) => no.some((r) => r.of === of && norm(r.name) === norm(name));
+
+/** The known entity a new name may be (its spelling, else the one a cue renames), unless the player said No to that pair. */
+export const aliasOf = (entities: readonly Entity[], e: Pick<Entity, 'name' | 'kind'>, cues: Cues, no?: readonly Pair[]): Entity | undefined =>
+  [spellingOf(entities, e.name, e.kind), entities.find((x) => x.id === cues.get(norm(e.name))?.of)].find((x) => x && !declined(no, e.name, x.id));
+
+/** The alias proposals already asked and each cue not yet among them nor declined, from action `at`. */
+export function withCues(state: { __aliasProposals?: Proposal[] | undefined; __aliasRejected?: Pair[] | undefined }, cues: Cues, at: number): Proposal[] {
+  const { __aliasProposals: asked = [], __aliasRejected: no } = state;
+  return [...asked, ...[...cues].flatMap(([n, c]) => (asked.some((p) => norm(p.name) === n) || declined(no, c.name, c.of) ? [] : [{ ...c, at }]))];
+}

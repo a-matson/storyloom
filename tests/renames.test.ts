@@ -39,4 +39,25 @@ describe('renameCues', () => {
     expect(adv.entities.map((e) => e.name)).toEqual(['Vorthak']);
     expect(adv.scriptState.__aliasProposals).toHaveLength(1);
   });
+
+  it('does not propose a pair the player said No to, but still proposes the name for another entity', () => {
+    const adv = createBlankAdventure('T', '');
+    const passage = 'You meet Vorthak, known as Old Red, and Halvord the smith.';
+    adv.actions = [{ id: 'a0', type: 'continue', versions: [passage], active: 0, createdAt: 0 }];
+    adv.entities = known('Vorthak', 'Halvard');
+    const [vorthak = '', halvard = ''] = adv.entities.map((e) => e.id);
+    const fold = () =>
+      foldEntities(adv, [{ name: 'Halvord', kind: 'character', description: '', facts: [] }], `[0] ${passage}`, { fromAction: 0, toAction: 1 });
+    adv.scriptState.__aliasRejected = [
+      { name: 'old red', of: vorthak },
+      { name: 'Halvord', of: 'other' },
+    ];
+    fold();
+    expect(adv.scriptState.__aliasProposals?.map((p) => [p.name, p.of])).toEqual([['Halvord', halvard]]);
+    adv.scriptState.__aliasRejected.push({ name: 'Halvord', of: halvard });
+    adv.scriptState.__aliasProposals = [];
+    fold();
+    expect(adv.scriptState.__aliasProposals).toEqual([]);
+    expect(adv.entities.map((e) => e.name)).toEqual(['Vorthak', 'Halvard', 'Halvord']);
+  });
 });
