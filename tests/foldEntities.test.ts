@@ -164,6 +164,7 @@ describe('foldEntities', () => {
             { to: 'You', stance: 'trusts' },
             { to: 'Odo', stance: 'fears him' },
             { to: 'Brin', stance: 'loves' },
+            { to: 'Odo', stance: ',.' },
           ],
         }),
       ],
@@ -174,7 +175,7 @@ describe('foldEntities', () => {
       ['you', 'trusts'],
       ['Odo', 'fears him'],
     ]);
-    expect(log.rejected.map((r) => [r.value, r.reason])).toEqual([['Brin: loves', 'unknown-to']]);
+    expect(log.rejected.map((r) => `${r.value} ${r.reason}`)).toEqual(['Brin: loves unknown-to', 'Odo: ,. empty-stance']);
   });
 
   it('merges a new name that is part of a known one, or a known one with a title its identity has', () => {

@@ -44,6 +44,7 @@ export interface Rejected {
     | 'look-inferred'
     | 'identity-unnamed'
     | 'unknown-to'
+    | 'empty-stance'
     | 'role-rejected'
     | 'event-rejected'
     | 'no-dialogue';
@@ -144,9 +145,11 @@ export function sightingOf(
     description,
     relationships: relationships.flatMap(({ to, stance }) => {
       const name = g.toward(to);
-      if (!name) g.reject(`${to}: ${stance}`, 'unknown-to');
+      // The 12B sometimes writes punctuation as a stance (",.").
+      const reason = !name ? 'unknown-to' : /\p{L}/u.test(stance) ? undefined : 'empty-stance';
+      if (reason) g.reject(`${to}: ${stance}`, reason);
       // "You" has no content word: the sentence naming both backs the stance.
-      return name ? keep(stance, { cap: LOOK_CHARS, about: name }).map((t) => ({ to: name, stance: t })) : [];
+      return name && !reason ? keep(stance, { cap: LOOK_CHARS, about: name }).map((t) => ({ to: name, stance: t })) : [];
     }),
     facts: facts.flatMap((f) => {
       // The 12B restates a new card's description as its first fact (a duplicate, not a loss: not logged), and writes a state ("location: the marsh") as a fact too.

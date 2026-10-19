@@ -128,4 +128,12 @@ describe('presentLine', () => {
     ];
     expect(presentLine(minos, [...as, ...evs], [minos, lena], false).text).toBe('Minos — trusts you. With Lena: fears.');
   });
+
+  it('a punctuation stance renders nothing (M24-5)', () => {
+    const lena: Entity = { ...minos, id: 'ent_lena', name: 'Lena' };
+    const rel = (id: string, to: string): Assertion => ({ ...base, id, at: 1, since: 1, kind: 'relationship', to, stance: ',.' });
+    const line = presentLine(minos, [rel('r1', 'you'), rel('r2', 'Lena')], [minos, lena], false);
+    expect(line.text).toBe('Minos.');
+    expect(line.factIds).toEqual([]);
+  });
 });

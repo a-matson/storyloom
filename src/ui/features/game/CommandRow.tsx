@@ -140,7 +140,7 @@ export function CommandRow({ busy, canRetry, canReroll = false, canErase, canBea
           </Button>
         </div>
         <div className="font-mono text-label text-muted-foreground">
-          Enter send · Ctrl+Enter continue · Ctrl+R retry · Ctrl+Z undo · /do /say /story /see /correct /rule /beat
+          Enter send · Ctrl+Enter continue · Ctrl+R retry · Ctrl+Z undo · {[...MODE_IDS, ...Object.keys(COMMANDS)].map((c) => `/${c}`).join(' ')}
         </div>
       </div>
     </footer>
