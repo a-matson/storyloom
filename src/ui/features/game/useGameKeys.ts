@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 
 const SHEET_MAX_WIDTH = 1100; // below this the sidebar is an overlay sheet
 
-/** Escape closes the context drawer, then the sidebar sheet; Ctrl/⌘+. toggles the sidebar. */
+/** Escape closes the context drawer, then the sidebar sheet; Ctrl/⌘+. toggles the sidebar; `/` outside a text field focuses search. */
 export function useGameKeys(
   showContext: boolean,
   showSidebar: boolean,
@@ -17,6 +17,10 @@ export function useGameKeys(
       } else if ((e.ctrlKey || e.metaKey) && e.key === '.') {
         e.preventDefault();
         setShowSidebar((s) => !s);
+      } else if (e.key === '/' && !(e.target instanceof HTMLElement && e.target.closest('input, textarea, select, [contenteditable="true"]'))) {
+        // The turn input keeps `/` for its slash commands.
+        e.preventDefault();
+        document.getElementById('story-search')?.focus();
       }
     };
     window.addEventListener('keydown', onKey);

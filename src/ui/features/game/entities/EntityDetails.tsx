@@ -9,7 +9,11 @@ import { SectionLabel } from '@ui/components/ui/section-label';
 export type Update = (patch: Partial<Entity>) => void;
 
 /** Bring an action into view; the story column's children, chapter headings aside, are the actions in order. */
-export const showAction = (index: number) => document.querySelectorAll('#story > :not([data-chapter])')[index]?.scrollIntoView({ block: 'center' });
+export function showAction(index: number): Element | undefined {
+  const el = document.querySelectorAll('#story > :not([data-chapter])')[index];
+  el?.scrollIntoView({ block: 'center' });
+  return el;
+}
 
 type Edits = Pick<ReturnType<typeof entityEdits>, 'setReference' | 'clearReference' | 'unfreeze' | 'portraitFromReference'>;
 

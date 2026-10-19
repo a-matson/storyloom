@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
+import type { Adventure } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
 import { StatusDot } from '@ui/components/ui/status-dot';
 import { TopBar, TopBarTitle } from '@ui/components/ui/top-bar';
 import { IconHome, IconRedo, IconSettings, IconUndo } from '@ui/components/Icons';
+import { StorySearch } from './StorySearch';
 
 interface Props {
-  title: string;
-  actionCount: number;
+  adventure: Adventure;
   busy: boolean;
   canUndo: boolean;
   canRedo: boolean;
@@ -20,7 +21,8 @@ interface Props {
   onToggleSidebar: () => void;
 }
 
-export function GameHeader({ title, actionCount, busy, canUndo, canRedo, failed, modelLabel, meter, sidebarOpen, api, onExit, onToggleSidebar }: Props) {
+export function GameHeader({ adventure, busy, canUndo, canRedo, failed, modelLabel, meter, sidebarOpen, api, onExit, onToggleSidebar }: Props) {
+  const { title } = adventure;
   return (
     <TopBar>
       <Button size="icon" className="shrink-0" aria-label="Back to library" onClick={onExit}>
@@ -28,9 +30,10 @@ export function GameHeader({ title, actionCount, busy, canUndo, canRedo, failed,
       </Button>
       <div className="flex min-w-0 flex-col gap-px">
         <TopBarTitle className="truncate">{title === '' ? 'Untitled adventure' : title}</TopBarTitle>
-        <div className="text-caption text-muted-foreground">{actionCount} actions</div>
+        <div className="text-caption text-muted-foreground">{adventure.actions.length} actions</div>
       </div>
       <span className="grow" />
+      <StorySearch adventure={adventure} />
       <div className="flex shrink-0 items-center gap-1.5">
         <Button size="icon" aria-label="Undo" onClick={api.undo} disabled={busy || !canUndo}>
           <IconUndo />
