@@ -57,6 +57,7 @@ describe('schemas', () => {
       textStyle: 'print',
       content: 'unrestricted',
       bannedPhrases: [],
+      autoBanned: true,
       consequences: 'fair',
     });
   });

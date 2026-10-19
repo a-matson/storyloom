@@ -21,4 +21,13 @@ describe('outputFlag', () => {
     }));
   it('flags past tense', () => expect(outputFlag(PAST, [])?.button).toBe('Retry in present tense'));
   it('blank lines ban nothing', () => expect(outputFlag(PRESENT, ['  ', ''])).toBeUndefined());
+  it('an output with a fatigued phrase flags with Repeats:, after the banned ones', () => {
+    expect(outputFlag(`${PRESENT} Her eyes, glint with mischief.`, [], ['her eyes glint with mischief'])).toEqual({
+      label: 'Repeats: "her eyes glint with mischief"',
+      button: 'Retry without it',
+      note: 'Never write "her eyes glint with mischief".',
+    });
+    expect(outputFlag(PRESENT, ['tamsin waves'], ['the road is empty'])?.label).toBe('Uses "tamsin waves"');
+  });
+  it('matches whole words only', () => expect(outputFlag('You walk on the roads.', [], ['walk on the road'])).toBeUndefined());
 });

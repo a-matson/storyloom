@@ -8,7 +8,7 @@ import { DirectorSwitch } from './DirectorSwitch';
 import { ImagesSection } from './ImagesSection';
 import { MemoryPreset } from './MemoryPreset';
 import { ModelSettings } from './ModelSettings';
-import { NeverWrite } from './NeverWrite';
+import { NeverWrite, repeatedLately } from './NeverWrite';
 import { NumberInput } from './NumberInput';
 import { Section, Setting } from './Section';
 import { MODEL_HELP } from './settingHelp';
@@ -24,7 +24,7 @@ const TEXT_STYLES: { value: Settings['textStyle']; label: string }[] = [
   { value: 'hacker', label: 'Hacker' },
 ];
 
-function StoryGenerator({ s, update }: { s: Settings; update: Update }) {
+function StoryGenerator({ s, update, repeated }: { s: Settings; update: Update; repeated: readonly string[] }) {
   return (
     <Section title="Story generator" defaultOpen>
       <Setting label="Prompt template" htmlFor="tpl">
@@ -99,7 +99,7 @@ function StoryGenerator({ s, update }: { s: Settings; update: Update }) {
           onChange={(e) => update({ contentText: e.target.value })}
         />
       )}
-      <NeverWrite value={s.bannedPhrases} onChange={(bannedPhrases) => update({ bannedPhrases })} />
+      <NeverWrite s={s} update={update} repeated={repeated} />
       <p className="text-caption text-muted-foreground">Model: {s.modelId ?? 'as loaded in the backend'}. Change backends in Settings.</p>
     </Section>
   );
@@ -239,7 +239,7 @@ export function GameplayTab({
   const s = adventure.settings;
   return (
     <>
-      <StoryGenerator s={s} update={api.updateSettings} />
+      <StoryGenerator s={s} update={api.updateSettings} repeated={repeatedLately(s, adventure.actions)} />
       <DiceSwitch adventure={adventure} api={api} />
       <DirectorSwitch api={api} />
       <MemorySystem s={s} update={api.updateSettings} />
