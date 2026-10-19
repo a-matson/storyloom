@@ -1,4 +1,6 @@
-import { actionText, type Action, type Adventure, type Assertion, type Entity } from '../model';
+import { actionText, type Action, type Adventure, type Assertion, type Entity, type Scene } from '../model';
+
+type Tension = NonNullable<Scene['tension']>;
 
 /**
  * One thing a character can do in a scene. `cue` opens the AI reply that plays it, pronoun-free so no pronoun is
@@ -6,23 +8,39 @@ import { actionText, type Action, type Adventure, type Assertion, type Entity } 
  */
 interface Beat {
   id: string;
+  /** The scene tension it does not fit; absent: it fits any. */
+  unfit?: Tension;
   cue: (name: string) => string;
   done: RegExp;
 }
+
+/** Whether `beat` fits a scene at `tension`; a player's own beat fits any. */
+export const fits = (beat: string, tension: Tension | undefined): boolean =>
+  tension === undefined || BEATS.find((b) => b.id === beat.toLowerCase())?.unfit !== tension;
 
 const OBJ = '(?:you|him|her|them|me|us)';
 
 /** The 12 beats, in the milestone's order. [provisional] */
 export const BEATS: readonly Beat[] = [
-  { id: 'interrupt', cue: (n) => `${n} interrupts: "`, done: new RegExp(String.raw`\binterrupt(?:s|ed|ing)?\b|\bcut ${OBJ} off\b`, 'i') },
+  { id: 'interrupt', unfit: 'quiet', cue: (n) => `${n} interrupts: "`, done: new RegExp(String.raw`\binterrupt(?:s|ed|ing)?\b|\bcut ${OBJ} off\b`, 'i') },
   { id: 'leave', cue: (n) => `${n} turns to leave, `, done: /\b(?:left|leaves|leaving|walked out|storm(?:s|ed) off|departed)\b/i },
-  { id: 'bargain', cue: (n) => `${n} leans in with an offer: "`, done: /\b(?:bargain|haggl|negotiat)\w*|\boffered (?:a|an) (?:deal|trade)\b/i },
-  { id: 'lie', cue: (n) => `${n} lies without blinking: "`, done: /\b(?:lied|lies|lying)\b/i },
-  { id: 'confide', cue: (n) => `${n} speaks low, in confidence: "`, done: /\b(?:confid(?:ed|es|ing)|confessed|admitted)\b/i },
-  { id: 'threaten', cue: (n) => `${n} makes a threat, cold and plain: "`, done: /\bthreaten\w*/i },
-  { id: 'joke', cue: (n) => `${n} grins and jokes: "`, done: /\b(?:jok(?:ed|es|ing)|teased|quipped)\b/i },
-  { id: 'demand', cue: (n) => `${n} demands: "`, done: /\bdemand(?:s|ed|ing)?\b/i },
-  { id: 'change the subject', cue: (n) => `${n} changes the subject: "`, done: /\b(?:changed|changes|changing) the subject\b|\bdeflect(?:s|ed|ing)?\b/i },
+  {
+    id: 'bargain',
+    unfit: 'action',
+    cue: (n) => `${n} leans in with an offer: "`,
+    done: /\b(?:bargain|haggl|negotiat)\w*|\boffered (?:a|an) (?:deal|trade)\b/i,
+  },
+  { id: 'lie', unfit: 'action', cue: (n) => `${n} lies without blinking: "`, done: /\b(?:lied|lies|lying)\b/i },
+  { id: 'confide', unfit: 'action', cue: (n) => `${n} speaks low, in confidence: "`, done: /\b(?:confid(?:ed|es|ing)|confessed|admitted)\b/i },
+  { id: 'threaten', unfit: 'quiet', cue: (n) => `${n} makes a threat, cold and plain: "`, done: /\bthreaten\w*/i },
+  { id: 'joke', unfit: 'action', cue: (n) => `${n} grins and jokes: "`, done: /\b(?:jok(?:ed|es|ing)|teased|quipped)\b/i },
+  { id: 'demand', unfit: 'quiet', cue: (n) => `${n} demands: "`, done: /\bdemand(?:s|ed|ing)?\b/i },
+  {
+    id: 'change the subject',
+    unfit: 'action',
+    cue: (n) => `${n} changes the subject: "`,
+    done: /\b(?:changed|changes|changing) the subject\b|\bdeflect(?:s|ed|ing)?\b/i,
+  },
   { id: 'reveal', cue: (n) => `${n} reveals what was held back: "`, done: /\b(?:reveal(?:s|ed|ing)?|disclosed)\b/i },
   {
     id: 'ask for help',

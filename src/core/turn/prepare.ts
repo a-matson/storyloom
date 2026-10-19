@@ -51,7 +51,7 @@ function contextInput(adventure: Adventure, actions: Action[], rankedMemories: R
       evictionChunk: adventure.settings.context.evictionChunk,
       pinnedFactsOnly: !adventure.settings.memory.entityFacts,
       content: contentClause(adventure.settings, 'story'),
-      ...(adventure.settings.context.lengthHint && { lengthLine: lengthLine(adventure.settings.model.responseLength) }),
+      ...(adventure.settings.context.lengthHint && { lengthLine: lengthLine(adventure.settings.model.responseLength, adventure.plot.scene?.tension) }),
     },
     tokenizer: deps.tokenizer,
   };

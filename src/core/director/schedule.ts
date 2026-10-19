@@ -1,7 +1,7 @@
 import type { AssertionIndex } from '../memory/assertionIndex';
 import { actionText, type Action } from '../model';
 import { cueBeat } from './beats';
-import { cueCard, deckOf, drawComplication } from './deck';
+import { cueCard, deckOf, drawComplication, type Draw } from './deck';
 import { pickBeat } from './pick';
 
 type Directed = Parameters<typeof pickBeat>[0] & Parameters<typeof drawComplication>[0];
@@ -37,14 +37,14 @@ export function directorDue(adv: Directed, every: number): boolean {
 }
 
 /** The director's cue: a complication when none came in the last `2 × every` player turns, else a beat (then a card). */
-export function drawDirector(adv: Directed, ix: AssertionIndex, every: number, random: () => number = Math.random): { cue: string } | { none: string } {
+export function drawDirector(adv: Directed, ix: AssertionIndex, every: number, random: () => number = Math.random): Draw {
   const card = () => drawComplication(adv, random);
   const beat = () => pickBeat(adv, ix, random);
   const order = turnsSince(adv, (c) => c === 'card') >= 2 * every ? [card, beat] : [beat, card];
-  let last: { cue: string } | { none: string } = { none: 'The director has nothing to play' };
+  let last: Draw = { none: 'The director has nothing to play' };
   for (const draw of order) {
     last = draw();
-    if ('cue' in last) return { cue: last.cue };
+    if ('cue' in last) return { cue: last.cue, ...('tension' in last && last.tension && { tension: last.tension }) };
   }
   return last;
 }

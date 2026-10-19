@@ -1,6 +1,6 @@
 import { sceneIds, sceneNames } from '@core/memory';
 import type { Entity, PlotComponents, Scene } from '@core/model';
-import { DayPart, WEATHERS } from '@core/schema';
+import { DayPart, Tension, WEATHERS } from '@core/schema';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Input, Select } from '@ui/components/ui/field';
 
@@ -48,6 +48,20 @@ function TimeFields({ time, set }: { time: Scene['time']; set: (time: Scene['tim
         />
       )}
     </>
+  );
+}
+
+/** The player's (or a complication's) `/tension`; no read sets it. */
+function TensionField({ tension, set }: { tension: Scene['tension']; set: (tension: Scene['tension']) => void }) {
+  return (
+    <Select aria-label="Tension" className="text-control" value={tension ?? ''} onChange={(e) => set(Tension.options.find((t) => t === e.target.value))}>
+      <option value="">No tension</option>
+      {Tension.options.map((t) => (
+        <option key={t} value={t}>
+          {t}
+        </option>
+      ))}
+    </Select>
   );
 }
 
@@ -109,6 +123,7 @@ export function SceneFields({
         ))}
       </Select>
       <TimeFields time={scene.time} set={(time) => set({ time })} />
+      <TensionField tension={scene.tension} set={(tension) => set({ tension })} />
       {log.length > 0 && (
         <ol aria-label="Scene timeline" className="text-muted-foreground text-xs">
           {log

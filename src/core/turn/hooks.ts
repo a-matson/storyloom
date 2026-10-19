@@ -22,8 +22,8 @@ export const SCRIPT_EVENTS = 20;
 
 function toScriptScene({ plot, entities }: Pick<Adventure, 'plot' | 'entities'>): ScriptScene | undefined {
   if (!plot.scene) return undefined;
-  const { location, zone, present, groups, time } = sceneNames(plot.scene, entities);
-  return { location, zone, present, groups: (groups ?? []).map((g) => ({ name: g.id, count: g.count })), time };
+  const { location, zone, present, groups, time, tension } = sceneNames(plot.scene, entities);
+  return { location, zone, present, groups: (groups ?? []).map((g) => ({ name: g.id, count: g.count })), time, ...(tension && { tension }) };
 }
 
 function toScriptEvents({ assertions, entities }: Pick<Adventure, 'assertions' | 'entities'>): ScriptEvent[] {
@@ -82,6 +82,7 @@ export async function runHook(
   collect?: string[],
 ): Promise<HookResult> {
   const scripts = deps.scripts ?? new NoopScriptRunner();
+  const tension = adventure.plot.scene?.tension;
   const input: HookInput = {
     hook,
     text,
@@ -91,6 +92,8 @@ export async function runHook(
     // onInput has no context to read them against.
     ...(hook !== 'onInput' && { entities: toScriptEntities(adventure), scene: toScriptScene(adventure), events: toScriptEvents(adventure) }),
     ...extra,
+    // On every hook: the dice Input script reads it, and onInput has no `state.scene`.
+    info: { ...extra.info, ...(tension && { tension }) },
   };
   // A runner that rejects (a crashed or restarted worker) must not fail the turn either; the trace keeps the reason.
   const result = await scripts.run(input).catch((e: unknown): HookResult => ({

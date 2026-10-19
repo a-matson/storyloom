@@ -3,7 +3,7 @@ import { current, type AssertionIndex } from '../memory/assertionIndex';
 import { isConfirmed } from '../memory/facts';
 import { playerName } from '../memory/you';
 import type { Adventure, Entity } from '../model';
-import { BEATS, cueFor, genreKeys, repertoire, usedBeats } from './beats';
+import { BEATS, cueFor, fits, genreKeys, repertoire, usedBeats } from './beats';
 
 type BeatPick = { entity: Entity; beat: string; cue: string } | { none: string };
 
@@ -31,7 +31,7 @@ function readAsk(ask: string, here: Entity[]): { who?: Entity; beat: string } {
 
 /**
  * The beat a Beat press plays: the quietest present character (`spotlight` quietFirst) with an eligible beat, i.e.
- * one in their repertoire they did not play in their last 3, and `act on the goal` only with a confirmed goal; chosen
+ * one in their repertoire they did not play in their last 3, that fits the scene's tension, and `act on the goal` only with a confirmed goal; chosen
  * with `random` among those. `ask` (`/beat Tamsin lie`) names the character, the beat, or both.
  */
 export function pickBeat(adv: Scene, ix: AssertionIndex, random: () => number = Math.random, ask = ''): BeatPick {
@@ -48,7 +48,7 @@ export function pickBeat(adv: Scene, ix: AssertionIndex, random: () => number = 
     }
     const used = new Set(usedBeats(adv.actions, e));
     const goal = current(ix.of(e.id), 'goal').some((a) => a.seen !== false);
-    const open = own.filter((b) => !used.has(b) && (goal || b !== GOAL));
+    const open = own.filter((b) => !used.has(b) && (goal || b !== GOAL) && fits(b, adv.plot.scene?.tension));
     const beat = open[Math.floor(random() * open.length)];
     if (beat !== undefined) return { entity: e, beat, cue: cueFor(beat, e.name) };
   }
