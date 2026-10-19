@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { entityEdits } from '@app/session/entities';
-import { isSpeciesClash, isValue, textOf, type AssertionOf } from '@core/memory';
+import { eventsOf, isSpeciesClash, isValue, matchEntity, standing, textOf, YOU, type AssertionOf } from '@core/memory';
 import type { Adventure, Assertion, Entity } from '@core/model';
 import { Button } from '@ui/components/ui/button';
 import { Pill } from '@ui/components/ui/pill';
@@ -36,6 +36,26 @@ export function FactLine({ card: c, fact: f, text, children }: { card: Card; fac
     >
       {children}
     </Line>
+  );
+}
+
+const norm = (s: string) => s.trim().toLowerCase();
+const signed = (n: number) => (n > 0 ? `+${n}` : `${n}`);
+
+/** A stance, with the trust and fear the events since moved it by; the title is the event that swapped its word. */
+export function RelationLine({ card: c, fact: f }: { card: Card; fact: AssertionOf<'relationship'> }) {
+  const from = norm(f.to) === YOU ? YOU : matchEntity(c.adventure.entities, f.to)?.id;
+  const events = eventsOf(c.adventure.assertions, f.subject);
+  const s = from === undefined ? undefined : standing(f, events, from);
+  const crossed = events.find((a) => a.at === s?.crossedAt && a.who[0] === from);
+  return (
+    <FactLine card={c} fact={f} text={`${f.to}: ${f.stance}`}>
+      {s && (s.trust !== 0 || s.fear !== 0) && (
+        <span className="text-caption text-muted-foreground" title={crossed?.text}>
+          trust {signed(s.trust)} · fear {signed(s.fear)}
+        </span>
+      )}
+    </FactLine>
   );
 }
 

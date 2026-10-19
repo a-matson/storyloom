@@ -104,4 +104,28 @@ describe('presentLine', () => {
     const as: Assertion[] = [effect('e1', 'cursed', 1), effect('e2', 'cursed', 2, true)];
     expect(presentLine(minos, as, [minos], false).text).toBe('Minos — cursed — Amulet.');
   });
+
+  it('a stance swaps its word once events cross it (M26-6)', () => {
+    const lena: Entity = { ...minos, id: 'ent_lena', name: 'Lena' };
+    const rel = (id: string, to: string): Assertion => ({ ...base, id, at: 1, since: 1, kind: 'relationship', to, stance: 'wary' });
+    const ev = (at: number, text: string, who: string[]): Assertion => ({
+      ...base,
+      id: `ev${at}`,
+      subject: who[0] ?? '',
+      at,
+      since: at,
+      kind: 'event',
+      text,
+      who,
+    });
+    const as = [rel('r1', 'you'), rel('r2', 'Lena')];
+    expect(presentLine(minos, as, [minos, lena], false).text).toBe('Minos — wary. With Lena: wary.');
+    const evs = [
+      ev(2, 'You rescue Minos', ['you', minos.id]),
+      ev(3, 'You heal Minos', ['you', minos.id]),
+      ev(4, 'Lena threatens Minos', [lena.id, minos.id]),
+      ev(5, 'Lena attacks Minos', [lena.id, minos.id]),
+    ];
+    expect(presentLine(minos, [...as, ...evs], [minos, lena], false).text).toBe('Minos — trusts you. With Lena: fears.');
+  });
 });

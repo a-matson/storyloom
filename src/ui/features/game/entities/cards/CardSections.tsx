@@ -12,7 +12,7 @@ import { RuleRow } from '../RuleList';
 import { AddRow, type AddKind } from './AddRow';
 import { BeatsRow } from './BeatsRow';
 import { Line } from './FactRows';
-import { ClaimLine, EffectLine, FactLine, GoalLine, StateLine, type Card } from './Lines';
+import { ClaimLine, EffectLine, FactLine, GoalLine, RelationLine, StateLine, type Card } from './Lines';
 
 interface Props {
   entity: Entity;
@@ -103,7 +103,7 @@ export function CardSections({ entity: e, adventure, api, edits, onClose, onOpen
       {e.kind === 'character' && <Has entity={e} adventure={adventure} onOpen={onOpen} />}
       <Section label="With">
         {[
-          ...current(live, 'relationship').map((a) => <FactLine key={a.id} card={card} fact={a} text={`${a.to}: ${a.stance}`} />),
+          ...current(live, 'relationship').map((a) => <RelationLine key={a.id} card={card} fact={a} />),
           ...e.relations.map((r) => (
             <Line
               key={`${r.to}|${r.label}`}
