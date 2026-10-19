@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { exportScenarioJson, importScenarioJson, scenarioFromAdventure, worldOf } from '@adapters/transfer';
 import type { Assertion } from '@core/model';
-import { createBlankAdventure, newScenario } from '@core/model';
+import { createAdventureFromScenario, createBlankAdventure, newScenario } from '@core/model';
 
 const base = { aliases: [], description: '', relations: [], firstSeen: 3, lastSeen: 9 };
 const common = { producer: 'turn', at: 4, since: 4, basis: 'stated', span: 'Lena, the smith' } as const;
@@ -81,4 +81,17 @@ it('imports a scenario without a world as before', () => {
   const s = importScenarioJson(exportScenarioJson(newScenario('Plain', 'You wait.')));
   expect(s.world).toBeUndefined();
   expect(s.prompt).toBe('You wait.');
+  expect(createAdventureFromScenario(s, {})).toMatchObject({ entities: [], assertions: [], rules: [] });
+});
+
+it('starts a new adventure in the world at action 0, the card held once', () => {
+  const s = importScenarioJson(exportScenarioJson(scenarioFromAdventure(built())));
+  const a = createAdventureFromScenario(s, {});
+  const lena = a.entities.find((e) => e.name === 'Lena');
+  expect(a.entities.map((e) => e.name)).toEqual(['Lena', 'Forge', 'Smiths', 'Corrow']);
+  expect(lena?.cardId).toBe(a.storyCards[0]?.id);
+  expect(lena?.cardId).not.toBe(s.storyCards[0]?.id);
+  expect(a.assertions.map((x) => x.at)).toEqual([0, 0, 0, 0, 0]);
+  expect(a.rules).toMatchObject([{ text: 'Smiths never lie.', fromAction: 0, gates: [a.entities.find((e) => e.name === 'Smiths')?.id] }]);
+  expect(a.assertions).not.toBe(s.world?.assertions);
 });
