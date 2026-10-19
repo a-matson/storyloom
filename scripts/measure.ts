@@ -9,6 +9,8 @@
  *     MEASURE_SCOPE=locked drops the Scene: lines, as with the setting off)
  *   contradiction-cases <backups> [file]  unlabelled check cases from backups' AI outputs (bench/contradiction-dogfood.json), no model
  *   memory-replay <url> <backup> <from-to> [label] [samples]  the memory for one action range of a backup, written [samples] times (default 5)
+ *   replay <url> <backup> [label] [to]  the memory jobs from nothing over a backup's actions (to [to]); entities, conflicts, cards per action
+ *     (MEASURE_NAMES=Baron,Goldarok keeps those names)
  *   state <url> <backup> [label] [labels-set]  scene and state reads over every AI turn of a backup, scored against bench/stateLabels.json
  *   duplicates <backup> [label]  near-duplicate card proposals over the stored cards by first sighting, and the cards after accepting (M23-6), no model
  *   places <backup> [label]  each place at its first sighting through the room rule (M23-6); top-level count, no model
@@ -65,6 +67,10 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
   places: {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/places'],
     env: { MEASURE_BACKUP: a, MEASURE_LABEL: b },
+  },
+  replay: {
+    cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/replay'],
+    env: { MEASURE_URL: a, MEASURE_BACKUP: b, MEASURE_LABEL: c, MEASURE_TO: d },
   },
   state: {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/state.bench'],
