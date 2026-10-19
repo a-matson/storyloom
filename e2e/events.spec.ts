@@ -32,6 +32,20 @@ test('an event shows under Happened on every card that took part, with its actio
   await expect(tamsin.getByRole('listitem').filter({ hasText: 'Pulled you from the river.' })).toContainText('yours');
 });
 
+test('a card lists what the character knows, loaded on open (M27-2)', async ({ page }) => {
+  const base = { subject: 'ent_tamsin', producer: 'batch' as const, basis: 'stated' as const, kind: 'event' as const };
+  const rowed = { ...base, id: 'as_rowed', at: 1, since: 1, text: 'Tamsin rowed Merav across the river.', who: ['ent_tamsin', 'ent_merav'] };
+  const alone = { ...base, id: 'as_alone', at: 2, since: 2, text: 'Tamsin buried the lantern.', who: ['ent_tamsin'] };
+  await openSeededAdventure(page, 3, undefined, { entities: [{ id: 'ent_tamsin', name: 'Tamsin' }], assertions: [rowed, alone] });
+  await page.getByRole('button', { name: 'Characters · 2' }).click();
+  await page.getByRole('button', { name: 'Open Merav' }).click();
+  const merav = page.getByRole('dialog', { name: 'Merav' });
+  await merav.getByText('What does Merav know?').click();
+  const known = merav.getByRole('group').filter({ hasText: 'What does Merav know?' });
+  await expect(known.getByRole('listitem').filter({ hasText: rowed.text })).toContainText('action 1');
+  await expect(known).not.toContainText(alone.text);
+});
+
 test('events move a stance: the card shows trust and the event that swapped it (M26-6)', async ({ page }) => {
   const base = { subject: 'ent_tamsin', producer: 'batch' as const, basis: 'stated' as const };
   const ev = (at: number, text: string) => ({ ...base, id: `as_ev${at}`, at, since: at, kind: 'event' as const, text, who: ['ent_tamsin', 'ent_merav'] });

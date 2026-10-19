@@ -68,6 +68,8 @@ interface Witnessed {
   wanting: ReadonlySet<string>;
   /** The log up to the last action, for when each last acted (`lastActive`). */
   actions: Adventure['actions'];
+  /** Their `knows:` clause (`knowsClause`), if any. */
+  knows?: (id: string) => string | undefined;
 }
 
 /** Quiet for `QUIET_TURNS` actions or more, or nudged: the model is given what they want so they act on it; nobody while `SEND_GOALS` is off. [provisional] */
@@ -92,7 +94,8 @@ function castLine(e: Entity, here: Entity[], ix: AssertionIndex, carded: boolean
   const room = Object.entries(w.rooms ?? {}).find(([n]) => n === e.id || named(e, n))?.[1];
   // The events others led on them move their stances (`standing`); those are stored under the actor.
   const as = [...ix.of(e.id), ...eventsOf(ix.all, e.id).filter((a) => a.subject !== e.id)];
-  const missed = [...new Set(gaps.map(witnessClause))];
+  const knows = e.kind === 'character' ? w.knows?.(e.id) : undefined;
+  const missed = [...new Set(gaps.map(witnessClause)), ...(knows ? [knows] : [])];
   const line = presentLine(e, as, here, carded, missed, w.speaking.has(e.id), room, w.wanting.has(e.id), lastActive(e, w.actions, ix));
   return gaps.length > 0 ? { ...line, gaps } : line;
 }
@@ -133,6 +136,7 @@ export function nowLines(adv: Pick<Adventure, 'plot' | 'entities' | 'assertions'
  * but what the player's last action asks about one it names (`askedFacts`). Absent characters send nothing unless the
  * player's action names them (`absent`).
  * `historyFrom`: the earliest action history can reach, the witnessed-by window's start.
+ * `knows`: a present character's `knows:` clause, given who is here and `inCast`; passed in so `nowLines` does not load it.
  */
 export function selectStructured(
   input: ContextBuildInput,
@@ -141,6 +145,7 @@ export function selectStructured(
   cap: number,
   out: RenderedSections,
   absent: (e: Entity) => boolean = () => false,
+  knows: (id: string, here: readonly Entity[], inCast: readonly Entity[]) => string | undefined = () => undefined,
 ): StructuredResult {
   const { tokenizer, plot } = input;
   const budget = Math.min(cap, STRUCTURED_CAP);
@@ -176,6 +181,10 @@ export function selectStructured(
 
   const carded = cardedBy(input.storyCards);
   const upTo = input.actions.slice(0, lastActionIndex + 1);
+  // Everyone the scene line names counts, unconfirmed too: Sefa, present but unconfirmed, retold a secret as a rumour.
+  const inScene = (plot.scene?.present ?? []).flatMap((n) => input.entities.find((e) => e.id === n || named(e, n)) ?? []);
+  // An absent character the text names still keeps a secret from the prompt: history still names them.
+  const inCast = [...new Set([...inScene, ...here, ...inTextOnly])];
   // A gap that left the window is in a memory, which the model reads as a memory anyway.
   const witnessed: Witnessed = {
     presence: plot.presence ?? [],
@@ -184,6 +193,7 @@ export function selectStructured(
     rooms: shown?.zones,
     wanting: wantingIn(upTo, here, ix, input.nudged),
     actions: upTo,
+    knows: (id) => knows(id, here, inCast),
   };
   // With entity facts off, the player's own facts (Correct, pins) still go in for who is here or named.
   // Each entry is one entity's line and its fallbacks: an asked-about line that does not fit sends the identity alone.
@@ -206,8 +216,6 @@ export function selectStructured(
     return fit ?? [];
   });
   if (kept.length) put('cast', kept.map((l) => l.text).join('\n'));
-  // Everyone the scene line names counts, unconfirmed too: Sefa, present but unconfirmed, retold a secret as a rumour.
-  const inScene = (plot.scene?.present ?? []).flatMap((n) => input.entities.find((e) => e.id === n || named(e, n)) ?? []);
 
   return {
     structuredBudget: budget,
@@ -215,7 +223,6 @@ export function selectStructured(
     usedFacts: kept.flatMap((l) => l.factIds.map((factId) => ({ entityId: l.entity.id, factId }))),
     usedEntityIds: [...new Set(kept.map((l) => l.entity.id))],
     usedRuleIds: rules.map((r) => r.id),
-    // An absent character the text names still keeps a secret from the prompt: history still names them.
-    inCast: [...new Set([...inScene, ...here, ...inTextOnly])],
+    inCast,
   };
 }
