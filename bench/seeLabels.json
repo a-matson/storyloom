@@ -1,0 +1,61 @@
+{
+  "labelledBy": "claude",
+  "status": "provisional",
+  "note": "Per See (adventure title, action index): tags any one of which counts as a hit in the sent prompt, read from the passage before the See and the brief. Booru vocabulary (the NoobAI checkpoint the Sees ran on).",
+  "sees": [
+    {
+      "adventure": "Goldarok",
+      "at": 7,
+      "bodyPlan": ["quadruped", "feral"],
+      "posture": ["lying", "on back", "on side"],
+      "action": ["spread legs", "legs apart"],
+      "view": ["front view", "looking at viewer"],
+      "scene": ["forest", "rain"]
+    },
+    {
+      "adventure": "Goldarok",
+      "at": 10,
+      "bodyPlan": ["quadruped", "feral"],
+      "posture": ["lying", "on back", "on side"],
+      "action": ["footjob", "masturbation"],
+      "view": ["front view", "looking at viewer"],
+      "scene": ["forest", "rain"]
+    },
+    {
+      "adventure": "Consequences (dice)",
+      "at": 9,
+      "bodyPlan": ["anthro"],
+      "posture": ["crouching", "squatting"],
+      "action": ["empty eyes", "hypnosis", "blank stare"],
+      "view": ["front view", "full body"],
+      "scene": ["castle", "indoors"]
+    },
+    {
+      "adventure": "Consequences (dice)",
+      "at": 14,
+      "bodyPlan": ["anthro"],
+      "posture": ["lying", "legs up"],
+      "action": ["soles", "foot focus"],
+      "view": ["close-up", "feet towards viewer"],
+      "scene": ["castle", "indoors"]
+    },
+    {
+      "adventure": "Consequences (dice)",
+      "at": 19,
+      "bodyPlan": ["anthro"],
+      "posture": ["standing"],
+      "action": ["chastity cage", "chastity"],
+      "view": ["close-up", "crotch focus"],
+      "scene": ["castle", "indoors"]
+    },
+    {
+      "adventure": "Consequences (dice)",
+      "at": 48,
+      "bodyPlan": ["quadruped", "feral"],
+      "posture": ["lying", "on back"],
+      "action": ["spread legs", "legs apart"],
+      "view": ["front view", "from above"],
+      "scene": ["mountain", "cave", "storm"]
+    }
+  ]
+}

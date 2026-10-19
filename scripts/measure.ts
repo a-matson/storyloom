@@ -15,6 +15,8 @@
  *   duplicates <backup> [label]  near-duplicate card proposals over the stored cards by first sighting, and the cards after accepting (M23-6), no model
  *   places <backup> [label]  each place at its first sighting through the room rule (M23-6); top-level count, no model
  *   probe <url> <backup> <at> [label] [samples]  the reply to player action <at>, drawn [samples] times (default 3); graded by hand
+ *   see <backup> [image-url] [label]  every See replayed through the composer, scored against bench/seeLabels.json; with an image url,
+ *     one render each and a contact sheet (MEASURE_URL=<text server> asks the helper as the app does)
  *   redact <backup> [label]  secret cuts in the prompt before every AI output (MEASURE_SECRET as for probe), no model
  *   voice <url> <backup> <batch.json> [label] [samples]  say turns replayed without and with the batch's voices; top speakers' lines, rated by hand
  *   spotlight <url> <backup> [label] [points]  crowded scenes (4–5 present) continued per cast order; who the speaker guess labels
@@ -50,6 +52,10 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
   core: { cmd: ['pnpm', 'bench'] },
   renders: { cmd: ['pnpm', 'measure:renders'], env: { MEASURE_LABEL: a } },
   latency: { cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/latency'], env: { MEASURE_URL: a, MEASURE_TURNS: b } },
+  see: {
+    cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/see.bench'],
+    env: { MEASURE_BACKUP: a, MEASURE_IMAGES: b, MEASURE_LABEL: c },
+  },
   redact: { cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/redact'], env: { MEASURE_BACKUP: a, MEASURE_LABEL: b } },
   gatev: { cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/gatev'], env: { MEASURE_URL: a } },
   'memory-keep': {
