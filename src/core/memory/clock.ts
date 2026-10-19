@@ -15,7 +15,19 @@ const HOURS_PER_PART = 4;
 /** Where an adventure with no time starts. [provisional] */
 const START: Time = { day: 1, part: 'morning' };
 
+/** A `/wait` this long (≈ 6 h at four hours a part) ends moods, postures and effects. [provisional] */
+const WAIT_ENDS_PARTS = 2;
+
 export const formatTime = (t: Time): string => `Day ${t.day}, ${t.part}`;
+
+/** Parts from `from` to `to`; negative when `to` is earlier. */
+export const elapsedParts = (from: Time | undefined, to: Time): number => {
+  const f = from ?? START;
+  return (to.day - f.day) * PARTS.length + PARTS.indexOf(to.part) - PARTS.indexOf(f.part);
+};
+
+/** Whether a clock skip ends transient states: a `wait` of `WAIT_ENDS_PARTS`, a set time any later part. */
+export const skipEnds = (from: Time | undefined, to: Time, by: 'wait' | 'time'): boolean => elapsedParts(from, to) >= (by === 'wait' ? WAIT_ENDS_PARTS : 1);
 
 /** `time` after a wait; an `until` lands on the next such part, so the same or an earlier part is tomorrow. */
 export function advance(time: Time | undefined, by: Wait): Time {

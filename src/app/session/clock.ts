@@ -12,26 +12,43 @@ async function jobsFor(host: GameSession, what: string): Promise<Jobs | undefine
 
 const unread = (host: GameSession, text: string, hint: string) => host.emit({ notice: `Could not read "${text.trim()}": try ${hint}` });
 
-/** Sets `scene.time`; the scene line tells the model, nothing asks it. Never an action. */
-async function setClock(host: GameSession, text: string, hint: string, read: (jobs: Jobs) => ReturnType<Jobs['parseTime']>): Promise<void> {
+/**
+ * Sets `scene.time`; the scene line tells the model, nothing asks it. Never an action, so an undo does not
+ * bring back the moods, postures and effects a long enough skip ends.
+ */
+async function setClock(
+  host: GameSession,
+  text: string,
+  hint: string,
+  by: 'wait' | 'time',
+  read: (jobs: Jobs) => ReturnType<Jobs['parseTime']>,
+): Promise<void> {
   const jobs = await jobsFor(host, 'set the time');
   if (!jobs) return;
   const time = read(jobs);
   if (!time) return unread(host, text, hint);
-  host.mutate((_, adv) => (adv.plot = { ...adv.plot, scene: { ...(adv.plot.scene ?? { present: [] }), time } }));
-  host.emit({ notice: `Now ${jobs.formatTime(time)}` });
+  let ended = 0;
+  host.mutate((log, adv) => {
+    if (jobs.skipEnds(adv.plot.scene?.time, time, by)) {
+      const rest = jobs.endTransient(adv.assertions, log.actions.length, 'all', { effects: true });
+      adv.assertions = rest.assertions;
+      ended = rest.ended;
+    }
+    adv.plot = { ...adv.plot, scene: { ...(adv.plot.scene ?? { present: [] }), time } };
+  });
+  host.emit({ notice: `Now ${jobs.formatTime(time)}${ended > 0 ? ', moods and postures reset' : ''}` });
 }
 
 /** `/wait 3 hours`, `/wait until night`. */
 export const waitFor = (host: GameSession, text: string) =>
-  setClock(host, text, '/wait 3 hours', (jobs) => {
+  setClock(host, text, '/wait 3 hours', 'wait', (jobs) => {
     const by = jobs.parseWait(text);
     return by && jobs.advance(host.adv.plot.scene?.time, by);
   });
 
 /** `/time evening, day 2`. */
 export const setTime = (host: GameSession, text: string) =>
-  setClock(host, text, '/time evening, day 2', (jobs) => jobs.parseTime(text, host.adv.plot.scene?.time));
+  setClock(host, text, '/time evening, day 2', 'time', (jobs) => jobs.parseTime(text, host.adv.plot.scene?.time));
 
 /** `/travel the docks [alone]`: a place no card knows gets one, as a turn read's would. Never an action. */
 export async function travelTo(host: GameSession, text: string): Promise<void> {

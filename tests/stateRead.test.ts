@@ -155,6 +155,40 @@ describe('the state read', () => {
     expect(ended).toMatchObject({ until: 4, producer: 'turn', basis: 'player', at: 3 });
   });
 
+  it('the player asleep ends every mood and posture before it; a posture written later in the reply stands', async () => {
+    const { adv, deps } = setup(
+      ['You lie down and fall asleep.', 'Mira sits by the fire.'],
+      [
+        { who: 'Mira', key: 'posture', now: 'sits by the fire', at: 4 },
+        { who: 'you', key: 'condition', now: 'asleep', at: 3 },
+      ],
+    );
+    const old = { producer: 'turn', at: 0, basis: 'stated', since: 0, kind: 'state' } as const;
+    adv.assertions = [
+      { id: 'm', subject: mira.id, ...old, key: 'mood', value: 'furious' },
+      { id: 'p', subject: mira.id, ...old, key: 'posture', value: 'kneeling' },
+      { id: 't', subject: tobin.id, ...old, key: 'mood', value: 'wary' },
+      { id: 'w', subject: tobin.id, ...old, key: 'wearing', value: 'a cloak' },
+    ];
+    await readState(adv, deps);
+    expect(now(adv, mira.id)).toEqual({ posture: 'sits by the fire' });
+    expect(now(adv, tobin.id)).toEqual({ wearing: 'a cloak' });
+    expect(adv.assertions.find((a) => a.id === 'm')).toMatchObject({ until: 3 });
+    expect(now(adv, YOU)).toEqual({ condition: 'asleep' });
+  });
+
+  it('another character asleep ends only their posture and mood', async () => {
+    const { adv, deps } = setup(['You wait.', 'Tobin falls asleep.'], [{ who: 'Tobin', key: 'condition', now: 'asleep', at: 4 }]);
+    const old = { producer: 'turn', at: 0, basis: 'stated', since: 0, kind: 'state', key: 'posture' } as const;
+    adv.assertions = [
+      { id: 'm', subject: mira.id, ...old, value: 'standing' },
+      { id: 't', subject: tobin.id, ...old, value: 'standing' },
+    ];
+    await readState(adv, deps);
+    expect(now(adv, mira.id)).toEqual({ posture: 'standing' });
+    expect(now(adv, tobin.id)).toEqual({ condition: 'asleep' });
+  });
+
   it('turns holds into the item’s holder, ending its place', async () => {
     const { adv, deps } = setup(['You wait.', 'Mira takes the amulet.'], [{ who: 'Mira', key: 'holds', now: 'the amulet', at: 4 }], [mira], ['Amulet']);
     adv.assertions = [{ id: 'p', subject: amulet.id, producer: 'turn', at: 0, basis: 'stated', since: 0, kind: 'state', key: 'location', value: 'the altar' }];
