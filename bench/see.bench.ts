@@ -5,11 +5,11 @@ import { LlamaServerProvider } from '@adapters/providers/llamaServer';
 import { styleOf } from '@app/session/portraitPrompt';
 import { familyOf } from '@core/image';
 import { seePrompt } from '@core/image/autoPrompt';
-import { composeSeePrompt } from '@core/image/compose';
+import { composeSeePrompt, looksOf } from '@core/image/compose';
 import { imageRequest } from '@core/image/request';
-import { heldBy, indexAssertions, sceneNames, withLooks } from '@core/memory';
+import { heldBy, indexAssertions, sceneNames, SHEET_KEYS, tagify, withLooks } from '@core/memory';
 import { presentAt } from '@core/memory/secrets';
-import { contentClause, type Entity } from '@core/model';
+import { type Adventure, type Assertion, contentClause, type Entity } from '@core/model';
 import * as S from '@core/schema';
 import { OUT_DIR, writeMeasurement } from './env';
 import labels from './seeLabels.json';
@@ -18,7 +18,8 @@ import { storeAt } from './storeAt';
 // Every `see` of a backup through the current composer, with the store, scene and cast as they stood then.
 // `pnpm measure see <backup> [image-url] [label]`; MEASURE_URL=<text server> asks the helper as the app does
 // (story pose tags, and the line for a See with no brief), else a See with no brief composes its stored prompt.
-const { MEASURE_BACKUP: backup, MEASURE_IMAGES: imagesUrl, MEASURE_URL: url } = process.env;
+// MEASURE_REBUILD=1 answers the builder again with every stored look first (M29-9's "rebuild first").
+const { MEASURE_BACKUP: backup, MEASURE_IMAGES: imagesUrl, MEASURE_URL: url, MEASURE_REBUILD: rebuild } = process.env;
 const LABEL = process.env['MEASURE_LABEL'] ?? 'baseline';
 const FIELDS = ['bodyPlan', 'posture', 'action', 'view', 'scene'] as const;
 
@@ -26,7 +27,8 @@ const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const has = (prompt: string, tag: string) => new RegExp(`(^|[^a-z])${esc(tag)}($|[^a-z])`, 'i').test(prompt);
 
 test.skipIf(!backup)('see prompts over a backup', { timeout: 3_600_000 }, async () => {
-  const adv = S.Adventure.parse(JSON.parse(readFileSync(backup ?? '', 'utf8')).adventure);
+  const parsed = S.Adventure.parse(JSON.parse(readFileSync(backup ?? '', 'utf8')).adventure);
+  const adv = rebuild ? rebuilt(parsed) : parsed;
   const { image } = adv.settings;
   const family = familyOf(image.model, image.width, image.height);
   const helper = async () => ({
@@ -91,6 +93,25 @@ test.skipIf(!backup)('see prompts over a backup', { timeout: 3_600_000 }, async 
 });
 
 type Row = { at: number; prompt: string; sent: string; seed?: number | undefined };
+
+const SHEET_PART = new RegExp(`(?:^|,\\s*)(${SHEET_KEYS.join('|')}):\\s*`);
+/** Every look answered again through the builder, and every frozen look frozen again from them (as a new reference does). */
+function rebuilt(adv: Adventure): Adventure {
+  const assertions = adv.assertions.flatMap(tagified);
+  const ix = indexAssertions(assertions);
+  const entities = adv.entities.map((e) => (e.look === undefined ? e : { ...e, look: looksOf(withLooks(e, ix.of(e.id))) }));
+  return { ...adv, assertions, entities };
+}
+
+/** A look as the builder now stores it: tagified, a legacy one split into its `key: value` parts (text before the first key dropped). */
+function tagified(a: Assertion): Assertion[] {
+  if (a.kind !== 'look') return [a];
+  if (a.key !== 'legacy') return [{ ...a, value: tagify(a.value).join(', ') }];
+  const parts = a.value.split(SHEET_PART).slice(1);
+  const out: Assertion[] = [];
+  for (let i = 0; i + 1 < parts.length; i += 2) out.push({ ...a, id: `${a.id}_${i}`, key: parts[i] ?? '', value: tagify(parts[i + 1] ?? '').join(', ') });
+  return out.length ? out : [a];
+}
 
 /** One render per See into `<OUT_DIR>/<date>-<name>/`, with an index.html contact sheet. */
 async function render(name: string, rows: readonly Row[], request: (prompt: string, seed?: number) => ReturnType<typeof imageRequest>): Promise<string> {
