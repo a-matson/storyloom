@@ -18,7 +18,7 @@ export function downloadText(filename: string, text: string, mime = 'application
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function safeName(s: string, fallback = 'adventure'): string {
+export function safeName(s: string, fallback = 'adventure'): string {
   return (
     s
       .replace(/[^\w.-]+/g, '_')
