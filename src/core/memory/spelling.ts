@@ -15,7 +15,7 @@ export function editDistance(a: string, b: string): number {
 }
 
 /** Names this short sit within 2 edits of too many others (Mina, Minos). [provisional] */
-const SPELLING_MIN = 5;
+export const SPELLING_MIN = 5;
 
 /** The one entity of `kind` whose name or alias `name` misspells by 1-2 edits (Weaver for Weever). */
 export function spellingOf(entities: readonly Entity[], name: string, kind: Entity['kind']): Entity | undefined {

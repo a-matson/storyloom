@@ -3,10 +3,10 @@ import { currentStates, identityText, indexAssertions } from '@core/memory';
 import type { Adventure, Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { progressText, useImageProgress } from '@ui/hooks/useImageProgress';
-import { Button } from '@ui/components/ui/button';
 import { Pill } from '@ui/components/ui/pill';
 import { StatusDot } from '@ui/components/ui/status-dot';
 import { CHIP, SECTION, SECTION_HEADER } from '../sidebar/Section';
+import { AliasProposals } from './AliasProposals';
 import { Avatar } from './Avatar';
 import { EntityDrawer } from './EntityDrawer';
 import { NowCard } from './NowCard';
@@ -31,20 +31,6 @@ function PortraitDot({ id, api }: { id: string; api: GameApi }) {
   );
 }
 
-type Proposal = NonNullable<Adventure['scriptState']['__aliasProposals']>[number];
-
-/** Yes makes the name an alias, so its held reply folds onto the entity; No forgets the name and its reply. */
-const answer = (api: GameApi, p: Proposal, yes: boolean) =>
-  api.mutate((_, adv) => {
-    const { __aliasProposals: asks = [], __pending: held = [], ...rest } = adv.scriptState;
-    adv.scriptState = {
-      ...rest,
-      __aliasProposals: asks.filter((q) => q.name !== p.name),
-      __pending: yes ? held : held.filter((h) => h.entity.name !== p.name),
-    };
-    if (yes) adv.entities = adv.entities.map((e) => (e.id === p.of ? { ...e, aliases: [...e.aliases, p.name] } : e));
-  });
-
 /** One sidebar tab: the characters, or the places, items and factions the story has named. Built by the memory cycle. */
 export function EntityList({ adventure, api, world }: { adventure: Adventure; api: GameApi; world: boolean }) {
   const [kind, setKind] = useState<Kind | null>(null);
@@ -68,24 +54,7 @@ export function EntityList({ adventure, api, world }: { adventure: Adventure; ap
           ))}
         </div>
       )}
-      {(adventure.scriptState.__aliasProposals ?? []).flatMap((p) => {
-        const of = shown.find((e) => e.id === p.of);
-        return of
-          ? [
-              <div key={p.name} className="flex items-center gap-1.5 text-caption">
-                <span className="grow">
-                  {p.name} = {of.name}?
-                </span>
-                <Button variant="ghost" onClick={() => answer(api, p, true)}>
-                  Yes
-                </Button>
-                <Button variant="ghost" onClick={() => answer(api, p, false)}>
-                  No
-                </Button>
-              </div>,
-            ]
-          : [];
-      })}
+      <AliasProposals adventure={adventure} api={api} shown={shown} world={world} />
       {!world && <YouCard adventure={adventure} api={api} />}
       {shown.length === 0 && (
         <p className="text-caption text-muted-foreground">
