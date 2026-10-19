@@ -7,6 +7,7 @@ import { Button } from '@ui/components/ui/button';
 import { Input } from '@ui/components/ui/field';
 import { SectionLabel } from '@ui/components/ui/section-label';
 import { Textarea } from '@ui/components/ui/textarea';
+import { CodexButton } from '../codex/CodexButton';
 import { SECTION, SECTION_BODY, SECTION_HEADER } from './Section';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -86,6 +87,9 @@ export function DetailsTab({ adventure, api }: { adventure: Adventure; api: Game
       >
         <Button onClick={() => void downloadStoryCards(adventure).catch(fail)}>Export cards</Button>
         <Button onClick={() => void importCards()}>Import cards</Button>
+      </Group>
+      <Group title="Codex" note="Everyone, every place and every event the story has recorded, compiled now; search it or export it as Markdown.">
+        <CodexButton adventure={adventure} />
       </Group>
       <Group title="Download adventure" note="The JSON backup restores everything, including retries and settings; import it from the Library.">
         <Button onClick={() => void downloadAdventureJson(adventure).catch(fail)}>JSON (full backup)</Button>
