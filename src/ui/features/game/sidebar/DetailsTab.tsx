@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { Adventure } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import {
   downloadAdventureJson,
   downloadAdventureText,
+  downloadStory,
   downloadStoryCards,
   downloadTraces,
   importStoryCardsFromFile,
@@ -12,8 +13,9 @@ import {
 } from '@ui/transferUi';
 import { CoverPicker } from '@ui/components/CoverPicker';
 import { Button } from '@ui/components/ui/button';
-import { Input } from '@ui/components/ui/field';
+import { Input, Select } from '@ui/components/ui/field';
 import { SectionLabel } from '@ui/components/ui/section-label';
+import { Switch } from '@ui/components/ui/switch';
 import { Textarea } from '@ui/components/ui/textarea';
 import { CodexButton } from '../codex/CodexButton';
 import { SECTION, SECTION_BODY, SECTION_HEADER } from './Section';
@@ -41,6 +43,33 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <SectionLabel>{label}</SectionLabel>
       {children}
     </label>
+  );
+}
+
+/** Format and quoting last only while the tab is open: an export choice, not a setting. */
+function StoryExport({ adventure }: { adventure: Adventure }) {
+  const [format, setFormat] = useState<'markdown' | 'epub'>('epub');
+  const [quoted, setQuoted] = useState(false);
+  const run = async () => {
+    try {
+      const missing = await downloadStory(adventure, format, quoted ? 'quoted' : 'narration');
+      if (missing) alert(`${missing} picture${missing === 1 ? ' was' : 's were'} not found and left out.`);
+    } catch (e) {
+      fail(e);
+    }
+  };
+  return (
+    <Group title="Export as story" note="The prose and the pictures you kept, in chapters; no prompts, cards or memories.">
+      <Select aria-label="Story format" className="w-auto" value={format} onChange={(e) => setFormat(e.target.value === 'markdown' ? 'markdown' : 'epub')}>
+        <option value="epub">EPUB</option>
+        <option value="markdown">Markdown</option>
+      </Select>
+      <Switch id="story-quoted" checked={quoted} onChange={setQuoted} />
+      <label htmlFor="story-quoted" className="text-caption">
+        Keep my lines as &gt; quotes
+      </label>
+      <Button onClick={() => void run()}>Export</Button>
+    </Group>
   );
 }
 
@@ -104,6 +133,7 @@ export function DetailsTab({ adventure, api }: { adventure: Adventure; api: Game
         <Button onClick={() => void downloadAdventureText(adventure).catch(fail)}>Plain text</Button>
         <Button onClick={() => void downloadTraces(adventure).catch(fail)}>Turn traces (JSONL)</Button>
       </Group>
+      <StoryExport adventure={adventure} />
       <Group
         title="Reuse the world"
         note="A new scenario in the Library with this opening, the cards, the people and places, and the confirmed rules. What happened in this story stays here."

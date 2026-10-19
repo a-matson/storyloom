@@ -4,6 +4,8 @@ export {
   exportAdventureText,
   exportScenarioJson,
   exportStoryCardsJson,
+  exportStoryEpub,
+  exportStoryMarkdown,
   exportTracesJsonl,
   importAdventureJson,
   importAidZip,
@@ -11,5 +13,8 @@ export {
   importStoryCardsJson,
   renumberScenario,
   scenarioFromAdventure,
+  storyParts,
   type ImportResult,
+  type PlayerLines,
+  type StoryImage,
 } from '@adapters/transfer';
