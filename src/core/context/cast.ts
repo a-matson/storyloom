@@ -1,5 +1,7 @@
 import { current, identityText, isCurrent, textOf, type AssertionOf } from '../memory/assertionIndex';
 import { currentStates, isValue } from '../memory/looks';
+import { standing, stanceWord } from '../memory/standing';
+import { YOU } from '../memory/you';
 import type { Assertion, Entity } from '../model/types';
 import { lookIdentity } from './lookIdentity';
 import type { Gap } from './witness';
@@ -65,7 +67,8 @@ const lead = (e: Entity, as: readonly Assertion[], carded: boolean, parts: reado
 /**
  * A present character's now-line: `Name (identity): in the basement; sitting, poisoned, wary, wearing a cloak; effect — cause; stance to you; witnessed-by; speaks: voice; wants: goal; pins. With Other: stance.`
  * Looks are the portrait's; only `wearing` changes the scene. Conflicts are never sent.
- * A relationship's `to` is who it is towards (`you`: the player). `missed`: `witnessClause`s, so the model does not let them answer from what they never saw (U17).
+ * A relationship's `to` is who it is towards (`you`: the player); its stance swaps to "trusts"/"distrusts"/"fears" once the events
+ * in `as` (others' too, those `e` took part in) move it there (`standing`). `missed`: `witnessClause`s, so the model does not let them answer from what they never saw (U17).
  * `speaks`: they are likely to talk this turn, so their voice goes in; otherwise it costs tokens for nothing.
  * `room`: the room of this place they are in (`Scene.zones`), first, so the model does not put them beside you.
  * `wants`: they have been quiet a while or were nudged, so their confirmed goal goes in for the model to act on.
@@ -90,7 +93,9 @@ export function presentLine(
     .filter((a, i, all) => all.findIndex((b) => effect(b) === effect(a)) === i);
   const rels = current(live, 'relationship');
   const toward = (a: AssertionOf<'relationship'>) => present.find((p) => p !== e && names(p).includes(norm(a.to)));
-  const toYou = rels.filter((a) => norm(a.to) === 'you');
+  const toYou = rels.filter((a) => norm(a.to) === YOU);
+  // `With X:` names who; a stance to you must say so.
+  const stance = (a: AssertionOf<'relationship'>, from: string) => clause(stanceWord(a, standing(a, as, from), from === YOU ? 'you' : ''));
   const pins = pinsOf(live);
   const voice = speaks ? current(live, 'voice').slice(-1) : [];
   // The batch read's goal is a proposal until the player confirms it.
@@ -103,7 +108,7 @@ export function presentLine(
     room && `in ${room}`,
     keys.map((k) => (k === 'wearing' ? 'wearing ' : '') + short(now[k] ?? '')).join(', '),
     ...effects.map(effect),
-    ...toYou.map((a) => clause(a.stance)),
+    ...toYou.map((a) => stance(a, YOU)),
     ...missed.map(clause),
     ...voice.map((a) => `speaks: ${clause(a.text)}`),
     ...goal.map((a) => `wants: ${clause(a.text)}`),
@@ -111,7 +116,7 @@ export function presentLine(
   ].filter(Boolean);
   const withOthers = present.flatMap((p) => {
     const about = rels.filter((a) => toward(a) === p);
-    return about.length ? [`With ${p.name}: ${about.map((a) => clause(a.stance)).join('; ')}.`] : [];
+    return about.length ? [`With ${p.name}: ${about.map((a) => stance(a, p.id)).join('; ')}.`] : [];
   });
   const text = [lead(e, as, carded, parts), ...withOthers].join(' ');
   const sent = [...effects, ...toYou, ...voice, ...goal, ...pins, ...rels.filter((a) => toward(a))].map((a) => a.id);

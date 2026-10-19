@@ -1,5 +1,5 @@
 import { compileCards, lookbackWindow, matchCards } from '../cards/storyCards';
-import { type AssertionIndex, indexAssertions } from '../memory/assertionIndex';
+import { type AssertionIndex, eventsOf, indexAssertions } from '../memory/assertionIndex';
 import { isConfirmed } from '../memory/facts';
 import { sceneNames } from '../memory/names';
 import { projectEntity } from '../memory/projection';
@@ -88,7 +88,9 @@ function castLine(e: Entity, here: Entity[], ix: AssertionIndex, carded: boolean
   const gaps = e.kind === 'character' ? gapsOf(e.id, w.presence, ix.of(e.id), w.window).slice(-MAX_GAPS) : [];
   // The clause names no range, so two gaps of a kind read the same: send it once.
   const room = Object.entries(w.rooms ?? {}).find(([n]) => n === e.id || named(e, n))?.[1];
-  const line = presentLine(e, ix.of(e.id), here, carded, [...new Set(gaps.map(witnessClause))], w.speaking.has(e.id), room, w.wanting.has(e.id));
+  // The events others led on them move their stances (`standing`); those are stored under the actor.
+  const as = [...ix.of(e.id), ...eventsOf(ix.all, e.id).filter((a) => a.subject !== e.id)];
+  const line = presentLine(e, as, here, carded, [...new Set(gaps.map(witnessClause))], w.speaking.has(e.id), room, w.wanting.has(e.id));
   return gaps.length > 0 ? { ...line, gaps } : line;
 }
 

@@ -31,3 +31,17 @@ test('an event shows under Happened on every card that took part, with its actio
   await tamsin.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(tamsin.getByRole('listitem').filter({ hasText: 'Pulled you from the river.' })).toContainText('yours');
 });
+
+test('events move a stance: the card shows trust and the event that swapped it (M26-6)', async ({ page }) => {
+  const base = { subject: 'ent_tamsin', producer: 'batch' as const, basis: 'stated' as const };
+  const ev = (at: number, text: string) => ({ ...base, id: `as_ev${at}`, at, since: at, kind: 'event' as const, text, who: ['ent_tamsin', 'ent_merav'] });
+  const rel = { ...base, id: 'as_rel', subject: 'ent_merav', at: 0, since: 0, kind: 'relationship' as const, to: 'Tamsin', stance: 'wary of her' };
+  await openSeededAdventure(page, 3, undefined, {
+    entities: [{ id: 'ent_tamsin', name: 'Tamsin' }],
+    assertions: [rel, ev(1, 'Tamsin rescued Merav from the river.'), ev(2, 'Tamsin healed Merav.')],
+  });
+  await page.getByRole('button', { name: 'Characters · 2' }).click();
+  await page.getByRole('button', { name: 'Open Merav' }).click();
+  const line = page.getByRole('dialog', { name: 'Merav' }).getByRole('listitem').filter({ hasText: 'Tamsin: wary of her' });
+  await expect(line.getByText('trust +2 · fear 0')).toHaveAttribute('title', 'Tamsin healed Merav.');
+});
