@@ -22,6 +22,8 @@ interface Props {
   busy: boolean;
   /** Action ids whose image is being generated right now. */
   pendingImages: readonly string[];
+  /** The director played this action: labelled in the gutter. */
+  director?: boolean | undefined;
   api: GameApi;
   speech: AppSettings['speech'];
   onViewContext: () => void;
@@ -94,8 +96,39 @@ export function ActionBlock(props: Props) {
   return <TextBlock {...props} />;
 }
 
-/** The player's pill. A Do/Say's is its menu (Mark secret): a button styled away, so the row looks and measures the same. */
-function Label({ action, busy, marking, onToggle }: { action: Action; busy: boolean; marking: boolean; onToggle: () => void }) {
+interface LabelProps {
+  action: Action;
+  busy: boolean;
+  marking: boolean;
+  onToggle: () => void;
+  director?: boolean | undefined;
+  /** Set on the last action only: × erases it. */
+  onErase?: (() => void) | undefined;
+}
+
+// ponytail: the director label is session state, so a reload drops it (the text stays); a stored mark if players miss it.
+/** The player's pill, or a director turn's label. A Do/Say's is its menu (Mark secret): a button styled away, so the row looks and measures the same. */
+function Label({ action, busy, marking, onToggle, director, onErase }: LabelProps) {
+  if (director)
+    return (
+      // Stacked: the label and its × fit the 60px gutter.
+      <span className="mt-[5px] flex flex-col items-start gap-1 justify-self-start font-sans sm:max-w-(--gutter)">
+        <Pill tone="auto" className="px-1 tracking-normal">
+          director
+        </Pill>
+        {onErase && (
+          <button
+            type="button"
+            aria-label="Erase director turn"
+            title="Erase director turn"
+            className="cursor-pointer border-0 bg-transparent p-0 text-control text-muted-foreground"
+            onClick={onErase}
+          >
+            ×
+          </button>
+        )}
+      </span>
+    );
   if (action.type === 'story')
     return (
       <Pill tone="story" className="mt-[5px] justify-self-start font-sans">
@@ -181,7 +214,14 @@ function TextBlock(props: Props) {
   return (
     // The id lets `SelectionBar` tell which action a selection is in.
     <div className={cn('group', actionGrid)} data-action-id={action.id}>
-      <Label action={action} busy={busy} marking={marking} onToggle={() => setMarking(!marking)} />
+      <Label
+        action={action}
+        busy={busy}
+        marking={marking}
+        onToggle={() => setMarking(!marking)}
+        director={props.director}
+        onErase={isLast && !busy ? api.erase : undefined}
+      />
       <div className={textColumn}>
         {paragraph}
         {props.diceOutput && !busy && <DiceChip adventureId={props.adventureId} output={props.diceOutput} />}

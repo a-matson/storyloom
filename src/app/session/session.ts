@@ -1,6 +1,6 @@
 import { ownedBlobIds, type Block } from '@core/image';
 import { ActionLog } from '@core/log';
-import { followLog, linkCards, withPresence } from '@core/memory';
+import { followLog, linkCards, patchPlot } from '@core/memory';
 import type { Adventure, AdventureSettings, AppSettings, PlotComponents, ReadKind, TurnTrace } from '@core/model';
 import type { Embedder } from '@core/ports';
 import { prepareContext, retryLast, runTurn, type PlayerTurnType, type PreparedContext, type TurnDeps, type TurnEvent } from '@core/turn';
@@ -99,6 +99,7 @@ export class GameSession {
   }
 
   readonly setApp = (app: AppSettings): void => void (this.app = app);
+  readonly setDirector = (director: number | null): void => this.emit({ director });
 
   private deps(): TurnDeps {
     const { svc, scripts, embedder, contextSize } = this;
@@ -128,7 +129,7 @@ export class GameSession {
   }
 
   // ---- turns ------------------------------------------------------------------
-  private async drive(gen: AsyncGenerator<TurnEvent>, retrying = false): Promise<void> {
+  private async drive(gen: AsyncGenerator<TurnEvent>, retrying = false, director = false): Promise<void> {
     this.emit({ busy: true, retrying, error: null, streaming: '' });
     const before = this.log.actions;
     let ok = false;
@@ -138,7 +139,8 @@ export class GameSession {
       this.pending = '';
       // A retry replaced the last action's text.
       if (ok) followLog(this.adv, before, this.log.actions);
-      this.emit({ busy: false, retrying: false, streaming: '' });
+      const directorIds = ok && director && this.log.last ? [...this.snapshot.directorIds, this.log.last.id] : this.snapshot.directorIds;
+      this.emit({ busy: false, retrying: false, streaming: '', directorIds });
       this.save();
       if (ok) this.afterTurn();
     }
@@ -192,6 +194,9 @@ export class GameSession {
   }
 
   private afterTurn(): void {
+    const { director } = this.snapshot;
+    // Typing skips the director to the next player turn. Lazy: off the start-up bundle. A turn it plays stops the idle work below.
+    if (director !== null && !this.memory.typing) void import('./beat').then((m) => m.direct(this, director), this.onError);
     const signal = this.idleWork.start(this.lastPrepared);
     this.svc.idle(() => this.memory.start(signal));
   }
@@ -211,13 +216,13 @@ export class GameSession {
     if (this.snapshot.prefetchReady) this.emit({ prefetchReady: false });
   }
 
-  /** `cue`: a Continue that opens with a beat (`beat.ts`). */
-  readonly submit = (type: PlayerTurnType | 'continue', text: string, cue?: string): void => {
+  /** `cue`: a Continue that opens with a beat (`beat.ts`); `director`: the director played it. */
+  readonly submit = (type: PlayerTurnType | 'continue', text: string, cue?: string, director = false): void => {
     if (this.snapshot.busy) return;
     this.beginAction();
     this.dropPrefetch();
     this.abort = new AbortController();
-    void this.drive(runTurn(this.adv, this.log, { type, text, cue }, this.deps(), this.abort.signal));
+    void this.drive(runTurn(this.adv, this.log, { type, text, cue }, this.deps(), this.abort.signal), false, director);
   };
 
   /** `note`: retry with the fact the flagged output broke; `reroll`: roll the dice of the last Do again. The prefetched alternative has neither. */
@@ -290,13 +295,7 @@ export class GameSession {
   readonly redo = () => this.mutate((log) => log.redo());
   readonly edit = (id: string, text: string) => this.mutate((log) => log.edit(id, text));
   readonly setVersion = (id: string, i: number) => this.mutate((log) => log.setActiveVersion(id, i));
-  // A hand edit of who is present is logged like a turn read's, so witnessed-by sees who the player sent away.
-  readonly updatePlot = (patch: Partial<PlotComponents>) =>
-    this.mutate((_, adv) => {
-      const plot = { ...adv.plot, ...patch };
-      const presence = patch.scene && withPresence(plot, patch.scene, adv.actions.length - 1);
-      adv.plot = presence ? { ...plot, presence } : plot;
-    });
+  readonly updatePlot = (patch: Partial<PlotComponents>) => this.mutate((_, adv) => (adv.plot = patchPlot(adv.plot, patch, adv.actions.length - 1)));
   readonly updateSettings = (patch: Partial<AdventureSettings>) => this.mutate((_, adv) => (adv.settings = { ...adv.settings, ...patch }));
   readonly updateMeta = (patch: Partial<Pick<Adventure, 'title' | 'description' | 'tags' | 'coverId'>>) => this.mutate((_, adv) => Object.assign(adv, patch));
   /** A card written for a known entity links it now (`linkCards`), not at the next fold. */

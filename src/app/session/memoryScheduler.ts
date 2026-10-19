@@ -28,7 +28,7 @@ interface Host {
  * still waiting for the entity call, run regardless.
  */
 export class MemoryScheduler {
-  private typing = false;
+  typing = false;
   /** The idle period's signal; fires when the next turn or edit starts. */
   private idle: AbortSignal | null = null;
   private running: AbortController | null = null;

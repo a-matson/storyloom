@@ -107,6 +107,13 @@ export function withPresence(plot: PlotComponents, scene: Pick<Scene, 'present' 
   return [...(plot.presence ?? []), { at, present: [...present] }].slice(-PRESENCE_CAP);
 }
 
+/** A hand edit of the plot. A scene edit is logged like a turn read's, so witnessed-by sees who the player sent away. */
+export function patchPlot(plot: PlotComponents, patch: Partial<PlotComponents>, at: number): PlotComponents {
+  const next = { ...plot, ...patch };
+  const presence = patch.scene && withPresence(next, patch.scene, at);
+  return presence ? { ...next, presence } : next;
+}
+
 /** The outermost place `e` is part of, so a room inside the current place is not a move. */
 export function outermost(places: readonly Entity[], e: Entity | undefined): Entity | undefined {
   const seen = new Set<string>();

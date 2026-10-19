@@ -37,6 +37,10 @@ export interface GameSnapshot {
   gated: { actionId: string; reason: GateReason } | null;
   /** Portrait renders by entity id; absent = none wanted, or done. Not persisted: a reload retries. */
   portraitState: Readonly<Record<string, PortraitState>>;
+  /** A director turn every this many player turns; null = off. Session-only: off on load. */
+  director: number | null;
+  /** Actions the director played, for their label. Not persisted: a reload drops the label, the text stays. */
+  directorIds: readonly string[];
 }
 
 export type PortraitState =
@@ -58,6 +62,8 @@ export const OPENED: Omit<GameSnapshot, 'adventure' | 'actions' | 'canUndo' | 'c
   contradiction: null,
   gated: null,
   portraitState: {},
+  director: null,
+  directorIds: [],
 };
 
 export interface SessionServices {
