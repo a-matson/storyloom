@@ -42,7 +42,8 @@ export function StorySearch({ adventure }: { adventure: Adventure }) {
   };
 
   return (
-    <search className="relative w-48 max-sm:max-w-28">
+    // ponytail: hidden on phones, where the header has no room and `/` has no keyboard; a search button if players ask.
+    <search className="relative hidden w-48 sm:flex">
       <Input
         onBlur={leave}
         id="story-search"
