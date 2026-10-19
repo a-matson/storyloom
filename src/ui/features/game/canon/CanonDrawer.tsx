@@ -4,6 +4,7 @@ import type { Adventure, Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Drawer, DrawerBody, DrawerHeader } from '@ui/components/ui/drawer';
 import { SectionLabel } from '@ui/components/ui/section-label';
+import { BeatsRow } from '../entities/cards/BeatsRow';
 import { SecretsList } from '../entities/SecretsList';
 import { SECTION, SECTION_BODY, SECTION_HEADER } from '../sidebar/Section';
 import { CommitInput, KeyRow, Relationships } from './CanonRows';
@@ -28,6 +29,8 @@ function CharacterCanon({ e, adventure, api }: { e: Entity; adventure: Adventure
         <SectionLabel>Relationships</SectionLabel>
         <Relationships api={api} id={e.id} own={own} />
         <CommitInput value={voice} label={`${e.name}'s voice`} placeholder="How they speak" onCommit={(t) => edits.setVoice(e.id, t)} />
+        <SectionLabel>Beats</SectionLabel>
+        <BeatsRow entity={e} adventure={adventure} onSet={(b) => edits.setBeats(e.id, b)} />
       </div>
     </section>
   );

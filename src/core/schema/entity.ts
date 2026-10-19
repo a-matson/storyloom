@@ -63,6 +63,8 @@ export const Entity = z.object({
   canon: z.optional(z.boolean()),
   /** State keys the player locked: a model overwrite keeps the value and records a conflict. */
   canonKeys: z.optional(z.array(z.string())),
+  /** A character's repertoire (`BEATS` ids or free text), newest last. `[]`: none; absent: the genre default, computed, never written. */
+  beats: z.optional(z.array(z.string())),
 });
 
 /** An entity as stored before the assertion store (M13-2): only the migration reads these fields. */
