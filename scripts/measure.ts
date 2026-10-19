@@ -19,6 +19,9 @@
  *   voice <url> <backup> <batch.json> [label] [samples]  say turns replayed without and with the batch's voices; top speakers' lines, rated by hand
  *   spotlight <url> <backup> [label] [points]  crowded scenes (4–5 present) continued per cast order; who the speaker guess labels
  *   initiative <url> <backup> [label] [points]  3+ present continued without and with confirmed goals (`wants:`); who speaks, gate flags
+ *     (MEASURE_BEATS=4 cues every 4th point with a beat; `completed` labelled by hand)
+ *   rules <url> [label]  "Find rules in this passage" over bench/rulesCases.json: expected rules found, spurious ones
+ *   check <url> <backup> <passage-file> [label]  "Check against the record" on a passage over the backup's record; the findings
  *   migrate <backup> [label]  entity facts to typed assertions: counts kept, dropped (conflicts on unlocked keys, stale spans), lost
  *   names <backups> [label]  new-name candidates and kinds, action by action, no model (backups comma-separated)
  *   speakers <backup> [label]  the speaker guess and the batch's stored speakers against bench/speakerLabels.json, no model
@@ -29,7 +32,9 @@
  *   standings <backup> [label]  each current relationship's stance word over the stored events, with crossedAt, no model
  *   orphans <cdp-url> [label]  stored image blobs no adventure owns, from the open app over CDP (browser started with --remote-debugging-port)
  *   live <url> [label]  plays 20 scripted turns in the real app; per-turn stats, memories, summary
- *   repetition <url> [label]  the live turns alone: repeated phrases per turn, distinct 4-grams (MEASURE_SAMPLERS=64,0 for the "before")
+ *     (MEASURE_TURNS=40 plays more; MEASURE_EVERY=/complicate:4 types that before every 4th turn; MEASURE_DIRECTOR=4 the director)
+ *   repetition <url> [label]  the live turns alone: repeated phrases per turn, distinct 4-grams (MEASURE_SAMPLERS=64,0 for the "before";
+ *     MEASURE_AUTOBANNED=0 with the repeated-phrase flags off)
  *   images <image-url> <url>  See mode and a cover against a real A1111 server
  *   sheet <image-url> [label]  builder round sheets of two characters x 5 seeds on the loaded checkpoint (MEASURE_WEIGHT, MEASURE_SIZE=w,h, MEASURE_CLIP)
  *   reference <image-url> [label]  two Sees of five built characters, text only vs img2img from the sheet (MEASURE_DENOISE, MEASURE_STEPS)
@@ -94,6 +99,11 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
   initiative: {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/initiative'],
     env: { MEASURE_URL: a, MEASURE_BACKUP: b, MEASURE_LABEL: c, MEASURE_POINTS: d },
+  },
+  rules: { cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/rules'], env: { MEASURE_URL: a, MEASURE_LABEL: b } },
+  check: {
+    cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/check'],
+    env: { MEASURE_URL: a, MEASURE_BACKUP: b, MEASURE_PASSAGE: c, MEASURE_LABEL: d },
   },
   migrate: {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/migrate'],

@@ -1,0 +1,31 @@
+{
+  "labelledBy": "claude",
+  "source": "Slice-of-life export (M12), passages cut to their rule sentences; expect: words a found rule must contain, one entry per rule",
+  "cases": [
+    {
+      "at": 16,
+      "text": "All of a sudden Minos gives you an amulet. Through laboured breathing, he says \"This is the most sacred thing I have... This amulet is very specific to our kind and we give it only to our closest one. I deem you the most important being in the world for me\"",
+      "expect": ["amulet"]
+    },
+    {
+      "at": 50,
+      "text": "You return to the contestation with following words \"you clearly know nothing of minotaur kind. They have items imbued with power to control the minotaur who created it so they only pass it to the people they will mate for life.\" Then you look at Weever and continue \"I want you to extract this magic and put it in me, so Minos is bound not to the amulet but to me.\"",
+      "expect": ["control"]
+    },
+    {
+      "at": 0,
+      "text": "You run a two-table noodle shop under the railway arches. It is raining, the last train has gone, and the regular who never talks has just asked if you have a minute.",
+      "expect": []
+    },
+    {
+      "at": 21,
+      "text": "Minos follows your mental guidance, his hooves pounding against the wet earth as he races through the darkness. The cottage appears ahead, a small stone structure with smoke rising from its chimney despite the late hour.\n\n\"Wait,\" he rumbles, suddenly stopping and turning to face the storm wraith that emerges from the trees behind you. Its yellow eyes fix on you with ravenous intensity, talons clicking against stone as it advances. The amulet around your neck pulses with warning heat.\n\n\"I don't know what you are,\" he growls at the storm wraith, \"but you won't touch him.\"",
+      "expect": []
+    },
+    {
+      "at": 30,
+      "text": "The amulet on your chest cools abruptly as the dragon's power settles into your control. Through the magical link, you feel his immense strength coiled beneath your will like a sleeping beast.\n\nThe dragon snarls but remains kneeling, smoke still curling from his nostrils as he glares at you with burning hatred. Minos struggles to his feet behind you, his scarred face twisted with confusion and concern.\n\n\"What did you do?\"",
+      "expect": []
+    }
+  ]
+}

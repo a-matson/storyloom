@@ -19,6 +19,8 @@ const LABEL = process.env['MEASURE_LABEL'] ?? 'baseline';
  */
 function replay(adv: Adventure) {
   let named = 0;
+  // M23-4: absent entities the action names that get neither facts (so no cast line) nor a card.
+  let absentMissed = 0;
   const rows = adv.actions.flatMap((action, i) => {
     const ix = indexAssertions(storeAt(adv.assertions, i));
     const here = new Set(adv.plot.presence?.findLast((p) => p.at <= i)?.present ?? []);
@@ -26,25 +28,26 @@ function replay(adv: Adventure) {
     const absent = entities.filter((e) => !here.has(e.id) && !e.cardId);
     const all = [...askedFacts(action, absent, entities, ix, COMMON_WORDS)];
     if (all.length) named++;
+    absentMissed += all.filter(([, facts]) => !facts.length).length;
     const asked = all.filter(([, facts]) => facts.length);
     if (!asked.length) return [];
     const byId = new Map(entities.map((e) => [e.id, e.name]));
     return [{ at: i, action: actionText(action), asked: asked.map(([id, facts]) => ({ entity: byId.get(id), facts: facts.map(textOf) })) }];
   });
-  return { named, rows };
+  return { named, absentMissed, rows };
 }
 
 test.skipIf(!backups.length)('facts the player asks about, action by action', () => {
   const out = backups.map((backup) => {
     const adv = parseOwn(JSON.parse(readFileSync(backup, 'utf8')));
     if (!adv) throw new Error(`${backup}: not a backup`);
-    const { named, rows } = replay(adv);
-    console.log(`\n${backup}: ${named} player actions name an absent entity, ${rows.length} send facts`);
+    const { named, absentMissed, rows } = replay(adv);
+    console.log(`\n${backup}: ${named} player actions name an absent entity, ${rows.length} send facts, ${absentMissed} named absent missed`);
     for (const r of rows) {
       console.log(`  #${r.at} ${r.action.trim().slice(0, 140)}`);
       for (const a of r.asked) console.log(`    ${a.entity}: ${a.facts.join(' | ')}`);
     }
-    return { backup, actions: adv.actions.length, named, asked: rows.length, rows };
+    return { backup, actions: adv.actions.length, named, asked: rows.length, absentMissed, rows };
   });
   console.log(writeMeasurement(`cast-facts-${LABEL}`, { backups: out }));
 });

@@ -27,6 +27,28 @@ export const TURNS: [mode: 'Do' | 'Say', text: string][] = [
 /** Commands typed before the turn of that index: the player's clock set, then moved at three points (M21-2 bar). */
 export const CLOCK: Partial<Record<number, string>> = { 0: '/time afternoon, day 1', 6: '/wait 4 hours', 11: '/wait until morning', 18: '/wait until night' };
 
+/** `MEASURE_TURNS=<n>` (default 20): the scenario's turns, from the start again past the end. */
+export const playTurns = () =>
+  Array.from({ length: Number(process.env['MEASURE_TURNS'] ?? TURNS.length) }, (_, i) => TURNS[i % TURNS.length]).filter((t) => t !== undefined);
+
+/** `MEASURE_EVERY="/complicate:4"`: that command, typed before every 4th turn after the first (M26-3). */
+export function everyCommand(turn: number): string | undefined {
+  const [command, every] = process.env['MEASURE_EVERY']?.split(':') ?? [];
+  return command && turn > 0 && turn % Number(every ?? 1) === 0 ? command : undefined;
+}
+
+/** `MEASURE_DIRECTOR=<n>` sets the director to every n player turns before turn 1 (M26-4); n is one the select offers. */
+export async function applyDirector(page: Page): Promise<void> {
+  const every = process.env['MEASURE_DIRECTOR'];
+  if (!every) return;
+  const toggle = page.getByRole('button', { name: 'Adventure settings' });
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+  await page.getByRole('tab', { name: 'Gameplay' }).click();
+  await page.getByText('Director', { exact: true }).click();
+  await page.getByRole('combobox', { name: 'Director turns' }).selectOption(every);
+  await page.getByRole('button', { name: 'Close settings' }).click();
+}
+
 /** `MEASURE_PRESET=sliceOfLife|adventure` picks that memory preset before the first turn (M24-4); an unknown id fails the run. */
 export async function applyPreset(page: Page): Promise<void> {
   const id = process.env['MEASURE_PRESET'];
