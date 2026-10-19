@@ -91,6 +91,9 @@ function renumber(a: Exported): Adventure {
       id: id(e.id),
       relations: e.relations.map((r) => ({ ...r, to: id(r.to) })),
       ...(e.cardId && { cardId: id(e.cardId) }),
+      ...(e.partOf !== undefined && { partOf: id(e.partOf) }),
+      // A link to a place the export does not hold goes.
+      ...(e.connectedTo && { connectedTo: e.connectedTo.filter((c) => ids.has(c.id)).map((c) => Object.assign({}, c, { id: id(c.id) })) }),
       // A version 1 export's facts, moved on the first open: their sources and causes follow the new ids.
       ...(e.facts && {
         facts: e.facts.map(({ sourceId, cause, ...f }) => ({

@@ -4,6 +4,7 @@ import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
 import { Select } from '@ui/components/ui/field';
 import { Section } from '../sidebar/Section';
+import { PlaceLinks } from './PlaceLinks';
 
 type PlaceAsk = NonNullable<ScriptState['__placeAsk']>;
 
@@ -16,7 +17,7 @@ const answer = (api: GameApi, ask: PlaceAsk, yes: boolean) =>
     if (yes && inside) adv.entities = adv.entities.map((e) => (e.kind === 'place' && e.name === ask.place && e !== inside ? { ...e, partOf: inside.id } : e));
   });
 
-/** The story's places with their other names: which is inside which, and Merge for two names of one place. */
+/** The story's places with their other names: which is inside which, the ways between them, and Merge for two names of one place. */
 export function PlacesList({ adventure, api }: { adventure: Adventure; api: GameApi }) {
   const places = adventure.entities.filter((e) => e.kind === 'place');
   const ask = adventure.scriptState.__placeAsk;
@@ -79,6 +80,7 @@ export function PlacesList({ adventure, api }: { adventure: Adventure; api: Game
                     ))}
                   </Select>
                 </span>
+                <PlaceLinks p={p} places={places} edits={edits} />
               </li>
             );
           })}

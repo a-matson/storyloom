@@ -110,7 +110,7 @@ function unseen<T>(seen: Iterable<string>, extra: readonly T[], key: (t: T) => s
 const rel = (r: { to: string; label: string }) => `${norm(r.to)}|${norm(r.label)}`;
 
 /**
- * Fold the stored entity `from` into `into` (the player's Merge): aliases and relations union in;
+ * Fold the stored entity `from` into `into` (the player's Merge): aliases, relations and place links union in;
  * `into` keeps its id, name, kind, card text and portrait. Assertions move with `mergeOwn`.
  */
 export function mergeEntities(into: Entity, from: Entity): Entity {
@@ -118,6 +118,9 @@ export function mergeEntities(into: Entity, from: Entity): Entity {
     ...into,
     aliases: [...into.aliases, ...unseen([into.name, ...into.aliases].map(norm), [from.name, ...from.aliases], norm)],
     relations: [...into.relations, ...unseen(into.relations.map(rel), from.relations, rel)],
+    ...((into.connectedTo ?? from.connectedTo) && {
+      connectedTo: unseen([], [...(into.connectedTo ?? []), ...(from.connectedTo ?? [])], (c) => c.id),
+    }),
     ...((into.roles ?? from.roles) && { roles: [...new Set([...(from.roles ?? []), ...(into.roles ?? [])])].slice(-MAX_ROLES) }),
     firstSeen: Math.min(into.firstSeen, from.firstSeen),
     lastSeen: Math.max(into.lastSeen, from.lastSeen),

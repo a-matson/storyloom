@@ -46,6 +46,27 @@ function mergeIntoYou(host: GameSession, id: string): void {
   });
 }
 
+function placeEdits(mutate: (fn: (adv: Adventure) => void) => void) {
+  return {
+    /** Only between places; `undefined` makes it stand alone. */
+    setPartOf: (placeId: string, parentId: string | undefined) =>
+      mutate((adv) => {
+        if (placeId === parentId) return;
+        const set = ({ partOf: _p, ...e }: Entity): Entity => (parentId === undefined ? e : { ...e, partOf: parentId });
+        adv.entities = adv.entities.map((e) => (e.id === placeId && e.kind === 'place' ? set(e) : e));
+      }),
+    /** A way between two places, read both ways; `via` is what it goes through. */
+    link: async (a: string, b: string, via?: string) => {
+      const { link } = await loadMemoryJobs();
+      mutate((adv) => (adv.entities = link(adv.entities, a, b, via)));
+    },
+    unlink: async (a: string, b: string) => {
+      const { unlink } = await loadMemoryJobs();
+      mutate((adv) => (adv.entities = unlink(adv.entities, a, b)));
+    },
+  };
+}
+
 /**
  * The player's edits to `adv.entities`, through the session's `mutate`. Not session methods, so
  * this stays out of the start-up bundle: only the lazy entity drawer imports it.
@@ -73,13 +94,7 @@ export function entityEdits(host: GameSession) {
       }
     },
     clearPortrait: (id: string) => clearPortrait(host, id),
-    /** Only between places; `undefined` makes it stand alone. */
-    setPartOf: (placeId: string, parentId: string | undefined) =>
-      mutate((adv) => {
-        if (placeId === parentId) return;
-        const set = ({ partOf: _p, ...e }: Entity): Entity => (parentId === undefined ? e : { ...e, partOf: parentId });
-        adv.entities = adv.entities.map((e) => (e.id === placeId && e.kind === 'place' ? set(e) : e));
-      }),
+    ...placeEdits(mutate),
     ...lineEdits(host),
     /** Freeze the character's current look and point at that See image; later Sees repeat the words and the seed. */
     setReference: async (id: string, imageId: string) => {
@@ -104,13 +119,17 @@ export function entityEdits(host: GameSession) {
     },
     /** `fromId` is folded into `intoId` and deleted; no undo. */
     merge: async (intoId: string, fromId: string) => {
-      const { mergeEntities, mergeOwn } = await loadMemoryJobs();
+      const { mergeEntities, mergeOwn, repointLinks } = await loadMemoryJobs();
       mutate((adv) => {
         const into = adv.entities.find((e) => e.id === intoId);
         const from = adv.entities.find((e) => e.id === fromId);
         if (!into || !from || into === from) return;
         const merged = mergeEntities(into, from);
-        adv.entities = adv.entities.flatMap((e) => (e === from ? [] : e === into ? [merged] : [e]));
+        adv.entities = repointLinks(
+          adv.entities.flatMap((e) => (e === from ? [] : e === into ? [merged] : [e])),
+          fromId,
+          intoId,
+        );
         const own = (id: string) => adv.assertions.filter((a) => a.subject === id);
         adv.assertions = [...adv.assertions.filter((a) => a.subject !== intoId && a.subject !== fromId), ...mergeOwn(into, own(intoId), own(fromId))];
         repointGates(adv, fromId, intoId);

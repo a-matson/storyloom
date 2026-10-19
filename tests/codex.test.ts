@@ -36,6 +36,12 @@ describe('codex (M27-1)', () => {
     const innEntry = c.places.find((e) => e.title === 'Red Inn');
     expect(innEntry?.lines).toContainEqual({ text: 'Rooms: Cellar' });
     expect(innEntry?.lines).toContainEqual({ text: 'Been here: Bram' });
+    const linked = setup();
+    linked.entities.push({
+      ...mergeEntity(undefined, { name: 'Docks', kind: 'place', description: '' }, 0),
+      connectedTo: [{ id: cellar.id, via: 'the trapdoor' }],
+    });
+    expect(compileCodex(linked).places.find((e) => e.title === 'Red Inn')?.lines).toContainEqual({ text: 'Ways to: Docks (through the trapdoor)' });
     expect(c.rules).toEqual([{ text: 'Kobolds fear fire', at: 0 }]);
     expect(c.timeline.map((l) => l.at)).toEqual([2, 4, 6]);
   });

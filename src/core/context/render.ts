@@ -16,9 +16,10 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 /**
  * `Blackmore's house · You: the study · Day 2, evening · Present: Lena, Morrow · Group: the Harrows (3) · In the basement: Weever · Here: the ledger, Key (Lena) · You hold: Horn · Rain`,
  * leaving out what is unknown; the item lists come from `entities` too. `Present` is who is with you (in your room, `zone`); one in another room (`zones`) is under it.
+ * `through`: the way the last move came, `the kitchen (through the hall)`.
  * ponytail: a third-person player's items stay under their name, not `You hold`; map it when one plays so.
  */
-export function renderScene(stored: Scene | undefined, entities: readonly Entity[] = [], ix = indexAssertions([])): string {
+export function renderScene(stored: Scene | undefined, entities: readonly Entity[] = [], ix = indexAssertions([]), through?: string): string {
   const scene = stored && sceneNames(stored, entities);
   const held = heldBy(entities, ix, YOU)
     .slice(0, MAX_ITEMS)
@@ -33,7 +34,7 @@ export function renderScene(stored: Scene | undefined, entities: readonly Entity
   const groups = scene?.groups ?? [];
   rooms.delete('');
   return [
-    scene?.location?.trim(),
+    scene?.location?.trim() && (through ? `${scene.location.trim()} (through ${through})` : scene.location.trim()),
     scene?.zone ? `You: ${scene.zone}` : '',
     // `formatTime` inlined: importing `clock.ts` would pull it into start-up.
     scene?.time ? `Day ${scene.time.day}, ${scene.time.part}` : '',

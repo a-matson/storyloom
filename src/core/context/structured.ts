@@ -137,6 +137,7 @@ export function nowLines(adv: Pick<Adventure, 'plot' | 'entities' | 'assertions'
  * player's action names them (`absent`).
  * `historyFrom`: the earliest action history can reach, the witnessed-by window's start.
  * `knows`: a present character's `knows:` clause, given who is here and `inCast`; passed in so `nowLines` does not load it.
+ * `through`: the way the last move came (`cameThrough`), passed in for the same reason.
  */
 export function selectStructured(
   input: ContextBuildInput,
@@ -146,6 +147,7 @@ export function selectStructured(
   out: RenderedSections,
   absent: (e: Entity) => boolean = () => false,
   knows: (id: string, here: readonly Entity[], inCast: readonly Entity[]) => string | undefined = () => undefined,
+  through?: string,
 ): StructuredResult {
   const { tokenizer, plot } = input;
   const budget = Math.min(cap, STRUCTURED_CAP);
@@ -176,7 +178,7 @@ export function selectStructured(
   while (rules.length && tokenizer.count(renderSection('rules', renderRules(rules))) > left) rules.pop();
   if (rules.length) put('rules', renderSection('rules', renderRules(rules)));
 
-  const scene = renderScene(shown, entities, ix);
+  const scene = renderScene(shown, entities, ix, through);
   if (scene && tokenizer.count(renderSection('scene', scene)) <= left) put('scene', renderSection('scene', scene));
 
   const carded = cardedBy(input.storyCards);
