@@ -2,6 +2,7 @@ import type { Adventure, AdventureSettings, Entity, Scenario, StoryCard } from '
 import { DEFAULT_ADVENTURE_SETTINGS, hasScripts, newId, scriptCount } from './types';
 import { applyPlaceholders, findPlaceholders } from '../text/placeholders';
 import { seedCanonEntities } from '../memory/canon';
+import { withPreset } from './presets';
 
 /**
  * Scenario → Adventure. The prompt becomes the first action ("start"); plot
@@ -100,7 +101,7 @@ export function createAdventureFromScenario(
     assertions: world.assertions,
     scriptState: { placeholders: Object.entries(answers).map(([question, answer]) => ({ question, answer })) },
     placeholders: Object.entries(answers).map(([question, answer]) => ({ question, answer })),
-    settings: structuredClone(settings),
+    settings: s.memoryPreset ? { ...structuredClone(settings), memory: withPreset(settings.memory, s.memoryPreset) } : structuredClone(settings),
     createdAt: now,
     updatedAt: now,
   };
