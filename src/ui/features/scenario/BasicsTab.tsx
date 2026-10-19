@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
-import type { AppSettings } from '@core/model';
+import { MEMORY_PRESETS, type AppSettings, type MemoryPresetId } from '@core/model';
 import { CoverPicker } from '@ui/components/CoverPicker';
-import { Input } from '@ui/components/ui/field';
+import { Input, Select } from '@ui/components/ui/field';
 import { TextField, type TabProps } from './fields';
 
 const parseTags = (text: string) =>
@@ -10,9 +10,12 @@ const parseTags = (text: string) =>
     .map((t) => t.trim())
     .filter(Boolean);
 
+const PRESET_IDS: MemoryPresetId[] = ['sliceOfLife', 'adventure'];
+
 export function BasicsTab({ draft, update, app }: TabProps & { app: AppSettings }) {
   const titleId = useId();
   const tagsId = useId();
+  const presetId = useId();
   // Raw text so a trailing comma survives typing; the draft keeps the parsed list.
   const [tags, setTags] = useState(draft.tags.join(', '));
   return (
@@ -25,6 +28,24 @@ export function BasicsTab({ draft, update, app }: TabProps & { app: AppSettings 
       </section>
       <TextField label="Description" hint="shown in the library" value={draft.description} onChange={(description) => update({ description })} />
       <CoverPicker ownerId={draft.id} coverId={draft.coverId} coverUrl={draft.coverUrl} app={app} onChange={(coverId) => update({ coverId })} />
+      <section className="flex flex-col gap-2">
+        <label htmlFor={presetId} className="text-control font-semibold">
+          Memory preset
+        </label>
+        <Select
+          id={presetId}
+          className="h-9 w-auto"
+          value={draft.memoryPreset ?? ''}
+          onChange={(e) => update({ memoryPreset: PRESET_IDS.find((id) => id === e.target.value) })}
+        >
+          <option value="">Player's defaults</option>
+          {PRESET_IDS.map((id) => (
+            <option key={id} value={id}>
+              {MEMORY_PRESETS[id].name}
+            </option>
+          ))}
+        </Select>
+      </section>
       <section className="flex flex-col gap-2">
         <label htmlFor={tagsId} className="text-control font-semibold">
           Tags

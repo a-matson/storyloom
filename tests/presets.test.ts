@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ADVENTURE_SETTINGS, MEMORY_PRESETS, presetOf, withPreset } from '@core/model';
+import { createAdventureFromScenario, DEFAULT_ADVENTURE_SETTINGS, MEMORY_PRESETS, newScenario, presetOf, withPreset } from '@core/model';
+import { exportScenarioJson, importScenarioJson } from '@adapters/transfer/scenario';
 
 const base = DEFAULT_ADVENTURE_SETTINGS.memory;
 
@@ -18,5 +19,16 @@ describe('memory presets', () => {
     expect(presetOf({ ...withPreset(base, 'adventure'), bankSize: 300 })).toBeUndefined();
     // A field outside the preset does not make it Custom.
     expect(presetOf({ ...withPreset(base, 'adventure'), autoSummary: false })).toBe('adventure');
+  });
+
+  it("a scenario's preset sets the new adventure's memory; none keeps the defaults", () => {
+    const s = newScenario('T', 'Start.');
+    expect(createAdventureFromScenario({ ...s, memoryPreset: 'sliceOfLife' }, {}).settings.memory).toEqual(withPreset(base, 'sliceOfLife'));
+    expect(createAdventureFromScenario(s, {}).settings.memory).toEqual(base);
+  });
+
+  it('the preset survives export and import', () => {
+    const s = { ...newScenario('T', 'Start.'), memoryPreset: 'adventure' as const };
+    expect(importScenarioJson(exportScenarioJson(s)).memoryPreset).toBe('adventure');
   });
 });

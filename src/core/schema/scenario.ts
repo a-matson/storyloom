@@ -25,6 +25,8 @@ export const Scenario = z.object({
   storyCards: z.array(StoryCard),
   scripts: z.optional(ScenarioScripts),
   world: z.optional(ScenarioWorld),
+  /** Applied over the app defaults when an adventure starts (`MEMORY_PRESETS`). */
+  memoryPreset: z.optional(z.enum(['sliceOfLife', 'adventure'])),
   /** Multiple choice: child scenarios, each a full scenario. */
   get options() {
     return z.optional(z.array(Scenario));
