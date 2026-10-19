@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState, type KeyboardEvent } from 'react';
 import { correct } from '@app/session/correct';
 import { setTime, travelTo, waitFor } from '@app/session/clock';
 import { addRule } from '@app/session/rules';
+import { markChapter } from '@app/session/chapters';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
 import { StatusDot } from '@ui/components/ui/status-dot';
@@ -48,7 +49,7 @@ function Palette(props: Omit<PaletteProps, 'onClose'>) {
 // Loaded on first use: start-up bundle budget.
 const beat = (api: GameApi, text = '') => import('@app/session/beat').then((m) => m.beat(api, text));
 
-const COMMANDS: Record<Command, (api: GameApi, text: string) => Promise<void>> = {
+const COMMANDS: Record<Command, (api: GameApi, text: string) => Promise<void> | void> = {
   correct,
   rule: addRule,
   wait: waitFor,
@@ -57,6 +58,7 @@ const COMMANDS: Record<Command, (api: GameApi, text: string) => Promise<void>> =
   beat,
   complicate: (api) => import('@app/session/beat').then((m) => m.complicate(api)),
   tension: (api, text) => import('@app/session/beat').then((m) => m.setTension(api, text)),
+  chapter: markChapter,
 };
 
 const chip =
@@ -86,7 +88,8 @@ function RetryButtons({ busy, canRetry, canReroll, retryReady, api }: Pick<Props
 /**
  * Take-a-turn row. Enter sends, Ctrl/⌘+Enter continues, Ctrl/⌘+R retries,
  * Ctrl/⌘+Z undoes (input empty); `/do /say /story /see` switch mode, `/correct …` pins a fact, `/rule …` adds a rule,
- * `/wait 3 hours | until night` and `/time evening, day 2` set the scene's time, `/travel <place> [alone]` its location.
+ * `/wait 3 hours | until night` and `/time evening, day 2` set the scene's time, `/travel <place> [alone]` its location,
+ * `/chapter [title]` starts a chapter with the next action.
  */
 export function CommandRow({ busy, canRetry, canReroll = false, canErase, canBeat = false, status, api, onSee, retryReady = false, onViewContext }: Props) {
   const [mode, setMode] = useState<Mode>('do');
@@ -99,7 +102,7 @@ export function CommandRow({ busy, canRetry, canReroll = false, canErase, canBea
     if (busy) return;
     const slash = parseSlash(text);
     if (slash && slash.kind !== 'mode') {
-      if (slash.text.trim() !== '' || slash.kind === 'beat' || slash.kind === 'complicate') setText('');
+      if (slash.text.trim() !== '' || slash.kind === 'beat' || slash.kind === 'complicate' || slash.kind === 'chapter') setText('');
       void COMMANDS[slash.kind](api, slash.text);
       return;
     }

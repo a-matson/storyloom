@@ -64,6 +64,9 @@ function lastFlag(contradiction: { actionId: string; fact: string } | null, acti
   return last?.type === 'continue' ? outputFlag(actionText(last), settings.bannedPhrases, repeatedLately(settings, actions)) : undefined;
 }
 
+const contextLine = (ctx: GameSnapshot['context']) =>
+  ctx ? `${ctx.result.triggeredCards.length} story cards · ${ctx.result.usedMemories.length} memories used` : undefined;
+
 function Meter({ state, onOpen }: { state: GameSnapshot; onOpen: () => void }) {
   const adv = state.adventure;
   const ctx = state.context?.result;
@@ -84,7 +87,6 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
   useGameKeys(showContext, showSidebar, setShowContext, setShowSidebar);
   useAdventureTheme(app, adv.settings.textStyle, useImageBlob(adv.id, adv.coverId) ?? adv.coverUrl);
 
-  const ctx = state.context?.result;
   const last = state.actions.at(-1);
   const rerollable = isCurrentDice(adv.scripts) && last?.type === 'continue' && state.actions.at(-2)?.type === 'do';
   useReadAloud(app.speech, state.busy, last?.type === 'continue' ? actionText(last) : undefined);
@@ -123,13 +125,14 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
             speech={app.speech}
             onViewContext={openContext}
             onViewTrace={() => last && setTraceAction(last.id)}
-            contextSummary={ctx ? `${ctx.triggeredCards.length} story cards · ${ctx.usedMemories.length} memories used` : undefined}
+            contextSummary={contextLine(state.context)}
             flag={lastFlag(state.contradiction, state.actions, adv.settings)}
             rerolled={state.gated?.actionId === last?.id ? state.gated?.reason : undefined}
             cast={app.speakerAvatars ? adv.entities : undefined}
             present={adv.plot.scene && sceneNames(adv.plot.scene, adv.entities).present}
             onOpenEntity={setFaceId}
             diceOutput={rerollable ? last : undefined}
+            plot={adv.plot}
           />
           {!state.busy && <SelectionBar api={api} entities={adv.entities} />}
           {!state.busy && adv.actions.length <= 1 && <CanonHint adventure={adv} api={api} />}

@@ -146,4 +146,31 @@ describe('story summary', () => {
     expect(calls[0]).toContain('Events since the last summary:\n- You met Tamsin.\n- You broke the oath.\n\nNew memories:');
     for (const absent of ['Too old', 'Still in history']) expect(calls[0]).not.toContain(absent);
   });
+
+  it('gives the summary the confirmed titles of the chapters starting in its range only', async () => {
+    const adv = adventure(30);
+    adv.scriptState = { ...adv.scriptState, __summaryAt: 6 };
+    adv.memories = memories([0, 6, 12]);
+    adv.plot.chapters = [
+      { at: 2, title: 'Too Old' },
+      { at: 8, title: 'The Oath' },
+      { at: 10, title: 'Proposed Only', seen: false },
+      { at: 12, title: 'The Ferry', seen: true },
+      { at: 20, title: 'Still In History' },
+    ];
+    const { deps, calls } = fakeDeps(adv);
+    await refreshSummary(adv, { ...deps, historyStart: 18 });
+    expect(calls[0]).toContain('Chapters: The Oath; The Ferry\n\n');
+    for (const absent of ['Too Old', 'Proposed Only', 'Still In History']) expect(calls[0]).not.toContain(absent);
+  });
+
+  it('sends no chapters line without a confirmed title', async () => {
+    const adv = adventure(30);
+    adv.scriptState = { ...adv.scriptState, __summaryAt: 6 };
+    adv.memories = memories([0, 6, 12]);
+    adv.plot.chapters = [{ at: 8 }];
+    const { deps, calls } = fakeDeps(adv);
+    await refreshSummary(adv, { ...deps, historyStart: 18 });
+    expect(calls[0]).not.toContain('Chapters:');
+  });
 });

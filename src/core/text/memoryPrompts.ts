@@ -42,16 +42,31 @@ const KEEP_MARKS = 'Keep each "(known only to …)" mark as written, with the fa
 const marksIn = (texts: readonly string[]) => (texts.some((t) => t.includes('(known only to ')) ? KEEP_MARKS : '');
 const listed = (title: string, lines: readonly string[]) => (lines.length ? `${title}\n${lines.map((l) => `- ${l}`).join('\n')}\n\n` : '');
 
-/** The summary's "Recently": the memories of newly evicted text, and the events the batch read stored there. */
-export function summaryPrompt(newMemories: readonly string[], events: readonly string[] = [], given: readonly string[] = []): string {
+/**
+ * The summary's "Recently": the memories of newly evicted text, and the events the batch read stored there. `chapters`:
+ * the player-confirmed titles of chapters starting there, as structure; none, no line, so the measured prompt stands. [provisional]
+ */
+export function summaryPrompt(
+  newMemories: readonly string[],
+  events: readonly string[] = [],
+  given: readonly string[] = [],
+  chapters: readonly string[] = [],
+): string {
   return (
     givenBlock(given) +
+    (chapters.length ? `Chapters: ${chapters.join('; ')}\n\n` : '') +
     listed('Events since the last summary:', events) +
     listed('New memories:', newMemories) +
     marksIn([...events, ...newMemories]) +
     'Write what happened, in at most 6 sentences:'
   );
 }
+
+export const CHAPTER_SYSTEM = 'You title chapters of an interactive story. Output only the title: 2 to 6 words, no quotes, no commentary.';
+
+/** One chapter's events and memories, for its title. [provisional] */
+export const chapterTitlePrompt = (lines: readonly string[]): string =>
+  `${listed('What happened in this chapter:', lines)}Give this chapter a title of 2 to 6 words.\n\nTitle:`;
 
 /** The old "Recently", retold short for "Long ago". */
 export function eraPrompt(recently: string): string {

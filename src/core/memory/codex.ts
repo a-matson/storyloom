@@ -1,5 +1,6 @@
 import type { Adventure, Entity } from '../model/types';
 import { current, identityText, indexAssertions, isCurrent, type AssertionIndex, type AssertionOf } from './assertionIndex';
+import { chapterStarts } from './chapters';
 import { itemsAt } from './items';
 import { knowledgeOf } from './knowledge';
 import { currentStates, isLook } from './looks';
@@ -113,12 +114,15 @@ export function compileCodex(adv: Adventure): Codex {
   const places = adv.entities.filter((e) => e.kind === 'place');
   const of = (kinds: Entity['kind'][]) => adv.entities.filter((e) => kinds.includes(e.kind)).map((e) => entryOf(adv, ix, events, e));
   const moves = (adv.plot.sceneLog ?? []).map((s) => ({ text: `Scene moves to ${s.location}`, at: s.at }));
+  // Listed first so the stable sort puts a chapter before the move it opens with; one chapter is no structure.
+  const starts = chapterStarts(adv.plot);
+  const chapters = starts.length > 1 ? starts.map((c, i) => ({ text: `Chapter ${i + 1}${c.title ? `: ${c.title}` : ''}`, at: c.at })) : [];
   return {
     characters: of(['character']),
     places: places.map((p) => placeEntry(adv, ix, events, places, p)),
     things: of(['item', 'faction']),
     rules: adv.rules.map((r) => ({ text: r.status === 'proposed' ? `${r.text} (proposed)` : r.text, at: r.fromAction })),
-    timeline: [...events.map((a) => ({ text: a.text, at: a.at })), ...moves].toSorted((a, b) => a.at - b.at),
+    timeline: [...chapters, ...events.map((a) => ({ text: a.text, at: a.at })), ...moves].toSorted((a, b) => a.at - b.at),
   };
 }
 
