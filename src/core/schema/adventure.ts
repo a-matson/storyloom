@@ -59,6 +59,8 @@ export const PlotComponents = z.object({
   sceneLog: z.optional(z.array(z.object({ at: z.int(), location: z.string() }))),
   /** One entry per change of who is present (ids), newest last; the cast's witnessed-by clauses read it. */
   presence: z.optional(z.array(z.object({ at: z.int(), present: z.array(z.string()) }))),
+  /** `/chapter` marks and chapter titles by start action; `seen: false` is a helper's proposed title. */
+  chapters: z.optional(z.array(z.object({ at: z.int(), title: z.optional(z.string()), seen: z.optional(z.boolean()) }))),
 });
 
 /** `state.memory` in the scripting API: overrides for plot essentials / author's note, plus front memory. */

@@ -11,6 +11,7 @@ import type { Rejected } from './fold';
 import { dropUnsupported } from './invalidate';
 import { helperCall, sentencesOnly, type CutCounts } from './helperCall';
 import { refreshSummary, summaryFirst } from './summary';
+import { titleChapters } from './chapterTitle';
 import { ngramOverlap } from '../text/repetition';
 import { youLines } from './you';
 
@@ -78,6 +79,8 @@ export interface MaintenanceReport extends CutCounts {
   /** Trait facts the entity call proposed, and every value its guards dropped: a live run sums them. */
   factsProposed: number;
   rejected: Rejected[];
+  /** Closed chapters given a proposed title. */
+  chaptersTitled?: number;
 }
 
 /** A memory's text needs no embedder. */
@@ -252,4 +255,5 @@ async function maintain(adventure: Adventure, all: MaintenanceDeps, report: Main
   }
 
   if (settings.autoSummary && !report.summaryFirst) report.summaryUpdated = await refreshSummary(adventure, on('summary'));
+  if (memoriesOn) report.chaptersTitled = await titleChapters(adventure, on('summary'));
 }

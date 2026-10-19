@@ -226,7 +226,14 @@ export class MemoryScheduler {
       // A live run reads these from the console: whether the summary keeps up, what typing cuts, what the entity call proposes and its guards drop.
       if (summaryUpdated || cutCalls || finishedPastCut || entityCalls.length)
         console.info(`memory run ${JSON.stringify({ summaryUpdated, summaryFirst, cutCalls, finishedPastCut, factsProposed, rejected, entityCalls })}`);
-      if (report.memoriesWritten || report.memoriesRegenerated || report.memoriesDropped || report.entitiesTouched || report.summaryUpdated)
+      if (
+        report.memoriesWritten ||
+        report.memoriesRegenerated ||
+        report.memoriesDropped ||
+        report.entitiesTouched ||
+        report.summaryUpdated ||
+        (report.chaptersTitled ?? 0) > 0
+      )
         this.host.changed();
       progressed = this.host.adventure().scriptState.__entitiesAt !== entitiesAt;
     } catch (e) {

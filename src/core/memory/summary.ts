@@ -3,6 +3,7 @@ import { SUMMARY_SYSTEM, eraPrompt, summaryPrompt } from '../text/memoryPrompts'
 import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
 import { trimUnfinishedSentence } from '../text/formatting';
+import { chapterTitles } from './chapters';
 import { eventsSince } from './events';
 import { helperCall, sentencesOnly } from './helperCall';
 import { summaryDue, summaryOverdue } from './memoryBank';
@@ -81,7 +82,8 @@ export async function refreshSummary(adventure: Adventure, deps: Omit<Maintenanc
     .map((m) => markOf(adventure.assertions, adventure.entities, m) + m.text);
   const events = eventsSince(adventure.assertions, lastAt, end).map((e) => e.text);
   if (!since.length && !events.length) return false;
-  const recently = await write(summaryPrompt(since.slice(-RECENT_MEMORIES), events, youLines(adventure.assertions)), RECENT_SENTENCES, deps);
+  const chapters = chapterTitles(adventure.plot, lastAt, end);
+  const recently = await write(summaryPrompt(since.slice(-RECENT_MEMORIES), events, youLines(adventure.assertions), chapters), RECENT_SENTENCES, deps);
   if (!recently) return false;
   const [longAgo, previous] = dirty ? ['', ''] : partsOf(adventure.plot.storySummary ?? '');
   const older = [previous, ...since.slice(0, -RECENT_MEMORIES)].filter(Boolean).join(' ');

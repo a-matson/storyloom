@@ -1,5 +1,7 @@
-import { useEffect, useRef } from 'react';
-import type { Action, AppSettings, Entity, GateReason } from '@core/model';
+import { Fragment, useEffect, useRef } from 'react';
+import { chapterStarts } from '@core/memory';
+import type { Action, AppSettings, Entity, GateReason, PlotComponents } from '@core/model';
+import { ChapterHeading } from './ChapterHeading';
 import type { OutputFlag } from '@core/trace';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { ActionBlock, PROSE } from './ActionBlock';
@@ -31,6 +33,8 @@ interface Props {
   onOpenEntity: (id: string) => void;
   /** The last output, when it answers a Do the dice rolled for: its roll shows under the Do. */
   diceOutput?: Action | undefined;
+  /** Where chapters start and their titles. */
+  plot: Pick<PlotComponents, 'sceneLog' | 'chapters'>;
 }
 
 /** The story column: player actions carry a mode pill, AI outputs are plain prose, the last output gets the tools. */
@@ -53,6 +57,7 @@ export function StoryView({
   present,
   onOpenEntity,
   diceOutput,
+  plot,
 }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
   // Follow the newest text: the compiler re-renders this view only when the story, stream or turn state changes.
@@ -62,31 +67,34 @@ export function StoryView({
 
   const lastIdx = actions.length - 1;
   const shown = retrying ? actions.slice(0, lastIdx) : actions;
+  const starts = chapterStarts(plot);
   return (
     <div className="flex grow justify-center overflow-y-auto px-10 pt-8 pb-6 max-sm:px-[18px] max-sm:pt-5 max-sm:pb-0">
-      {/* The id lets the entity drawer scroll to an action: this column's children are the actions in order. */}
+      {/* The id lets the entity drawer scroll to an action: this column's children, headings aside, are the actions in order. */}
       <div id="story" className="flex w-full max-w-story flex-col gap-[22px] font-prose text-(length:--prose-size) leading-(--prose-leading)">
         {shown.map((a, i) => (
-          <ActionBlock
-            key={a.id}
-            action={a}
-            adventureId={adventureId}
-            isLast={i === lastIdx}
-            busy={busy}
-            pendingImages={pendingImages}
-            director={directorIds.includes(a.id)}
-            api={api}
-            speech={speech}
-            onViewContext={onViewContext}
-            onViewTrace={onViewTrace}
-            contextSummary={contextSummary}
-            flag={i === lastIdx ? flag : undefined}
-            rerolled={i === lastIdx ? rerolled : undefined}
-            cast={cast}
-            present={actions[i - 1]?.type === 'say' ? present : undefined}
-            onOpenEntity={onOpenEntity}
-            diceOutput={i === lastIdx - 1 ? diceOutput : undefined}
-          />
+          <Fragment key={a.id}>
+            <ChapterHeading starts={starts} at={i} stored={plot.chapters} api={api} />
+            <ActionBlock
+              action={a}
+              adventureId={adventureId}
+              isLast={i === lastIdx}
+              busy={busy}
+              pendingImages={pendingImages}
+              director={directorIds.includes(a.id)}
+              api={api}
+              speech={speech}
+              onViewContext={onViewContext}
+              onViewTrace={onViewTrace}
+              contextSummary={contextSummary}
+              flag={i === lastIdx ? flag : undefined}
+              rerolled={i === lastIdx ? rerolled : undefined}
+              cast={cast}
+              present={actions[i - 1]?.type === 'say' ? present : undefined}
+              onOpenEntity={onOpenEntity}
+              diceOutput={i === lastIdx - 1 ? diceOutput : undefined}
+            />
+          </Fragment>
         ))}
         {/* In the action grid, so the stream starts at the same left edge as the finished prose. */}
         {streaming !== '' && (

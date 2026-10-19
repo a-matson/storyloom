@@ -8,8 +8,8 @@ import { SectionLabel } from '@ui/components/ui/section-label';
 
 export type Update = (patch: Partial<Entity>) => void;
 
-/** Bring an action into view; the story column's children are the actions in order. */
-export const showAction = (index: number) => document.getElementById('story')?.children[index]?.scrollIntoView({ block: 'center' });
+/** Bring an action into view; the story column's children, chapter headings aside, are the actions in order. */
+export const showAction = (index: number) => document.querySelectorAll('#story > :not([data-chapter])')[index]?.scrollIntoView({ block: 'center' });
 
 type Edits = Pick<ReturnType<typeof entityEdits>, 'setReference' | 'clearReference' | 'unfreeze' | 'portraitFromReference'>;
 
