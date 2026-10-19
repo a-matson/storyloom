@@ -54,6 +54,15 @@ describe('a beat turn', () => {
     expect(prompts.at(-1)?.endsWith(CUE)).toBe(false);
   });
 
+  it('a Retry of a complication re-sends its deck cue', async () => {
+    const { adventure, log, deps, prompts } = setup();
+    const cue = 'The weather turns: ';
+    await collect(runTurn(adventure, log, { type: 'continue', text: '', cue }, deps));
+    await collect(retryLast(adventure, log, deps));
+    expect(prompts.at(-1)?.endsWith(cue)).toBe(true);
+    expect(actionText(log.last!).startsWith(cue)).toBe(true);
+  });
+
   it('without a cue the prompt is the one prepareContext renders, byte for byte', async () => {
     const { adventure, log, deps, prompts } = setup();
     const expected = await prepareContext(adventure, log.actions, deps);

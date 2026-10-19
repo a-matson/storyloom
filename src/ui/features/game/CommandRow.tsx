@@ -34,6 +34,7 @@ const COMMANDS: Record<Command, (api: GameApi, text: string) => Promise<void>> =
   time: setTime,
   travel: travelTo,
   beat,
+  complicate: (api) => import('@app/session/beat').then((m) => m.complicate(api)),
 };
 
 const chip =
@@ -76,7 +77,7 @@ export function CommandRow({ busy, canRetry, canReroll = false, canErase, canBea
     if (busy) return;
     const slash = parseSlash(text);
     if (slash && slash.kind !== 'mode') {
-      if (slash.text.trim() !== '' || slash.kind === 'beat') setText('');
+      if (slash.text.trim() !== '' || slash.kind === 'beat' || slash.kind === 'complicate') setText('');
       void COMMANDS[slash.kind](api, slash.text);
       return;
     }
