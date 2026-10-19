@@ -15,6 +15,8 @@ interface Props {
   /** A retry of the last output is running: its text gives way to the new one. */
   retrying: boolean;
   pendingImages: readonly string[];
+  /** Actions the director played this session. */
+  directorIds: readonly string[];
   api: GameApi;
   speech: AppSettings['speech'];
   onViewContext: () => void;
@@ -39,6 +41,7 @@ export function StoryView({
   busy,
   retrying,
   pendingImages,
+  directorIds,
   api,
   speech,
   onViewContext,
@@ -71,6 +74,7 @@ export function StoryView({
             isLast={i === lastIdx}
             busy={busy}
             pendingImages={pendingImages}
+            director={directorIds.includes(a.id)}
             api={api}
             speech={speech}
             onViewContext={onViewContext}

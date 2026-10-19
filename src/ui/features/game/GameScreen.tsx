@@ -105,6 +105,7 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
             busy={state.busy}
             retrying={state.retrying}
             pendingImages={state.pendingImages}
+            directorIds={state.directorIds}
             api={api}
             speech={app.speech}
             onViewContext={openContext}

@@ -9,7 +9,7 @@ export { isSpeciesClash, swapWord } from './species';
 export { tagify } from './tagify';
 export { isYouLine, playerName, YOU } from './you';
 export { andList, defaultKnownBy, newSecret, repointSecrets, secretsOf } from './secrets';
-export { matchEntity, roomsOf, sceneIds, sceneNames, withPresence } from './names';
+export { matchEntity, patchPlot, roomsOf, sceneIds, sceneNames, withPresence } from './names';
 export type { MaintenanceDeps } from './memoryJobs';
 export type { CutCounts, HelperCallLog } from './helperCall';
 /** Idle-only work, loaded on first use to keep it off the start-up bundle. */

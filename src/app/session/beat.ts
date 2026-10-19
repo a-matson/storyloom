@@ -1,4 +1,4 @@
-import { drawComplication, pickBeat } from '@core/director';
+import { directorDue, drawComplication, drawDirector, pickBeat } from '@core/director';
 import { indexAssertions } from '@core/memory';
 import type { GameSession } from './session';
 
@@ -17,4 +17,11 @@ export function complicate(host: GameSession): void {
   if (draw.warning) host.emit({ notice: draw.warning });
   if ('none' in draw) return host.emit({ notice: draw.none });
   host.submit('continue', '', draw.cue);
+}
+
+/** After a player turn: when the director is due, a cued Continue of its own, labelled `director`. */
+export function direct(host: GameSession, every: number): void {
+  if (host.getSnapshot().busy || !directorDue(host.adv, every)) return;
+  const draw = drawDirector(host.adv, indexAssertions(host.adv.assertions), every);
+  if ('cue' in draw) host.submit('continue', '', draw.cue, true);
 }
