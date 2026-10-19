@@ -37,6 +37,7 @@ export type AdventureSettings = z.output<typeof S.AdventureSettings>;
 export type ScriptState = z.output<typeof S.ScriptState>;
 export type Adventure = z.output<typeof S.Adventure>;
 export type Scenario = z.output<typeof S.Scenario>;
+export type ScenarioWorld = z.output<typeof S.ScenarioWorld>;
 export type ProviderConfig = z.output<typeof S.ProviderConfig>;
 export type AppSettings = z.output<typeof S.AppSettings>;
 export type ImagePreset = z.output<typeof S.ImagePreset>;

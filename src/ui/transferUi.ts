@@ -39,6 +39,14 @@ export async function downloadAdventureJson(a: Adventure): Promise<void> {
   downloadText(`${safeName(a.title)}.storyloom.json`, (await transfer()).exportAdventureJson(a));
 }
 
+/** A copy with fresh ids, so the scenario's cards and entities never share an id with the adventure's. */
+export async function saveAsScenario(a: Adventure): Promise<Scenario> {
+  const [{ renumberScenario, scenarioFromAdventure }, { storage }] = await Promise.all([transfer(), import('@app/services')]);
+  const s = renumberScenario(scenarioFromAdventure(a));
+  await storage.putScenario(s);
+  return s;
+}
+
 export async function downloadAdventureText(a: Adventure): Promise<void> {
   downloadText(`${safeName(a.title)}.txt`, (await transfer()).exportAdventureText(a), 'text/plain');
 }

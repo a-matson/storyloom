@@ -1,8 +1,14 @@
 import { z } from 'zod/mini';
 import { PlotComponents, ScenarioScripts } from './adventure';
+import { Assertion } from './assertion';
 import { StoryCard } from './card';
+import { Entity } from './entity';
+import { Rule } from './rule';
 
 export const ScenarioType = z.enum(['story', 'characterCreator', 'multipleChoice']);
+
+/** What a saved adventure's world carries into new ones (`worldOf`); one story's play (states, events, effects) stays behind. */
+export const ScenarioWorld = z.object({ entities: z.array(Entity), assertions: z.array(Assertion), rules: z.array(Rule) });
 
 export const Scenario = z.object({
   id: z.string(),
@@ -18,6 +24,7 @@ export const Scenario = z.object({
   plot: PlotComponents,
   storyCards: z.array(StoryCard),
   scripts: z.optional(ScenarioScripts),
+  world: z.optional(ScenarioWorld),
   /** Multiple choice: child scenarios, each a full scenario. */
   get options() {
     return z.optional(z.array(Scenario));

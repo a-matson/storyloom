@@ -1,7 +1,15 @@
 import type { ReactNode } from 'react';
 import type { Adventure } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
-import { downloadAdventureJson, downloadAdventureText, downloadStoryCards, downloadTraces, importStoryCardsFromFile, pickFile } from '@ui/transferUi';
+import {
+  downloadAdventureJson,
+  downloadAdventureText,
+  downloadStoryCards,
+  downloadTraces,
+  importStoryCardsFromFile,
+  pickFile,
+  saveAsScenario,
+} from '@ui/transferUi';
 import { CoverPicker } from '@ui/components/CoverPicker';
 import { Button } from '@ui/components/ui/button';
 import { Input } from '@ui/components/ui/field';
@@ -95,6 +103,14 @@ export function DetailsTab({ adventure, api }: { adventure: Adventure; api: Game
         <Button onClick={() => void downloadAdventureJson(adventure).catch(fail)}>JSON (full backup)</Button>
         <Button onClick={() => void downloadAdventureText(adventure).catch(fail)}>Plain text</Button>
         <Button onClick={() => void downloadTraces(adventure).catch(fail)}>Turn traces (JSONL)</Button>
+      </Group>
+      <Group
+        title="Reuse the world"
+        note="A new scenario in the Library with this opening, the cards, the people and places, and the confirmed rules. What happened in this story stays here."
+      >
+        <Button onClick={() => void saveAsScenario(adventure).then((s) => alert(`Saved "${s.title || 'Untitled'}" to the Library.`), fail)}>
+          Save as scenario
+        </Button>
       </Group>
     </>
   );
