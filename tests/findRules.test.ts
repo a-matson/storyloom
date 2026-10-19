@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findRules, findRulesPrompt } from '@core/memory/findRules';
+import { findRules, findRulesPrompt, rulesFromPlayer, statesWorldFact } from '@core/memory/findRules';
 import type { Adventure, LegacyEntity, Rule } from '@core/model';
 import type { CompletionRequest } from '@core/ports';
 import { makeAdventure } from './fixtures/adventure';
@@ -50,6 +50,15 @@ describe('findRulesPrompt', () => {
   });
 });
 
+describe('statesWorldFact', () => {
+  it('passes a generic statement and not an action or a greeting', () => {
+    expect(statesWorldFact('> You give him mintnip, a known aphrodisiac for minotaurs.')).toBe(true);
+    expect(statesWorldFact('> You say "Kobolds always fear fire."')).toBe(true);
+    expect(statesWorldFact('> I open the door.')).toBe(false);
+    expect(statesWorldFact('> You say "Hello, Mira. Are you well?"')).toBe(false);
+  });
+});
+
 describe('findRules', () => {
   it('maps a reply to proposed story rules gated on the entities they name', async () => {
     const { rules, requests } = await run(JSON.stringify({ rules: [{ text: 'Mintnip is an aphrodisiac for minotaurs.', about: ['Minotaur'] }] }));
@@ -76,6 +85,22 @@ describe('findRules', () => {
   it('makes nothing from an empty or damaged reply', async () => {
     expect((await run(JSON.stringify({ rules: [] }))).rules).toEqual([]);
     expect((await run('The minotaur blushes.')).rules).toEqual([]);
+  });
+
+  it('reads the newest player world statement once in the idle pass', async () => {
+    const adv = adventure();
+    adv.actions.push({ id: 'said', type: 'say', versions: ['> You say "Kobolds always fear fire."'], active: 0, createdAt: 9 });
+    const at = adv.actions.length - 1;
+    let calls = 0;
+    const provider = fakeProvider(async function* () {
+      calls++;
+      yield { text: '"rules": [{"text": "Kobolds fear fire.", "about": []}]}', done: true };
+    });
+    expect(await rulesFromPlayer(adv, { provider, template: 'chatml' })).toBe(1);
+    expect(adv.rules).toMatchObject([{ text: 'Kobolds fear fire.', source: 'story', status: 'proposed', fromAction: at }]);
+    expect(adv.scriptState.__rulesAt).toBe(at);
+    expect(await rulesFromPlayer(adv, { provider, template: 'chatml' })).toBe(0);
+    expect(calls).toBe(1);
   });
 
   it('keeps at most 3 rules', async () => {

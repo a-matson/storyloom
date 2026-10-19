@@ -14,6 +14,7 @@ import { refreshSummary, summaryFirst } from './summary';
 import { titleChapters } from './chapterTitle';
 import { ngramOverlap } from '../text/repetition';
 import { youLines } from './you';
+import { rulesFromPlayer } from './findRules';
 
 // For the player's entity edits, which load with these jobs.
 export { entityNamedIn, guessUnlabelled, mergeEntities } from './entities';
@@ -81,6 +82,8 @@ export interface MaintenanceReport extends CutCounts {
   rejected: Rejected[];
   /** Closed chapters given a proposed title. */
   chaptersTitled?: number;
+  /** Rules proposed from the player's own world statement. */
+  rulesProposed?: number;
 }
 
 /** A memory's text needs no embedder. */
@@ -227,6 +230,7 @@ async function maintain(adventure: Adventure, all: MaintenanceDeps, report: Main
   // Memories feed both features (auto-summary uses them to bridge gaps).
   const memoriesOn = settings.memoryBank || settings.autoSummary;
   dropUnsupported(adventure, actions);
+  report.rulesProposed = await rulesFromPlayer(adventure, deps);
   // Memory jobs filled every idle slot and the summary never ran (none in 44 actions).
   report.summaryFirst = settings.autoSummary && summaryFirst(adventure, deps.historyStart);
   // An edited range must not feed the summary its old text.
