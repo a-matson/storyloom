@@ -93,7 +93,8 @@ export function presentLine(
   const effects = current(live, 'effect')
     .filter((a) => a.seen !== false)
     .filter((a, i, all) => all.findIndex((b) => effect(b) === effect(a)) === i);
-  const rels = current(live, 'relationship');
+  // Old saves hold punctuation stances (",."): they say nothing.
+  const rels = current(live, 'relationship').filter((a) => /\p{L}/u.test(a.stance));
   const toward = (a: AssertionOf<'relationship'>) => present.find((p) => p !== e && names(p).includes(norm(a.to)));
   const toYou = rels.filter((a) => norm(a.to) === YOU);
   // `With X:` names who; a stance to you must say so.

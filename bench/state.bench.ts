@@ -28,7 +28,7 @@ import { renderTemplate } from '@core/text/templates';
 import { writeMeasurement } from './env';
 import { type GroupRow, groupsAt, scoreGroups } from './groups';
 import { mergeScore } from './merges';
-import { mergedB, parses, type Reply } from './stateReply';
+import { mergedB, parses, replyTotals, type Reply } from './stateReply';
 import { placeCard, playerRoomOk, withRoomCard } from './zones';
 import { leftRow, leftWanted, onlySpan, pickSet, sceneAt, scoreLeft, scoreRows, type LeftRow, type StateRow } from './stateScore';
 
@@ -195,41 +195,16 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     const bLine = b ? `B ${b.ms} ms ${b.stop} ${b.raw} rejected ${JSON.stringify(b.rejected)}` : '';
     console.log('state', i, `A ${a.ms} ms ${a.stop}`, bLine, '=>', scene.location, scene.zone ?? '', '|', scene.present.join(','));
   }
-  const mean = (xs: number[]) => (xs.length ? Math.round(xs.reduce((s, x) => s + x, 0) / xs.length) : 0);
-  const bs = rows.flatMap((r) => (r.b ? [r.b] : []));
   const score = {
     ...scoreRows(rows, set),
-    // The bar: ≤ 4 location strings, moves = place changes; new places decide `partOf` by ask vs by rule.
-    locations: new Set(rows.flatMap((r) => r.location ?? [])).size,
+    ...replyTotals(rows),
+    // Moves = place changes; new places decide `partOf` by ask vs by rule.
     moves,
     newPlaces,
-    cutReplies: [...rows.map((r) => r.a), ...bs].filter((x) => x.stop === 'length').length,
-    // C9: a utility model below 28/30 parsed fails the JSON bar.
-    parsedA: rows.filter((r) => r.a.parsed).length,
-    parsedB: bs.filter((x) => x.parsed).length,
-    meanMsA: mean(rows.map((r) => r.a.ms)),
     ...scoreLeft(
       rows.map((r) => r.left),
       process.env['MEASURE_ROOM'],
     ),
-    meanMsB: mean(bs.map((x) => x.ms)),
-    // M17-1's bar: helper time per turn, both reads (one call under `AB`).
-    meanMsTurn: mean(rows.map((r) => r.a.ms + (r.b?.ms ?? 0))),
-    meanPromptMsA: mean(rows.flatMap((r) => r.a.promptMs ?? [])),
-    meanPromptMsB: mean(bs.flatMap((x) => x.promptMs ?? [])),
-    meanCachedA: mean(rows.flatMap((r) => r.a.cachedTokens ?? [])),
-    meanCachedB: mean(bs.flatMap((x) => x.cachedTokens ?? [])),
-    // C8: above 20 % the next item loosens the subject rule.
-    stateAccepted: bs.reduce((s, x) => s + (x.accepted ?? 0), 0),
-    stateRejected: bs.reduce((s, x) => s + (x.rejected?.filter((y) => y.reason !== 'ungrounded').length ?? 0), 0),
-    // M17-4: proposed, not sent (the record holds sent values only); `unchanged` must not rise.
-    stateUngrounded: bs.reduce((s, x) => s + (x.rejected?.filter((y) => y.reason === 'ungrounded').length ?? 0), 0),
-    stateUnchanged: bs.reduce((s, x) => s + (x.rejected?.filter((y) => y.reason === 'unchanged').length ?? 0), 0),
-    // M18-2: a role ("the kobold") names its character, so these fall.
-    stateWrongSubject: bs.reduce((s, x) => s + (x.rejected?.filter((y) => y.reason === 'wrong-subject').length ?? 0), 0),
-    // M13-5's bar: ≤ 200 with three present.
-    maxStructured: Math.max(0, ...rows.map((r) => r.structured.tokens)),
-    maxStructuredThreePresent: Math.max(0, ...rows.filter((r) => r.present.length >= 3).map((r) => r.structured.tokens)),
     ...scoreGroups(rows),
     playerRoom,
   };
