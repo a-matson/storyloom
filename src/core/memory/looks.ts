@@ -25,6 +25,8 @@ export const SHEET_KEYS = [
   'palette',
 ] as const;
 const STATES = new Set(['wearing']);
+/** The state key of what a returning character did while away: a line for their now-line, not a value of the moment. */
+export const MEANWHILE = 'meanwhile';
 /** State keys a See shows of the moment. [provisional] */
 const SEE_STATES = ['posture', 'condition', 'mood'] as const;
 
@@ -34,11 +36,12 @@ export const rivalKey = (kind: Entity['kind'], key: string): string | undefined 
 
 /**
  * A subject's current look and state values by key, in store order, a later one over an earlier.
- * The legacy free-text look is no key, and a proposal (`seen: false`) is not current until accepted.
+ * The legacy free-text look is no key, `MEANWHILE` no value, and a proposal (`seen: false`) is not current until accepted.
  */
 export function currentStates(as: readonly Assertion[]): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const a of as) if (isCurrent(a) && a.seen !== false && (a.kind === 'state' || (a.kind === 'look' && a.key !== 'legacy'))) out[a.key] = a.value;
+  for (const a of as)
+    if (isCurrent(a) && a.seen !== false && ((a.kind === 'state' && a.key !== MEANWHILE) || (a.kind === 'look' && a.key !== 'legacy'))) out[a.key] = a.value;
   return out;
 }
 

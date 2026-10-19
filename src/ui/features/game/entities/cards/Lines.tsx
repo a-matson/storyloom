@@ -131,6 +131,25 @@ export function GoalLine({ card: c, fact: f }: { card: Card; fact: AssertionOf<'
   );
 }
 
+/** `meanwhile: …`, what a returning character did while away: a proposal until confirmed; ✕ ends it and keeps it as history. */
+export function MeanwhileLine({ card: c, fact: f }: { card: Card; fact: AssertionOf<'state'> }) {
+  return (
+    <FactLine card={c} fact={f} text={`meanwhile: ${f.value}`}>
+      {f.seen === false && (
+        <>
+          <Pill tone="see">proposal</Pill>
+          <Button className="h-7" onClick={() => c.edits.confirm(f.id)}>
+            Confirm
+          </Button>
+        </>
+      )}
+      <Button variant="ghost" className="h-7 shrink-0" aria-label="End: meanwhile" onClick={() => c.edits.endLine(f.id)}>
+        ✕
+      </Button>
+    </FactLine>
+  );
+}
+
 /** `condition — cause`; a cause with a card opens it, ✕ ends the effect. */
 export function EffectLine({ card: c, fact: f }: { card: Card; fact: AssertionOf<'effect'> }) {
   const cause = f.cause;

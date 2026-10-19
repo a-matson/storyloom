@@ -22,6 +22,7 @@ export { introduce, notePlace } from './introduce';
 export { advance, formatTime, parseTime, parseTravel, parseWait, skipEnds, travel } from './clock';
 export { endTransient } from './rest';
 export { readState } from './stateRead';
+export { readMeanwhile, returning } from './meanwhile';
 export { checkInputs, checkOutput } from './contradiction';
 export { MEMORY_SPAN } from './memoryBank';
 export { projectEntity } from './projection';
