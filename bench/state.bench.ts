@@ -29,7 +29,7 @@ import { writeMeasurement } from './env';
 import { type GroupRow, groupsAt, scoreGroups } from './groups';
 import { mergeScore } from './merges';
 import { mergedB, parses, type Reply } from './stateReply';
-import { playerRoomOk, withRoomCard } from './zones';
+import { placeCard, playerRoomOk, withRoomCard } from './zones';
 import { leftRow, leftWanted, onlySpan, pickSet, sceneAt, scoreLeft, scoreRows, type LeftRow, type StateRow } from './stateScore';
 
 // Reads A (scene) and B (state of who is there) replayed over every AI turn of a backup, scored against hand labels.
@@ -118,9 +118,9 @@ test.skipIf(!url || !backup || !READS.some((r) => r === 'A' || r === 'B'))('stat
     playerRoom += playerRoomOk(samples, scene, (r) => step(r).scene);
     const read = a.parsed?.scene;
     if (read) {
-      // As `introduce` does: an unknown location becomes a place card.
+      // As `introduce` does: an unknown location becomes a place card, a room of where you were inside it (M23-6).
       if (read.location.trim() && !knownAs(places, read.location)) {
-        places.push(mergeEntity(undefined, { name: read.location.trim(), kind: 'place', description: '' }, i));
+        places.push(placeCard(places, read.location.trim(), i, scene.location, passage));
         newPlaces.push(read.location.trim());
       }
       const r = step(read);
