@@ -50,16 +50,25 @@ export const waitFor = (host: GameSession, text: string) =>
 export const setTime = (host: GameSession, text: string) =>
   setClock(host, text, '/time evening, day 2', 'time', (jobs) => jobs.parseTime(text, host.adv.plot.scene?.time));
 
-/** `/travel the docks [alone]`: a place no card knows gets one, as a turn read's would. Never an action. */
+/**
+ * `/travel the docks [alone]`: a place no card knows gets one, as a turn read's would. Never an action.
+ * Between two places with no known way, the move still happens (the player said so) and the link is written, removable in the World tab.
+ */
 export async function travelTo(host: GameSession, text: string): Promise<void> {
   const jobs = await jobsFor(host, 'travel');
   if (!jobs) return;
   const to = jobs.parseTravel(text);
   if (!to) return unread(host, text, '/travel the docks');
+  let linked: readonly [string, string] | undefined;
   host.mutate((log, adv) => {
     const at = log.actions.length;
     jobs.notePlace(adv, to.place, at);
+    const way = jobs.linkWay(adv.entities, adv.plot.scene?.location, to.place);
+    adv.entities = way.entities;
+    linked = way.linked;
     adv.plot = jobs.travel(adv.plot, adv.entities, to.place, at, to.alone);
   });
-  host.emit({ notice: `Travelled to ${to.place}${to.alone ? ', alone' : ''}` });
+  host.emit({
+    notice: linked ? `No known way from ${linked[0]} to ${linked[1]}: linked them (World tab)` : `Travelled to ${to.place}${to.alone ? ', alone' : ''}`,
+  });
 }

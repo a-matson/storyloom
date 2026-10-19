@@ -46,6 +46,8 @@ export const Entity = z.object({
   relations: z.array(Relation),
   /** A place's id of the place it is inside (a room in a house): moving between them is no change of place. */
   partOf: z.optional(z.string()),
+  /** A place's links to other places, read both ways; `via` is what the way goes through ("the hall"). */
+  connectedTo: z.optional(z.array(z.object({ id: z.string(), via: z.optional(z.string()) }))),
   /** Action indexes. */
   firstSeen: count,
   lastSeen: count,

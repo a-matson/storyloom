@@ -4,6 +4,7 @@ import { itemsAt } from './items';
 import { knowledgeOf } from './knowledge';
 import { currentStates, isLook } from './looks';
 import { knownAs } from './names';
+import { outerGraph } from './places';
 import { placeAt } from './rooms';
 import { standing } from './standing';
 import { YOU } from './you';
@@ -88,12 +89,18 @@ function placeEntry(adv: Adventure, ix: AssertionIndex, events: AssertionOf<'eve
   const rooms = places.filter((x) => x.partOf === p.id).map((x) => x.name);
   const visitors = [...visitorsOf(adv, places, p)].map(name);
   const items = itemsAt(adv.entities, ix, p.name).map((x) => x.name);
+  // The graph, as each outermost place's adjacency list.
+  const ways = outerGraph(places).edges.flatMap((w) => {
+    const other = w.a === p.id ? w.b : w.b === p.id ? w.a : undefined;
+    return other === undefined ? [] : [`${name(other)}${w.via ? ` (through ${w.via})` : ''}`];
+  });
   const base = entryOf(adv, ix, events, p);
   return {
     title: p.name,
     lines: [
       ...base.lines,
       ...(rooms.length ? [{ text: `Rooms: ${rooms.join(', ')}` }] : []),
+      ...(ways.length ? [{ text: `Ways to: ${ways.join(', ')}` }] : []),
       ...(visitors.length ? [{ text: `Been here: ${visitors.join(', ')}` }] : []),
       ...(items.length ? [{ text: `Items: ${items.join(', ')}` }] : []),
     ],
