@@ -13,6 +13,7 @@ import { causeIn, endsCurrent, grounded } from './grounding';
 import { heldBy, holderOf, YOU } from './items';
 import { currentStates, valueOf } from './looks';
 import { castLabels, norm } from './names';
+import { endTransient } from './rest';
 import { playerName } from './you';
 
 /** Actions the state read reads: the last AI output and the player line before it. [measured: 2026-10-13-state-probe-m12-dogfood P8b] */
@@ -20,6 +21,8 @@ const STATE_SPAN = 2;
 /** P8b: 5.5–6.4 s for one present character, 12 s for three; at 40, 0/24 calls hit the cap. [measured: 2026-10-15-state-s4b.json] */
 const TOKENS_EACH = 40;
 const TOKENS_CAP = 160;
+/** A read condition that ends moods and postures (not effects: sleep heals nothing). [provisional] */
+const ASLEEP = /^(asleep|sleeping)$/i;
 
 type Subject = Pick<Entity, 'id' | 'kind' | 'name' | 'aliases' | 'roles' | 'canon' | 'cardId' | 'canonKeys'>;
 /** The player, also by their name: "Rowan kneels" is theirs, not `wrong-subject`. */
@@ -136,7 +139,12 @@ export function applyChanges(adventure: Adventure, cast: readonly Subject[], cha
       propose(adventure, s, c.key, now, c.at);
       out.rejected.push({ value: `${c.who} ${c.key}: ${c.now}`, reason: 'ungrounded' });
       continue;
-    } else write(adventure, s, { [c.key]: now }, at, out);
+    } else {
+      // Asleep, not unconscious: a blow is not a night. The player asleep is the night passing for everyone.
+      if (c.key === 'condition' && ASLEEP.test(now))
+        adventure.assertions = endTransient(adventure.assertions, c.at, isYou(s) ? 'all' : [s.id], { effects: false }).assertions;
+      write(adventure, s, { [c.key]: now }, at, out);
+    }
     const others = adventure.entities.filter((e) => e.id !== s.id && (e.kind === 'item' || e.kind === 'character'));
     const cause = c.key === 'condition' ? causeIn(text, now, others) : undefined;
     if (cause?.kind === 'item' || cause?.kind === 'character') {

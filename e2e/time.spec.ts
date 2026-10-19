@@ -31,6 +31,22 @@ test('/time and /travel set the scene without an action; the next prompt carries
   await expect(context).toContainText('[Scene: The Docks · Day 2, evening · Present: Merav');
 });
 
+test('/wait 8 hours ends a read mood; the notice says so', async ({ page }) => {
+  await openSeededAdventure(page, 3, undefined, {
+    scene: { location: 'Old Well', present: ['Merav'] },
+    assertions: [{ id: 'as_mood', subject: 'ent_merav', producer: 'turn', at: 1, basis: 'stated', since: 1, kind: 'state', key: 'mood', value: 'furious' }],
+  });
+  await page.getByRole('button', { name: /^World/ }).click();
+  const cast = page.getByRole('list', { name: 'Cast' });
+  await expect(cast).toContainText('furious');
+
+  const input = page.getByRole('textbox', { name: 'Take a turn' });
+  await input.fill('/wait 8 hours');
+  await input.press('Enter');
+  await expect(page.getByText('Now Day 1, afternoon, moods and postures reset')).toBeVisible();
+  await expect(cast).not.toContainText('furious');
+});
+
 test('/travel to a room of this place sets your room; alone, the company stays behind', async ({ page }) => {
   await openSeededAdventure(page, 3, undefined, {
     scene: { location: 'Old Well', present: ['Merav'] },
