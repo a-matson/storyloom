@@ -1,9 +1,17 @@
 import { mergeEntity } from '@core/memory/entities';
+import { placeAt, roomOf } from '@core/memory/rooms';
 import type { Entity, Scene } from '@core/model/types';
 import type { SceneRead } from '@core/schema/extraction';
 
 /** `MEASURE_ROOM=basement` scores rooms (M21-1); it also cards that room inside the start place, as a player who answered the inside-ask has it (M22-3). */
 const ROOM = process.env['MEASURE_ROOM'];
+
+/** As `notePlace`: a card for the new place `name`, filed under where the scene was (`was`) when `roomOf` reads it as a room there (M23-6). */
+export const placeCard = (places: readonly Entity[], name: string, at: number, was: string | undefined, passage: string): Entity => {
+  const inside = placeAt(places, was);
+  const room = inside && roomOf(name, passage, inside, places);
+  return { ...mergeEntity(undefined, { name, kind: 'place', description: '' }, at), ...(room && { partOf: room.id }) };
+};
 
 export const withRoomCard = (places: Entity[]): Entity[] => {
   const start = places[0];

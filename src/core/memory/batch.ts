@@ -19,6 +19,7 @@ import type { MaintenanceDeps } from './memoryJobs';
 import { indexAssertions } from './assertionIndex';
 import { castLabels, namesOf, words } from './names';
 import { acceptRoles } from './roles';
+import { fileRooms } from './rooms';
 import { foldEvents } from './events';
 
 /** `cut`: the reply ran to its cap inside `entities`; one cut in `refersTo` or `events` lost roles or events only. */
@@ -115,7 +116,9 @@ export async function updateEntities(adventure: Adventure, range: MemoryRange, d
   const reply = passage ? await extractFromPassage(passage, known, [...byLabel.keys()].slice(0, MAX_REFERS), deps) : null;
   if (!reply) return { touched: 0 };
   const log: FoldLog = { proposed: 0, rejected: [] };
+  const before = adventure.entities;
   const touched = foldEntities(adventure, reply.entities, passage, range, { twice: true, log });
+  fileRooms(adventure, before, passage, range.toAction);
   foldEvents(adventure, reply.events, range, byLabel, (entity, value) => log.rejected.push({ entity, value, reason: 'event-rejected', passageRange: range }));
   adventure.entities = acceptRoles(
     adventure.entities,

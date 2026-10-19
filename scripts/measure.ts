@@ -11,6 +11,7 @@
  *   memory-replay <url> <backup> <from-to> [label] [samples]  the memory for one action range of a backup, written [samples] times (default 5)
  *   state <url> <backup> [label] [labels-set]  scene and state reads over every AI turn of a backup, scored against bench/stateLabels.json
  *   duplicates <backup> [label]  near-duplicate card proposals over the stored cards by first sighting, and the cards after accepting (M23-6), no model
+ *   places <backup> [label]  each place at its first sighting through the room rule (M23-6); top-level count, no model
  *   probe <url> <backup> <at> [label] [samples]  the reply to player action <at>, drawn [samples] times (default 3); graded by hand
  *   redact <backup> [label]  secret cuts in the prompt before every AI output (MEASURE_SECRET as for probe), no model
  *   voice <url> <backup> <batch.json> [label] [samples]  say turns replayed without and with the batch's voices; top speakers' lines, rated by hand
@@ -59,6 +60,10 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
   },
   duplicates: {
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/duplicates'],
+    env: { MEASURE_BACKUP: a, MEASURE_LABEL: b },
+  },
+  places: {
+    cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/places'],
     env: { MEASURE_BACKUP: a, MEASURE_LABEL: b },
   },
   state: {

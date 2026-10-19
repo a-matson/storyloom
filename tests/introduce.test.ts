@@ -237,13 +237,13 @@ describe('introduce', () => {
     });
 
     it('makes a place card for an unknown location and asks whether it is inside the previous place', async () => {
-      const { adv, deps } = sceneOnly('You climb to the loft.', { ...at, location: 'the loft' });
+      const { adv, deps } = sceneOnly('You step onto the jetty.', { ...at, location: 'the jetty' });
       const ferry = mergeEntity(undefined, { name: 'the ferry', kind: 'place', description: '' }, 0);
       adv.entities.push(ferry);
       adv.plot.scene = { location: 'the ferry', present: [] };
       await introduce(adv, deps);
-      expect(adv.entities.map((e) => e.name)).toEqual(['Tamsin', 'the ferry', 'the loft']);
-      expect(adv.scriptState.__placeAsk).toEqual({ place: 'the loft', inside: 'the ferry' });
+      expect(adv.entities.map((e) => e.name)).toEqual(['Tamsin', 'the ferry', 'the jetty']);
+      expect(adv.scriptState.__placeAsk).toEqual({ place: 'the jetty', inside: 'the ferry' });
     });
 
     it('comes with the cards when there are new names, which it resolves to', async () => {
