@@ -1,4 +1,5 @@
 import { cueBeat } from '../director/beats';
+import { cueCard, deckOf } from '../director/deck';
 import type { ActionLog } from '../log/actionLog';
 import { actionText, type Adventure, type TurnTrace } from '../model/types';
 import { formatPlayerInput } from '../text/formatting';
@@ -133,11 +134,13 @@ export function retryLast(
         return;
       }
       run.actionId = last.id;
-      // A beat's retry plays the same beat: the cue is read back from the output's opening.
-      const cue = cueBeat(
-        actionText(last),
-        adventure.entities.filter((e) => e.kind === 'character'),
-      )?.cue;
+      // A beat's or complication's retry plays the same one: the cue is read back from the output's opening.
+      const lastText = actionText(last);
+      const cue =
+        cueBeat(
+          lastText,
+          adventure.entities.filter((e) => e.kind === 'character'),
+        )?.cue ?? cueCard(lastText, deckOf(adventure).deck)?.cue;
       const prepared = withCue(await prepareContext(adventure, log.actions.slice(0, -1), deps, run.scriptLogs, note, reroll ? last.versions.length : 0), cue);
       if ('stopped' in prepared) {
         yield { type: 'stopped', turnId, reason: prepared.stopped };
