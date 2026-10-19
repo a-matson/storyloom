@@ -7,7 +7,7 @@ export { linkCards } from './canon';
 export { isComplete, nextQuestions, REQUIRED, statusOf, type SheetKey } from './sheet';
 export { isSpeciesClash, swapWord } from './species';
 export { tagify } from './tagify';
-export { standing, type Standing } from './standing';
+export { standing } from './standing';
 export { isYouLine, playerName, YOU } from './you';
 export { andList, defaultKnownBy, newSecret, repointSecrets, secretsOf } from './secrets';
 export { matchEntity, patchPlot, roomsOf, sceneIds, sceneNames, withPresence } from './names';
