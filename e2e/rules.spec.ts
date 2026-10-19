@@ -72,3 +72,24 @@ test('/rule adds a rule; a gate on an absent place takes it out of the prompt', 
   context = await rawPrompt(page);
   await expect(context.getByText('[Rules:')).toHaveCount(0);
 });
+
+test('find rules in the last passage proposes a rule the player confirms', async ({ page }) => {
+  const UTILITY = 'http://localhost:9997';
+  await page.route(`${UTILITY}/**`, async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/health') return route.fulfill({ json: { status: 'ok' } });
+    if (path === '/props') return route.fulfill({ json: { model_path: '/models/qwen-3b.gguf', total_slots: 1 } });
+    if (path !== '/completion') return route.fulfill({ status: 404, json: {} });
+    const { prompt } = route.request().postDataJSON() as { prompt: string };
+    const content = prompt.includes('standing rules') ? JSON.stringify({ rules: [{ text: 'Kobolds fear fire.', about: [] }] }) : 'The road bends.';
+    return route.fulfill({ contentType: 'text/event-stream', body: `data: ${JSON.stringify({ content, stop: true })}\n\n` });
+  });
+  await openSeededAdventure(page, 3, undefined, { utility: `${UTILITY}/` });
+
+  await page.getByRole('button', { name: 'Rules · 0' }).click();
+  await page.getByRole('button', { name: 'Find rules in the last passage' }).click();
+  await expect(page.getByText('Found 1 rule: confirm them in Rules')).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Rule text' })).toHaveValue('Kobolds fear fire.');
+  await page.getByRole('button', { name: 'Confirm' }).click();
+  await expect(page.getByRole('button', { name: 'Confirm' })).toHaveCount(0);
+});

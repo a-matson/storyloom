@@ -28,6 +28,7 @@ export { MEMORY_SPAN } from './memoryBank';
 export { projectEntity } from './projection';
 export { codexMarkdown, compileCodex, filterCodex } from './codex';
 export { knowledgeOf } from './knowledge';
+export { findRules } from './findRules';
 export { link, linkWay, repointLinks, unlink } from './places';
 
 /**

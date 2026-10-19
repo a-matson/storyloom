@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { makeItem, pinFact } from '@app/session/correct';
-import { addRule } from '@app/session/rules';
+import { addRule, findRulesIn } from '@app/session/rules';
 import type { Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
@@ -67,6 +67,18 @@ export function SelectionBar({ api, entities }: { api: GameApi; entities: readon
         }}
       >
         Pin as rule
+      </Button>
+      <Button
+        className="h-8"
+        onClick={() => {
+          void findRulesIn(
+            api,
+            api.adv.actions.findIndex((a) => a.id === sel.actionId),
+          );
+          done();
+        }}
+      >
+        Find rules
       </Button>
       {characters.length > 0 && (
         <Select
