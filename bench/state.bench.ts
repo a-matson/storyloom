@@ -27,6 +27,7 @@ import type { RenderedSections } from '@core/context/types';
 import { renderTemplate } from '@core/text/templates';
 import { writeMeasurement } from './env';
 import { type GroupRow, groupsAt, scoreGroups } from './groups';
+import { mergeScore } from './merges';
 import { mergedB, parses, type Reply } from './stateReply';
 import { playerRoomOk, withRoomCard } from './zones';
 import { leftRow, leftWanted, onlySpan, pickSet, sceneAt, scoreLeft, scoreRows, type LeftRow, type StateRow } from './stateScore';
@@ -263,7 +264,6 @@ test.skipIf(!url || !backup || !READS.includes('C'))('batch call over a backup',
     replies.push({ range, ...call, identities, events, voices, rejected: c?.rejected });
     console.log('batch', range, `${c?.ms} ms ${c?.generatedTokens} tokens ${c?.stopReason}`, JSON.stringify(identities), JSON.stringify(c?.rejected));
   }
-  const proposals = (work.scriptState.__aliasProposals ?? []).map((p) => ({ name: p.name, of: work.entities.find((e) => e.id === p.of)?.name }));
   const score = {
     calls: replies.length,
     cut: replies.filter((r) => r.stop === 'length').length,
@@ -278,7 +278,7 @@ test.skipIf(!url || !backup || !READS.includes('C'))('batch call over a backup',
     // M23-2: the player's name read as an entity, proposed on `you` instead of a card.
     routedToYou: work.assertions.filter((a) => a.subject === 'you' && a.seen === false).length,
     roles: Object.fromEntries(work.entities.map((e) => [e.name, e.roles ?? []])),
-    proposals,
+    ...mergeScore(work),
     // M18-4: an identity whose species the looks contradict.
     species: work.assertions.flatMap((a) =>
       a.kind === 'conflict' ? [`${work.entities.find((e) => e.id === a.subject)?.name}:${a.claimed} vs ${a.canon}`] : [],

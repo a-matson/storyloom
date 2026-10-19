@@ -5,6 +5,7 @@ import { mergeAssertions, type Rest } from './assertionWrites';
 import { bodiesFromPlayer } from './bodyPlan';
 import { cardKind, linkCards } from './canon';
 import { COMMON_WORDS } from './commonWords';
+import { cardProposals } from './duplicates';
 import { speciesFromPlayer } from './declared';
 import { knownAs, matchEntity, mergeEntity, namedInPassage } from './entities';
 import { sourceIn, type Source } from './invalidate';
@@ -156,8 +157,8 @@ function proposeOnYou(adventure: Adventure, incoming: readonly Incoming[], range
  * A name seen once is held (`scriptState.__pending`) and folded, with its own range, once a card
  * it resolves to exists: its first facts were lost before. A new name a known one's spelling
  * (`spellingOf`) or that the passage gives as its other name (`renameCues`) is held too, and proposed as its
- * alias (`__aliasProposals`) for the player to accept; a cue's name is proposed even if the reply left it out.
- * A fact the description or a state already says is dropped. The player's name is never a card: its
+ * alias (`__aliasProposals`) for the player to accept; a cue's name is proposed even if the reply left it out, and a
+ * changed card's near-duplicate (`cardProposals`). A fact the description or a state already says is dropped. The player's name is never a card: its
  * reads land on `you` as proposals (`seen: false`), logged as `player`. `log` counts the trait facts proposed
  * and records every value a guard dropped. Returns how many entities changed or were proposed.
  */
@@ -227,7 +228,7 @@ export function foldEntities(
     assertions = [...assertions.filter((a) => a.subject !== merged.id), ...mine];
   }
   // A proposal counts: the scheduler saves only on a change.
-  const asked = proposals.length - (adventure.scriptState.__aliasProposals?.length ?? 0);
+  const asked = proposals.push(...cardProposals(entities, adventure.entities, proposals, at)) - (adventure.scriptState.__aliasProposals?.length ?? 0);
   adventure.assertions = assertions;
   let touched = entities.filter((x, i) => x !== adventure.entities[i]).length + asked + proposeOnYou(adventure, incoming, range, opts);
   adventure.entities = entities;

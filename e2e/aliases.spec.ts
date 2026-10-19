@@ -38,3 +38,21 @@ test('a name the story gives a known one is proposed as an alias, and Yes adds i
   await open(page, 'The gate creaks.\n\nVorthak, known as Old Red, grins at you.', 'Old Red', { id: 'ent_vorthak', name: 'Vorthak', description: 'An orc.' });
   await accept(page, 'Old Red', 'Vorthak');
 });
+
+test('a near-duplicate card is proposed, and Yes merges it into the first', async ({ page }) => {
+  await open(page, 'The bell tolls.\n\n"Hold the lamp," Father Caradoc says.', 'Father Caradoc', {
+    id: 'ent_reed',
+    name: 'Caradoc Reed',
+    description: 'A priest.',
+  });
+  const sidebar = page.getByRole('complementary');
+  await expect(sidebar.getByText('Father Caradoc = Caradoc Reed? Merge')).toBeVisible();
+  await expect(sidebar.getByRole('button', { name: 'Open Father Caradoc' })).toBeVisible();
+  await sidebar.getByRole('button', { name: 'Yes' }).click();
+  await expect(sidebar.getByRole('button', { name: 'Open Father Caradoc' })).toHaveCount(0);
+  await expect(sidebar.getByText('Father Caradoc = Caradoc Reed? Merge')).toHaveCount(0);
+  await sidebar.getByRole('button', { name: 'Open Caradoc Reed' }).click();
+  await expect(page.getByRole('dialog', { name: 'Caradoc Reed' }).getByRole('textbox', { name: 'Also called (comma-separated)' })).toHaveValue(
+    'Father Caradoc',
+  );
+});
