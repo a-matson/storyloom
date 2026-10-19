@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { isCurrentDice } from '@core/dice';
 import { sceneNames } from '@core/memory';
 import { actionText, type Action, type Adventure, type AppSettings } from '@core/model';
@@ -30,6 +30,17 @@ interface Props {
   onAppChange: (next: AppSettings) => void;
   backendLabel: string;
   onExit: () => void;
+}
+
+// Lazy: it shows after a long break only, so it stays off the start-up bundle.
+const Recap = lazy(async () => (await import('./Recap')).loadRecapCard());
+
+function LazyRecap({ adventure }: { adventure: Adventure }) {
+  return (
+    <Suspense fallback={null}>
+      <Recap adventure={adventure} />
+    </Suspense>
+  );
 }
 
 /** A card opened from a face in the story; the sidebar lists open their own. */
@@ -120,6 +131,7 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
           />
           {!state.busy && <SelectionBar api={api} entities={adv.entities} />}
           {!state.busy && adv.actions.length <= 1 && <CanonHint adventure={adv} api={api} />}
+          <LazyRecap adventure={adv} />
           <CommandRow
             busy={state.busy}
             canRetry={last?.type === 'continue'}
