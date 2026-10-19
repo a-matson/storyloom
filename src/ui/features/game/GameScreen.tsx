@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 import { isCurrentDice } from '@core/dice';
 import { sceneNames } from '@core/memory';
-import { actionText, type Action, type Adventure, type AppSettings } from '@core/model';
+import { actionText, type Action, type Adventure, type AdventureSettings, type AppSettings } from '@core/model';
 import { outputFlag, type OutputFlag } from '@core/trace';
 import type { GameSnapshot } from '@app/session';
 import { tokenizer } from '@app/services';
@@ -10,6 +10,7 @@ import { useGameSession, type GameApi } from '@ui/hooks/useGameSession';
 import { useImageBlob } from '@ui/hooks/useImageBlob';
 import { useReadAloud } from '@ui/hooks/useSpeech';
 import { Toast } from '@ui/components/ui/toast';
+import { repeatedLately } from './sidebar/NeverWrite';
 import { Sidebar } from './sidebar/Sidebar';
 import { CanonHint } from './canon/CanonButton';
 import { ContextViewer } from './context/ContextViewer';
@@ -56,10 +57,11 @@ function Notices({ error, notice, api }: { error: string | null; notice: string 
 }
 
 /** The contradiction check's verdict wins; otherwise the cheap checks on the last output's text. */
-function lastFlag(contradiction: { actionId: string; fact: string } | null, last: Action | undefined, banned: readonly string[]): OutputFlag | undefined {
+function lastFlag(contradiction: { actionId: string; fact: string } | null, actions: readonly Action[], settings: AdventureSettings): OutputFlag | undefined {
+  const last = actions.at(-1);
   if (contradiction && contradiction.actionId === last?.id)
     return { label: `May contradict: ${contradiction.fact}`, button: 'Retry with note', note: contradiction.fact };
-  return last?.type === 'continue' ? outputFlag(actionText(last), banned) : undefined;
+  return last?.type === 'continue' ? outputFlag(actionText(last), settings.bannedPhrases, repeatedLately(settings, actions)) : undefined;
 }
 
 function Meter({ state, onOpen }: { state: GameSnapshot; onOpen: () => void }) {
@@ -122,7 +124,7 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
             onViewContext={openContext}
             onViewTrace={() => last && setTraceAction(last.id)}
             contextSummary={ctx ? `${ctx.triggeredCards.length} story cards · ${ctx.usedMemories.length} memories used` : undefined}
-            flag={lastFlag(state.contradiction, last, adv.settings.bannedPhrases)}
+            flag={lastFlag(state.contradiction, state.actions, adv.settings)}
             rerolled={state.gated?.actionId === last?.id ? state.gated?.reason : undefined}
             cast={app.speakerAvatars ? adv.entities : undefined}
             present={adv.plot.scene && sceneNames(adv.plot.scene, adv.entities).present}

@@ -129,6 +129,8 @@ export const AdventureSettings = z.object({
   contentText: z.optional(z.string()),
   /** Lines of the "Never write" box; an output containing one is flagged for a retry. Not a sampler: llama-server's string bias bans every token of a phrase. */
   bannedPhrases: z._default(z.array(z.string()), []),
+  /** Phrases repeated across recent outputs flag like banned ones; derived each render, never stored. */
+  autoBanned: z._default(z.boolean(), true),
   /** How hard the dice script's outcome bands are (`info.consequences`). */
   consequences: z._default(z.enum(['harsh', 'fair', 'none']), 'fair'),
 });
