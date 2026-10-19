@@ -77,3 +77,36 @@ test('find rules in the last passage proposes a rule the player confirms', async
   await page.getByRole('button', { name: 'Confirm' }).click();
   await expect(page.getByRole('button', { name: 'Confirm' })).toHaveCount(0);
 });
+
+test('a selection checked against the record lists the line it breaks; the drawer adds an alias', async ({ page }) => {
+  const UTILITY = 'http://localhost:9997';
+  await page.route(`${UTILITY}/**`, async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/health') return route.fulfill({ json: { status: 'ok' } });
+    if (path === '/props') return route.fulfill({ json: { model_path: '/models/qwen-3b.gguf', total_slots: 1 } });
+    if (path !== '/completion') return route.fulfill({ status: 404, json: {} });
+    const { prompt } = route.request().postDataJSON() as { prompt: string };
+    // The check breaks the first record line it is sent.
+    const fact = /Established facts:\n- (.+)/.exec(prompt)?.[1];
+    const content = fact ? JSON.stringify({ contradicts: true, fact }) : 'The road bends.';
+    return route.fulfill({ contentType: 'text/event-stream', body: `data: ${JSON.stringify({ content, stop: true })}\n\n` });
+  });
+  await openSeededAdventure(page, 3, undefined, { opening: 'Merav burns the needle map.', utility: `${UTILITY}/` });
+
+  await (await select(page, 0, 'Merav burns')).getByRole('button', { name: 'Check against the record' }).click();
+  const finding = page.getByRole('list', { name: 'Continuity check' }).getByRole('button');
+  await expect(finding).toHaveCount(1);
+  await expect(finding).toContainText(/— action \d+/);
+  await finding.click();
+  await expect(page.locator('#story [data-action-id]').first()).toBeInViewport();
+
+  await page.getByRole('button', { name: /^Characters/ }).click();
+  const open = page.getByRole('complementary').getByRole('button', { name: 'Open Merav' });
+  await open.click();
+  const aliases = page.getByRole('dialog', { name: 'Merav' }).getByRole('textbox', { name: 'Also called (comma-separated)' });
+  await aliases.fill('the well-warden, Salt Mother');
+  await aliases.blur();
+  await page.keyboard.press('Escape');
+  await open.click();
+  await expect(aliases).toHaveValue('the well-warden, Salt Mother');
+});
