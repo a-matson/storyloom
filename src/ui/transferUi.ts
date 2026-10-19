@@ -1,13 +1,14 @@
 import type { Adventure, Scenario } from '@core/model';
-import type { ImportResult } from '@app/transfer';
+import type { ImportResult, PlayerLines, StoryImage } from '@app/transfer';
 
 // Import/export is rare; load it (zip + AI Dungeon mapping) on demand.
 const transfer = () => import('@app/transfer');
 
 /** Browser helpers for download / file-picker based import-export. */
 
-export function downloadText(filename: string, text: string, mime = 'application/json'): void {
-  const blob = new Blob([text], { type: mime });
+export function downloadText(filename: string, text: string | Uint8Array, mime = 'application/json'): void {
+  // The copy narrows fflate's `ArrayBufferLike` to the `ArrayBuffer` a Blob takes.
+  const blob = new Blob([typeof text === 'string' ? text : new Uint8Array(text)], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -49,6 +50,26 @@ export async function saveAsScenario(a: Adventure): Promise<Scenario> {
 
 export async function downloadAdventureText(a: Adventure): Promise<void> {
   downloadText(`${safeName(a.title)}.txt`, (await transfer()).exportAdventureText(a), 'text/plain');
+}
+
+/** Markdown (a zip when it has pictures) or EPUB; returns how many pictures had no stored image and were left out. */
+export async function downloadStory(a: Adventure, format: 'markdown' | 'epub', playerLines: PlayerLines): Promise<number> {
+  const [t, { storage }] = await Promise.all([transfer(), import('@app/services')]);
+  const story = t.storyParts(a, playerLines);
+  const images = new Map<string, StoryImage>();
+  let missing = 0;
+  for (const id of new Set(story.chapters.flatMap((c) => c.blocks.flatMap((b) => (b.kind === 'image' ? [b.imageId] : []))))) {
+    const blob = await storage.getImage(a.id, id);
+    if (blob) images.set(id, { bytes: new Uint8Array(await blob.arrayBuffer()), type: blob.type });
+    else missing++;
+  }
+  const name = safeName(a.title, 'story');
+  if (format === 'epub') downloadText(`${name}.epub`, t.exportStoryEpub(story, images), 'application/epub+zip');
+  else {
+    const { data, ext } = t.exportStoryMarkdown(story, images);
+    downloadText(`${name}.${ext}`, data, ext === 'zip' ? 'application/zip' : 'text/markdown');
+  }
+  return missing;
 }
 
 export async function downloadTraces(a: Adventure): Promise<void> {

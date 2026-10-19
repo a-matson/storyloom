@@ -4,7 +4,9 @@ import { adventureFromData, type ImportResult } from './zip';
 
 export { exportStoryCardsJson, importStoryCardsJson } from './cards';
 export { exportAdventureJson, exportAdventureText, exportTracesJsonl } from './own';
+export { exportStoryEpub } from './epub';
 export { exportScenarioJson, importScenarioJson, renumberScenario } from './scenario';
+export { exportStoryMarkdown, storyParts, type PlayerLines, type StoryImage } from './story';
 export { scenarioFromAdventure, worldOf } from './world';
 export { importAidZip, type ImportResult } from './zip';
 
