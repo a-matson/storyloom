@@ -5,7 +5,7 @@ import * as S from '@core/schema';
 import { GATE_WINDOW, gateOutput, previousOutputs } from '@core/turn/gate';
 import { writeMeasurement } from '../../bench/env';
 import { watchIntroductions } from '../../bench/introductions';
-import { applyPreset, CLOCK, readDb, TURNS } from '../../bench/livePlay';
+import { applyDirector, applyPreset, CLOCK, everyCommand, playTurns, readDb } from '../../bench/livePlay';
 import { watchMemoryRuns } from '../../bench/memoryRuns';
 import { portraits } from '../../bench/portraits';
 
@@ -37,6 +37,8 @@ async function addCards(page: Page): Promise<void> {
   // The sidebar starts open on wide screens; the header button toggles it.
   const toggle = page.getByRole('button', { name: 'Adventure settings' });
   if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+  // The panel keeps its last tab: Gameplay after a preset or the director was set.
+  await page.getByRole('tab', { name: 'Adventure' }).click();
   await page.getByRole('button', { name: /^Story cards/ }).click();
   await page.getByRole('button', { name: '+ New' }).click();
   await page.locator('#card-name').fill('Tamsin');
@@ -80,7 +82,8 @@ async function settledDb(page: Page) {
 }
 
 test('scripted live play', async ({ page }) => {
-  test.setTimeout(60 * 60_000);
+  // 3 minutes a scripted turn (20 in an hour), plus room for command and director turns.
+  test.setTimeout(playTurns().length * 4 * 60_000);
   await page.goto('/');
   await page.getByRole('button', { name: /^llama-server/ }).click();
   await page.getByRole('textbox', { name: /Server URL/ }).fill(URL ?? '');
@@ -122,10 +125,22 @@ test('scripted live play', async ({ page }) => {
   await page.getByRole('button', { name: 'Fantasy' }).click();
   await expect(page).toHaveURL(/#\/adventure\//);
   await applyPreset(page);
+  await applyDirector(page);
+  const lastOutput = () => page.locator('#story [data-action-id]').last().innerText();
 
   // With MEASURE_CLOCK, every output in full: whether it honours the time is labelled by hand.
   const clock: { turn: number; command?: string; output: string }[] = [];
-  for (const [i, [mode, text]] of TURNS.entries()) {
+  // With MEASURE_EVERY, each command's reply: whether its cue is completed, not restated, is labelled by hand.
+  const cues: { turn: number; command: string; output: string }[] = [];
+  const turnsPlayed = playTurns();
+  for (const [i, [mode, text]] of turnsPlayed.entries()) {
+    const every = everyCommand(i);
+    if (every) {
+      const input = page.getByRole('textbox', { name: 'Take a turn' });
+      await input.fill(every);
+      await generated(page, () => input.press('Enter'));
+      cues.push({ turn: i, command: every, output: await lastOutput() });
+    }
     // A command sets the scene and writes no action: typed and sent, but not a turn.
     const command = process.env['MEASURE_CLOCK'] ? CLOCK[i] : undefined;
     if (command) {
@@ -138,8 +153,9 @@ test('scripted live play', async ({ page }) => {
     await page.getByRole('button', { name: mode, exact: true }).click();
     await page.getByRole('textbox', { name: 'Take a turn' }).pressSequentially(text, { delay: TYPE_MS / text.length });
     await generated(page, () => send(page).click());
-    if (process.env['MEASURE_CLOCK'])
-      clock.push({ turn: i, ...(command && { command }), output: await page.locator('#story [data-action-id]').last().innerText() });
+    // A director turn starts after the player's; the next turn waits for it.
+    await expect(send(page)).toBeVisible({ timeout: TURN_MS });
+    if (process.env['MEASURE_CLOCK']) clock.push({ turn: i, ...(command && { command }), output: await lastOutput() });
     if (i === 2) await addCards(page);
     if (i === 5) for (let r = 0; r < 2; r++) await generated(page, () => page.getByRole('button', { name: /^Retry( ·)?$/ }).click());
     if (i === 9) await editLast(page);
@@ -154,6 +170,15 @@ test('scripted live play', async ({ page }) => {
     db = await settledDb(page);
   }
   const actions = z.array(S.Action).parse(db.actions);
+  // The `director` label is session state, so it is read off the page before anything reloads.
+  const directed = await page
+    .locator('#story [data-action-id]')
+    .filter({ has: page.getByText('director', { exact: true }) })
+    .evaluateAll((els) => els.map((e) => e.getAttribute('data-action-id')));
+  const director = directed.map((id) => {
+    const at = actions.findIndex((a) => a.id === id);
+    return { at, after: actions[at - 1]?.type, output: actions[at]?.versions[actions[at]?.active ?? 0] };
+  });
   const text = new Map(actions.map((a) => [a.id, a.versions[a.active] ?? '']));
   // Flags still on the kept replies after the gate's one re-roll (M20-1).
   const gateLeft = actions.flatMap((a, i) => {
@@ -239,6 +264,8 @@ test('scripted live play', async ({ page }) => {
     })),
     entityPrompt,
     ...(clock.length && { clock }),
+    ...(cues.length && { cues }),
+    ...(process.env['MEASURE_DIRECTOR'] && { directorEvery: Number(process.env['MEASURE_DIRECTOR']), director }),
     ...(IMAGES && { images: IMAGES, renders, mostRendering, portraitLog, portraits: await portraits(page, entities) }),
     cards: z
       .array(S.StoryCard)
@@ -247,6 +274,6 @@ test('scripted live play', async ({ page }) => {
     storySummary: z.array(z.object({ plot: z.object({ storySummary: z.optional(z.string()) }) })).parse(db.adventures)[0]?.plot.storySummary,
   });
   console.log(`wrote ${path}`);
-  expect(turns.length).toBeGreaterThanOrEqual(TURNS.length);
+  expect(turns.length).toBeGreaterThanOrEqual(turnsPlayed.length);
   if (IMAGES) expect(mostRendering).toBe(1);
 });

@@ -16,7 +16,10 @@ export interface Finding {
  * "Check against the record": the selected text against every current assertion of each character it names,
  * one call each on slot 1. Player-run only; nothing is stored. Undefined when it did not run (busy, or failed).
  */
-export async function checkSelection(host: Pick<GameSession, 'adv' | 'getSnapshot' | 'helperModel' | 'onError'>, text: string): Promise<Finding[] | undefined> {
+// `getSnapshot` only for `busy`, so `bench/check.bench.ts` can run it without a session.
+type Host = Pick<GameSession, 'adv' | 'helperModel' | 'onError'> & { getSnapshot: () => { busy: boolean } };
+
+export async function checkSelection(host: Host, text: string): Promise<Finding[] | undefined> {
   try {
     const jobs = await loadMemoryJobs();
     if (host.getSnapshot().busy) return undefined;

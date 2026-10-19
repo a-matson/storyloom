@@ -14,6 +14,7 @@ test.skip(!URL, 'needs MEASURE_URL (a running llama-server)');
 const TURN_MS = 180_000;
 // Same seed on both sides of a before/after; MEASURE_SEED for a second seed. [provisional]
 const SEED = process.env['MEASURE_SEED'] ?? '42';
+const AUTOBANNED = process.env['MEASURE_AUTOBANNED'];
 
 const fourGrams = (text: string) => {
   const w = text.toLowerCase().match(/[a-z']+/g) ?? [];
@@ -34,6 +35,8 @@ test('repetition bench', async ({ page }) => {
   const toggle = page.getByRole('button', { name: 'Adventure settings' });
   if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
   await page.getByRole('tab', { name: 'Gameplay' }).click();
+  // `MEASURE_AUTOBANNED=0`: no repeated-phrase flags, the "before" of M30-7.
+  if (AUTOBANNED === '0') await page.getByRole('switch', { name: 'Flag repeated phrases' }).setChecked(false);
   await page.getByText('Model settings', { exact: true }).click();
   const [repeatWindow, dry] = SAMPLERS?.split(',') ?? [];
   for (const [name, value] of [
@@ -83,6 +86,7 @@ test('repetition bench', async ({ page }) => {
     url: URL,
     samplers: SAMPLERS ?? 'adventure defaults',
     seed: SEED,
+    autoBanned: AUTOBANNED !== '0',
     turns: turns.length,
     repeatedPerTurn: mean(turns.map((t) => t.repeated.length)),
     distinct4gramRatio: +(new Set(grams).size / (grams.length || 1)).toFixed(3),

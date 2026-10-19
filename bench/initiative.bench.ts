@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { test, vi } from 'vitest';
 import { LlamaServerProvider } from '@adapters/providers/llamaServer';
+import { pickBeat } from '@core/director';
+import { indexAssertions } from '@core/memory/assertionIndex';
 import type { Adventure, Assertion } from '@core/model';
 import * as S from '@core/schema';
 import { guessSpeakers } from '@core/text/speakers';
@@ -19,6 +21,8 @@ const url = process.env['MEASURE_URL'];
 const backup = process.env['MEASURE_BACKUP'];
 const LABEL = process.env['MEASURE_LABEL'] ?? 'm21-3';
 const POINTS = Number(process.env['MEASURE_POINTS'] ?? 40);
+// M26-2: `MEASURE_BEATS=4` cues every 4th point with `pickBeat`'s beat, as the Beat button does; `completed` is the hand label.
+const BEATS = Number(process.env['MEASURE_BEATS'] ?? 0);
 
 // Off in the app since this bench measured it; the goals run needs it on.
 vi.mock('@core/context/spotlight', async (orig) => ({ ...(await orig<object>()), SEND_GOALS: true }));
@@ -64,12 +68,17 @@ test.skipIf(!url || !backup)('initiative with and without goals', { timeout: 7_2
     contextSize: (await provider.health()).contextSize,
   };
   const rows: { run: 'main' | 'goals'; labelled: string[]; wants: string[]; gate: string | undefined; [k: string]: unknown }[] = [];
-  for (const i of points)
+  for (const [k, i] of points.entries())
     for (const run of ['main', 'goals'] as const) {
       const a = at(adv, i, run === 'goals' ? goals : []);
-      const prepared = await prepareContext(a, a.actions, deps);
-      if ('stopped' in prepared) throw new Error(prepared.stopped);
+      const context = await prepareContext(a, a.actions, deps);
+      if ('stopped' in context) throw new Error(context.stopped);
       const seed = 3000 + i;
+      // Seeded so both runs of a point draw the same beat.
+      const pick = BEATS && k % BEATS === 0 ? pickBeat(a, indexAssertions(a.assertions), () => (seed % 97) / 97) : undefined;
+      const cue = pick && 'cue' in pick ? pick.cue : undefined;
+      // As `runTurn`'s `withCue`: the cue ends the prompt and the reply finishes its sentence.
+      const prepared = cue ? { ...context, prompt: context.prompt + cue, cue } : context;
       const gen = generate(a, buildRequest(a, prepared, { seed }), deps);
       let next = await gen.next();
       while (!next.done) next = await gen.next();
@@ -79,7 +88,20 @@ test.skipIf(!url || !backup)('initiative with and without goals', { timeout: 7_2
       const wants = castText.split('\n').flatMap((l) => (l.includes('wants: ') ? [l.split(/[\s(:—]/)[0] ?? ''] : []));
       const gate = gateOutput(text, previousOutputs(a.actions, undefined, GATE_WINDOW), { playerType: a.actions.at(-1)?.type, thirdPerson: false });
       const labelled = [...new Set(guessSpeakers(text, present).map((s) => s.name))];
-      rows.push({ run, at: i, seed, present: present.map((e) => e.name), wants, labelled, gate, cast: castText, player: a.actions.at(-1)?.versions[0], text });
+      const beat = pick && 'cue' in pick ? { beat: pick.beat, cue, restated: text.includes(cue?.trim() ?? ''), completed: null } : {};
+      rows.push({
+        run,
+        at: i,
+        seed,
+        present: present.map((e) => e.name),
+        wants,
+        labelled,
+        gate,
+        ...beat,
+        cast: castText,
+        player: a.actions.at(-1)?.versions[0],
+        text,
+      });
       console.log(run, i, `${labelled.length}/${present.length}`, wants.join(','), gate ?? '');
     }
   const score = Object.fromEntries(
@@ -93,6 +115,8 @@ test.skipIf(!url || !backup)('initiative with and without goals', { timeout: 7_2
           per10: (labelled / mine.length) * 10,
           wantsSent: mine.reduce((n, r) => n + r.wants.length, 0),
           agency: mine.filter((r) => r.gate === 'agency').length,
+          beats: mine.filter((r) => r['beat'] !== undefined).length,
+          distinctBeats: new Set(mine.flatMap((r) => r['beat'] ?? [])).size,
         },
       ];
     }),
