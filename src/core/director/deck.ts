@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/mini';
 import { actionText, type Action, type Adventure } from '../model';
 import { genreKeys } from './beats';
 
@@ -57,7 +57,8 @@ const GENRE_DECK: Readonly<Record<string, readonly string[]>> = {
   ],
 };
 
-const ScriptDeck = z.array(z.union([z.string().min(1), z.object({ cue: z.string().min(1), cooldown: z.optional(z.number().int().nonnegative()) })]));
+const Cue = z.string().check(z.minLength(1));
+const ScriptDeck = z.array(z.union([Cue, z.object({ cue: Cue, cooldown: z.optional(z.int().check(z.gte(0))) })]));
 
 type Deckable = Pick<Adventure, 'tags' | 'title' | 'scriptState'>;
 
