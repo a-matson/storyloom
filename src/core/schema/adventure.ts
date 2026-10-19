@@ -10,6 +10,9 @@ import { AdventureSettings } from './settings';
 /** Six parts of a day, not an hour clock: the model writes prose, not timestamps. [provisional] */
 export const DayPart = z.enum(['dawn', 'morning', 'midday', 'afternoon', 'evening', 'night']);
 
+/** How hot the scene runs: it filters beats, shortens the length hint and raises dice DCs. [provisional] */
+export const Tension = z.enum(['quiet', 'tense', 'action']);
+
 /** Where the story is now: maintained by memory jobs from the helper call, player-editable. */
 export const Scene = z.object({
   /** A place's entity id, else the place as written (`sceneIds`). */
@@ -25,6 +28,8 @@ export const Scene = z.object({
   /** Set only by the player (`/wait`, `/time`, the Scene fields); no read writes it. */
   time: z.optional(z.object({ day: z.int(), part: DayPart })),
   weather: z.optional(z.string()),
+  /** Set only by the player (`/tension`, the Scene fields) or a drawn complication; no read writes it. */
+  tension: z.optional(Tension),
   /** Named items there, as written. */
   items: z.optional(z.array(z.string())),
   /** Action index of the last location change. */

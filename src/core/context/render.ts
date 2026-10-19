@@ -43,6 +43,7 @@ export function renderScene(stored: Scene | undefined, entities: readonly Entity
     here.length ? `Here: ${here.join(', ')}` : '',
     held.length ? `You hold: ${held.join(', ')}` : '',
     scene?.weather?.trim() ? cap(scene.weather.trim()) : '',
+    scene?.tension ? `Tension: ${scene.tension}` : '',
   ]
     .filter(Boolean)
     .join(' · ');

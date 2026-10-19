@@ -35,6 +35,7 @@ const COMMANDS: Record<Command, (api: GameApi, text: string) => Promise<void>> =
   travel: travelTo,
   beat,
   complicate: (api) => import('@app/session/beat').then((m) => m.complicate(api)),
+  tension: (api, text) => import('@app/session/beat').then((m) => m.setTension(api, text)),
 };
 
 const chip =

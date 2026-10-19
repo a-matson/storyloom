@@ -55,6 +55,7 @@ export interface ScriptScene {
   present: string[];
   groups: { name: string; count?: number | undefined }[];
   time?: { day: number; part: string } | undefined;
+  tension?: string | undefined;
 }
 
 /** `state.events`: the latest event assertions, `who` as names (`you` stays `you`). */
@@ -73,6 +74,8 @@ export interface ScriptInfo {
   retry?: number | undefined;
   /** The adventure's consequences setting, for the dice script. */
   consequences?: 'harsh' | 'fair' | 'none' | undefined;
+  /** The scene's tension, on every hook, when set: the dice script raises its DCs by it. */
+  tension?: string | undefined;
   /** onModelContext only */
   maxChars?: number;
   memoryLength?: number;

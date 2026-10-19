@@ -26,7 +26,7 @@ function outcome(r, dc) {
 }`;
 
 /** `info.consequences`: fair is the old bands; harsh moves both up 3; none never fails badly. [provisional] */
-const LIBRARY = `${ROLL}
+const library = (dc: string) => `${ROLL}
 function outcome(r, dc, level) {
   if (level === 'none') return r >= dc + 5 ? 'succeeds with flair' : r >= dc - 5 ? 'succeeds' : 'succeeds at a cost';
   var d = level === 'harsh' ? dc + 3 : dc;
@@ -34,11 +34,16 @@ function outcome(r, dc, level) {
 }
 function rolled(seed, text) {
   var r = roll(seed);
-  var dc = difficulty(text);
+  var dc = ${dc};
   var o = outcome(r, dc, info.consequences);
   log('d20 ' + r + ' vs ' + dc + ' · ' + o);
   return '[Outcome: ' + o + ']';
 }`;
+
+/** `info.tension`: DC +2 when tense, +4 in action. [provisional] */
+const LIBRARY = library(`difficulty(text) + (info.tension === 'action' ? 4 : info.tension === 'tense' ? 2 : 0)`);
+/** The M24-2 library, before tension; saves still hold it. */
+const CONSEQUENCE_LIBRARY = library('difficulty(text)');
 
 const INPUT = `const modifier = (text) => {
   const front = info.actionType === 'do' ? rolled(info.actionCount + 1, text) : '';
@@ -96,10 +101,13 @@ export const PREVIOUS_DICE: Scripts[] = [LEGACY_DICE, { library: OLD_LIBRARY, in
 
 const same = (a: Scripts, b: Scripts) => a.library === b.library && a.input === b.input && a.context === b.context && a.output === b.output;
 
-export const isDiceScripts = (s: Adventure['scripts']) => s !== undefined && [DICE_SCRIPTS, ...PREVIOUS_DICE].some((d) => same(s, d));
+/** The M24-2 scripts: Re-roll and consequences work, tension does not raise DCs until the dice are switched off and on. */
+export const CONSEQUENCE_DICE: Scripts = { ...DICE_SCRIPTS, library: CONSEQUENCE_LIBRARY };
+
+export const isDiceScripts = (s: Adventure['scripts']) => s !== undefined && [DICE_SCRIPTS, CONSEQUENCE_DICE, ...PREVIOUS_DICE].some((d) => same(s, d));
 
 /** Re-roll and the consequences level need the current script; an older one is upgraded by switching the dice off and on. */
-export const isCurrentDice = (s: Adventure['scripts']) => s !== undefined && same(s, DICE_SCRIPTS);
+export const isCurrentDice = (s: Adventure['scripts']) => s !== undefined && (same(s, DICE_SCRIPTS) || same(s, CONSEQUENCE_DICE));
 
 /** The latest roll among a turn's script log lines, without the hook prefix: `d20 7 vs 10 · succeeds at a cost`. */
 export const diceLine = (logs: readonly string[]) => logs.findLast((l) => /: d20 \d+ vs \d+ · /.test(l))?.replace(/^\w+: /, '');

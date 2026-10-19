@@ -81,3 +81,27 @@ test('the director plays a labelled turn after every 3 player turns, × erases i
   expect(prompts).toHaveLength(7);
   await expect(label).toBeHidden();
 });
+
+test('/tension action puts it on the scene line and shortens the length hint; off takes both back', async ({ page }) => {
+  const prompts = await open(page);
+  const input = page.getByRole('textbox', { name: 'Take a turn' });
+  const take = async (text: string) => {
+    await input.fill(text);
+    await page.getByRole('button', { name: 'Send' }).click();
+  };
+  const hint = (p: string | undefined) => /Replies run about (\d+) words/.exec(p ?? '')?.[1];
+
+  await take('/tension action');
+  await expect(page.getByText('Tension: action')).toBeVisible();
+  await take('look around');
+  await expect.poll(() => prompts.length).toBe(1);
+  expect(prompts[0]).toContain('Tension: action');
+
+  await expect(page.getByRole('button', { name: 'Send' })).toBeEnabled();
+  await take('/tension off');
+  await expect(page.getByText('Tension cleared')).toBeVisible();
+  await take('walk on');
+  await expect.poll(() => prompts.length).toBe(2);
+  expect(prompts[1]).not.toContain('Tension:');
+  expect(Number(hint(prompts[0]))).toBeLessThan(Number(hint(prompts[1])));
+});
