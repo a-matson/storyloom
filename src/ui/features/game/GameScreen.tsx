@@ -98,8 +98,7 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
   return (
     <div className="flex h-full flex-col">
       <GameHeader
-        title={adv.title}
-        actionCount={adv.actions.length}
+        adventure={adv}
         busy={state.busy}
         canUndo={state.canUndo}
         canRedo={state.canRedo}

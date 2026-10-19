@@ -12,9 +12,11 @@ export { isYouLine, playerName, YOU } from './you';
 export { andList, defaultKnownBy, newSecret, repointSecrets, secretsOf } from './secrets';
 export { chapterStarts, withChapter, type Chapter } from './chapters';
 export { matchEntity, MAX_HELD, patchPlot, roomsOf, sceneIds, sceneNames, withPresence } from './names';
+export type { SearchDoc } from './search';
 export type { MaintenanceDeps } from './memoryJobs';
 export type { CodexEntry, CodexLine } from './codex';
 export type { CutCounts, HelperCallLog } from './helperCall';
 /** Idle-only work, loaded on first use to keep it off the start-up bundle. */
 export const loadMemoryJobs = () => import('./memoryJobs');
 export const loadAssertions = () => import('./assertions');
+export const loadSearch = () => import('./search');
