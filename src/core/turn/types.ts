@@ -21,7 +21,15 @@ export interface TurnDeps {
 /** Events that belong to one turn carry its `turnId`; tokens and messages are tied to it by order. */
 export type TurnEvent =
   | { type: 'player'; turnId: string; action: Action }
-  | { type: 'context'; turnId: string; result: ContextBuildResult; prompt: string; stop: string[]; scriptCache?: ScriptCache | undefined }
+  | {
+      type: 'context';
+      turnId: string;
+      result: ContextBuildResult;
+      prompt: string;
+      stop: string[];
+      scriptCache?: ScriptCache | undefined;
+      cue?: string | undefined;
+    }
   | { type: 'token'; text: string }
   /** The gate rejected the reply streamed so far; a second one streams next. */
   | { type: 'regenerate'; turnId: string; actionId: string; reason: GateReason }
@@ -38,6 +46,8 @@ export interface PreparedContext {
   stop: string[];
   /** What onModelContext did to the cached prefix; absent when no script ran. */
   scriptCache?: ScriptCache | undefined;
+  /** A beat's reply opening, already at the end of `prompt`; the reply's text is `cue` + what the model writes. */
+  cue?: string | undefined;
 }
 
 export interface Generated {

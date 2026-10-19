@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { exportAdventureJson, importAdventureJson } from '@adapters/transfer';
-import { BEATS, cleanBeats, DEFAULT_BEATS, genreKeys, GENRE_BEATS, repertoire, suggestedBeats } from '@core/director';
+import { BEATS, cleanBeats, cueBeat, cueFor, DEFAULT_BEATS, genreKeys, GENRE_BEATS, repertoire, suggestedBeats, usedBeats } from '@core/director';
+import { ActionLog } from '@core/log';
 import { byPlayer, YOU } from '@core/memory';
-import { createBlankAdventure, type Assertion, type Entity } from '@core/model';
+import { createBlankAdventure, type ActionType, type Assertion, type Entity } from '@core/model';
 import * as S from '@core/schema';
 
 const tamsin: Entity = { id: 'ent_t', kind: 'character', name: 'Tamsin', aliases: [], description: '', relations: [], firstSeen: 0, lastSeen: 0 };
@@ -50,6 +51,40 @@ describe('suggestedBeats', () => {
         tags,
       ),
     ).toEqual([]);
+  });
+});
+
+describe('cues', () => {
+  const log = (texts: [ActionType, string][]) => texts.map(([type, text]) => new ActionLog([]).append(type, text));
+
+  it('name the character and open a sentence or a quote', () => {
+    for (const b of BEATS) {
+      const cue = b.cue('Tamsin');
+      expect(cue).toContain('Tamsin');
+      expect(/(?:"|, |: )$/.test(cue)).toBe(true);
+    }
+  });
+
+  it('read back every beat, for one-word and two-word names; ordinary prose is none', () => {
+    const cast = [tamsin, { name: 'Father Caradoc' }];
+    for (const name of ['Tamsin', 'Father Caradoc'])
+      for (const b of BEATS) expect(cueBeat(`${b.cue(name)}Enough.`, cast)).toEqual({ name, beat: b.id, cue: b.cue(name) });
+    expect(cueBeat('Tamsin sighs and looks at the river.', cast)).toBeUndefined();
+    expect(cueBeat(`${cueFor('sing', 'Tamsin')}low and slow.`, [{ ...tamsin, beats: ['sing'] }])?.beat).toBe('sing');
+  });
+
+  it('used beats are the last 3 of their AI openings, oldest first, player lines ignored', () => {
+    const t = (beat: string) => `${cueFor(beat, 'Tamsin')}x`;
+    const actions = log([
+      ['continue', t('lie')],
+      ['continue', t('joke')],
+      ['do', `> ${t('leave')}`],
+      ['continue', 'The rain goes on.'],
+      ['continue', t('demand')],
+      ['continue', t('reveal')],
+    ]);
+    expect(usedBeats(actions, tamsin)).toEqual(['joke', 'demand', 'reveal']);
+    expect(usedBeats(actions, { name: 'Oren' })).toEqual([]);
   });
 });
 
