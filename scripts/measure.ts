@@ -25,6 +25,9 @@
  *   summary <url> <backup> [label]  the summary refreshed 10 times over a backup's memories from nothing; how many changed it
  *   gate <backup> [label]  the output gate (empty, verbatim, agency) over every AI output, first and kept version, no model
  *   cast-facts <backups> [label]  the facts each player action sends for the absent it names (M19-1), no model
+ *   record <backup> [label]  codex ms and missing who, a planted told-only-to-X event, outer places, chapters, search ms; story .md/.epub, no model
+ *   standings <backup> [label]  each current relationship's stance word over the stored events, with crossedAt, no model
+ *   orphans <cdp-url> [label]  stored image blobs no adventure owns, from the open app over CDP (browser started with --remote-debugging-port)
  *   live <url> [label]  plays 20 scripted turns in the real app; per-turn stats, memories, summary
  *   repetition <url> [label]  the live turns alone: repeated phrases per turn, distinct 4-grams (MEASURE_SAMPLERS=64,0 for the "before")
  *   images <image-url> <url>  See mode and a cover against a real A1111 server
@@ -116,6 +119,12 @@ const SCENARIOS: Record<string, { cmd: string[]; env?: Record<string, string | u
     cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/castFacts'],
     env: { MEASURE_BACKUP: a, MEASURE_LABEL: b },
   },
+  record: { cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/record'], env: { MEASURE_BACKUP: a, MEASURE_LABEL: b } },
+  standings: {
+    cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/standings'],
+    env: { MEASURE_BACKUP: a, MEASURE_LABEL: b },
+  },
+  orphans: { cmd: ['pnpm', 'exec', 'vitest', 'run', '--config', 'bench/vitest.config.ts', 'bench/orphans'], env: { MEASURE_CDP: a, MEASURE_LABEL: b } },
   // `--project=live`, not `--project live`: the flag is variadic and would swallow the file.
   live: { cmd: ['pnpm', 'exec', 'playwright', 'test', '--project=live', 'e2e/live/play.spec.ts'], env: { MEASURE_URL: a, MEASURE_LABEL: b } },
   repetition: {
