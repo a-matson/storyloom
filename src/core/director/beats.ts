@@ -1,7 +1,7 @@
 import type { Adventure, Assertion, Entity } from '../model';
 
 /** One thing a character can do in a scene; `done` matches an event text that shows they did it. [provisional] */
-export interface Beat {
+interface Beat {
   id: string;
   done: RegExp;
 }
