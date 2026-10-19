@@ -24,8 +24,8 @@ describe('facts for the asked-about absent', () => {
     expect(r.usedFacts.filter((f) => f.entityId === orrin.id).map((f) => f.factId)).toEqual(['as_f-Orrin-0', 'as_f-Orrin-2']);
   });
 
-  it('an absent character named only in earlier history keeps the identity-only line', () => {
-    expect(orrinLine(buildContext(asking(act('do', '> You ask Lena whether she fears the water.'))))).toBe('Orrin (a ferryman).');
+  it('an absent character named only in earlier history sends no line', () => {
+    expect(orrinLine(buildContext(asking(act('do', '> You ask Lena whether she fears the water.'))))).toBeUndefined();
   });
 
   it('a role in the action counts as naming it', () => {
@@ -41,9 +41,9 @@ describe('facts for the asked-about absent', () => {
     expect(orrinLine(r)).toBe('Orrin (a ferryman).');
   });
 
-  it('a continue or story action admits no facts', () => {
+  it('a continue or story action naming an absent character sends no line', () => {
     for (const type of ['continue', 'story'] as const)
-      expect(orrinLine(buildContext(asking(act(type, 'Whether Orrin fears the water, nobody knows.'))))).toBe('Orrin (a ferryman).');
+      expect(orrinLine(buildContext(asking(act(type, 'Whether Orrin fears the water, nobody knows.'))))).toBeUndefined();
   });
 
   it('present lines are unchanged and come first; a fact line that does not fit falls back to the identity line', () => {

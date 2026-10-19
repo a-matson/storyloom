@@ -113,6 +113,8 @@ export interface ContextBuildResult {
   budget: ContextBudget;
   triggeredCards: CardMatch[];
   droppedCards: CardMatch[];
+  /** Triggered character cards held back: their character is absent and the player's last action does not name them. */
+  absentCards: CardMatch[];
   usedMemories: Memory[];
   /** The ranking the memories were picked from, so the viewer can show scores as sent. */
   rankedMemories: RankedMemory[];

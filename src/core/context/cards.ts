@@ -10,9 +10,10 @@ export interface CardsResult {
   cardsUsed: number;
   triggeredCards: CardMatch[];
   droppedCards: CardMatch[];
+  absentCards: CardMatch[];
 }
 
-/** Story cards triggered by the last few actions, best first, within 25% of the dynamic budget. */
+/** Story cards triggered by the last few actions, best first, within 25% of the dynamic budget; an `absent` character's card is held back. */
 export function selectCards(
   actions: Action[],
   lastActionIndex: number,
@@ -21,11 +22,14 @@ export function selectCards(
   tokenizer: Tokenizer,
   out: RenderedSections,
   warnings: string[],
+  absent: (c: StoryCard) => boolean = () => false,
 ): CardsResult {
   const cardsBudget = Math.floor(dynamicAvailable * 0.25);
   const window = lookbackWindow(cardsBudget);
   const recent = lastActionIndex >= 0 ? actions.slice(Math.max(0, lastActionIndex - window + 1), lastActionIndex + 1) : [];
-  const matches = matchCards(compileCards(storyCards), recent.map(actionStoryText));
+  const triggered = matchCards(compileCards(storyCards), recent.map(actionStoryText));
+  const absentCards = triggered.filter((m) => absent(m.card));
+  const matches = triggered.filter((m) => !absentCards.includes(m));
 
   const triggeredCards: CardMatch[] = [];
   const droppedCards: CardMatch[] = [];
@@ -45,5 +49,5 @@ export function selectCards(
     const rendered = renderSection('storyCards', triggeredCards.map((m) => m.card.entry).join('\n\n'));
     out.set('storyCards', { text: rendered, tokens: tokenizer.count(rendered), trimmed: droppedCards.length > 0 });
   }
-  return { cardsBudget, cardsUsed, triggeredCards, droppedCards };
+  return { cardsBudget, cardsUsed, triggeredCards, droppedCards, absentCards };
 }
