@@ -27,6 +27,7 @@ describe('duplicateOf', () => {
   it('gives none for two people, another kind, a namesake or a bare title', () => {
     expect(duplicateOf(all, all[2] as Entity)).toBeUndefined();
     expect(duplicateOf([ent('Hedda Vane', 'place')], ent('Hedda'))).toBeUndefined();
+    expect(duplicateOf([ent('breakwater', 'place')], ent('shore near breakwater', 'place'))).toBeUndefined();
     expect(duplicateOf([ent('Lena')], ent('Lena'))).toBeUndefined();
     expect(duplicateOf([ent('Old Warden')], ent('Warden'))).toBeUndefined();
   });

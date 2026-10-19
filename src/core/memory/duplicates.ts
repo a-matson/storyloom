@@ -18,14 +18,21 @@ const namesOf = (e: Entity) => [e.name, ...e.aliases].map(wordsOf);
 const inside = (a: Entity, b: Entity) => namesOf(a).some((x) => x.length > 0 && namesOf(b).some((y) => x.every((w) => y.includes(w))));
 const one = (hits: Entity[]) => (hits.length === 1 ? hits[0] : undefined);
 
+/**
+ * Named, not described: "shore near breakwater" holds "breakwater" and is another place. [measured: 2026-10-19-duplicates-m23-6.json,
+ * 3 of 7 place proposals were two places]
+ */
+const NAMED = new Set<Entity['kind']>(['character', 'faction']);
+
 /** The one other card of `e`'s kind holding all of `e`'s name words; of several, the one holding the rest ("Caradoc Reed" over "Father Caradoc"). Namesakes are not one. */
 function holderOf(entities: readonly Entity[], e: Entity): Entity | undefined {
+  if (!NAMED.has(e.kind)) return undefined;
   const hits = entities.filter((x) => x.id !== e.id && x.kind === e.kind && norm(x.name) !== norm(e.name) && inside(e, x));
   return one(hits.filter((x) => !hits.some((y) => y !== x && inside(x, y) && !inside(y, x))));
 }
 
 /**
- * The card `e` is a near-duplicate of, same kind, titles stripped: the one whose name holds `e`'s name words
+ * The card `e` is a near-duplicate of, same kind (a character or faction), titles stripped: the one whose name holds `e`'s name words
  * (Caradoc of Caradoc Reed), else the one whose name words `e`'s holds. "Reed" beside Caradoc Reed and Tamsin Reed: none.
  */
 export const duplicateOf = (entities: readonly Entity[], e: Entity): Entity | undefined =>
