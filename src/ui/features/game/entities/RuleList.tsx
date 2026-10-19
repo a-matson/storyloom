@@ -1,5 +1,5 @@
 import { useState, useSyncExternalStore } from 'react';
-import { addRule, ruleEdits } from '@app/session/rules';
+import { addRule, findRulesIn, lastPassage, ruleEdits } from '@app/session/rules';
 import type { Adventure, Rule } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
@@ -73,6 +73,7 @@ export function RuleList({ adventure, api }: { adventure: Adventure; api: GameAp
   const [draft, setDraft] = useState('');
   const used = useSyncExternalStore(api.subscribe, () => api.getSnapshot().context?.result.usedRuleIds);
   const edits = ruleEdits(api);
+  const passage = lastPassage(adventure);
   const add = () => {
     void addRule(api, draft);
     setDraft('');
@@ -91,6 +92,9 @@ export function RuleList({ adventure, api }: { adventure: Adventure; api: GameAp
           + Add
         </Button>
       </form>
+      <Button variant="ghost" className="h-8 self-start" disabled={passage < 0} onClick={() => void findRulesIn(api, passage)}>
+        Find rules in the last passage
+      </Button>
       {adventure.rules.length === 0 && (
         <p className="text-caption text-muted-foreground">
           No rules yet. A rule is sent while something it names is in the scene; one naming no one is always sent.

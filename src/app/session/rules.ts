@@ -28,6 +28,22 @@ export async function addRule(host: GameSession, text: string): Promise<void> {
   host.emit({ notice: names.length ? `Rule added, sent with ${names.join(', ')}` : 'Rule added, always sent' });
 }
 
+/** The last passage the story wrote: what "Find rules in the last passage" reads; -1 when none. */
+export const lastPassage = (adv: Adventure): number => adv.actions.findLastIndex((a) => a.type === 'start' || a.type === 'continue' || a.type === 'story');
+
+/** "Find rules": one slot-1 read of action `at`; its rules are appended as story proposals for the Rules tab. Not while busy. */
+export async function findRulesIn(host: GameSession, at: number): Promise<void> {
+  try {
+    const jobs = await loadMemoryJobs();
+    if (host.getSnapshot().busy) return;
+    const found = await jobs.findRules(host.adv, await host.helperModel('check'), at);
+    if (found.length) host.mutate((_, adv) => (adv.rules = [...adv.rules, ...found]));
+    host.emit({ notice: found.length ? `Found ${found.length} rule${found.length > 1 ? 's' : ''}: confirm them in Rules` : 'No rules in this passage' });
+  } catch (err) {
+    host.onError(`Could not find rules: ${String(err)}`);
+  }
+}
+
 /** The player's edits to `adv.rules`; lazy like `entityEdits`. */
 export function ruleEdits(host: GameSession) {
   const mutate = (fn: (adv: Adventure) => void) => host.mutate((_, adv) => fn(adv));
