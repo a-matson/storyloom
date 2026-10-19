@@ -30,6 +30,7 @@ export { codexMarkdown, compileCodex, filterCodex } from './codex';
 export { knowledgeOf } from './knowledge';
 export { findRules } from './findRules';
 export { link, linkWay, repointLinks, unlink } from './places';
+export { recap, recapDue } from './recap';
 
 /**
  * Background memory maintenance. Call after each committed turn; it is safe
