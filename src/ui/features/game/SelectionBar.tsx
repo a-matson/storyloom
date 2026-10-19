@@ -6,6 +6,7 @@ import { defaultKnownBy, matchEntity, YOU } from '@core/memory';
 import type { Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
+import { branchFrom } from './OutputTools';
 import { SelectionCheck } from './SelectionCheck';
 import { SelectionPick } from './SelectionPick';
 
@@ -99,6 +100,9 @@ export function SelectionBar({ api, entities }: { api: GameApi; entities: readon
           Make item
         </Button>
       )}
+      <Button className="h-8" onClick={run(() => branchFrom(api, sel.actionId))}>
+        Branch from here
+      </Button>
       <SelectionCheck key={sel.text} api={api} text={sel.text} />
     </div>
   );

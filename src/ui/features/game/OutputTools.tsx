@@ -1,3 +1,4 @@
+import { forkAdventure } from '@app/session/fork';
 import type { Action, AppSettings, GateReason } from '@core/model';
 import { actionText } from '@core/model';
 import type { OutputFlag } from '@core/trace';
@@ -7,6 +8,7 @@ import { Button } from '@ui/components/ui/button';
 import { Pill } from '@ui/components/ui/pill';
 import { IconLeft, IconRight } from '@ui/components/Icons';
 import { cn } from '@ui/lib/utils';
+import { navigate } from '@ui/router';
 
 interface Props {
   action: Action;
@@ -34,6 +36,14 @@ export const textColumn = 'sm:col-start-2';
 /** A block with no label of its own (See) clears the same gutter with padding. */
 export const seeIndent = 'sm:ps-[var(--gutter)]';
 const arrow = 'inline-flex size-5 items-center justify-center border-none bg-transparent p-0 text-foreground';
+
+/** "Branch from here": opens the new adventure once it is saved; the tools that offer it are hidden while a turn runs. */
+export function branchFrom(api: GameApi, id: string): void {
+  forkAdventure(api.svc.storage, { ...api.adv, actions: api.log.actions }, id).then(
+    (to) => navigate({ name: 'adventure', id: to }),
+    (e: unknown) => api.onError(e instanceof Error ? e.message : String(e)),
+  );
+}
 
 /**
  * `contentEditable` turns on a render after the key that asked for it, and an element that
@@ -107,6 +117,9 @@ export function OutputTools({ action, api, speech, onEdit, onViewContext, onView
         </Button>
         <Button className={tool} onClick={() => api.eraseTo(action.id)}>
           Erase to here
+        </Button>
+        <Button className={tool} onClick={() => branchFrom(api, action.id)}>
+          Branch from here
         </Button>
         <Button variant="system" className={`${tool} border-border`} onClick={onViewContext}>
           View context

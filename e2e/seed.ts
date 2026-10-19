@@ -111,3 +111,27 @@ async function seedEntities(page: Page, contextScript?: string, seedScene?: Scen
     { context: contextScript, scene: seedScene, extra: more, assertions: lines },
   );
 }
+
+/** Selects `text` inside the story's action `n`, as a mouse drag would; resolves to the selection toolbar. */
+export async function select(page: Page, n: number, text: string) {
+  await page.locator('#story [data-action-id]').nth(n).getByText(text).waitFor();
+  await page.evaluate(
+    ({ i, words }) => {
+      const block = document.querySelectorAll('#story [data-action-id]')[i];
+      const walker = document.createTreeWalker(block ?? document.body, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const at = node.textContent?.indexOf(words) ?? -1;
+        if (at < 0) continue;
+        const range = document.createRange();
+        range.setStart(node, at);
+        range.setEnd(node, at + words.length);
+        document.getSelection()?.removeAllRanges();
+        document.getSelection()?.addRange(range);
+        return;
+      }
+      throw new Error(`no "${words}" in action ${i}`);
+    },
+    { i: n, words: text },
+  );
+  return page.getByRole('toolbar', { name: 'Pin selection' });
+}
