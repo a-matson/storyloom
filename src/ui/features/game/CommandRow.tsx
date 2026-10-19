@@ -1,4 +1,4 @@
-import { useEffect, useState, type KeyboardEvent } from 'react';
+import { lazy, Suspense, useEffect, useState, type KeyboardEvent } from 'react';
 import { correct } from '@app/session/correct';
 import { setTime, travelTo, waitFor } from '@app/session/clock';
 import { addRule } from '@app/session/rules';
@@ -6,6 +6,7 @@ import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
 import { StatusDot } from '@ui/components/ui/status-dot';
 import { cn } from '@ui/lib/utils';
+import type { PaletteProps } from './CommandPalette';
 import { MODE_IDS, MODES, parseSlash, type Command, type Mode } from './modes';
 import { TurnInput } from './TurnInput';
 
@@ -22,6 +23,26 @@ interface Props {
   onSee?: (prompt: string) => void;
   /** A prefetched alternative exists: Retry is instant. */
   retryReady?: boolean;
+  onViewContext: () => void;
+}
+
+// Lazy: opened by Ctrl/⌘+K only.
+const CommandPalette = lazy(async () => ({ default: (await import('./CommandPalette')).CommandPalette }));
+
+/** Ctrl/⌘+K anywhere in the game, except while a passage is edited in place: the edit keeps its own keys. */
+function Palette(props: Omit<PaletteProps, 'onClose'>) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !(e.target instanceof HTMLElement && e.target.isContentEditable)) {
+        e.preventDefault();
+        setOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  return <Suspense fallback={null}>{open && <CommandPalette {...props} onClose={() => setOpen(false)} />}</Suspense>;
 }
 
 // Loaded on first use: start-up bundle budget.
@@ -67,7 +88,7 @@ function RetryButtons({ busy, canRetry, canReroll, retryReady, api }: Pick<Props
  * Ctrl/⌘+Z undoes (input empty); `/do /say /story /see` switch mode, `/correct …` pins a fact, `/rule …` adds a rule,
  * `/wait 3 hours | until night` and `/time evening, day 2` set the scene's time, `/travel <place> [alone]` its location.
  */
-export function CommandRow({ busy, canRetry, canReroll = false, canErase, canBeat = false, status, api, onSee, retryReady = false }: Props) {
+export function CommandRow({ busy, canRetry, canReroll = false, canErase, canBeat = false, status, api, onSee, retryReady = false, onViewContext }: Props) {
   const [mode, setMode] = useState<Mode>('do');
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
@@ -140,8 +161,9 @@ export function CommandRow({ busy, canRetry, canReroll = false, canErase, canBea
           </Button>
         </div>
         <div className="font-mono text-label text-muted-foreground">
-          Enter send · Ctrl+Enter continue · Ctrl+R retry · Ctrl+Z undo · {[...MODE_IDS, ...Object.keys(COMMANDS)].map((c) => `/${c}`).join(' ')}
+          Enter send · Ctrl+Enter continue · Ctrl+K all commands · {[...MODE_IDS, ...Object.keys(COMMANDS)].map((c) => `/${c}`).join(' ')}
         </div>
+        <Palette api={api} draft={(d) => ('mode' in d ? setMode(d.mode) : setText(d.text))} onViewContext={onViewContext} />
       </div>
     </footer>
   );
