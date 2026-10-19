@@ -55,8 +55,10 @@ export const MODES: Record<Mode, ModeStyle> = {
 
 export const MODE_IDS: Mode[] = ['do', 'say', 'story', 'see'];
 
-const COMMANDS = ['correct', 'rule', 'wait', 'time', 'travel', 'beat', 'complicate', 'tension'] as const;
+export const COMMANDS = ['correct', 'rule', 'wait', 'time', 'travel', 'beat', 'complicate', 'tension'] as const;
 export type Command = (typeof COMMANDS)[number];
+/** Put into the turn input from outside it (the palette): a mode, or text to finish typing. */
+export type Draft = { mode: Mode } | { text: string };
 export type Slash = { kind: 'mode'; mode: Mode; rest: string } | { kind: Command; text: string };
 
 /** `/say hello` switches mode; `/correct …` (a fact), `/rule …`, `/wait`, `/time`, `/travel`, `/beat`, `/complicate`, `/tension` are not modes: they must not become actions. */

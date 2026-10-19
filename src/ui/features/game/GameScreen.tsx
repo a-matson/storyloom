@@ -142,6 +142,7 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
             api={api}
             onSee={api.see}
             retryReady={state.prefetchReady}
+            onViewContext={openContext}
           />
         </main>
         <Sidebar adventure={adv} api={api} app={app} onAppChange={onAppChange} hidden={!showSidebar} onClose={() => setShowSidebar(false)} />
