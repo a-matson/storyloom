@@ -34,7 +34,7 @@ async function select(page: Page, n: number, text: string) {
   return page.getByRole('toolbar', { name: 'Pin selection' });
 }
 
-test('selected story text pins as a rule, a fact about a character, or an item', async ({ page }) => {
+test('selected story text pins as a rule, a fact, an item, an alias or a secret', async ({ page }) => {
   await openSeededAdventure(page, 3);
 
   await (await select(page, 1, 'The road bends 1.')).getByRole('button', { name: 'Pin as rule' }).click();
@@ -51,6 +51,14 @@ test('selected story text pins as a rule, a fact about a character, or an item',
   await (await select(page, 0, 'road')).getByRole('button', { name: 'Make item' }).click();
   await expect(page.getByText('road added as an item')).toBeVisible();
   await expect(page.getByRole('toolbar', { name: 'Pin selection' })).toHaveCount(0);
+
+  await (await select(page, 0, 'bends')).getByRole('combobox', { name: 'This is' }).selectOption('Merav');
+  await expect(page.getByText('bends is now Merav')).toBeVisible();
+  // A name already taken is not offered as an alias again.
+  await expect((await select(page, 0, 'bends')).getByRole('combobox', { name: 'This is' })).toHaveCount(0);
+
+  await (await select(page, 2, 'road bends')).getByRole('button', { name: 'Mark secret' }).click();
+  await expect(page.getByText('Secret saved: who knows it is in World › Secrets')).toBeVisible();
 });
 
 test('/rule adds a rule; a gate on an absent place takes it out of the prompt', async ({ page }) => {

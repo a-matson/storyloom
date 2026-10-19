@@ -69,3 +69,17 @@ export function makeItem(host: GameSession, name: string, actionId: string): voi
   });
   host.emit({ notice: `${n} added as an item` });
 }
+
+/** "This is <character>": the selected words become an alias of `entityId`; a pending proposal of that name is answered. */
+export function addAlias(host: GameSession, entityId: string, name: string): void {
+  const n = name.trim();
+  const e = host.adv.entities.find((x) => x.id === entityId);
+  if (!n || !e) return;
+  host.mutate((_, adv) => {
+    const { __aliasProposals: asks, ...rest } = adv.scriptState;
+    const left = asks?.filter((q) => q.name.toLowerCase() !== n.toLowerCase());
+    adv.scriptState = { ...rest, ...(left !== undefined && left.length > 0 && { __aliasProposals: left }) };
+    adv.entities = adv.entities.map((x) => (x.id === entityId ? { ...x, aliases: [...x.aliases, n] } : x));
+  });
+  host.emit({ notice: `${n} is now ${e.name}` });
+}
