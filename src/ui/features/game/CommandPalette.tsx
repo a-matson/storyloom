@@ -63,7 +63,7 @@ export function CommandPalette(props: PaletteProps) {
     const step = { ArrowDown: 1, ArrowUp: -1 }[e.key];
     if (step !== undefined) {
       e.preventDefault();
-      setActive((current + step + entries.length) % entries.length);
+      if (entries.length > 0) setActive((current + step + entries.length) % entries.length);
     } else if (e.key === 'Enter') {
       e.preventDefault();
       run(entries[current]);
