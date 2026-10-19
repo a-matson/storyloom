@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { makeItem, pinFact } from '@app/session/correct';
+import { addAlias, makeItem, pinFact } from '@app/session/correct';
 import { addRule, findRulesIn } from '@app/session/rules';
+import { secretEdits } from '@app/session/secret';
+import { defaultKnownBy, matchEntity, YOU } from '@core/memory';
 import type { Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
-import { Select } from '@ui/components/ui/field';
 import { SelectionCheck } from './SelectionCheck';
+import { SelectionPick } from './SelectionPick';
 
 interface Picked {
   text: string;
@@ -32,7 +34,7 @@ function picked(): Picked | null {
   return { text, actionId: block.dataset['actionId'], top: Math.max(8, r.top - 44), left: Math.max(8, r.left) };
 }
 
-/** Pin selected story text as a rule, as a fact about a character, or as a new item; or check it against the record. */
+/** Pin selected story text as a rule, a fact, an alias, a secret or a new item; or check it against the record. */
 export function SelectionBar({ api, entities }: { api: GameApi; entities: readonly Entity[] }) {
   const [sel, setSel] = useState<Picked | null>(null);
   const bar = useRef<HTMLDivElement>(null);
@@ -43,11 +45,14 @@ export function SelectionBar({ api, entities }: { api: GameApi; entities: readon
     return () => document.removeEventListener('selectionchange', onChange);
   }, []);
   if (!sel) return null;
-  const done = () => {
+  const run = (fn: () => unknown) => () => {
+    void fn();
     document.getSelection()?.removeAllRanges();
     setSel(null);
   };
+  const at = () => api.adv.actions.findIndex((a) => a.id === sel.actionId);
   const characters = entities.filter((e) => e.kind === 'character');
+  const short = sel.text.length <= ITEM_CHARS;
   return (
     // ponytail: placed once at the selection; scrolling leaves it behind until the selection changes.
     <div
@@ -57,56 +62,40 @@ export function SelectionBar({ api, entities }: { api: GameApi; entities: readon
       tabIndex={-1}
       className="fixed z-30 flex gap-1.5 rounded-lg border border-border bg-card p-1 shadow-lg"
       style={{ top: sel.top, left: sel.left }}
-      onKeyDown={(e) => e.key === 'Escape' && done()}
+      onKeyDown={(e) => e.key === 'Escape' && run(() => undefined)()}
     >
-      <Button
-        className="h-8"
-        onClick={() => {
-          void addRule(api, sel.text);
-          done();
-        }}
-      >
+      <Button className="h-8" onClick={run(() => addRule(api, sel.text))}>
         Pin as rule
       </Button>
-      <Button
-        className="h-8"
-        onClick={() => {
-          void findRulesIn(
-            api,
-            api.adv.actions.findIndex((a) => a.id === sel.actionId),
-          );
-          done();
-        }}
-      >
+      <Button className="h-8" onClick={run(() => findRulesIn(api, at()))}>
         Find rules
       </Button>
       {characters.length > 0 && (
-        <Select
-          aria-label="Pin as fact about"
-          className="h-8 w-auto"
-          value=""
-          onChange={(e) => {
-            if (!e.target.value) return;
-            pinFact(api, e.target.value, sel.text, sel.actionId);
-            done();
-          }}
-        >
-          <option value="">Pin as fact about…</option>
-          {characters.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.name}
-            </option>
-          ))}
-        </Select>
+        <SelectionPick
+          label="Pin as fact about"
+          prompt="Pin as fact about…"
+          characters={characters}
+          onPick={(id) => run(() => pinFact(api, id, sel.text, sel.actionId))()}
+        />
       )}
-      {sel.text.length <= ITEM_CHARS && (
-        <Button
-          className="h-8"
-          onClick={() => {
-            makeItem(api, sel.text, sel.actionId);
-            done();
-          }}
-        >
+      {short && characters.length > 0 && !matchEntity(entities, sel.text) && (
+        <SelectionPick label="This is" prompt="This is…" characters={characters} onPick={(id) => run(() => addAlias(api, id, sel.text))()} />
+      )}
+      <Button
+        className="h-8"
+        onClick={run(() => {
+          secretEdits(api).markSecret(
+            sel.actionId,
+            sel.text,
+            defaultKnownBy(api.adv.plot, at()).filter((k) => k !== YOU),
+          );
+          api.emit({ notice: 'Secret saved: who knows it is in World › Secrets' });
+        })}
+      >
+        Mark secret
+      </Button>
+      {short && (
+        <Button className="h-8" onClick={run(() => makeItem(api, sel.text, sel.actionId))}>
           Make item
         </Button>
       )}
