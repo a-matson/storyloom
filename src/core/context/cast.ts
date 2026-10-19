@@ -68,7 +68,7 @@ const lead = (e: Entity, as: readonly Assertion[], carded: boolean, parts: reado
  * A present character's now-line: `Name (identity): in the basement; sitting, poisoned, wary, wearing a cloak; effect — cause; stance to you; witnessed-by; speaks: voice; wants: goal; meanwhile: line; pins. With Other: stance.`
  * Looks are the portrait's; only `wearing` changes the scene. Conflicts are never sent.
  * A relationship's `to` is who it is towards (`you`: the player); its stance swaps to "trusts"/"distrusts"/"fears" once the events
- * in `as` (others' too, those `e` took part in) move it there (`standing`). `missed`: `witnessClause`s, so the model does not let them answer from what they never saw (U17).
+ * in `as` (others' too, those `e` took part in) move it there (`standing`). `missed`: `witnessClause`s, so the model does not let them answer from what they never saw (U17), then a `knows:` clause (`knowsClause`).
  * `speaks`: they are likely to talk this turn, so their voice goes in; otherwise it costs tokens for nothing.
  * `room`: the room of this place they are in (`Scene.zones`), first, so the model does not put them beside you.
  * `wants`: they have been quiet a while or were nudged, so their confirmed goal goes in for the model to act on.

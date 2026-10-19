@@ -27,6 +27,7 @@ export { checkInputs, checkOutput } from './contradiction';
 export { MEMORY_SPAN } from './memoryBank';
 export { projectEntity } from './projection';
 export { codexMarkdown, compileCodex, filterCodex } from './codex';
+export { knowledgeOf } from './knowledge';
 
 /**
  * Background memory maintenance. Call after each committed turn; it is safe

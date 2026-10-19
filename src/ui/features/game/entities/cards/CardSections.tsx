@@ -11,6 +11,7 @@ import { Has } from '../ItemRows';
 import { RuleRow } from '../RuleList';
 import { AddRow, type AddKind } from './AddRow';
 import { BeatsRow } from './BeatsRow';
+import { Knows } from './Knows';
 import { Line } from './FactRows';
 import { ClaimLine, EffectLine, FactLine, GoalLine, MeanwhileLine, RelationLine, StateLine, type Card } from './Lines';
 
@@ -58,7 +59,7 @@ function Rules({ entity: e, own, adventure, api }: { entity: Entity; own: readon
   );
 }
 
-/** The card's Is / Now / Has / With / Rules / Happened, each line editable, then the add row. */
+/** The card's Is / Now / Has / With / Rules / Happened / Knows, each line editable, then the add row. */
 export function CardSections({ entity: e, adventure, api, edits, onClose, onOpen }: Props) {
   const onShow = (i: number) => {
     onClose();
@@ -134,6 +135,7 @@ export function CardSections({ entity: e, adventure, api, edits, onClose, onOpen
             </FactLine>
           ))}
       </Section>
+      {e.kind === 'character' && <Knows entity={e} adventure={adventure} onShow={onShow} />}
       <AddRow entity={e} onAdd={add} />
     </>
   );

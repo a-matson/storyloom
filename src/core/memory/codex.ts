@@ -1,6 +1,7 @@
 import type { Adventure, Entity } from '../model/types';
 import { current, identityText, indexAssertions, isCurrent, type AssertionIndex, type AssertionOf } from './assertionIndex';
 import { itemsAt } from './items';
+import { knowledgeOf } from './knowledge';
 import { currentStates, isLook } from './looks';
 import { knownAs } from './names';
 import { placeAt } from './rooms';
@@ -58,6 +59,11 @@ function entryOf(adv: Adventure, ix: AssertionIndex, events: AssertionOf<'event'
       ...(e.beats && e.beats.length > 0 ? [{ text: `Beats: ${e.beats.join(', ')}` }] : []),
       ...current(as, 'relationship').map((r) => relationLine(adv, ix, r)),
       ...events.filter((a) => a.who.includes(e.id)).map((a) => ({ text: a.text, at: a.at })),
+      ...(e.kind === 'character'
+        ? knowledgeOf(e.id, adv)
+            .filter((a) => !a.who.includes(e.id))
+            .map((a) => ({ text: `Knows: ${a.text}`, at: a.at }))
+        : []),
     ],
   };
 }

@@ -18,10 +18,14 @@ const words = (s: string) => new Set((s.toLowerCase().match(/\p{L}+/gu) ?? []).f
 
 /** The sentence retells the gist in other words: no span can catch that, so shared content words do. */
 export function echoes(sentence: string, gist: string): boolean {
-  const g = words(gist);
-  const s = words(sentence);
-  const shared = [...g].filter((w) => s.has(w)).length;
-  return shared >= ECHO_WORDS && shared >= ECHO_SHARE * g.size;
+  const n = shared(gist, sentence);
+  return n >= ECHO_WORDS && n >= ECHO_SHARE * words(gist).size;
+}
+
+/** How many content words `a` and `b` share. */
+export function shared(a: string, b: string): number {
+  const s = words(b);
+  return [...words(a)].filter((w) => s.has(w)).length;
 }
 
 /** The secrets a character in the cast does not know: the ones to cut. */

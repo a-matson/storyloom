@@ -1,5 +1,7 @@
 import { absence } from './absent';
+import { knowsClause } from '../memory/knowledge';
 import { markOf, secretsOf } from '../memory/secrets';
+import { actionText, type Entity } from '../model/types';
 import { selectCards } from './cards';
 import { historyWindowStart, selectHistory } from './history';
 import { selectMemories, type MemoriesResult } from './memories';
@@ -37,7 +39,12 @@ export function buildContext(input: ContextBuildInput): ContextBuildResult {
   // History is cut after structured takes its share, so this is the widest its window can be: a clause may cover a few actions history drops.
   const historyFrom = historyWindowStart(actions, req.lastActionIndex, afterRequired, tokenizer).start;
   const absent = absence(input, req.lastActionIndex);
-  const structured = selectStructured(input, req.lastActionIndex, historyFrom, structuredCap, out, absent.entity);
+  const last = actions[req.lastActionIndex];
+  const said = last?.type === 'do' || last?.type === 'say' ? actionText(last) : '';
+  const store = { plot: input.plot, assertions: input.assertions ?? [] };
+  const knows = (id: string, here: readonly Entity[], inCast: readonly Entity[]) =>
+    said ? knowsClause(id, here, store, said, secretsToCut(secretsOf(store.assertions), inCast)) : undefined;
+  const structured = selectStructured(input, req.lastActionIndex, historyFrom, structuredCap, out, absent.entity, knows);
   const dynamicAvailable = afterRequired - structured.structuredUsed;
   const cards = selectCards(actions, req.lastActionIndex, input.storyCards, dynamicAvailable, tokenizer, out, warnings, absent.card);
   const end = req.lastActionIndex; // history excludes the last action
