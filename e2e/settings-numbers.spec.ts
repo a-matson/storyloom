@@ -72,6 +72,30 @@ test('every image and model setting has help, and clip skip 1 warns', async ({ p
   await expect(page.getByRole('note').filter({ hasText: 'Blank white' })).toHaveCount(0);
 });
 
+test('a memory preset sets its fields, survives a reload, and an edit shows Custom', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /^Demo \(no GPU\)/ }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Fantasy' }).click();
+  await page.getByRole('tab', { name: 'Gameplay' }).click();
+
+  const preset = page.getByRole('combobox', { name: 'Memory preset' });
+  const bank = page.getByRole('spinbutton', { name: 'Bank size' });
+  await expect(preset).toHaveValue('');
+  await preset.selectOption({ label: 'Adventure' });
+  await expect(page.getByRole('combobox', { name: 'State read' })).toHaveValue('idle');
+  await preset.selectOption({ label: 'Slice of life' });
+  await expect(bank).toHaveValue('400');
+  await expect(page.getByRole('combobox', { name: 'State read' })).toHaveValue('every');
+
+  await page.reload();
+  await page.getByRole('tab', { name: 'Gameplay' }).click();
+  await expect(preset).toHaveValue('sliceOfLife');
+  await bank.fill('300');
+  await bank.blur();
+  await expect(preset).toHaveValue('');
+});
+
 // Departure 5: clearing or zeroing a number field used to write 0 straight into the settings.
 test('a number setting cannot be left at 0', async ({ page }) => {
   await page.goto('/');

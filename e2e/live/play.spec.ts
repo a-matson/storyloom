@@ -5,7 +5,7 @@ import * as S from '@core/schema';
 import { GATE_WINDOW, gateOutput, previousOutputs } from '@core/turn/gate';
 import { writeMeasurement } from '../../bench/env';
 import { watchIntroductions } from '../../bench/introductions';
-import { CLOCK, readDb, TURNS } from '../../bench/livePlay';
+import { applyPreset, CLOCK, readDb, TURNS } from '../../bench/livePlay';
 import { watchMemoryRuns } from '../../bench/memoryRuns';
 import { portraits } from '../../bench/portraits';
 
@@ -121,6 +121,7 @@ test('scripted live play', async ({ page }) => {
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Fantasy' }).click();
   await expect(page).toHaveURL(/#\/adventure\//);
+  await applyPreset(page);
 
   // With MEASURE_CLOCK, every output in full: whether it honours the time is labelled by hand.
   const clock: { turn: number; command?: string; output: string }[] = [];

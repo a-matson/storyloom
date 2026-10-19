@@ -27,6 +27,17 @@ export const TURNS: [mode: 'Do' | 'Say', text: string][] = [
 /** Commands typed before the turn of that index: the player's clock set, then moved at three points (M21-2 bar). */
 export const CLOCK: Partial<Record<number, string>> = { 0: '/time afternoon, day 1', 6: '/wait 4 hours', 11: '/wait until morning', 18: '/wait until night' };
 
+/** `MEASURE_PRESET=sliceOfLife|adventure` picks that memory preset before the first turn (M24-4); an unknown id fails the run. */
+export async function applyPreset(page: Page): Promise<void> {
+  const id = process.env['MEASURE_PRESET'];
+  if (!id) return;
+  const toggle = page.getByRole('button', { name: 'Adventure settings' });
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+  await page.getByRole('tab', { name: 'Gameplay' }).click();
+  await page.getByRole('combobox', { name: 'Memory preset' }).selectOption(id);
+  await page.getByRole('button', { name: 'Close settings' }).click();
+}
+
 /** Every row of the stores a live run reads; the app has one adventure. */
 export function readDb(page: Page) {
   return page.evaluate(async () => {

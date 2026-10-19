@@ -6,6 +6,7 @@ import { TEMPLATES } from '@ui/features/setup/backends';
 import { DiceSwitch } from './DiceSwitch';
 import { DirectorSwitch } from './DirectorSwitch';
 import { ImagesSection } from './ImagesSection';
+import { MemoryPreset } from './MemoryPreset';
 import { ModelSettings } from './ModelSettings';
 import { NeverWrite } from './NeverWrite';
 import { NumberInput } from './NumberInput';
@@ -123,6 +124,7 @@ function MemorySystem({ s, update }: { s: Settings; update: Update }) {
         />
         <span className="font-mono text-caption">{(s.model.contextLength / 1024).toFixed(0)}k</span>
       </Setting>
+      <MemoryPreset value={s.memory} onChange={(m) => update({ memory: m })} />
       <SettingSwitch id="auto-summary" label="Auto summarization" checked={s.memory.autoSummary} onChange={(on) => memory({ autoSummary: on })} />
       <SettingSwitch id="memory-bank" label="Memory bank" checked={s.memory.memoryBank} onChange={(on) => memory({ memoryBank: on })} />
       <SettingSwitch
@@ -155,9 +157,7 @@ function MemorySystem({ s, update }: { s: Settings; update: Update }) {
           max={2000}
           step={10}
           value={s.memory.bankSize}
-          onCommit={(v) => {
-            if (v !== undefined) memory({ bankSize: v });
-          }}
+          onCommit={(v) => v !== undefined && memory({ bankSize: v })}
         />
       </Setting>
       <SettingSwitch
