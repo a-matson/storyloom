@@ -1,5 +1,6 @@
+import { cueBeat } from '../director/beats';
 import type { ActionLog } from '../log/actionLog';
-import type { Adventure, TurnTrace } from '../model/types';
+import { actionText, type Adventure, type TurnTrace } from '../model/types';
 import { formatPlayerInput } from '../text/formatting';
 import { GATE_NOTES, GATE_WINDOW, gateOutput, previousOutputs } from './gate';
 import { buildRequest, generate, randomSeed } from './generate';
@@ -10,10 +11,17 @@ import type { Generated, PlayerTurnType, PreparedContext, TurnDeps, TurnEvent } 
 
 export { randomSeed };
 
-/** Build the request, stream it and note both on `run` so the trace has them even if the stream fails. */
+/** A beat's cue goes at the end of the prompt, so the model finishes its sentence instead of restating it. */
+const withCue = (p: PreparedContext | { stopped: string }, cue: string | undefined) => (cue && !('stopped' in p) ? { ...p, prompt: p.prompt + cue, cue } : p);
+
+/**
+ * Build the request, stream it and note both on `run` so the trace has them even if the stream fails.
+ * Returns what the model wrote; the caller puts a cue in front of it.
+ */
 async function* generateFor(adventure: Adventure, run: TurnRun, prepared: PreparedContext, deps: TurnDeps, signal?: AbortSignal, seed?: number) {
   run.prepared = prepared;
   run.request = buildRequest(adventure, prepared, seed === undefined ? {} : { seed });
+  if (prepared.cue) yield { type: 'token', text: prepared.cue } satisfies TurnEvent;
   const generated = yield* generate(adventure, run.request, deps, signal, run.scriptLogs);
   run.generated = generated;
   return generated;
@@ -21,13 +29,13 @@ async function* generateFor(adventure: Adventure, run: TurnRun, prepared: Prepar
 
 /**
  * Play one turn: optionally add a player action, then generate the AI's reply.
- * `input.type === 'continue'` skips the player action. Mutates `log` and `adventure`;
- * persisting is the caller's job.
+ * `input.type === 'continue'` skips the player action; a Continue's `cue` (a beat) opens the reply.
+ * Mutates `log` and `adventure`; persisting is the caller's job.
  */
 export function runTurn(
   adventure: Adventure,
   log: ActionLog,
-  input: { type: PlayerTurnType | 'continue'; text: string },
+  input: { type: PlayerTurnType | 'continue'; text: string; cue?: string | undefined },
   deps: TurnDeps,
   signal?: AbortSignal,
 ): AsyncGenerator<TurnEvent> {
@@ -60,7 +68,8 @@ export function runTurn(
         adventure.actions = log.actions;
         yield { type: 'player', turnId, action };
       }
-      const prepared = await prepareContext(adventure, log.actions, deps, run.scriptLogs);
+      const cue = continued ? input.cue : undefined;
+      const prepared = withCue(await prepareContext(adventure, log.actions, deps, run.scriptLogs), cue);
       if ('stopped' in prepared) {
         yield { type: 'stopped', turnId, reason: prepared.stopped };
         return;
@@ -75,23 +84,24 @@ export function runTurn(
       const retried = reason !== undefined && adventure.settings.model.autoRetry;
       if (reason) run.gate = { reason, retried };
       // The first reply is logged before the re-roll so a failed retry still leaves it, and Retry can bring it back.
-      let action = log.append('continue', first.text, { turnId, ...(first.stats ? { stats: first.stats } : {}) });
+      const opening = cue ?? '';
+      let action = log.append('continue', opening + first.text, { turnId, ...(first.stats ? { stats: first.stats } : {}) });
       run.actionId = action.id;
       adventure.actions = log.actions;
       let { text, stats } = first;
       if (reason && retried) {
         yield { type: 'regenerate', turnId, actionId: action.id, reason };
-        const again = await prepareContext(adventure, before, deps, run.scriptLogs, GATE_NOTES[reason]);
+        const again = withCue(await prepareContext(adventure, before, deps, run.scriptLogs, GATE_NOTES[reason]), cue);
         if ('stopped' in again) {
           yield { type: 'stopped', turnId, reason: again.stopped };
           return;
         }
         yield { type: 'context', turnId, ...again };
         ({ text, stats } = yield* generateFor(adventure, run, again, deps, signal, randomSeed()));
-        action = log.addVersion(action.id, text) ?? action;
+        action = log.addVersion(action.id, opening + text) ?? action;
         adventure.actions = log.actions;
       }
-      yield { type: 'done', turnId, action, text, stats };
+      yield { type: 'done', turnId, action, text: opening + text, stats };
     },
     signal,
   );
@@ -123,17 +133,23 @@ export function retryLast(
         return;
       }
       run.actionId = last.id;
-      const prepared = await prepareContext(adventure, log.actions.slice(0, -1), deps, run.scriptLogs, note, reroll ? last.versions.length : 0);
+      // A beat's retry plays the same beat: the cue is read back from the output's opening.
+      const cue = cueBeat(
+        actionText(last),
+        adventure.entities.filter((e) => e.kind === 'character'),
+      )?.cue;
+      const prepared = withCue(await prepareContext(adventure, log.actions.slice(0, -1), deps, run.scriptLogs, note, reroll ? last.versions.length : 0), cue);
       if ('stopped' in prepared) {
         yield { type: 'stopped', turnId, reason: prepared.stopped };
         return;
       }
       yield { type: 'context', turnId, ...prepared };
-      const { text, stats } = yield* generateFor(adventure, run, prepared, deps, signal, randomSeed());
+      const generated = yield* generateFor(adventure, run, prepared, deps, signal, randomSeed());
+      const text = (cue ?? '') + generated.text;
       const updated = log.addVersion(last.id, text);
       if (!updated) throw new Error('The action being retried disappeared from the log.');
       adventure.actions = log.actions;
-      yield { type: 'done', turnId, action: updated, text, stats };
+      yield { type: 'done', turnId, action: updated, text, stats: generated.stats };
     },
     signal,
   );
@@ -160,5 +176,5 @@ export async function generateAlternative(
   let next = await gen.next();
   while (!next.done) next = await gen.next();
   run.generated = next.value;
-  return { ...next.value, trace: traceOf(adventure, deps, run, 'done') };
+  return { ...next.value, text: (prepared.cue ?? '') + next.value.text, trace: traceOf(adventure, deps, run, 'done') };
 }

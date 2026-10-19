@@ -15,6 +15,8 @@ interface Props {
   /** The last output answers a Do the dice rolled for. */
   canReroll?: boolean;
   canErase: boolean;
+  /** Someone is present to play a beat. */
+  canBeat?: boolean;
   status: string;
   api: GameApi;
   onSee?: (prompt: string) => void;
@@ -22,12 +24,16 @@ interface Props {
   retryReady?: boolean;
 }
 
+// Loaded on first use: start-up bundle budget.
+const beat = (api: GameApi, text = '') => import('@app/session/beat').then((m) => m.beat(api, text));
+
 const COMMANDS: Record<Command, (api: GameApi, text: string) => Promise<void>> = {
   correct,
   rule: addRule,
   wait: waitFor,
   time: setTime,
   travel: travelTo,
+  beat,
 };
 
 const chip =
@@ -59,7 +65,7 @@ function RetryButtons({ busy, canRetry, canReroll, retryReady, api }: Pick<Props
  * Ctrl/⌘+Z undoes (input empty); `/do /say /story /see` switch mode, `/correct …` pins a fact, `/rule …` adds a rule,
  * `/wait 3 hours | until night` and `/time evening, day 2` set the scene's time, `/travel <place> [alone]` its location.
  */
-export function CommandRow({ busy, canRetry, canReroll = false, canErase, status, api, onSee, retryReady = false }: Props) {
+export function CommandRow({ busy, canRetry, canReroll = false, canErase, canBeat = false, status, api, onSee, retryReady = false }: Props) {
   const [mode, setMode] = useState<Mode>('do');
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
@@ -70,7 +76,7 @@ export function CommandRow({ busy, canRetry, canReroll = false, canErase, status
     if (busy) return;
     const slash = parseSlash(text);
     if (slash && slash.kind !== 'mode') {
-      if (slash.text.trim() !== '') setText('');
+      if (slash.text.trim() !== '' || slash.kind === 'beat') setText('');
       void COMMANDS[slash.kind](api, slash.text);
       return;
     }
@@ -123,13 +129,16 @@ export function CommandRow({ busy, canRetry, canReroll = false, canErase, status
           <Button size="lg" onClick={() => api.submit('continue', '')} disabled={busy}>
             Continue
           </Button>
+          <Button size="lg" onClick={() => void beat(api)} disabled={busy || !canBeat} title="A character does something">
+            Beat
+          </Button>
           <RetryButtons busy={busy} canRetry={canRetry} canReroll={canReroll} retryReady={retryReady} api={api} />
           <Button size="lg" danger onClick={api.erase} disabled={busy || !canErase}>
             Erase
           </Button>
         </div>
         <div className="font-mono text-label text-muted-foreground">
-          Enter send · Ctrl+Enter continue · Ctrl+R retry · Ctrl+Z undo · /do /say /story /see /correct /rule
+          Enter send · Ctrl+Enter continue · Ctrl+R retry · Ctrl+Z undo · /do /say /story /see /correct /rule /beat
         </div>
       </div>
     </footer>

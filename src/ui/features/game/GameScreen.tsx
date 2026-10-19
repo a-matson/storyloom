@@ -124,6 +124,7 @@ export function GameScreen({ adventure: initial, app, onAppChange, backendLabel,
             canRetry={last?.type === 'continue'}
             canReroll={rerollable}
             canErase={state.actions.length > 1}
+            canBeat={(adv.plot.scene?.present.length ?? 0) > 0}
             status={turnStatus(state, backendLabel)}
             api={api}
             onSee={api.see}

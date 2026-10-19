@@ -152,7 +152,7 @@ export class GameSession {
         break;
       case 'context':
         this.lastPrompt = evt.prompt;
-        this.lastPrepared = { result: evt.result, prompt: evt.prompt, stop: evt.stop, scriptCache: evt.scriptCache };
+        this.lastPrepared = { result: evt.result, prompt: evt.prompt, stop: evt.stop, scriptCache: evt.scriptCache, cue: evt.cue };
         this.emit({ context: { result: evt.result, prompt: evt.prompt, scriptCache: evt.scriptCache } });
         break;
       case 'token':
@@ -211,12 +211,13 @@ export class GameSession {
     if (this.snapshot.prefetchReady) this.emit({ prefetchReady: false });
   }
 
-  readonly submit = (type: PlayerTurnType | 'continue', text: string): void => {
+  /** `cue`: a Continue that opens with a beat (`beat.ts`). */
+  readonly submit = (type: PlayerTurnType | 'continue', text: string, cue?: string): void => {
     if (this.snapshot.busy) return;
     this.beginAction();
     this.dropPrefetch();
     this.abort = new AbortController();
-    void this.drive(runTurn(this.adv, this.log, { type, text }, this.deps(), this.abort.signal));
+    void this.drive(runTurn(this.adv, this.log, { type, text, cue }, this.deps(), this.abort.signal));
   };
 
   /** `note`: retry with the fact the flagged output broke; `reroll`: roll the dice of the last Do again. The prefetched alternative has neither. */

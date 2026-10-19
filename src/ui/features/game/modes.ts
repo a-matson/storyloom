@@ -55,11 +55,11 @@ export const MODES: Record<Mode, ModeStyle> = {
 
 export const MODE_IDS: Mode[] = ['do', 'say', 'story', 'see'];
 
-const COMMANDS = ['correct', 'rule', 'wait', 'time', 'travel'] as const;
+const COMMANDS = ['correct', 'rule', 'wait', 'time', 'travel', 'beat'] as const;
 export type Command = (typeof COMMANDS)[number];
 export type Slash = { kind: 'mode'; mode: Mode; rest: string } | { kind: Command; text: string };
 
-/** `/say hello` switches mode; `/correct …` (a fact), `/rule …`, `/wait`, `/time`, `/travel` are not modes: they must not become actions. */
+/** `/say hello` switches mode; `/correct …` (a fact), `/rule …`, `/wait`, `/time`, `/travel`, `/beat` are not modes: they must not become actions. */
 export function parseSlash(raw: string): Slash | null {
   const m = /^\/(\w+)(?:\s+(.*))?$/s.exec(raw);
   const rest = m?.[2] ?? '';

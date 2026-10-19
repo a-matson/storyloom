@@ -1,8 +1,12 @@
-import type { Adventure, Assertion, Entity } from '../model';
+import { actionText, type Action, type Adventure, type Assertion, type Entity } from '../model';
 
-/** One thing a character can do in a scene; `done` matches an event text that shows they did it. [provisional] */
+/**
+ * One thing a character can do in a scene. `cue` opens the AI reply that plays it, pronoun-free so no pronoun is
+ * guessed; `done` matches an event text that shows they did it. [provisional]
+ */
 interface Beat {
   id: string;
+  cue: (name: string) => string;
   done: RegExp;
 }
 
@@ -10,19 +14,44 @@ const OBJ = '(?:you|him|her|them|me|us)';
 
 /** The 12 beats, in the milestone's order. [provisional] */
 export const BEATS: readonly Beat[] = [
-  { id: 'interrupt', done: new RegExp(String.raw`\binterrupt(?:s|ed|ing)?\b|\bcut ${OBJ} off\b`, 'i') },
-  { id: 'leave', done: /\b(?:left|leaves|leaving|walked out|storm(?:s|ed) off|departed)\b/i },
-  { id: 'bargain', done: /\b(?:bargain|haggl|negotiat)\w*|\boffered (?:a|an) (?:deal|trade)\b/i },
-  { id: 'lie', done: /\b(?:lied|lies|lying)\b/i },
-  { id: 'confide', done: /\b(?:confid(?:ed|es|ing)|confessed|admitted)\b/i },
-  { id: 'threaten', done: /\bthreaten\w*/i },
-  { id: 'joke', done: /\b(?:jok(?:ed|es|ing)|teased|quipped)\b/i },
-  { id: 'demand', done: /\bdemand(?:s|ed|ing)?\b/i },
-  { id: 'change the subject', done: /\b(?:changed|changes|changing) the subject\b|\bdeflect(?:s|ed|ing)?\b/i },
-  { id: 'reveal', done: /\b(?:reveal(?:s|ed|ing)?|disclosed)\b/i },
-  { id: 'ask for help', done: new RegExp(String.raw`\bask(?:s|ed|ing)? (?:${OBJ} )?for help\b|\b(?:begged|pleaded)\b`, 'i') },
-  { id: 'act on the goal', done: /\b(?:set out to|went after|made (?:a|his|her|their) move)\b/i },
+  { id: 'interrupt', cue: (n) => `${n} interrupts: "`, done: new RegExp(String.raw`\binterrupt(?:s|ed|ing)?\b|\bcut ${OBJ} off\b`, 'i') },
+  { id: 'leave', cue: (n) => `${n} turns to leave, `, done: /\b(?:left|leaves|leaving|walked out|storm(?:s|ed) off|departed)\b/i },
+  { id: 'bargain', cue: (n) => `${n} leans in with an offer: "`, done: /\b(?:bargain|haggl|negotiat)\w*|\boffered (?:a|an) (?:deal|trade)\b/i },
+  { id: 'lie', cue: (n) => `${n} lies without blinking: "`, done: /\b(?:lied|lies|lying)\b/i },
+  { id: 'confide', cue: (n) => `${n} speaks low, in confidence: "`, done: /\b(?:confid(?:ed|es|ing)|confessed|admitted)\b/i },
+  { id: 'threaten', cue: (n) => `${n} makes a threat, cold and plain: "`, done: /\bthreaten\w*/i },
+  { id: 'joke', cue: (n) => `${n} grins and jokes: "`, done: /\b(?:jok(?:ed|es|ing)|teased|quipped)\b/i },
+  { id: 'demand', cue: (n) => `${n} demands: "`, done: /\bdemand(?:s|ed|ing)?\b/i },
+  { id: 'change the subject', cue: (n) => `${n} changes the subject: "`, done: /\b(?:changed|changes|changing) the subject\b|\bdeflect(?:s|ed|ing)?\b/i },
+  { id: 'reveal', cue: (n) => `${n} reveals what was held back: "`, done: /\b(?:reveal(?:s|ed|ing)?|disclosed)\b/i },
+  {
+    id: 'ask for help',
+    cue: (n) => `${n} asks for help: "`,
+    done: new RegExp(String.raw`\bask(?:s|ed|ing)? (?:${OBJ} )?for help\b|\b(?:begged|pleaded)\b`, 'i'),
+  },
+  { id: 'act on the goal', cue: (n) => `${n} decides to act, `, done: /\b(?:set out to|went after|made (?:a|his|her|their) move)\b/i },
 ];
+
+/** The reply opening for `beat` by `name`; a player's own beat ("sing") gets a plain one. [provisional] */
+export const cueFor = (beat: string, name: string): string =>
+  BEATS.find((b) => b.id === beat.toLowerCase())?.cue(name) ?? `${name} decides to ${beat.toLowerCase()}, `;
+
+type Cast = Pick<Entity, 'name' | 'beats'>;
+const beatsOf = (e: Cast) => [...BEATS.map((b) => b.id), ...(e.beats ?? [])];
+
+/** The beat an AI action's text opens with, for one of `cast`; read back from the log, never stored. */
+export function cueBeat(text: string, cast: readonly Cast[]): { name: string; beat: string; cue: string } | undefined {
+  for (const e of cast)
+    for (const beat of beatsOf(e)) {
+      const cue = cueFor(beat, e.name);
+      if (text.startsWith(cue)) return { name: e.name, beat, cue };
+    }
+  return undefined;
+}
+
+/** The last 3 beats `e` played, oldest first, from the AI actions that open with their cue. */
+export const usedBeats = (actions: readonly Action[], e: Cast): string[] =>
+  actions.flatMap((a) => (a.type === 'continue' ? (cueBeat(actionText(a), [e])?.beat ?? []) : [])).slice(-3);
 
 /** The first 10 beats: a tag-less or unknown-genre adventure's repertoire. [provisional] */
 export const DEFAULT_BEATS: readonly string[] = BEATS.slice(0, 10).map((b) => b.id);
