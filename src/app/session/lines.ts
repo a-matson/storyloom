@@ -1,5 +1,6 @@
 // Only start-up members of the barrel: importing a lazy one splits it out of the start-up chunk.
 import { byPlayer, current, isSpeciesClash, setValue, swapWord, type Fields } from '@core/memory';
+import { cleanBeats } from '@core/director';
 import { newId, type Adventure, type Assertion, type Entity } from '@core/model';
 import type { GameSession } from './session';
 
@@ -25,6 +26,7 @@ const replaceLine = (adv: Adventure, id: string, at: number, kind: 'goal' | 'voi
   const ended = adv.assertions.map((a) => (a.subject === id && a.kind === kind && a.until === undefined ? { ...a, until: at } : a));
   adv.assertions = [...ended, byPlayer(id, at, { kind, text })];
 };
+const withBeats = ({ beats: _b, ...e }: Entity, beats: readonly string[] | undefined): Entity => (beats === undefined ? e : { ...e, beats: cleanBeats(beats) });
 const blank = (kind: Entity['kind'], name: string, at: number): Entity => ({
   id: newId('ent_'),
   kind,
@@ -125,6 +127,9 @@ export function lineEdits(host: GameSession) {
         adv.entities = [...adv.entities, item];
         adv.assertions = [...adv.assertions, byPlayer(item.id, at, { kind: 'state', key: 'holder', value: holder })];
       }),
+    /** `id`'s repertoire; `undefined` goes back to the genre default, `[]` is none. */
+    setBeats: (id: string, beats: readonly string[] | undefined) =>
+      mutate((adv) => (adv.entities = adv.entities.map((e) => (e.id === id ? withBeats(e, beats) : e)))),
     /** A character the player names before the story does: no card, no lines yet. */
     addCharacter: (name: string) => mutate((adv, at) => (adv.entities = [...adv.entities, blank('character', name, at)])),
   };

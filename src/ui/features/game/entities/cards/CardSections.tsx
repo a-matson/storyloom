@@ -10,6 +10,7 @@ import { showAction } from '../EntityDetails';
 import { Has } from '../ItemRows';
 import { RuleRow } from '../RuleList';
 import { AddRow, type AddKind } from './AddRow';
+import { BeatsRow } from './BeatsRow';
 import { Line } from './FactRows';
 import { ClaimLine, EffectLine, FactLine, GoalLine, StateLine, type Card } from './Lines';
 
@@ -86,6 +87,12 @@ export function CardSections({ entity: e, adventure, api, edits, onClose, onOpen
           ...stateLines(true),
         ]}
       </Section>
+      {e.kind === 'character' && (
+        <>
+          <SectionLabel>Beats</SectionLabel>
+          <BeatsRow entity={e} adventure={adventure} onSet={(b) => edits.setBeats(e.id, b)} />
+        </>
+      )}
       <Section label="Now">
         {[
           ...stateLines(false),
