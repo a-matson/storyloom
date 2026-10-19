@@ -107,6 +107,8 @@ export const ScriptState = z.looseObject({
   /** The same, at the last state read (memory jobs). */
   __stateAt: z.optional(z.number()),
   __stateHash: z.optional(z.string()),
+  /** The player action the idle rules read last read (memory jobs). */
+  __rulesAt: z.optional(z.number()),
   /** An action the summary read was edited or erased: rebuild it from the memories. */
   __summaryDirty: z.optional(z.boolean()),
   /** A place the turn read made while the scene was at `inside`: the Scene section asks whether it is part of it. */

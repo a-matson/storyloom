@@ -232,7 +232,8 @@ export class MemoryScheduler {
         report.memoriesDropped ||
         report.entitiesTouched ||
         report.summaryUpdated ||
-        (report.chaptersTitled ?? 0) > 0
+        (report.chaptersTitled ?? 0) > 0 ||
+        (report.rulesProposed ?? 0) > 0
       )
         this.host.changed();
       progressed = this.host.adventure().scriptState.__entitiesAt !== entitiesAt;

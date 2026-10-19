@@ -5,6 +5,7 @@ import { withContent } from '../text/content';
 import { parseJsonReply } from '../text/jsonReply';
 import { renderTemplate } from '../text/templates';
 import { helperCall } from './helperCall';
+import { isPlayerAction } from './memoryBank';
 import type { MaintenanceDeps } from './memoryJobs';
 import { entityNamedIn, norm } from './names';
 
@@ -87,4 +88,26 @@ export async function findRules(
     found.push({ id: newId('rule_'), text: t, gates, source: 'story', status: 'proposed', createdAt: Date.now(), fromAction: at });
   }
   return found;
+}
+
+// A kind, a habit or a known fact ("kobolds always fear fire"), not "you are tired". [provisional]
+const WORLD_CUE = /\b(?:\w+s are|is an?|known|always|never|every \w+|all \w+s)\b/i;
+
+/** A cheap gate on the player's `do`/`say` text: a generic statement outside any question ("Are you well?"). [provisional] */
+export function statesWorldFact(text: string): boolean {
+  return WORLD_CUE.test(text.replace(/[^.!?"“”]*\?/g, ''));
+}
+
+/**
+ * The idle pass's read of the newest player action when it states a world fact; its rules join as proposals.
+ * `scriptState.__rulesAt` marks the action read. A cut call throws before the marker, so the next idle pass reads it again.
+ */
+export async function rulesFromPlayer(adventure: Adventure, deps: Parameters<typeof findRules>[1]): Promise<number> {
+  const at = adventure.actions.findLastIndex(isPlayerAction);
+  const action = adventure.actions[at];
+  if (!action || at <= (adventure.scriptState.__rulesAt ?? -1) || deps.signal?.aborted || !statesWorldFact(actionText(action))) return 0;
+  const found = await findRules(adventure, deps, at);
+  adventure.rules = [...adventure.rules, ...found];
+  adventure.scriptState = { ...adventure.scriptState, __rulesAt: at };
+  return found.length;
 }
