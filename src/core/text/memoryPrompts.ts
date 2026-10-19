@@ -60,3 +60,16 @@ export function eraPrompt(recently: string): string {
     'Retell this in at most 3 sentences. Keep who met whom and where, deaths, promises, betrayals and discoveries:'
   );
 }
+
+export const MEANWHILE_SYSTEM = 'You write one short sentence about a story character. Output only the sentence: past tense, no dialogue, no commentary.';
+
+/** What `name` did while away, from their goal and what happened without them; only the names given may appear. [provisional] */
+export function meanwhilePrompt(name: string, goal: string | undefined, events: readonly string[]): string {
+  return (
+    `${name} left the story for a while and has just come back.\n\n` +
+    (goal ? `${name} wants: ${goal}\n\n` : '') +
+    listed(`While ${name} was away:`, events) +
+    `In one sentence of at most 25 words, say what ${name} did while away. Use no names but those above; call the player "you".\n\n` +
+    `${name}, meanwhile:`
+  );
+}

@@ -135,17 +135,18 @@ export class MemoryScheduler {
       console.warn('introduction call failed', e);
     }
     // Not merged (no turn read this turn): the standalone read. A failed read is skipped: the next one anchors on the stored state.
-    if (stateRead === 'every' && !merged) await this.readState();
+    if (stateRead === 'every' && !merged) await this.read('readState');
+    await this.read('readMeanwhile', this.idle ?? undefined, false);
   }
-  /** What changed for whoever is there; `cancel` (idle mode) lets typing cut it, and a cut throws so the run waits. */
-  private async readState(cancel?: AbortSignal): Promise<void> {
+  /** What changed for whoever is there, or what one `returning` did meanwhile; `cancel` cuts the call, and a cut `throws` so the run waits. */
+  private async read(job: 'readState' | 'readMeanwhile', cancel?: AbortSignal, throws = true): Promise<void> {
     try {
-      const { readState } = await loadMemoryJobs();
-      const r = await this.logged('state', (d) => readState(this.host.adventure(), { ...d, ...(cancel && { cancel }) }));
-      if (r.changed) this.host.changed();
+      const jobs = await loadMemoryJobs();
+      if (job === 'readMeanwhile' && !jobs.returning(this.host.adventure()).length) return;
+      if ((await this.logged('state', (d) => jobs[job](this.host.adventure(), { ...d, ...(cancel && { cancel }) }))).changed) this.host.changed();
     } catch (e) {
-      if (cancel?.aborted) throw e;
-      console.warn('state read failed', e);
+      if (cancel?.aborted && throws) throw e;
+      if (!cancel?.aborted) console.warn(`${job} failed`, e);
     }
   }
 
@@ -206,7 +207,7 @@ export class MemoryScheduler {
     const entitiesAt = this.host.adventure().scriptState.__entitiesAt;
     let progressed = false;
     try {
-      if (this.host.adventure().settings.memory.stateRead === 'idle') await this.readState(cancel.signal);
+      if (this.host.adventure().settings.memory.stateRead === 'idle') await this.read('readState', cancel.signal);
       // Memories are embedded on the story side so they compare with the query vectors in `prepareContext`.
       const { runMemoryMaintenance } = await loadMemoryJobs();
       const model = this.host.helperModel;

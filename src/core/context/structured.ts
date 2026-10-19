@@ -11,7 +11,7 @@ import { type CastLine, identityLine, pinnedLine, presentLine } from './cast';
 import { renderScene, renderSection } from './render';
 import { relevantRules, renderRules } from './rules';
 import type { ContextBuildInput, RenderedSections, SectionKind } from './types';
-import { named, nudgedIn, QUIET_TURNS, quietTurns, SEND_GOALS, spotlight } from './spotlight';
+import { lastActive, named, nudgedIn, QUIET_TURNS, quietTurns, SEND_GOALS, spotlight } from './spotlight';
 import { gapsOf, MAX_GAPS, witnessClause } from './witness';
 
 /** Hard ceiling on rules, scene and cast together, under the `structuredShare` cap. [provisional] */
@@ -66,6 +66,8 @@ interface Witnessed {
   rooms: Scene['zones'];
   /** Who gets their confirmed goal on the line (`wantingIn`). */
   wanting: ReadonlySet<string>;
+  /** The log up to the last action, for when each last acted (`lastActive`). */
+  actions: Adventure['actions'];
 }
 
 /** Quiet for `QUIET_TURNS` actions or more, or nudged: the model is given what they want so they act on it; nobody while `SEND_GOALS` is off. [provisional] */
@@ -90,7 +92,8 @@ function castLine(e: Entity, here: Entity[], ix: AssertionIndex, carded: boolean
   const room = Object.entries(w.rooms ?? {}).find(([n]) => n === e.id || named(e, n))?.[1];
   // The events others led on them move their stances (`standing`); those are stored under the actor.
   const as = [...ix.of(e.id), ...eventsOf(ix.all, e.id).filter((a) => a.subject !== e.id)];
-  const line = presentLine(e, as, here, carded, [...new Set(gaps.map(witnessClause))], w.speaking.has(e.id), room, w.wanting.has(e.id));
+  const missed = [...new Set(gaps.map(witnessClause))];
+  const line = presentLine(e, as, here, carded, missed, w.speaking.has(e.id), room, w.wanting.has(e.id), lastActive(e, w.actions, ix));
   return gaps.length > 0 ? { ...line, gaps } : line;
 }
 
@@ -117,6 +120,7 @@ export function nowLines(adv: Pick<Adventure, 'plot' | 'entities' | 'assertions'
     speaking: speakingIn(adv.actions, to, here),
     rooms: shown?.zones,
     wanting: wantingIn(adv.actions, here, ix, nudgedIn(adv.scriptState?.__nudge, adv.actions.length)),
+    actions: adv.actions,
   };
   const lines = hereLines(spotlight(here, adv.actions, ix), items, ix, cardedBy(adv.storyCards), w);
   return { scene: renderScene(shown, entities, ix), lines };
@@ -179,6 +183,7 @@ export function selectStructured(
     speaking: speakingIn(input.actions, lastActionIndex, here),
     rooms: shown?.zones,
     wanting: wantingIn(upTo, here, ix, input.nudged),
+    actions: upTo,
   };
   // With entity facts off, the player's own facts (Correct, pins) still go in for who is here or named.
   // Each entry is one entity's line and its fallbacks: an asked-about line that does not fit sends the identity alone.

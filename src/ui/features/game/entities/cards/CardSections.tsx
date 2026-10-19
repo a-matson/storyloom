@@ -1,7 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from 'react';
 import type { entityEdits } from '@app/session/entities';
 import { ruleEdits } from '@app/session/rules';
-import { current, currentStates, eventsOf, indexAssertions, rivalKey, SHEET_KEYS, textOf, YOU } from '@core/memory';
+import { current, currentStates, eventsOf, indexAssertions, MEANWHILE, rivalKey, SHEET_KEYS, textOf, YOU, type AssertionOf } from '@core/memory';
 import type { Adventure, Assertion, Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
@@ -12,7 +12,7 @@ import { RuleRow } from '../RuleList';
 import { AddRow, type AddKind } from './AddRow';
 import { BeatsRow } from './BeatsRow';
 import { Line } from './FactRows';
-import { ClaimLine, EffectLine, FactLine, GoalLine, RelationLine, StateLine, type Card } from './Lines';
+import { ClaimLine, EffectLine, FactLine, GoalLine, MeanwhileLine, RelationLine, StateLine, type Card } from './Lines';
 
 interface Props {
   entity: Entity;
@@ -27,7 +27,8 @@ const LOOKS = new Set<string>(SHEET_KEYS);
 const norm = (s: string) => s.trim().toLowerCase();
 // `looked:` traits are the old, replaced looks.
 const isHistory = (a: Assertion) => a.until !== undefined || (a.kind === 'trait' && a.text.startsWith('looked: '));
-const isClaim = (a: Assertion) => a.kind === 'conflict' || ((a.kind === 'look' || a.kind === 'state') && a.seen === false);
+const isMeanwhile = (a: Assertion): a is AssertionOf<'state'> => a.kind === 'state' && a.key === MEANWHILE;
+const isClaim = (a: Assertion) => a.kind === 'conflict' || ((a.kind === 'look' || a.kind === 'state') && a.seen === false && !isMeanwhile(a));
 
 function Section({ label, children }: { label: string; children: ReactNode[] }) {
   if (children.length === 0) return null;
@@ -97,6 +98,7 @@ export function CardSections({ entity: e, adventure, api, edits, onClose, onOpen
         {[
           ...stateLines(false),
           ...current(live, 'effect').map((a) => <EffectLine key={a.id} card={card} fact={a} />),
+          ...live.filter(isMeanwhile).map((a) => <MeanwhileLine key={a.id} card={card} fact={a} />),
           ...own.filter((a) => isClaim(a) && !isHistory(a)).map((a) => <ClaimLine key={a.id} card={card} fact={a} />),
         ]}
       </Section>
