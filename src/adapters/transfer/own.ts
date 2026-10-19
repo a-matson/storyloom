@@ -1,5 +1,5 @@
 import { z } from 'zod/mini';
-import type { Action, Adventure, TurnTrace } from '@core/model';
+import type { Action, Adventure, Assertion, Entity, TurnTrace } from '@core/model';
 import { newId } from '@core/model';
 import * as S from '@core/schema';
 
@@ -85,18 +85,11 @@ function renumber(a: Exported): Adventure {
       ...(image && { image: { ...withoutBlob(image), ...(image.entityIds && { entityIds: image.entityIds.map(id) }) } }),
     })),
     storyCards: a.storyCards.map((c) => ({ ...c, id: id(c.id) })),
-    // Without the id the portrait is drawn again between turns.
-    entities: a.entities.map(({ portraitId: _portrait, portraitBasis: _basis, referenceImageId: _reference, sheetImageId: _sheet, ...e }) => ({
-      ...e,
-      id: id(e.id),
-      relations: e.relations.map((r) => ({ ...r, to: id(r.to) })),
-      ...(e.cardId && { cardId: id(e.cardId) }),
-      ...(e.partOf !== undefined && { partOf: id(e.partOf) }),
-      // A link to a place the export does not hold goes.
-      ...(e.connectedTo && { connectedTo: e.connectedTo.filter((c) => ids.has(c.id)).map((c) => Object.assign({}, c, { id: id(c.id) })) }),
+    entities: a.entities.map(({ facts, ...e }) => ({
+      ...repointEntity(e, id, ids),
       // A version 1 export's facts, moved on the first open: their sources and causes follow the new ids.
-      ...(e.facts && {
-        facts: e.facts.map(({ sourceId, cause, ...f }) => ({
+      ...(facts && {
+        facts: facts.map(({ sourceId, cause, ...f }) => ({
           ...f,
           ...(sourceId !== undefined && { sourceId: actionIds.get(sourceId) ?? sourceId }),
           ...(cause && { cause: cause.id ? { ...cause, id: id(cause.id) } : cause }),
@@ -105,14 +98,35 @@ function renumber(a: Exported): Adventure {
     })),
     // Rule ids are local to the adventure record, so only their gates follow the entities.
     rules: a.rules.map((r) => ({ ...r, gates: r.gates.map(id) })),
-    assertions: a.assertions.map((x) => ({
-      ...x,
-      subject: id(x.subject),
-      ...(x.kind === 'effect' && x.cause?.id && { cause: { ...x.cause, id: id(x.cause.id) } }),
-      ...(x.kind === 'secret' && { knownBy: x.knownBy.map(id) }),
-      ...(x.kind === 'event' && { who: x.who.map(id) }),
-    })),
+    assertions: a.assertions.map((x) => repointAssertion(x, id)),
     memories: [], // embeddings may come from another embedder; rebuilt lazily
     updatedAt: Date.now(),
+  };
+}
+
+/** An entity under new ids (`id` maps old to new; `ids` is the map). Without the blob ids the portrait is drawn again between turns. */
+export function repointEntity<E extends Entity>(
+  { portraitId: _portrait, portraitBasis: _basis, referenceImageId: _reference, sheetImageId: _sheet, ...e }: E,
+  id: (old: string) => string,
+  ids: ReadonlyMap<string, string>,
+) {
+  return {
+    ...e,
+    id: id(e.id),
+    relations: e.relations.map((r) => ({ ...r, to: id(r.to) })),
+    ...(e.cardId && { cardId: id(e.cardId) }),
+    ...(e.partOf !== undefined && { partOf: id(e.partOf) }),
+    // A link to a place the export does not hold goes.
+    ...(e.connectedTo && { connectedTo: e.connectedTo.filter((c) => ids.has(c.id)).map((c) => Object.assign({}, c, { id: id(c.id) })) }),
+  };
+}
+
+export function repointAssertion(x: Assertion, id: (old: string) => string): Assertion {
+  return {
+    ...x,
+    subject: id(x.subject),
+    ...(x.kind === 'effect' && x.cause?.id && { cause: { ...x.cause, id: id(x.cause.id) } }),
+    ...(x.kind === 'secret' && { knownBy: x.knownBy.map(id) }),
+    ...(x.kind === 'event' && { who: x.who.map(id) }),
   };
 }

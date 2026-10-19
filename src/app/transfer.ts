@@ -9,5 +9,7 @@ export {
   importAidZip,
   importScenarioJson,
   importStoryCardsJson,
+  renumberScenario,
+  scenarioFromAdventure,
   type ImportResult,
 } from '@adapters/transfer';

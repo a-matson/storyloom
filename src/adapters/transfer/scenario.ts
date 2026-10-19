@@ -2,7 +2,7 @@ import { z } from 'zod/mini';
 import type { Scenario } from '@core/model';
 import { newId } from '@core/model';
 import * as S from '@core/schema';
-import { firstIssue, isRecord } from './own';
+import { firstIssue, isRecord, repointAssertion, repointEntity } from './own';
 
 export const SCENARIO_FORMAT = 'storyloom-scenario';
 
@@ -23,16 +23,28 @@ export function importScenarioJson(json: string): Scenario {
   return renumberScenario(bare.data);
 }
 
-/** Fresh ids for the scenario, its options (all depths) and cards, so an import never overwrites. The cover blob does not travel with the JSON, so its id goes. */
+/**
+ * Fresh ids for the scenario, its options (all depths), cards and world, so an import never overwrites;
+ * the world's links follow them. The cover blob does not travel with the JSON, so its id goes.
+ */
 export function renumberScenario(s: Scenario, parentId?: string): Scenario {
-  const id = newId('scn_');
-  const { parentId: _old, coverId: _cover, options, ...rest } = s;
+  const scn = newId('scn_');
+  const { parentId: _old, coverId: _cover, options, world, ...rest } = s;
+  const ids = new Map([...s.storyCards.map((c) => [c.id, newId('card_')] as const), ...(world?.entities ?? []).map((e) => [e.id, newId('ent_')] as const)]);
+  const id = (old: string) => ids.get(old) ?? old;
   return {
     ...rest,
-    id,
+    id: scn,
     ...(parentId === undefined ? {} : { parentId }),
-    ...(options === undefined ? {} : { options: options.map((o) => renumberScenario(o, id)) }),
-    storyCards: s.storyCards.map((c) => ({ ...c, id: newId('card_') })),
+    ...(options === undefined ? {} : { options: options.map((o) => renumberScenario(o, scn)) }),
+    storyCards: s.storyCards.map((c) => ({ ...c, id: id(c.id) })),
+    ...(world && {
+      world: {
+        entities: world.entities.map((e) => repointEntity(e, id, ids)),
+        assertions: world.assertions.map((x) => Object.assign(repointAssertion(x, id), { id: newId('as_') })),
+        rules: world.rules.map((r) => Object.assign({}, r, { id: newId('rule_'), gates: r.gates.map(id) })),
+      },
+    }),
     updatedAt: Date.now(),
   };
 }
