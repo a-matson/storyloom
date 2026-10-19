@@ -1,3 +1,4 @@
+import { absence } from './absent';
 import { markOf, secretsOf } from '../memory/secrets';
 import { selectCards } from './cards';
 import { historyWindowStart, selectHistory } from './history';
@@ -35,9 +36,10 @@ export function buildContext(input: ContextBuildInput): ContextBuildResult {
   const structuredCap = Math.min(afterRequired, Math.floor(total * (settings.structuredShare ?? 0.1)));
   // History is cut after structured takes its share, so this is the widest its window can be: a clause may cover a few actions history drops.
   const historyFrom = historyWindowStart(actions, req.lastActionIndex, afterRequired, tokenizer).start;
-  const structured = selectStructured(input, req.lastActionIndex, historyFrom, structuredCap, out);
+  const absent = absence(input, req.lastActionIndex);
+  const structured = selectStructured(input, req.lastActionIndex, historyFrom, structuredCap, out, absent.entity);
   const dynamicAvailable = afterRequired - structured.structuredUsed;
-  const cards = selectCards(actions, req.lastActionIndex, input.storyCards, dynamicAvailable, tokenizer, out, warnings);
+  const cards = selectCards(actions, req.lastActionIndex, input.storyCards, dynamicAvailable, tokenizer, out, warnings, absent.card);
   const end = req.lastActionIndex; // history excludes the last action
   const history = selectHistory(actions, end, dynamicAvailable, cards, settings, tokenizer, out, warnings);
 
@@ -80,6 +82,7 @@ export function buildContext(input: ContextBuildInput): ContextBuildResult {
     },
     triggeredCards: cards.triggeredCards,
     droppedCards: cards.droppedCards,
+    absentCards: cards.absentCards,
     usedMemories: memories.usedMemories,
     rankedMemories: input.rankedMemories,
     usedFacts: structured.usedFacts,

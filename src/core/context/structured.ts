@@ -124,10 +124,18 @@ export function nowLines(adv: Pick<Adventure, 'plot' | 'entities' | 'assertions'
  * Rules, the scene line, then the cast: a now-line per present character (and the scene's place),
  * an identity line per item here or held, then per entity the recent text names, most recent first.
  * In that order inside one cap; a line that does not fit is skipped whole. Absent entities send no facts, pins included,
- * but what the player's last action asks about one it names (`askedFacts`).
+ * but what the player's last action asks about one it names (`askedFacts`). Absent characters send nothing unless the
+ * player's action names them (`absent`).
  * `historyFrom`: the earliest action history can reach, the witnessed-by window's start.
  */
-export function selectStructured(input: ContextBuildInput, lastActionIndex: number, historyFrom: number, cap: number, out: RenderedSections): StructuredResult {
+export function selectStructured(
+  input: ContextBuildInput,
+  lastActionIndex: number,
+  historyFrom: number,
+  cap: number,
+  out: RenderedSections,
+  absent: (e: Entity) => boolean = () => false,
+): StructuredResult {
   const { tokenizer, plot } = input;
   const budget = Math.min(cap, STRUCTURED_CAP);
   const ix = indexAssertions(input.assertions ?? []);
@@ -148,7 +156,8 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
   );
   const present = ids(here);
   const seen = new Set([...present, ...ids(items)]);
-  const mentioned = [...ids(inText)].filter((i) => !seen.has(i)).flatMap((i) => byId.get(i) ?? []);
+  const inTextOnly = [...ids(inText)].filter((i) => !seen.has(i)).flatMap((i) => byId.get(i) ?? []);
+  const mentioned = inTextOnly.filter((e) => !absent(e));
 
   // Rules first: the world's laws outrank what the scene holds. As many as fit, in order.
   const ctx = { entities, ix, scene: shown, present, mentioned: ids(mentioned) };
@@ -199,6 +208,7 @@ export function selectStructured(input: ContextBuildInput, lastActionIndex: numb
     usedFacts: kept.flatMap((l) => l.factIds.map((factId) => ({ entityId: l.entity.id, factId }))),
     usedEntityIds: [...new Set(kept.map((l) => l.entity.id))],
     usedRuleIds: rules.map((r) => r.id),
-    inCast: [...new Set([...inScene, ...here, ...mentioned])],
+    // An absent character the text names still keeps a secret from the prompt: history still names them.
+    inCast: [...new Set([...inScene, ...here, ...inTextOnly])],
   };
 }

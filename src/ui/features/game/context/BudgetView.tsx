@@ -49,6 +49,11 @@ function Cards({ result }: { result: ContextBuildResult }) {
           <span>did not fit</span>
         </div>
       ))}
+      {result.absentCards.length > 0 && (
+        <div className={`text-caption ${muted}`}>
+          {result.absentCards.length} character card(s) held back: not here ({result.absentCards.map((m) => m.card.name).join(', ')})
+        </div>
+      )}
     </div>
   );
 }
@@ -87,7 +92,7 @@ export function BudgetView({ result }: { result: ContextBuildResult }) {
           </div>
         )}
       </div>
-      {result.triggeredCards.length > 0 && <Cards result={result} />}
+      {result.triggeredCards.length + result.absentCards.length > 0 && <Cards result={result} />}
       {result.usedMemories.length > 0 && (
         <div className="flex flex-col gap-1">
           <SectionLabel>Memories used</SectionLabel>
