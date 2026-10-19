@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { checkInputs, checkOutput } from '@core/memory/contradiction';
-import type { Adventure, LegacyEntity } from '@core/model';
+import { checkInputs, checkOutput, recordLines } from '@core/memory/contradiction';
+import type { Adventure, Assertion, LegacyEntity } from '@core/model';
 import type { CompletionRequest } from '@core/ports';
 import { makeAdventure } from './fixtures/adventure';
 import { derived } from './fixtures/assertions';
@@ -108,5 +108,25 @@ describe('checkOutput', () => {
     });
     expect(await checkOutput('text', [], { provider, template: 'chatml' })).toBeNull();
     expect(calls).toBe(0);
+  });
+});
+
+describe('recordLines', () => {
+  const base = { subject: 'ent_Mira', producer: 'turn', basis: 'stated', since: 0 } as const;
+  const assertions: Assertion[] = [
+    { ...base, id: 'a1', at: 1, kind: 'look', key: 'species', value: 'elf' },
+    { ...base, id: 'a2', at: 2, kind: 'relationship', to: 'ent_Aldric', stance: 'distrusts him' },
+    { ...base, id: 'a3', at: 3, kind: 'event', text: 'Mira burned the letter', who: ['ent_Mira'] },
+    { ...base, id: 'a4', at: 4, kind: 'trait', text: 'She is a smuggler', seen: false },
+    { ...base, id: 'a5', at: 4, kind: 'conflict', key: 'species', claimed: 'human', canon: 'elf' },
+  ];
+  const entities = [entity('Mira'), entity('Aldric')];
+
+  it('lists the current record with where each line came from, leaving out proposals and conflicts', () => {
+    expect(recordLines({ entities, assertions }, ['ent_Mira'])).toEqual([
+      { line: 'Mira: species is elf', at: 1 },
+      { line: 'Mira → Aldric: distrusts him', at: 2 },
+      { line: 'Mira: Mira burned the letter', at: 3 },
+    ]);
   });
 });

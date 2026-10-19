@@ -5,6 +5,7 @@ import type { Entity } from '@core/model';
 import type { GameApi } from '@ui/hooks/useGameSession';
 import { Button } from '@ui/components/ui/button';
 import { Select } from '@ui/components/ui/field';
+import { SelectionCheck } from './SelectionCheck';
 
 interface Picked {
   text: string;
@@ -31,7 +32,7 @@ function picked(): Picked | null {
   return { text, actionId: block.dataset['actionId'], top: Math.max(8, r.top - 44), left: Math.max(8, r.left) };
 }
 
-/** Pin selected story text as a rule, as a fact about a character, or as a new item. */
+/** Pin selected story text as a rule, as a fact about a character, or as a new item; or check it against the record. */
 export function SelectionBar({ api, entities }: { api: GameApi; entities: readonly Entity[] }) {
   const [sel, setSel] = useState<Picked | null>(null);
   const bar = useRef<HTMLDivElement>(null);
@@ -97,6 +98,7 @@ export function SelectionBar({ api, entities }: { api: GameApi; entities: readon
           Make item
         </Button>
       )}
+      <SelectionCheck key={sel.text} api={api} text={sel.text} />
     </div>
   );
 }

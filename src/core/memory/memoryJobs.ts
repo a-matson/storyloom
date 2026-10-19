@@ -23,7 +23,7 @@ export { advance, formatTime, parseTime, parseTravel, parseWait, skipEnds, trave
 export { endTransient } from './rest';
 export { readState } from './stateRead';
 export { readMeanwhile, returning } from './meanwhile';
-export { checkInputs, checkOutput } from './contradiction';
+export { checkInputs, checkOutput, recordLines } from './contradiction';
 export { MEMORY_SPAN } from './memoryBank';
 export { projectEntity } from './projection';
 export { codexMarkdown, compileCodex, filterCodex } from './codex';

@@ -6,11 +6,12 @@ import { parseJsonReply } from '../text/jsonReply';
 import { CHECK_SYSTEM, checkPrompt } from '../text/prompts';
 import { withContent } from '../text/content';
 import { renderTemplate } from '../text/templates';
-import { indexAssertions } from './assertionIndex';
+import { eventsOf, indexAssertions, isCurrent } from './assertionIndex';
 import { helperCall } from './helperCall';
-import { currentStates } from './looks';
+import { currentStates, MEANWHILE } from './looks';
 import { knownAs, sceneNames } from './names';
 import type { MaintenanceDeps } from './memoryJobs';
+import { YOU } from './you';
 
 const CheckJson = z.object({ contradicts: z.boolean(), fact: z.string() });
 const { $schema: _dialect, ...CHECK_JSON_SCHEMA } = z.toJSONSchema(CheckJson);
@@ -78,4 +79,29 @@ export async function checkOutput(
     if (fact && !line) call.rejected = [{ value: fact, reason: 'not-an-input-line' }];
   }
   return line ?? null;
+}
+
+/**
+ * Every current assertion of each id as a line the check can quote, with the action it was read from: looks and
+ * states (latest per key), identity, traits, voice, stances and events. Proposals and conflicts are not the record.
+ */
+export function recordLines(adv: Pick<Adventure, 'entities' | 'assertions'>, ids: readonly string[]): { line: string; at: number }[] {
+  const ix = indexAssertions(adv.assertions);
+  const nameOf = (id: string) => (id === YOU ? 'you' : adv.entities.find((e) => e.id === id)?.name);
+  return ids.flatMap((id) => {
+    const name = nameOf(id);
+    if (!name) return [];
+    const keyed = new Map<string, { line: string; at: number }>();
+    const rest: { line: string; at: number }[] = [];
+    for (const a of ix.of(id)) {
+      if (!isCurrent(a) || a.seen === false) continue;
+      if ((a.kind === 'look' || a.kind === 'state') && a.key !== MEANWHILE)
+        keyed.set(a.key, { line: a.key === 'legacy' ? `${name}: ${a.value}` : `${name}: ${a.key} is ${a.value}`, at: a.at });
+      else if (a.kind === 'identity' || a.kind === 'trait') rest.push({ line: `${name}: ${a.text}`, at: a.at });
+      else if (a.kind === 'voice') rest.push({ line: `${name}: speaks: ${a.text}`, at: a.at });
+      else if (a.kind === 'relationship') rest.push({ line: `${name} → ${nameOf(a.to) ?? a.to}: ${a.stance}`, at: a.at });
+    }
+    const events = eventsOf(adv.assertions, id).flatMap((a) => (a.seen === false ? [] : [{ line: `${name}: ${a.text}`, at: a.at }]));
+    return [...keyed.values(), ...rest, ...events];
+  });
 }
