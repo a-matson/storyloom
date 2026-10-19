@@ -5,14 +5,14 @@ import { playerName } from '../memory/you';
 import type { Adventure, Entity } from '../model';
 import { BEATS, cueFor, genreKeys, repertoire, usedBeats } from './beats';
 
-export type BeatPick = { entity: Entity; beat: string; cue: string } | { none: string };
+type BeatPick = { entity: Entity; beat: string; cue: string } | { none: string };
 
 type Scene = Pick<Adventure, 'plot' | 'actions' | 'entities' | 'tags' | 'title'>;
 
 const GOAL = 'act on the goal';
 
 /** Confirmed characters the scene has present, the player's own excepted. */
-export function presentCast(adv: Scene, ix: AssertionIndex): Entity[] {
+function presentCast(adv: Scene, ix: AssertionIndex): Entity[] {
   const present = adv.plot.scene?.present ?? [];
   const you = playerName(adv);
   return adv.entities.filter(
