@@ -13,9 +13,8 @@ import { articleOnly, cuedKinds, kindOf } from './kindCues';
 import type { MemoryRange } from './memoryBank';
 import { sightingOf, uncut, type Incoming, type Rejected } from './sighting';
 import { flagSpecies } from './species';
-import { norm } from './names';
-import { CAPITALISED, renameCues, withCues } from './renames';
-import { spellingOf } from './spelling';
+import { MAX_HELD, norm } from './names';
+import { aliasOf, CAPITALISED, renameCues, withCues } from './renames';
 import { NOT_A_NAME, playerName, YOU } from './you';
 
 export { uncut, type Incoming, type Rejected } from './sighting';
@@ -103,9 +102,6 @@ function restIn(actions: readonly Action[]): (s: Source | undefined) => Rest | u
   };
 }
 
-/** Held names and alias proposals kept; an older one is dropped (a held one with its facts). [provisional] */
-const MAX_HELD = 20;
-
 /**
  * The player is never a card: what the reply says under their name, through the same guards, is
  * added to `you` as proposals (`seen: false`), which nothing sends until the player keeps one.
@@ -177,7 +173,7 @@ export function foldEntities(
   const held: Held[] = [];
   const cues = renameCues(passage, entities);
   const at = range.toAction - 1;
-  const proposals = withCues(adventure.scriptState.__aliasProposals ?? [], cues, at);
+  const proposals = withCues(adventure.scriptState, cues, at);
   for (const item of incoming) {
     const { facts = [], ...e } = item;
     if (opts.log) opts.log.proposed += facts.length;
@@ -189,7 +185,7 @@ export function foldEntities(
       for (const f of facts) opts.log?.rejected.push({ entity: e.name, value: f, reason, passageRange: range });
       continue;
     }
-    const like = old ? undefined : (spellingOf(entities, e.name, e.kind) ?? entities.find((x) => x.id === cues.get(norm(e.name))?.of));
+    const like = old ? undefined : aliasOf(entities, e, cues, adventure.scriptState.__aliasRejected);
     if (like) proposals.push({ name: e.name, of: like.id, at });
     const seenIn = old ? [] : sightings(adventure, e.name, range);
     if (!old && (like || (opts.twice && seenIn.length < 2))) {

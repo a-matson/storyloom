@@ -3,6 +3,9 @@ import { identityText, type AssertionIndex } from './assertionIndex';
 
 // Apart from `entities.ts` so the scene line's item lookup stays light in the start-up chunk.
 
+/** Held names, alias proposals and declined pairs kept; an older one is dropped (a held one with its facts). [provisional] */
+export const MAX_HELD = 20;
+
 export const norm = (s: string): string =>
   s
     .trim()
