@@ -1,4 +1,4 @@
-import type { Adventure, AdventureSettings, Scenario, StoryCard } from './types';
+import type { Adventure, AdventureSettings, Entity, Scenario, StoryCard } from './types';
 import { DEFAULT_ADVENTURE_SETTINGS, hasScripts, newId, scriptCount } from './types';
 import { applyPlaceholders, findPlaceholders } from '../text/placeholders';
 import { seedCanonEntities } from '../memory/canon';
@@ -50,23 +50,26 @@ export function createAdventureFromScenario(
   const sub = (t: string | undefined) => (t ? applyPlaceholders(t, answers) : t);
   const creator = s.type === 'characterCreator';
   const kept = (c: StoryCard) => !creator || !c.selectable || picked.includes(c.id);
-  const cards: StoryCard[] = s.storyCards.flatMap((c) =>
-    kept(c)
-      ? [
-          {
-            ...c,
-            id: newId('card_'),
-            entry: applyPlaceholders(c.entry, answers),
-            triggers: c.triggers.map((t) => applyPlaceholders(t, answers)),
-            notes: sub(c.notes),
-          },
-        ]
-      : [],
+  const cardIds = new Map(s.storyCards.filter(kept).map((c) => [c.id, newId('card_')]));
+  const cards: StoryCard[] = s.storyCards.filter(kept).map((c) =>
+    Object.assign(structuredClone(c), {
+      id: cardIds.get(c.id) ?? c.id,
+      entry: applyPlaceholders(c.entry, answers),
+      triggers: c.triggers.map((t) => applyPlaceholders(t, answers)),
+      notes: sub(c.notes),
+    }),
   );
   const now = Date.now();
   const prompt = applyPlaceholders(s.prompt, answers).trim();
   const chosen = creator ? cards.filter((c) => c.selectable) : [];
   const characterIntro = chosen.length ? `\n\n${chosen.map((c) => c.entry).join('\n')}` : '';
+  // The world's ids are already this record's own (renumbered when it was saved or imported); its card links follow the new cards.
+  const world = structuredClone(s.world ?? { entities: [], assertions: [], rules: [] });
+  const entities: Entity[] = world.entities.map(({ cardId, ...e }) => {
+    const card = cardId && cardIds.get(cardId);
+    return card ? { ...e, cardId: card } : e;
+  });
+  const linked = new Set(entities.map((e) => e.cardId));
   return {
     id: newId('adv_'),
     title: s.title,
@@ -85,10 +88,16 @@ export function createAdventureFromScenario(
     storyCards: cards,
     scripts: hasScripts(s.scripts) ? { ...s.scripts } : undefined,
     memories: [],
-    entities: seedCanonEntities(cards, 0),
-    rules: [],
-    // Derived from the canon entities on the first save.
-    assertions: [],
+    entities: [
+      ...entities,
+      ...seedCanonEntities(
+        cards.filter((c) => !linked.has(c.id)),
+        0,
+      ),
+    ],
+    rules: world.rules,
+    // The world's; with none, derived from the canon entities on the first save.
+    assertions: world.assertions,
     scriptState: { placeholders: Object.entries(answers).map(([question, answer]) => ({ question, answer })) },
     placeholders: Object.entries(answers).map(([question, answer]) => ({ question, answer })),
     settings: structuredClone(settings),
