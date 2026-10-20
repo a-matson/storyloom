@@ -14,7 +14,7 @@ import { writeMeasurement } from './env';
 
 // The memory jobs replayed over a backup from nothing: the player's settings, cards and plot fields, no record.
 // `pnpm measure replay <url> <backup.storyloom.json> [label] [to]`; skipped without both. `MEASURE_NAMES=Baron,Goldarok`
-// keeps only those names in the per-action rows.
+// keeps only those names in the per-action rows. The replayed adventure lands beside it as `replay-<label>.storyloom.json`.
 const { MEASURE_URL: url, MEASURE_BACKUP: backup, MEASURE_LABEL: LABEL = 'baseline', MEASURE_TO: TO, MEASURE_NAMES: NAMES } = process.env;
 const names = NAMES?.split(',').map((n) => n.trim().toLowerCase());
 
@@ -88,5 +88,7 @@ test.skipIf(!url || !backup)('memory jobs replayed over a backup', { timeout: 14
     rows.push({ at: i, type: a.type, entities, conflicts, cardsTriggered: cards, cast });
     console.log(`#${i} ${a.type} entities ${adv.entities.length} conflicts ${conflicts.length} cards [${cards.join(', ')}]`);
   }
+  // The replayed record as a backup, so the no-model benches (`standings`, `record`) can read what the jobs wrote.
+  writeMeasurement(`replay-${LABEL}.storyloom`, { adventure: adv });
   console.log(writeMeasurement(`replay-${LABEL}`, { backup, to, names: NAMES, rows, memories: adv.memories.length, summary: adv.plot.storySummary }));
 });
