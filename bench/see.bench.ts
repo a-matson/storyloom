@@ -7,6 +7,7 @@ import { familyOf } from '@core/image';
 import { seePrompt } from '@core/image/autoPrompt';
 import { composeSeePrompt, looksOf } from '@core/image/compose';
 import { imageRequest } from '@core/image/request';
+import { applyImagePreset, IMAGE_PRESETS } from '@core/imagePresets';
 import { heldBy, indexAssertions, sceneNames, SHEET_KEYS, tagify, withLooks } from '@core/memory';
 import { presentAt } from '@core/memory/secrets';
 import { type Adventure, type Assertion, contentClause, type Entity } from '@core/model';
@@ -19,8 +20,11 @@ import { storeAt } from './storeAt';
 // `pnpm measure see <backup> [image-url] [label]`; MEASURE_URL=<text server> asks the helper as the app does
 // (story pose tags, and the line for a See with no brief), else a See with no brief composes its stored prompt.
 // MEASURE_REBUILD=1 answers the builder again with every stored look first (M29-9's "rebuild first").
-const { MEASURE_BACKUP: backup, MEASURE_IMAGES: imagesUrl, MEASURE_URL: url, MEASURE_REBUILD: rebuild } = process.env;
+// Renders: MEASURE_SAMPLES=n per See (seed + i), MEASURE_AT=7,10 only those Sees, MEASURE_PRESET=noobai that image recipe.
+const { MEASURE_BACKUP: backup, MEASURE_IMAGES: imagesUrl, MEASURE_URL: url, MEASURE_REBUILD: rebuild, MEASURE_AT: only } = process.env;
 const LABEL = process.env['MEASURE_LABEL'] ?? 'baseline';
+const SAMPLES = Number(process.env['MEASURE_SAMPLES'] ?? 1);
+const PRESET = IMAGE_PRESETS.find((p) => p.id === process.env['MEASURE_PRESET']);
 const FIELDS = ['bodyPlan', 'posture', 'action', 'view', 'scene'] as const;
 
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -29,7 +33,7 @@ const has = (prompt: string, tag: string) => new RegExp(`(^|[^a-z])${esc(tag)}($
 test.skipIf(!backup)('see prompts over a backup', { timeout: 3_600_000 }, async () => {
   const parsed = S.Adventure.parse(JSON.parse(readFileSync(backup ?? '', 'utf8')).adventure);
   const adv = rebuild ? rebuilt(parsed) : parsed;
-  const { image } = adv.settings;
+  const image = PRESET ? applyImagePreset(adv.settings.image, PRESET) : adv.settings.image;
   const family = familyOf(image.model, image.width, image.height);
   const helper = async () => ({
     provider: new LlamaServerProvider('see', url ?? ''),
@@ -40,7 +44,7 @@ test.skipIf(!backup)('see prompts over a backup', { timeout: 3_600_000 }, async 
   const names = adv.entities.flatMap((e) => [e.name, ...(e.aliases ?? [])]).filter((n) => /\p{Lu}/u.test(n));
   const rows: (Row & Record<string, unknown> & { fused: boolean; properNoun: string[]; hits?: Record<string, boolean> | undefined })[] = [];
   for (const [at, a] of adv.actions.entries()) {
-    if (a.type !== 'see' || !a.image) continue;
+    if (a.type !== 'see' || !a.image || (only && !only.split(',').includes(String(at)))) continue;
     const raw = a.image.brief === undefined;
     const ix = indexAssertions(storeAt(adv.assertions, at));
     // As in the app: the last state read covered the last story action and the player line before it.
@@ -59,7 +63,9 @@ test.skipIf(!backup)('see prompts over a backup', { timeout: 3_600_000 }, async 
       readsStory: true,
     };
     const { blocks, dropped, ...composed } = composeSeePrompt(req);
+    const t0 = performance.now();
     const { prompt, seed } = url ? await seePrompt(req, helper) : composed;
+    const ms = Math.round(performance.now() - t0);
     const sent = imageRequest(image, prompt).prompt;
     // A look tag (spelled `key: value` before M29, `value key` since) that runs on into the next words with no comma.
     const looks = req.entities.flatMap((e) => Object.entries(e.looks).flatMap(([k, v]) => [`${k}: ${v} `, `${v} ${k} `]));
@@ -78,6 +84,7 @@ test.skipIf(!backup)('see prompts over a backup', { timeout: 3_600_000 }, async 
       fused,
       properNoun: names.filter((n) => has(sent, n)),
       chars: sent.length,
+      ms,
       hits,
     });
   }
@@ -120,9 +127,13 @@ async function render(name: string, rows: readonly Row[], request: (prompt: stri
   const images = new A1111Provider('see', imagesUrl ?? '');
   const cells = [];
   for (const r of rows) {
-    const png = await images.txt2img(request(r.prompt, r.seed), AbortSignal.timeout(900_000));
-    writeFileSync(`${dir}/${r.at}.png`, Buffer.from(await png.arrayBuffer()));
-    cells.push(`<figure><img src="${r.at}.png" width="384"><figcaption>#${r.at} ${r.sent.replace(/</g, '&lt;')}</figcaption></figure>`);
+    for (let i = 0; i < SAMPLES; i++) {
+      // A seedless See samples a random seed each time; a seeded one steps from its own.
+      const png = await images.txt2img(request(r.prompt, r.seed === undefined ? undefined : r.seed + i), AbortSignal.timeout(900_000));
+      const file = SAMPLES > 1 ? `${r.at}-${i}.png` : `${r.at}.png`;
+      writeFileSync(`${dir}/${file}`, Buffer.from(await png.arrayBuffer()));
+      cells.push(`<figure><img src="${file}" width="384"><figcaption>#${r.at} ${r.sent.replace(/</g, '&lt;')}</figcaption></figure>`);
+    }
   }
   writeFileSync(
     `${dir}/index.html`,
